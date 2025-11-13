@@ -1,0 +1,84 @@
+version: "3"
+
+vars:
+  CONTROL_PLANE_DIR: ../control-plane
+
+tasks:
+  # Client generation
+  client:generate:
+    desc: Generate GraphQL client from running control-plane API (requires control plane at localhost:8081)
+    dir: pkg/client
+    cmds:
+      - npx get-graphql-schema http://localhost:8081/graphql > schema.graphql
+      - go run github.com/Khan/genqlient
+    sources:
+      - "queries/*.graphql"
+    generates:
+      - "generated.go"
+
+  # Build tasks
+  build:
+    desc: Build the tero CLI binary
+    cmds:
+      - go build -o bin/tero cmd/tero/main.go
+    sources:
+      - "**/*.go"
+    generates:
+      - "bin/tero"
+
+  # Development tasks
+  run:
+    desc: Run tero without building (fast iteration)
+    cmds:
+      - go run ./cmd/tero {{.CLI_ARGS}}
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - |
+        if ! command -v golangci-lint &> /dev/null; then
+          echo "golangci-lint not found. Installing..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        fi
+      - $(go env GOPATH)/bin/golangci-lint run ./...
+
+  do:
+    desc: Format, lint, and test
+    cmds:
+      - go fmt ./...
+      - golangci-lint run ./...
+      - task: test
+
+  dev:
+    desc: Generate client and build
+    cmds:
+      - task: client:generate
+      - task: build
+
+  # Installation
+  install:
+    desc: Install tero CLI to GOPATH
+    deps: [build]
+    cmds:
+      - go install cmd/tero/main.go
+
+  # Clean
+  clean:
+    desc: Clean build artifacts and Go caches
+    cmds:
+      - rm -f bin/tero
+      - go clean -cache -testcache -modcache
+      - 'echo "Cleaned: binary and Go caches"'
+
+  reset:
+    desc: Reset development environment (logs and preferences)
+    cmds:
+      - rm -f /tmp/tero.log
+      - rm -rf ~/.tero/
+      - rm -rf ~/.config/tero/
+      - 'echo "Reset: logs and preferences cleared"'

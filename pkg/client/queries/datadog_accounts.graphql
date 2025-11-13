@@ -1,0 +1,71 @@
+query GetAccount($id: ID!) {
+    accounts(where: { id: $id }, first: 1) {
+        edges {
+            node {
+                id
+                datadogAccount {
+                    id
+                    name
+                    site
+                }
+            }
+        }
+    }
+}
+
+mutation CreateDatadogAccountWithCredentials(
+    $input: CreateDatadogAccountWithCredentialsInput!
+) {
+    createDatadogAccount(input: $input) {
+        id
+        name
+        site
+        createdAt
+        updatedAt
+    }
+}
+
+mutation ValidateDatadogApiKey($input: ValidateDatadogApiKeyInput!) {
+    validateDatadogApiKey(input: $input) {
+        valid
+        error
+    }
+}
+
+query GetDatadogAccountServiceDiscoveryProgress($id: ID!) {
+    datadogAccounts(where: { id: $id }, first: 1) {
+        edges {
+            node {
+                id
+                serviceDiscoveryProgress {
+                    status
+                    servicesDiscovered
+                    lastError
+                    startedAt
+                    completedAt
+                    consecutiveFailures
+                }
+            }
+        }
+    }
+}
+
+query GetDatadogAccountLogDiscoveryProgress($id: ID!) {
+    datadogAccounts(where: { id: $id }, first: 1) {
+        edges {
+            node {
+                id
+                logEventDiscoveryProgress {
+                    status
+                    percentComplete
+                    weeklyVolume
+                    weeklyDiscoveredVolume
+                    lastError
+                    startedAt
+                    completedAt
+                    consecutiveFailures
+                }
+            }
+        }
+    }
+}

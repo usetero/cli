@@ -1,0 +1,30 @@
+query ListOrganizations {
+    organizations {
+        edges {
+            node {
+                id
+                name
+                createdAt
+            }
+        }
+        totalCount
+    }
+}
+
+mutation CreateOrganizationAndBootstrap($input: CreateOrganizationInput!) {
+    createOrganizationAndBootstrap(input: $input) {
+        organization {
+            id
+            name
+            createdAt
+        }
+        account {
+            id
+            name
+        }
+        workspace {
+            id
+            name
+        }
+    }
+}

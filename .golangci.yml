@@ -1,0 +1,87 @@
+---
+# GolangCI-Lint configuration for Tero CLI
+# Focuses on catching real issues while avoiding noise
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    # Core static analysis (essential)
+    - errcheck # Unchecked errors
+    - govet # Standard vet checks
+    - staticcheck # Advanced static analysis
+    - unused # Unused code
+    - ineffassign # Ineffectual assignments
+
+    # Code quality and style
+    - misspell # Common misspellings
+    - unconvert # Unnecessary type conversions
+    - wastedassign # Wasted assignments
+
+    # Bug detection
+    - bodyclose # HTTP response body not closed
+    - noctx # HTTP requests without context
+    - rowserrcheck # SQL rows.Err() not checked
+    - copyloopvar # Loop variable copying (Go 1.22+)
+
+    # Error handling
+    - errorlint # Error wrapping issues
+    - errname # Error naming conventions
+
+    # Interface and type safety
+    - forcetypeassert # Type assertion checking
+
+    # Additional valuable checks
+    - nilerr # Finds code that returns nil even if it checks that error is not nil
+    - nolintlint # Reports ill-formed or insufficient nolint directives
+    - usestdlibvars # Detects possibility to use variables/constants from stdlib
+
+linters-settings:
+  errcheck:
+    # Don't require error checks for these functions where it's reasonable to ignore
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # Can be noisy and performance impact is usually minimal
+      - shadow # Can be overly strict
+
+  staticcheck:
+    checks: ["all"]
+
+  nolintlint:
+    # Require explanation for nolint directives
+    require-explanation: true
+    # Require specific linter names in nolint directives
+    require-specific: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Allow security issues in test files
+    - path: '.*_test\.go$'
+      linters: [gosec]
+
+    # Allow unchecked type assertions in test files
+    - path: '.*_test\.go$'
+      linters: [forcetypeassert]
+
+    # Skip generated files entirely
+    - path: 'pkg/client/generated\.go$'
+      linters: [all]
+
+    # Allow unused parameters in interfaces
+    - text: "`(ctx|logger)` is unused"
+      linters: [unused]
+
+severity:
+  default: error

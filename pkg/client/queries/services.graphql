@@ -1,0 +1,65 @@
+# Query to list all services with basic information
+query ListServices {
+    services(first: 100) {
+        edges {
+            node {
+                id
+                name
+                description
+                enabled
+                createdAt
+                updatedAt
+            }
+        }
+        totalCount
+    }
+}
+
+# Query to get detailed information about a specific service by ID
+query GetService($id: ID!) {
+    node(id: $id) {
+        ... on Service {
+            id
+            name
+            description
+            enabled
+            createdAt
+            updatedAt
+            account {
+                id
+                name
+            }
+            logEvents {
+                id
+                name
+                description
+                createdAt
+            }
+        }
+    }
+}
+
+# Query to get service by name
+query GetServiceByName($name: String!) {
+    services(where: { name: $name }, first: 1) {
+        edges {
+            node {
+                id
+                name
+                description
+                enabled
+                createdAt
+                updatedAt
+            }
+        }
+    }
+}
+
+# Mutation to enable a service for analysis
+mutation EnableService($serviceId: ID!) {
+    updateService(id: $serviceId, input: { enabled: true }) {
+        id
+        name
+        enabled
+    }
+}
