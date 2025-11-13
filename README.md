@@ -1,21 +1,21 @@
 # Tero CLI
 
-Interactive terminal interface for the Tero observability control plane.
+Improve your observability data quality from the terminal.
 
 *Built by the creators of [Vector.dev](https://vector.dev).*
 
 ## What is this?
 
-`tero` is the terminal interface for the Tero observability control plane.
+Tero helps you find and fix waste in your observability data.
 
 Connect your Datadog account (read-only) and Tero will:
 - Understand what your logs mean semantically - patterns, quality, value
-- Identify waste - typically 40%+ of volume that's safe to drop
-- Help you remove it with one-click actions - only what won't hurt you
+- Identify waste - typically 40%+ of volume that doesn't help during incidents
+- Help you remove it with informed actions - only what won't hurt you
 
-**If someone sent you here:** They found waste in one of your services and want you to take a look. The CLI walks you through what we found and helps you fix it.
+**If someone sent you here:** Your team lead or SRE found waste in one of your services. The CLI will show you exactly what patterns are wasteful and why, then help you fix them. Takes 10 minutes.
 
-**If you're evaluating Tero:** This CLI is how you interact with the platform. Install it, connect your Datadog account, see what we find. Takes 5 minutes.
+**If you're evaluating Tero:** This is how you interact with the platform. Install it, connect your Datadog account, see what we find. Takes 5 minutes.
 
 ## Quick Start
 
@@ -41,6 +41,8 @@ After that, just run `tero` anytime to explore waste, check status, or take acti
 ## What does it do?
 
 `tero` is an interactive chat interface. Ask questions, get answers about your observability data.
+
+The CLI doesn't just identify waste—it teaches you what makes observability data valuable. Each recommendation explains why something is or isn't useful during incidents, helping your team get better at instrumentation over time.
 
 **Common workflows:**
 
@@ -113,7 +115,10 @@ This log is emitted from src/middleware/logger.ts - want me to help you remove i
 
 > yes
 
-[Opens your editor to remove the logging statement]
+[Scanning your local repository for the logging statement...]
+Found in src/middleware/logger.ts:45
+
+[Opens your editor with the change ready to review]
 
 Done. Blocked in Datadog and removed from code. Want to see the next waste pattern?
 ```
@@ -127,6 +132,14 @@ Done. Blocked in Datadog and removed from code. Want to see the next waste patte
 **No infrastructure changes:** No agents to install. No collector configs to update. No deployment required. Just a read-only API connection.
 
 **Opt-in actions:** When you choose to block waste, we configure your existing tools (Datadog exclusion rules, code changes, etc.). Everything is reversible.
+
+## What This Isn't
+
+**Not a cost-cutting tool.** Tero helps you improve observability quality. Reduced costs are a side effect of better data.
+
+**Not a pipeline.** We don't route, sample, or transform your data in flight. We analyze what you have and help you improve it at the source.
+
+**Not automatic.** We never drop data without your explicit approval. You're in control of every action.
 
 ## Common Questions
 
