@@ -29,7 +29,6 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    if: contains(github.actor, '[bot]') || github.ref == 'refs/heads/master' || contains(github.event.pull_request.labels.*.name, 'ci')
     steps:
       - name: Generate a token
         id: generate-token
