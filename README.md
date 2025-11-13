@@ -22,6 +22,7 @@ Connect your Datadog account (read-only) and Tero will:
 **Install:**
 
 ```bash
+brew tap usetero/tap
 brew install tero
 ```
 

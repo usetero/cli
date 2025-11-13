@@ -24,15 +24,13 @@ builds:
 
 archives:
   - id: tero
-    format: tar.gz
     name_template: "tero_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE*
       - README*
       - CHANGELOG*
+    # format defaults to tar.gz, zip for windows
+    rlcp: true
 
 checksum:
   name_template: "checksums.txt"
@@ -49,7 +47,8 @@ changelog:
       - Merge branch
 
 brews:
-  - repository:
+  - name: tero
+    repository:
       owner: usetero
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
