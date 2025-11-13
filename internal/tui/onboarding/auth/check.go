@@ -6,10 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
-<<<<<<< HEAD
-	"github.com/charmbracelet/lipgloss/v2"
-=======
->>>>>>> 17e8dd9 (chore: initial commit)
 	authservice "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -154,26 +150,6 @@ func (s *CheckAuthStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the check UI
 func (s *CheckAuthStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	if s.checking {
-		return titleStyle.Render("Checking authentication...")
-	}
-
-	if s.hasValidAuth {
-		successStyle := lipgloss.NewStyle().
-			Foreground(theme.Success).
-			Bold(true)
-		return successStyle.Render("✓ Already authenticated")
-	}
-
-	return titleStyle.Render("No authentication found")
-=======
 	common := styles.Common()
 
 	if s.checking {
@@ -185,7 +161,6 @@ func (s *CheckAuthStep) View() string {
 	}
 
 	return common.Title.Render("No authentication found")
->>>>>>> 17e8dd9 (chore: initial commit)
 }
 
 // SetSize sets the width available for rendering

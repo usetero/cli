@@ -6,10 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
-<<<<<<< HEAD
-	"github.com/charmbracelet/lipgloss/v2"
-=======
->>>>>>> 17e8dd9 (chore: initial commit)
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/keymap"
@@ -151,26 +147,6 @@ func (s *CheckDatadogStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the check UI
 func (s *CheckDatadogStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	if s.checking {
-		return titleStyle.Render("Checking Datadog account...")
-	}
-
-	if s.hasDatadog {
-		successStyle := lipgloss.NewStyle().
-			Foreground(theme.Success).
-			Bold(true)
-		return successStyle.Render("✓ Datadog account found")
-	}
-
-	return titleStyle.Render("No Datadog account found")
-=======
 	common := styles.Common()
 
 	if s.checking {
@@ -182,7 +158,6 @@ func (s *CheckDatadogStep) View() string {
 	}
 
 	return common.Title.Render("No Datadog account found")
->>>>>>> 17e8dd9 (chore: initial commit)
 }
 
 // SetSize sets the width available for rendering

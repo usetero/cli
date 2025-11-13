@@ -8,10 +8,11 @@ import (
 	"github.com/usetero/cli/internal/tui"
 )
 
-func NewRootCmd(logger log.Logger) *cobra.Command {
+func NewRootCmd(logger log.Logger, version string) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "tero",
-		Short: "Tero - Your telemetry quality platform",
+		Use:     "tero",
+		Short:   "Tero - Your telemetry quality platform",
+		Version: version,
 		Long: `Tero is a telemetry quality platform that helps you understand and improve
 your observability data across all your tools.
 

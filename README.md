@@ -176,4 +176,4 @@ Tero is different. We understand what your data means, identify what's wrong, an
 
 ---
 
-**Copyright © 2025 Tero, Inc.**
+**Copyright © 2025 Tero Edge, Inc.**

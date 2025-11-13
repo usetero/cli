@@ -1,0 +1,69 @@
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+
+builds:
+  - id: tero
+    main: ./cmd/tero
+    binary: tero
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - id: tero
+    format: tar.gz
+    name_template: "tero_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - repository:
+      owner: usetero
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://usetero.com"
+    description: "Improve your observability data quality from the terminal"
+    license: "Apache-2.0"
+    install: |
+      bin.install "tero"
+    test: |
+      system "#{bin}/tero", "--version"
+
+release:
+  github:
+    owner: usetero
+    name: cli
+  name_template: "v{{.Version}}"

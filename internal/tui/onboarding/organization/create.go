@@ -177,34 +177,11 @@ func (s *CreateStep) createOrganization(name string) tea.Cmd {
 
 // View renders the create organization UI
 func (s *CreateStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-=======
 	common := styles.Common()
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-<<<<<<< HEAD
-			titleStyle.Render("Creating organization..."),
-		)
-	}
-
-	title := titleStyle.Render("Create a new organization")
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-	subtitle := subtitleStyle.Render("Enter your organization name")
-
-	helpStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-	help := helpStyle.Render("This will be your default workspace")
-=======
 			common.Title.Render("Creating organization..."),
 		)
 	}
@@ -212,7 +189,6 @@ func (s *CreateStep) View() string {
 	title := common.Title.Render("Create a new organization")
 	subtitle := common.Subtitle.Render("Enter your organization name")
 	help := common.Help.Render("This will be your default workspace")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

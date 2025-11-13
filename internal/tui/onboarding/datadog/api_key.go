@@ -230,21 +230,6 @@ func (s *APIKeyStep) validateAPIKey(apiKey string) tea.Cmd {
 
 // View renders the Datadog API key step UI
 func (s *APIKeyStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	helpStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-
-	successStyle := lipgloss.NewStyle().
-		Foreground(theme.Success).
-		Bold(true)
-
-	// Show success state
-	if s.validated {
-		title := successStyle.Render("✓ Datadog API key verified!")
-		help := helpStyle.Render("Press Enter to continue")
-=======
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
@@ -252,7 +237,6 @@ func (s *APIKeyStep) View() string {
 	if s.validated {
 		title := common.Success.Render("✓ Datadog API key verified!")
 		help := common.Help.Render("Press Enter to continue")
->>>>>>> 17e8dd9 (chore: initial commit)
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
@@ -276,33 +260,13 @@ func (s *APIKeyStep) View() string {
 		)
 	}
 
-<<<<<<< HEAD
-	stepTitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-	stepTitle := stepTitleStyle.Render("Step 2 of 3: Get your API key")
-
-	urlStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-=======
 	stepTitle := common.Title.Render("Step 2 of 3: Get your API key")
->>>>>>> 17e8dd9 (chore: initial commit)
 	url := ddvendor.GetAPIKeyURL(s.site)
 
 	// Interstitial screen
 	if !s.showingInput {
-<<<<<<< HEAD
-		subtitleStyle := lipgloss.NewStyle().
-			Foreground(theme.Text)
-		subtitle := subtitleStyle.Render("Datadog uses two keys for access. First, your API key:")
-
-		instructionStyle := lipgloss.NewStyle().
-			Foreground(theme.Primary)
-		instruction := instructionStyle.Render("Press Enter to open in browser, or press 'c' to copy the URL")
-=======
 		subtitle := common.Body.Render("Datadog uses two keys for access. First, your API key:")
 		instruction := common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -310,48 +274,26 @@ func (s *APIKeyStep) View() string {
 			"",
 			subtitle,
 			"",
-<<<<<<< HEAD
-			urlStyle.Render("  "+url),
-=======
 			common.URL.Render("  "+url),
->>>>>>> 17e8dd9 (chore: initial commit)
 			"",
 			instruction,
 		)
 	}
 
 	// Input screen
-<<<<<<< HEAD
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	var statusLine string
-	if s.copiedURL {
-		copyStyle := lipgloss.NewStyle().
-			Foreground(theme.Success)
-		statusLine = copyStyle.Render("✓ URL copied to clipboard")
-	}
-
-	subtitle := subtitleStyle.Render("Create an API key in Datadog, then paste it here:")
-=======
 	var statusLine string
 	if s.copiedURL {
 		statusLine = common.Success.Render("✓ URL copied to clipboard")
 	}
 
 	subtitle := common.Body.Render("Create an API key in Datadog, then paste it here:")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	parts := []string{
 		stepTitle,
 		"",
 		subtitle,
 		"",
-<<<<<<< HEAD
-		urlStyle.Render("  " + url),
-=======
 		common.URL.Render("  " + url),
->>>>>>> 17e8dd9 (chore: initial commit)
 	}
 
 	if statusLine != "" {

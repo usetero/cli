@@ -82,3 +82,30 @@ tasks:
       - rm -rf ~/.tero/
       - rm -rf ~/.config/tero/
       - 'echo "Reset: logs and preferences cleared"'
+
+  # Release tasks
+  build:version:
+    desc: Build with version information injected (same as CI)
+    cmds:
+      - |
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        go build -ldflags "-X main.version=${VERSION}" -o bin/tero cmd/tero/main.go
+        echo "Built tero ${VERSION}"
+
+  release:check:
+    desc: Check recent commits follow conventional commit format
+    cmds:
+      - |
+        echo "Recent commits (should follow conventional commit format):"
+        git log --oneline -10
+        echo ""
+        echo "Valid prefixes: feat, fix, chore, docs, refactor, test, ci, perf, revert"
+        echo "Example: feat: add new feature"
+
+  release:snapshot:
+    desc: Test GoReleaser build locally without publishing
+    cmds:
+      - goreleaser release --snapshot --clean --skip=publish
+      - echo ""
+      - echo "Build artifacts in dist/ directory"
+      - ls -lh dist/*.tar.gz dist/*.zip 2>/dev/null || true

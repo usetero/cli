@@ -161,37 +161,17 @@ func (s *CreateStep) createAccount(name string) tea.Cmd {
 
 // View renders the create account UI
 func (s *CreateStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-=======
 	common := styles.Common()
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-<<<<<<< HEAD
-			titleStyle.Render("Creating account..."),
-		)
-	}
-
-	title := titleStyle.Render("Create a new account")
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-	subtitle := subtitleStyle.Render("Enter your account name")
-=======
 			common.Title.Render("Creating account..."),
 		)
 	}
 
 	title := common.Title.Render("Create a new account")
 	subtitle := common.Subtitle.Render("Enter your account name")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	// Input with cursor marker
 	inputCursor := s.input.Cursor()
@@ -207,13 +187,7 @@ func (s *CreateStep) View() string {
 		inputLine = inputView
 	}
 
-<<<<<<< HEAD
-	helpStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-	help := helpStyle.Render("This groups your observability tools and services")
-=======
 	help := common.Help.Render("This groups your observability tools and services")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

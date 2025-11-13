@@ -14,10 +14,7 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/components/progress"
 	"github.com/usetero/cli/internal/tui/keymap"
-<<<<<<< HEAD
-=======
 	"github.com/usetero/cli/internal/tui/onboarding/complete"
->>>>>>> 17e8dd9 (chore: initial commit)
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/styles"
 )
@@ -244,27 +241,11 @@ func (s *DiscoveryStep) View() string {
 
 // renderLoading renders the initial loading state
 func (s *DiscoveryStep) renderLoading(theme *styles.Theme) string {
-<<<<<<< HEAD
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Text).
-		Bold(true)
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-
-	statusStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	title := titleStyle.Render("Understanding your log patterns and identifying waste...")
-	subtitle := subtitleStyle.Render("This may take a few minutes depending on volume.")
-	statusMsg := s.spinner.View() + " " + statusStyle.Render("Connecting to Datadog...")
-=======
 	common := styles.Common()
 
 	title := common.Body.Bold(true).Render("Understanding your log patterns and identifying waste...")
 	subtitle := common.Subtitle.Render("This may take a few minutes depending on volume.")
 	statusMsg := s.spinner.View() + " " + common.Body.Render("Connecting to Datadog...")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -278,18 +259,6 @@ func (s *DiscoveryStep) renderLoading(theme *styles.Theme) string {
 
 // renderError renders the error state
 func (s *DiscoveryStep) renderError(theme *styles.Theme) string {
-<<<<<<< HEAD
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-	errorStyle := lipgloss.NewStyle().Foreground(theme.Error)
-
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		titleStyle.Render("Analyzing your top services for waste..."),
-		"",
-		errorStyle.Render("Error: "+s.err.Error()),
-=======
 	common := styles.Common()
 
 	return lipgloss.JoinVertical(
@@ -297,34 +266,15 @@ func (s *DiscoveryStep) renderError(theme *styles.Theme) string {
 		common.Title.Render("Analyzing your top services for waste..."),
 		"",
 		common.Error.Render("Error: "+s.err.Error()),
->>>>>>> 17e8dd9 (chore: initial commit)
 	)
 }
 
 // renderInProgress renders the discovery in progress state
 func (s *DiscoveryStep) renderInProgress(theme *styles.Theme) string {
-<<<<<<< HEAD
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Text).
-		Bold(true)
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-
-	statusStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	infoStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-
-	title := titleStyle.Render("Understanding your log patterns and identifying waste...")
-	subtitle := subtitleStyle.Render("This may take a few minutes depending on volume.")
-=======
 	common := styles.Common()
 
 	title := common.Body.Bold(true).Render("Understanding your log patterns and identifying waste...")
 	subtitle := common.Subtitle.Render("This may take a few minutes depending on volume.")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	// Create progress bar with gradient - match content width
 	prog := progress.New(60)
@@ -332,15 +282,9 @@ func (s *DiscoveryStep) renderInProgress(theme *styles.Theme) string {
 
 	// Format log counts with spinner
 	logCounts := s.formatLogCounts()
-<<<<<<< HEAD
-	statusMsg := s.spinner.View() + " " + statusStyle.Render(logCounts)
-
-	info := infoStyle.Render(`
-=======
 	statusMsg := s.spinner.View() + " " + common.Body.Render(logCounts)
 
 	info := common.Help.Render(`
->>>>>>> 17e8dd9 (chore: initial commit)
 What you'll see next: Waste patterns we found, what's safe to remove,
 and one-click actions to improve quality.`)
 
@@ -417,13 +361,8 @@ func (s *DiscoveryStep) Error() error {
 
 // Next returns the next step after discovery
 func (s *DiscoveryStep) Next() step.Step {
-<<<<<<< HEAD
-	// TODO: Implement next step - transition to app mode
-	return nil
-=======
 	// Show completion message
 	return complete.NewCompleteStep(s.logger, s.globalBindings)
->>>>>>> 17e8dd9 (chore: initial commit)
 }
 
 // Help returns the key bindings for this step

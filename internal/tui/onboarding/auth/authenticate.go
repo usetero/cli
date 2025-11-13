@@ -231,36 +231,6 @@ func (s *AuthenticateStep) pollForAuth() tea.Cmd {
 
 // View renders the auth step
 func (s *AuthenticateStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	urlStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-
-	actionStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary)
-
-	mutedStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-
-	errorStyle := lipgloss.NewStyle().Foreground(theme.Error)
-	successStyle := lipgloss.NewStyle().Foreground(theme.Success)
-
-	switch s.state {
-	case stateInitializing:
-		return titleStyle.Render("Initializing authentication...")
-
-	case stateReady:
-		if s.deviceAuth == nil {
-			return titleStyle.Render("Loading...")
-=======
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
@@ -273,27 +243,17 @@ func (s *AuthenticateStep) View() string {
 	case stateReady:
 		if s.deviceAuth == nil {
 			return common.Title.Render("Loading...")
->>>>>>> 17e8dd9 (chore: initial commit)
 		}
 
 		var parts []string
 
 		// Title
-<<<<<<< HEAD
-		parts = append(parts, titleStyle.Render("Authenticate with Tero"), "")
-
-		// URL
-		parts = append(parts,
-			subtitleStyle.Render("Visit this URL to sign in:"),
-			urlStyle.Render(s.deviceAuth.VerificationURIComplete),
-=======
 		parts = append(parts, common.Title.Render("Authenticate with Tero"), "")
 
 		// URL
 		parts = append(parts,
 			common.Body.Render("Visit this URL to sign in:"),
 			common.URL.Render(s.deviceAuth.VerificationURIComplete),
->>>>>>> 17e8dd9 (chore: initial commit)
 			"",
 		)
 
@@ -301,29 +261,17 @@ func (s *AuthenticateStep) View() string {
 		if s.polling {
 			parts = append(parts, s.spinner.View()+" "+mutedStyle.Render("Waiting for authentication..."))
 		} else if s.openFailed {
-<<<<<<< HEAD
-			parts = append(parts, errorStyle.Render("Couldn't open browser. Press 'c' to copy URL"))
-		} else if s.copiedToClipboard {
-			parts = append(parts, successStyle.Render("✓ URL copied to clipboard"))
-		} else {
-			parts = append(parts, actionStyle.Render("Press Enter to open in browser, or press 'c' to copy the URL"))
-=======
 			parts = append(parts, common.Error.Render("Couldn't open browser. Press 'c' to copy URL"))
 		} else if s.copiedToClipboard {
 			parts = append(parts, common.Success.Render("✓ URL copied to clipboard"))
 		} else {
 			parts = append(parts, common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL"))
->>>>>>> 17e8dd9 (chore: initial commit)
 		}
 
 		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 
 	case stateComplete:
-<<<<<<< HEAD
-		return titleStyle.Render("✓ Authentication successful!")
-=======
 		return common.Title.Render("✓ Authentication successful!")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	default:
 		return ""

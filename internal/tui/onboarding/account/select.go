@@ -232,24 +232,10 @@ func (s *SelectStep) View() string {
 		return s.remoteList.View()
 	}
 
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	title := titleStyle.Render("Select your account")
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-	subtitle := subtitleStyle.Render("This groups your observability tools and services")
-=======
 	common := styles.Common()
 
 	title := common.Title.Render("Select your account")
 	subtitle := common.Subtitle.Render("This groups your observability tools and services")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
