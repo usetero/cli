@@ -20,11 +20,11 @@ tasks:
   build:
     desc: Build the tero CLI binary
     cmds:
-      - go build -o bin/tero cmd/tero/main.go
+      - go build -o tero cmd/tero/main.go
     sources:
       - "**/*.go"
     generates:
-      - "bin/tero"
+      - "tero"
 
   # Development tasks
   run:
@@ -71,7 +71,8 @@ tasks:
   clean:
     desc: Clean build artifacts and Go caches
     cmds:
-      - rm -f bin/tero
+      - rm -f tero
+      - rm -rf dist/
       - go clean -cache -testcache -modcache
       - 'echo "Cleaned: binary and Go caches"'
 
@@ -89,7 +90,7 @@ tasks:
     cmds:
       - |
         VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-        go build -ldflags "-X main.version=${VERSION}" -o bin/tero cmd/tero/main.go
+        go build -ldflags "-X main.version=${VERSION}" -o tero cmd/tero/main.go
         echo "Built tero ${VERSION}"
 
   release:check:
