@@ -54,6 +54,14 @@ tasks:
       - golangci-lint run ./...
       - task: test
 
+  signoff:
+    desc: Full validation before push (format, lint, test, build)
+    aliases: ["sign", "s"]
+    cmds:
+      - task: do
+      - task: build
+      - gh signoff
+
   dev:
     desc: Generate client and build
     cmds:
