@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-# cli
-Command-line interface for the Tero control plane
-=======
->>>>>>> 17e8dd9 (chore: initial commit)
 # Tero CLI
 
 Interactive terminal interface for the Tero observability control plane.
@@ -171,7 +164,3 @@ Tero is different. We understand what your data means, identify what's wrong, an
 ---
 
 **Copyright © 2025 Tero, Inc.**
-<<<<<<< HEAD
-=======
->>>>>>> 351dd38 (chore: initial commit)
->>>>>>> 17e8dd9 (chore: initial commit)
