@@ -32,13 +32,13 @@ jobs:
     steps:
       - name: Generate a token
         id: generate-token
-        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
           private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ steps.generate-token.outputs.token }}
       - uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1

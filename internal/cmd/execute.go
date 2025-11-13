@@ -9,7 +9,7 @@ import (
 )
 
 // Execute runs the root command
-func Execute() {
+func Execute(version string) {
 	// Create logger once at the top level
 	logger := log.New()
 
@@ -21,7 +21,7 @@ func Execute() {
 		}
 	}()
 
-	rootCmd := NewRootCmd(logger)
+	rootCmd := NewRootCmd(logger, version)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

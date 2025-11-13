@@ -146,28 +146,12 @@ func (s *SelectRegionStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the region selection UI
 func (s *SelectRegionStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	header := RenderHeader()
-
-	stepTitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	stepTitle := stepTitleStyle.Render("Step 1 of 3: Select your region")
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
-	subtitle := subtitleStyle.Render("Select the region that matches your Datadog URL:")
-=======
 	common := styles.Common()
 
 	header := RenderHeader()
 
 	stepTitle := common.Title.Render("Step 1 of 3: Select your region")
 	subtitle := common.Help.Render("Select the region that matches your Datadog URL:")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,

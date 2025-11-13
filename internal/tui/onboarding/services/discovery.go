@@ -202,40 +202,17 @@ func (s *DiscoveryStep) checkDiscoveryStatus() tea.Cmd {
 
 // View renders the service discovery UI
 func (s *DiscoveryStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-
-	statusStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	title := titleStyle.Render("Discovering services...")
-	subtitle := subtitleStyle.Render("This usually takes 30-60 seconds.")
-=======
 	common := styles.Common()
 
 	title := common.Title.Render("Discovering services...")
 	subtitle := common.Subtitle.Render("This usually takes 30-60 seconds.")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	// Build status message with spinner and count
 	var statusMsg string
 	if s.serviceCount > 0 {
-<<<<<<< HEAD
-		statusMsg = s.spinner.View() + " " + statusStyle.Render(fmt.Sprintf("%d services discovered so far", s.serviceCount))
-	} else {
-		statusMsg = s.spinner.View() + " " + statusStyle.Render("Starting discovery...")
-=======
 		statusMsg = s.spinner.View() + " " + common.Body.Render(fmt.Sprintf("%d services discovered so far", s.serviceCount))
 	} else {
 		statusMsg = s.spinner.View() + " " + common.Body.Render("Starting discovery...")
->>>>>>> 17e8dd9 (chore: initial commit)
 	}
 
 	return lipgloss.JoinVertical(

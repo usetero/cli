@@ -178,20 +178,10 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the role selection UI.
 func (s *SelectStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	titleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-
-	title := titleStyle.Render("What's your role in this organization?")
-=======
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
 	title := common.Title.Render("What's your role in this organization?")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	// Options
 	options := []struct {
@@ -216,26 +206,11 @@ func (s *SelectStep) View() string {
 			nameStyle := lipgloss.NewStyle().
 				Foreground(theme.Primary).
 				Bold(true)
-<<<<<<< HEAD
-			descStyle := lipgloss.NewStyle().
-				Foreground(theme.TextMuted)
-
-			view = nameStyle.Render("> "+opt.name) + "\n  " + descStyle.Render(opt.description)
-		} else {
-			// Unselected option
-			nameStyle := lipgloss.NewStyle().
-				Foreground(theme.Text)
-			descStyle := lipgloss.NewStyle().
-				Foreground(theme.TextSubtle)
-
-			view = nameStyle.Render("  "+opt.name) + "\n  " + descStyle.Render(opt.description)
-=======
 
 			view = nameStyle.Render("> "+opt.name) + "\n  " + common.Help.Render(opt.description)
 		} else {
 			// Unselected option
 			view = common.Body.Render("  "+opt.name) + "\n  " + common.Subtitle.Render(opt.description)
->>>>>>> 17e8dd9 (chore: initial commit)
 		}
 		optionViews = append(optionViews, view)
 	}

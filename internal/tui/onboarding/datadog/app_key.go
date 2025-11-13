@@ -222,54 +222,23 @@ func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 
 // View renders the app key input UI
 func (s *AppKeyStep) View() string {
-<<<<<<< HEAD
-	theme := styles.CurrentTheme()
-
-	bodyStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-=======
 	common := styles.Common()
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			"",
-<<<<<<< HEAD
-			bodyStyle.Render("Creating Datadog account..."),
-		)
-	}
-
-	stepTitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary).
-		Bold(true)
-	stepTitle := stepTitleStyle.Render("Step 3 of 3: Create a service account")
-
-	urlStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle)
-=======
 			common.Body.Render("Creating Datadog account..."),
 		)
 	}
 
 	stepTitle := common.Title.Render("Step 3 of 3: Create a service account")
->>>>>>> 17e8dd9 (chore: initial commit)
 	url := ddvendor.GetAppKeyURL(s.site)
 
 	// Interstitial screen
 	if !s.showingInput {
-<<<<<<< HEAD
-		subtitleStyle := lipgloss.NewStyle().
-			Foreground(theme.Text)
-		subtitle := subtitleStyle.Render("Next, create a service account called \"Tero\" and copy its Application key:")
-
-		instructionStyle := lipgloss.NewStyle().
-			Foreground(theme.Primary)
-		instruction := instructionStyle.Render("Press Enter to open in browser, or press 'c' to copy the URL")
-=======
 		subtitle := common.Body.Render("Next, create a service account called \"Tero\" and copy its Application key:")
 		instruction := common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -277,48 +246,26 @@ func (s *AppKeyStep) View() string {
 			"",
 			subtitle,
 			"",
-<<<<<<< HEAD
-			urlStyle.Render("  "+url),
-=======
 			common.URL.Render("  "+url),
->>>>>>> 17e8dd9 (chore: initial commit)
 			"",
 			instruction,
 		)
 	}
 
 	// Input screen
-<<<<<<< HEAD
-	subtitleStyle := lipgloss.NewStyle().
-		Foreground(theme.Text)
-
-	var statusLine string
-	if s.copiedURL {
-		copyStyle := lipgloss.NewStyle().
-			Foreground(theme.Success)
-		statusLine = copyStyle.Render("✓ URL copied to clipboard")
-	}
-
-	subtitle := subtitleStyle.Render("Create a service account called \"Tero\", then paste its Application key here:")
-=======
 	var statusLine string
 	if s.copiedURL {
 		statusLine = common.Success.Render("✓ URL copied to clipboard")
 	}
 
 	subtitle := common.Body.Render("Create a service account called \"Tero\", then paste its Application key here:")
->>>>>>> 17e8dd9 (chore: initial commit)
 
 	parts := []string{
 		stepTitle,
 		"",
 		subtitle,
 		"",
-<<<<<<< HEAD
-		urlStyle.Render("  " + url),
-=======
 		common.URL.Render("  " + url),
->>>>>>> 17e8dd9 (chore: initial commit)
 	}
 
 	if statusLine != "" {
