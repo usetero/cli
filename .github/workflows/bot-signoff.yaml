@@ -23,6 +23,7 @@ name: bot-signoff
 
 env:
   GOPRIVATE: github.com/usetero/
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   validate:
