@@ -54,6 +54,12 @@ jobs:
       - run: git config user.name "github-actions[bot]"
       - run: git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Setup CI environment (if task exists)
+        run: |
+          if task --list | grep -q "ci:setup"; then
+            task ci:setup
+          fi
+
       - if: github.actor == 'renovate[bot]'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
