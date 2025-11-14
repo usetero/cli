@@ -9,6 +9,11 @@ name: conventional-pr
       - opened
       - edited
       - synchronize
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-pr:
     runs-on: ubuntu-latest
