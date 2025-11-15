@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/usetero/cli/compare/v1.1.0...v1.1.1) (2025-11-15)
+
+
+### Bug Fixes
+
+* remove invalid rlcp field from goreleaser config ([ebc1cc9](https://github.com/usetero/cli/commit/ebc1cc99641bff6bc82c8bdd58417ac371c65455))
+
 ## [1.1.0](https://github.com/usetero/cli/compare/v1.0.0...v1.1.0) (2025-11-15)
 
 
