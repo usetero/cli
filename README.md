@@ -22,6 +22,10 @@ Connect your Datadog account (read-only) and Tero will:
 **Install:**
 
 ```bash
+# Quick install (macOS and Linux)
+curl -sSfL https://sh.usetero.com | sh
+
+# Or with Homebrew
 brew tap usetero/tap
 brew install tero
 ```
