@@ -1,0 +1,74 @@
+---
+name: test-install
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/install.sh'
+      - '.github/workflows/test-install.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'scripts/install.sh'
+      - '.github/workflows/test-install.yml'
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck scripts/install.sh
+
+  test-install:
+    name: Test install script
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Test help
+        run: |
+          sh scripts/install.sh --help
+
+      - name: Test installation
+        run: |
+          export TERO_INSTALL_DIR="/tmp/tero-test"
+          sh scripts/install.sh -y
+
+          # Verify binary was installed
+          if [ ! -x "$TERO_INSTALL_DIR/tero" ]; then
+            echo "Error: tero binary not found at $TERO_INSTALL_DIR/tero"
+            exit 1
+          fi
+
+          # Verify it runs
+          "$TERO_INSTALL_DIR/tero" --version
+
+          echo "✓ Installation test passed on ${{ matrix.os }}"
+
+      - name: Test version override
+        run: |
+          export TERO_INSTALL_DIR="/tmp/tero-version-test"
+          rm -rf "$TERO_INSTALL_DIR"
+
+          # Install specific version (1.1.0)
+          sh scripts/install.sh --version=1.1.0 -y
+
+          # Verify installation
+          if [ ! -x "$TERO_INSTALL_DIR/tero" ]; then
+            echo "Error: tero binary not found"
+            exit 1
+          fi
+
+          "$TERO_INSTALL_DIR/tero" --version
+
+          echo "✓ Version override test passed"
