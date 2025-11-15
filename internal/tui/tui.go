@@ -84,10 +84,7 @@ type TUI struct {
 }
 
 // New creates a new TUI model
-func New(cfg *config.Config, logger log.Logger) tea.Model {
-	// API endpoint for control plane
-	apiEndpoint := "http://localhost:8081/graphql"
-
+func New(cfg *config.Config, apiEndpoint string, logger log.Logger) tea.Model {
 	// Create WorkOS client for authentication
 	workosClient := workos.NewClient(workosBaseURL, workosClientID)
 
