@@ -134,8 +134,6 @@ check_dependencies() {
 }
 
 get_latest_version() {
-  log_info "Fetching latest version..."
-
   # Try to get latest release from GitHub API
   LATEST_VERSION=$(curl -sSfL "$GITHUB_API/repos/$REPO/releases/latest" |
     grep '"tag_name":' |
