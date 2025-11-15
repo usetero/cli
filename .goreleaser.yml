@@ -65,3 +65,5 @@ release:
     owner: usetero
     name: cli
   name_template: "v{{.Version}}"
+  extra_files:
+    - glob: scripts/install.sh
