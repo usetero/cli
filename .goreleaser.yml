@@ -30,7 +30,6 @@ archives:
       - README*
       - CHANGELOG*
     # format defaults to tar.gz, zip for windows
-    rlcp: true
 
 checksum:
   name_template: "checksums.txt"
