@@ -47,11 +47,17 @@ tasks:
         fi
       - $(go env GOPATH)/bin/golangci-lint run ./...
 
+  lint:scripts:
+    desc: Lint shell scripts with shellcheck
+    cmds:
+      - shellcheck scripts/*.sh
+
   do:
     desc: Format, lint, and test
     cmds:
       - go fmt ./...
       - golangci-lint run ./...
+      - task: lint:scripts
       - task: test
 
   signoff:
@@ -118,3 +124,32 @@ tasks:
       - echo ""
       - echo "Build artifacts in dist/ directory"
       - ls -lh dist/*.tar.gz dist/*.zip 2>/dev/null || true
+
+  install:test:
+    desc: Test install.sh script with released version
+    cmds:
+      - |
+        echo "Testing install script..."
+        export TERO_INSTALL_DIR="/tmp/tero-install-test"
+        rm -rf "$TERO_INSTALL_DIR"
+
+        # Test help
+        sh scripts/install.sh --help
+
+        # Test actual installation with latest release
+        echo ""
+        echo "Installing latest release to $TERO_INSTALL_DIR..."
+        sh scripts/install.sh -y
+
+        # Verify installation
+        if [ -x "$TERO_INSTALL_DIR/tero" ]; then
+          echo ""
+          echo "✓ Installation successful!"
+          "$TERO_INSTALL_DIR/tero" --version
+        else
+          echo "✗ Installation failed"
+          exit 1
+        fi
+
+        # Cleanup
+        rm -rf "$TERO_INSTALL_DIR"
