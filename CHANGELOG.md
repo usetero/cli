@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.2.0](https://github.com/usetero/cli/compare/v1.1.1...v1.2.0) (2025-11-17)
+
+
+### Features
+
+* add install script for single-line installation ([d7ce2b4](https://github.com/usetero/cli/commit/d7ce2b4933b2b0b9593400dded9edad5a1910456))
+* make WorkOS client ID configurable via environment variable ([a719553](https://github.com/usetero/cli/commit/a719553606a81e2ed11a0c7e774deda90775ca5c))
+* show upgrade message when version changes ([ff72bc7](https://github.com/usetero/cli/commit/ff72bc77ef9ee3c057bcbc1333c4473090e2d68c))
+
+
+### Bug Fixes
+
+* enable staging WorkOS client ID by default for development ([981bce2](https://github.com/usetero/cli/commit/981bce2db95eabb79d946a2c5c59b230071fd9b5))
+* remove log output from get_latest_version function ([b253eec](https://github.com/usetero/cli/commit/b253eec6e3335bc9c8cf5ed3fd7c4525f7959ec1))
+
+
+### Reverts
+
+* remove separate test-install workflow ([69fabb6](https://github.com/usetero/cli/commit/69fabb6d4a29087f1be7b4fb3537601b7cf46293))
+
 ## [1.1.1](https://github.com/usetero/cli/compare/v1.1.0...v1.1.1) (2025-11-15)
 
 
