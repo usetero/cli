@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.3](https://github.com/usetero/cli/compare/v1.2.2...v1.2.3) (2025-11-17)
+
+
+### Bug Fixes
+
+* remove unsupported folder field from brews config ([bb5291e](https://github.com/usetero/cli/commit/bb5291e92506d02ffe27dca115fa4de080ed1389))
+
+
+### Reverts
+
+* install test should fail on errors, not swallow them ([ba4233e](https://github.com/usetero/cli/commit/ba4233e8df769609e3279fad2137e695ae9e7315))
+
 ## [1.2.2](https://github.com/usetero/cli/compare/v1.2.1...v1.2.2) (2025-11-17)
 
 
