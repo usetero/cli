@@ -47,6 +47,7 @@ changelog:
 
 brews:
   - name: tero
+    directory: Formula
     repository:
       owner: usetero
       name: homebrew-tap
