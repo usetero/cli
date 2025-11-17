@@ -159,20 +159,16 @@ tasks:
         # Test actual installation with latest release
         echo ""
         echo "Installing latest release to $TERO_INSTALL_DIR..."
-        if sh scripts/install.sh -y; then
-          # Verify installation
-          if [ -x "$TERO_INSTALL_DIR/tero" ]; then
-            echo ""
-            echo "✓ Installation successful!"
-            "$TERO_INSTALL_DIR/tero" --version
-          else
-            echo "✗ Installation verification failed"
-            exit 1
-          fi
+        sh scripts/install.sh -y
+
+        # Verify installation
+        if [ -x "$TERO_INSTALL_DIR/tero" ]; then
+          echo ""
+          echo "✓ Installation successful!"
+          "$TERO_INSTALL_DIR/tero" --version
         else
-          echo "⚠ Install script failed (release may not have archives yet)"
-          echo "This is expected if the release was just created"
-          exit 0
+          echo "✗ Installation failed"
+          exit 1
         fi
 
         # Cleanup
