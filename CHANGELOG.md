@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/usetero/cli/compare/v1.2.0...v1.2.1) (2025-11-17)
+
+
+### Bug Fixes
+
+* use 'folder' instead of deprecated 'directory' in goreleaser ([0918ba4](https://github.com/usetero/cli/commit/0918ba40780bc206fd72ff9e1639fe980d063d09))
+
 ## [1.2.0](https://github.com/usetero/cli/compare/v1.1.1...v1.2.0) (2025-11-17)
 
 
