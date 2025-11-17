@@ -166,6 +166,17 @@ confirm_install() {
 }
 
 download_and_install() {
+  # Check if already installed
+  if [ -x "$INSTALL_DIR/$BINARY_NAME" ]; then
+    CURRENT_VERSION=$("$INSTALL_DIR/$BINARY_NAME" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+      log_info "Tero CLI v$VERSION is already installed"
+      log_info "Reinstalling..."
+    elif [ "$CURRENT_VERSION" != "unknown" ]; then
+      log_info "Upgrading from v$CURRENT_VERSION → v$VERSION"
+    fi
+  fi
+
   ARCHIVE_NAME="tero_${VERSION}_${OS}_${ARCH}.tar.gz"
   DOWNLOAD_URL="$GITHUB_DOWNLOAD/$REPO/releases/download/v${VERSION}/$ARCHIVE_NAME"
 
