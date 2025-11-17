@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/usetero/cli/compare/v1.2.1...v1.2.2) (2025-11-17)
+
+
+### Reverts
+
+* switch back from homebrew_casks to brews for CLI tool ([a3311ed](https://github.com/usetero/cli/commit/a3311ed78a780e1e5a647d10c56ebdb4a504e3ff))
+
 ## [1.2.1](https://github.com/usetero/cli/compare/v1.2.0...v1.2.1) (2025-11-17)
 
 
