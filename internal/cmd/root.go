@@ -31,7 +31,7 @@ Just run 'tero' to start an interactive chat session.`,
 			endpoint, _ := cmd.Flags().GetString("endpoint")
 
 			// Create and run the TUI
-			p := tea.NewProgram(tui.New(cfg, endpoint, logger))
+			p := tea.NewProgram(tui.New(cfg, endpoint, cliConfig.WorkOSClientID, logger))
 			if _, err := p.Run(); err != nil {
 				logger.Error("bubbletea program error", "error", err)
 				return err

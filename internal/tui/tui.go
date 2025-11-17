@@ -27,8 +27,7 @@ const (
 	minHeight = 24
 
 	// WorkOS authentication configuration
-	workosBaseURL  = "https://api.workos.com"
-	workosClientID = "client_01JQCC2CJMTB8AY2JRMZXFY9R1"
+	workosBaseURL = "https://api.workos.com"
 )
 
 var (
@@ -84,7 +83,7 @@ type TUI struct {
 }
 
 // New creates a new TUI model
-func New(cfg *config.Config, apiEndpoint string, logger log.Logger) tea.Model {
+func New(cfg *config.Config, apiEndpoint string, workosClientID string, logger log.Logger) tea.Model {
 	// Create WorkOS client for authentication
 	workosClient := workos.NewClient(workosBaseURL, workosClientID)
 
