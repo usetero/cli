@@ -45,20 +45,15 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
+homebrew_casks:
   - name: tero
     repository:
       owner: usetero
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    folder: Formula
     homepage: "https://usetero.com"
     description: "Improve your observability data quality from the terminal"
     license: "Apache-2.0"
-    install: |
-      bin.install "tero"
-    test: |
-      system "#{bin}/tero", "--version"
 
 release:
   github:
