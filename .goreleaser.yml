@@ -51,7 +51,6 @@ brews:
       owner: usetero
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    folder: Formula
     homepage: "https://usetero.com"
     description: "Improve your observability data quality from the terminal"
     license: "Apache-2.0"
