@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/usetero/cli/compare/v1.2.3...v1.2.4) (2025-11-19)
+
+
+### Bug Fixes
+
+* specify Formula directory in goreleaser brew config ([b64aa60](https://github.com/usetero/cli/commit/b64aa60139819804faaf24c061d57b1bb46aa45e))
+
 ## [1.2.3](https://github.com/usetero/cli/compare/v1.2.2...v1.2.3) (2025-11-17)
 
 
