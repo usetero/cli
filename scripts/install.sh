@@ -19,13 +19,12 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Parse command line arguments
-SKIP_PROMPTS=0
 REQUESTED_VERSION=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     -y|--yes)
-      SKIP_PROMPTS=1
+      # Accepted for backwards compatibility, but no longer needed
       shift
       ;;
     --version=*)
@@ -145,24 +144,6 @@ get_latest_version() {
   fi
 
   echo "$LATEST_VERSION"
-}
-
-confirm_install() {
-  if [ "$SKIP_PROMPTS" -eq 1 ]; then
-    return 0
-  fi
-
-  printf "Install Tero CLI %s to %s? [y/N] " "$VERSION" "$INSTALL_DIR"
-  read -r response
-  case "$response" in
-    [yY][eE][sS]|[yY])
-      return 0
-      ;;
-    *)
-      log_info "Installation cancelled"
-      exit 0
-      ;;
-  esac
 }
 
 download_and_install() {
@@ -294,7 +275,6 @@ main() {
     log_info "Latest version: $VERSION"
   fi
 
-  confirm_install
   download_and_install
   verify_installation
 }
