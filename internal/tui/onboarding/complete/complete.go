@@ -1,6 +1,8 @@
 package complete
 
 import (
+	"os"
+
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -10,6 +12,12 @@ import (
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/styles"
 )
+
+// shouldSkipToApp returns true if TERO_SKIP_TO_APP environment variable is set to "true"
+// This is a development flag to automatically transition to app mode after onboarding
+func shouldSkipToApp() bool {
+	return os.Getenv("TERO_SKIP_TO_APP") == "true"
+}
 
 // CompleteStep shows the onboarding completion message
 type CompleteStep struct {
@@ -76,8 +84,13 @@ func (s *CompleteStep) SetSize(width, height int) {
 	s.width = width
 }
 
-// IsComplete returns false - this step stays visible
+// IsComplete returns true if TERO_SKIP_TO_APP is enabled (development mode),
+// otherwise returns false to keep the completion message visible
 func (s *CompleteStep) IsComplete() bool {
+	if shouldSkipToApp() {
+		s.logger.Info("skip to app enabled, completing onboarding")
+		return true
+	}
 	return false
 }
 
