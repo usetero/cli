@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/usetero/cli/compare/v1.2.3...v1.3.0) (2025-12-03)
+
+
+### Features
+
+* **onboarding:** add TERO_SKIP_TO_APP env var to skip completion screen ([e948998](https://github.com/usetero/cli/commit/e948998013c54d3c9fec15af7f1f37cd22cea390))
+
+
+### Bug Fixes
+
+* **install:** remove confirmation prompt for piped installs ([7d1c86f](https://github.com/usetero/cli/commit/7d1c86fed11ff1198ebeb137e32aa1569d721b98))
+* specify Formula directory in goreleaser brew config ([b64aa60](https://github.com/usetero/cli/commit/b64aa60139819804faaf24c061d57b1bb46aa45e))
+
 ## [1.2.3](https://github.com/usetero/cli/compare/v1.2.2...v1.2.3) (2025-11-17)
 
 
