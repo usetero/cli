@@ -187,7 +187,7 @@ download_and_install() {
   mv "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
   chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
-  log_info "${GREEN}Successfully installed Tero CLI v${VERSION}!${NC}"
+  log_info "Successfully installed Tero CLI v${VERSION}!"
 }
 
 check_path() {
