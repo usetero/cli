@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/components/list"
+	"github.com/usetero/cli/internal/tui/components/loader"
 	"github.com/usetero/cli/internal/tui/components/remotelist"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
@@ -86,6 +87,7 @@ type SelectStep struct {
 	selectedWorkosOrgID string
 	tokenRefreshed      bool
 	refreshingToken     bool
+	refreshLoader       *loader.Component
 	width               int
 	globalBindings      []key.Binding
 }
@@ -181,7 +183,18 @@ func (s *SelectStep) selectOrg(orgID, workosOrgID string) tea.Cmd {
 	// Existing org needs token refresh
 	if workosOrgID != "" {
 		s.refreshingToken = true
-		return s.refreshToken()
+
+		// Create loader with org name
+		orgName := "organization"
+		for _, org := range s.orgs {
+			if org.ID == orgID {
+				orgName = org.Name
+				break
+			}
+		}
+		s.refreshLoader = loader.New("Selecting " + orgName)
+
+		return tea.Batch(s.refreshLoader.Init(), s.refreshToken())
 	}
 
 	// No workos org ID - skip refresh
@@ -192,6 +205,12 @@ func (s *SelectStep) selectOrg(orgID, workosOrgID string) tea.Cmd {
 // Update handles messages
 func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 	var cmds []tea.Cmd
+
+	// Update loader if refreshing
+	if s.refreshingToken && s.refreshLoader != nil {
+		loaderCmd := s.refreshLoader.Update(msg)
+		cmds = append(cmds, loaderCmd)
+	}
 
 	// Handle token refresh completion
 	switch msg := msg.(type) {
@@ -304,19 +323,8 @@ func (s *SelectStep) View() string {
 	}
 
 	// Show loading during token refresh (after auto-selection)
-	if s.refreshingToken {
-		// Find the selected org name
-		orgName := ""
-		for _, org := range s.orgs {
-			if org.ID == s.selectedOrgID {
-				orgName = org.Name
-				break
-			}
-		}
-		if orgName != "" {
-			return common.Body.Render("Selecting " + orgName + "...")
-		}
-		return common.Body.Render("Selecting organization...")
+	if s.refreshingToken && s.refreshLoader != nil {
+		return s.refreshLoader.View()
 	}
 
 	// Show error state
