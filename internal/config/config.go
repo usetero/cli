@@ -10,7 +10,8 @@ import (
 // Config is the Tero CLI configuration stored as YAML.
 // It implements the app.Store interface using a map-based structure for flexibility.
 type Config struct {
-	data map[string]interface{}
+	data      map[string]interface{}
+	namespace string
 }
 
 // Get retrieves a string value by key
@@ -61,25 +62,31 @@ func (c *Config) SetList(key string, values []string) {
 	c.data[key] = values
 }
 
-// Path returns the config file path (~/.tero/config.yaml)
-func Path() (string, error) {
+// configPath returns the config file path.
+// For production (empty namespace): ~/.tero/config.yaml
+// For other environments: ~/.tero/<namespace>/config.yaml
+func configPath(namespace string) (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".tero", "config.yaml"), nil
+	if namespace == "" {
+		return filepath.Join(homeDir, ".tero", "config.yaml"), nil
+	}
+	return filepath.Join(homeDir, ".tero", namespace, "config.yaml"), nil
 }
 
-// Load reads the config from disk
-func Load() (*Config, error) {
-	path, err := Path()
+// Load reads the config from disk.
+// If namespace is non-empty, config is stored separately (e.g., for non-production environments).
+func Load(namespace string) (*Config, error) {
+	path, err := configPath(namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return &Config{data: make(map[string]interface{})}, nil // Empty config if file doesn't exist
+		return &Config{data: make(map[string]interface{}), namespace: namespace}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -90,12 +97,12 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	return &Config{data: cfgData}, nil
+	return &Config{data: cfgData, namespace: namespace}, nil
 }
 
 // Save writes the config to disk
 func (c *Config) Save() error {
-	path, err := Path()
+	path, err := configPath(c.namespace)
 	if err != nil {
 		return err
 	}
