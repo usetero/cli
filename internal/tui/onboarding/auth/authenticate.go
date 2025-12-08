@@ -129,7 +129,19 @@ func (s *AuthenticateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		s.err = nil // Clear any previous error
 		s.logger.Info("device authorization started")
 		s.logger.Debug("device auth details", "user_code", s.deviceAuth.UserCode, "expires_in", s.deviceAuth.ExpiresIn)
-		return s, nil
+
+		// Auto-open browser and start polling
+		err := browser.OpenURL(s.deviceAuth.VerificationURIComplete)
+		if err != nil {
+			s.logger.Warn("failed to auto-open browser", "error", err)
+			s.openFailed = true
+			// Don't start polling yet - let user manually open or copy URL
+			return s, nil
+		}
+
+		s.logger.Debug("auto-opened browser for auth", "url", s.deviceAuth.VerificationURIComplete)
+		s.polling = true
+		return s, s.pollForAuth()
 
 	case authCompleteMsg:
 		s.polling = false
