@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/atotto/clipboard"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/pkg/browser"
+	"github.com/atotto/clipboard"
 	"github.com/usetero/cli/internal/api"
 	ddvendor "github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
@@ -166,7 +165,7 @@ func (s *APIKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		case "o":
 			// Open Datadog API key creation page
 			url := ddvendor.GetAPIKeyURL(s.site)
-			err := browser.OpenURL(url)
+			err := openBrowser(url)
 			if err != nil {
 				s.logger.Error("failed to open browser", "error", err, "url", url)
 			} else {
@@ -178,7 +177,7 @@ func (s *APIKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Interstitial screen: open browser and transition to input
 			if !s.showingInput {
 				url := ddvendor.GetAPIKeyURL(s.site)
-				err := browser.OpenURL(url)
+				err := openBrowser(url)
 				if err != nil {
 					s.logger.Error("failed to open browser", "error", err, "url", url)
 				} else {

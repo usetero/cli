@@ -3,13 +3,12 @@ package datadog
 import (
 	"context"
 
-	"github.com/atotto/clipboard"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/pkg/browser"
+	"github.com/atotto/clipboard"
 	"github.com/usetero/cli/internal/api"
 	ddvendor "github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
@@ -149,7 +148,7 @@ func (s *AppKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			if !s.creating && !s.created {
 				// Open Datadog Application key creation page
 				url := ddvendor.GetAppKeyURL(s.site)
-				err := browser.OpenURL(url)
+				err := openBrowser(url)
 				if err != nil {
 					s.logger.Error("failed to open browser", "error", err, "url", url)
 				} else {
@@ -162,7 +161,7 @@ func (s *AppKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Interstitial screen: open browser and transition to input
 			if !s.showingInput {
 				url := ddvendor.GetAppKeyURL(s.site)
-				err := browser.OpenURL(url)
+				err := openBrowser(url)
 				if err != nil {
 					s.logger.Error("failed to open browser", "error", err, "url", url)
 				} else {
