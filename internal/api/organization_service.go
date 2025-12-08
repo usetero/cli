@@ -48,8 +48,9 @@ func (s *OrganizationService) List(ctx context.Context) ([]Organization, error) 
 	orgs := make([]Organization, len(resp.Organizations.Edges))
 	for i, edge := range resp.Organizations.Edges {
 		orgs[i] = Organization{
-			ID:   edge.Node.Id,
-			Name: edge.Node.Name,
+			ID:                   edge.Node.Id,
+			Name:                 edge.Node.Name,
+			WorkosOrganizationID: edge.Node.WorkosOrganizationID,
 		}
 	}
 

@@ -730,14 +730,11 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeEdgeApiKey
 // GetServiceNodeEdgeInstance
 // GetServiceNodeLogEvent
-// GetServiceNodeLogEventVolume
 // GetServiceNodeLogRule
 // GetServiceNodeLogRuleDeployment
-// GetServiceNodeLogRuleVolume
 // GetServiceNodeMessage
 // GetServiceNodeOrganization
 // GetServiceNodeService
-// GetServiceNodeServiceLogVolume
 // GetServiceNodeTeam
 // GetServiceNodeWorkspace
 // The GraphQL type's documentation follows.
@@ -757,14 +754,11 @@ func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode
 func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()        {}
 func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()      {}
 func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()          {}
-func (v *GetServiceNodeLogEventVolume) implementsGraphQLInterfaceGetServiceNode()    {}
 func (v *GetServiceNodeLogRule) implementsGraphQLInterfaceGetServiceNode()           {}
 func (v *GetServiceNodeLogRuleDeployment) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeLogRuleVolume) implementsGraphQLInterfaceGetServiceNode()     {}
 func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()           {}
 func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()      {}
 func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()           {}
-func (v *GetServiceNodeServiceLogVolume) implementsGraphQLInterfaceGetServiceNode()  {}
 func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()              {}
 func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()         {}
 
@@ -803,17 +797,11 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	case "LogEvent":
 		*v = new(GetServiceNodeLogEvent)
 		return json.Unmarshal(b, *v)
-	case "LogEventVolume":
-		*v = new(GetServiceNodeLogEventVolume)
-		return json.Unmarshal(b, *v)
 	case "LogRule":
 		*v = new(GetServiceNodeLogRule)
 		return json.Unmarshal(b, *v)
 	case "LogRuleDeployment":
 		*v = new(GetServiceNodeLogRuleDeployment)
-		return json.Unmarshal(b, *v)
-	case "LogRuleVolume":
-		*v = new(GetServiceNodeLogRuleVolume)
 		return json.Unmarshal(b, *v)
 	case "Message":
 		*v = new(GetServiceNodeMessage)
@@ -823,9 +811,6 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "Service":
 		*v = new(GetServiceNodeService)
-		return json.Unmarshal(b, *v)
-	case "ServiceLogVolume":
-		*v = new(GetServiceNodeServiceLogVolume)
 		return json.Unmarshal(b, *v)
 	case "Team":
 		*v = new(GetServiceNodeTeam)
@@ -902,14 +887,6 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 			*GetServiceNodeLogEvent
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetServiceNodeLogEventVolume:
-		typename = "LogEventVolume"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventVolume
-		}{typename, v}
-		return json.Marshal(result)
 	case *GetServiceNodeLogRule:
 		typename = "LogRule"
 
@@ -924,14 +901,6 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeLogRuleDeployment
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogRuleVolume:
-		typename = "LogRuleVolume"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogRuleVolume
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeMessage:
@@ -956,14 +925,6 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeService
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeServiceLogVolume:
-		typename = "ServiceLogVolume"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeServiceLogVolume
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeTeam:
@@ -1046,14 +1007,6 @@ type GetServiceNodeLogEvent struct {
 // GetTypename returns GetServiceNodeLogEvent.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEvent) GetTypename() string { return v.Typename }
 
-// GetServiceNodeLogEventVolume includes the requested fields of the GraphQL type LogEventVolume.
-type GetServiceNodeLogEventVolume struct {
-	Typename string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventVolume.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventVolume) GetTypename() string { return v.Typename }
-
 // GetServiceNodeLogRule includes the requested fields of the GraphQL type LogRule.
 type GetServiceNodeLogRule struct {
 	Typename string `json:"__typename"`
@@ -1069,14 +1022,6 @@ type GetServiceNodeLogRuleDeployment struct {
 
 // GetTypename returns GetServiceNodeLogRuleDeployment.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogRuleDeployment) GetTypename() string { return v.Typename }
-
-// GetServiceNodeLogRuleVolume includes the requested fields of the GraphQL type LogRuleVolume.
-type GetServiceNodeLogRuleVolume struct {
-	Typename string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogRuleVolume.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogRuleVolume) GetTypename() string { return v.Typename }
 
 // GetServiceNodeMessage includes the requested fields of the GraphQL type Message.
 type GetServiceNodeMessage struct {
@@ -1181,14 +1126,6 @@ func (v *GetServiceNodeServiceLogEventsLogEvent) GetDescription() string { retur
 
 // GetCreatedAt returns GetServiceNodeServiceLogEventsLogEvent.CreatedAt, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeServiceLogEventsLogEvent) GetCreatedAt() time.Time { return v.CreatedAt }
-
-// GetServiceNodeServiceLogVolume includes the requested fields of the GraphQL type ServiceLogVolume.
-type GetServiceNodeServiceLogVolume struct {
-	Typename string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeServiceLogVolume.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceLogVolume) GetTypename() string { return v.Typename }
 
 // GetServiceNodeTeam includes the requested fields of the GraphQL type Team.
 type GetServiceNodeTeam struct {
@@ -1388,6 +1325,8 @@ type ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNo
 	Name string `json:"name"`
 	// When the organization was created
 	CreatedAt time.Time `json:"createdAt"`
+	// WorkOS organization ID for client-side auth token scoping
+	WorkosOrganizationID string `json:"workosOrganizationID"`
 }
 
 // GetId returns ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization.Id, and is useful for accessing the field via an interface.
@@ -1403,6 +1342,11 @@ func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEd
 // GetCreatedAt returns ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization.CreatedAt, and is useful for accessing the field via an interface.
 func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization) GetCreatedAt() time.Time {
 	return v.CreatedAt
+}
+
+// GetWorkosOrganizationID returns ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization.WorkosOrganizationID, and is useful for accessing the field via an interface.
+func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization) GetWorkosOrganizationID() string {
+	return v.WorkosOrganizationID
 }
 
 // ListOrganizationsResponse is returned by ListOrganizations on success.
@@ -2073,6 +2017,7 @@ query ListOrganizations {
 				id
 				name
 				createdAt
+				workosOrganizationID
 			}
 		}
 		totalCount
