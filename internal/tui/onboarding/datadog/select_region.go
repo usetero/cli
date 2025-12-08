@@ -149,7 +149,8 @@ func (s *SelectRegionStep) View() string {
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
-	title := common.Title.Render("Connect Datadog")
+	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 1 of 3)")
+	explanation := common.Body.Render("Tero connects to your Datadog account to discover your services and analyze your telemetry.")
 	subtitle := common.Subtitle.Render("Which region?")
 
 	linkStyle := lipgloss.NewStyle().
@@ -160,6 +161,8 @@ func (s *SelectRegionStep) View() string {
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
+		"",
+		explanation,
 		"",
 		subtitle,
 		"",

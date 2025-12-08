@@ -260,7 +260,7 @@ func (s *APIKeyStep) View() string {
 		)
 	}
 
-	title := common.Title.Render("Connect Datadog")
+	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 2 of 3)")
 	url := ddvendor.GetAPIKeyURL(s.site)
 
 	linkStyle := lipgloss.NewStyle().
