@@ -72,6 +72,7 @@ type SelectStep struct {
 	organizationLister  OrganizationLister
 	defaultOrgSaver     DefaultOrgSaver
 	defaultAccountSaver DefaultAccountSaver
+	tokenRefresher      TokenRefresher
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -86,7 +87,7 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new organization selection step
-func NewSelectStep(role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationLister == nil {
 		panic("organizationLister cannot be nil")
 	}
@@ -98,6 +99,9 @@ func NewSelectStep(role string, organizationLister OrganizationLister, apiClient
 	}
 	if defaultAccountSaver == nil {
 		panic("defaultAccountSaver cannot be nil")
+	}
+	if tokenRefresher == nil {
+		panic("tokenRefresher cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
@@ -111,6 +115,7 @@ func NewSelectStep(role string, organizationLister OrganizationLister, apiClient
 		organizationLister:  organizationLister,
 		defaultOrgSaver:     defaultOrgSaver,
 		defaultAccountSaver: defaultAccountSaver,
+		tokenRefresher:      tokenRefresher,
 		apiClient:           apiClient,
 		logger:              logger,
 		remoteList:          remoteList,
@@ -295,7 +300,7 @@ func (s *SelectStep) Next() step.Step {
 		organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
 		// User wants to create new org - pass role forward
-		return NewCreateStep(s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings)
+		return NewCreateStep(s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings)
 	}
 
 	// Create account service for next step

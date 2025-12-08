@@ -223,6 +223,7 @@ func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 // View renders the app key input UI
 func (s *AppKeyStep) View() string {
 	common := styles.Common()
+	theme := styles.CurrentTheme()
 
 	if s.creating {
 		return lipgloss.JoinVertical(
@@ -232,47 +233,41 @@ func (s *AppKeyStep) View() string {
 		)
 	}
 
-	stepTitle := common.Title.Render("Step 3 of 3: Create a service account")
+	title := common.Title.Render("Connect Datadog")
 	url := ddvendor.GetAppKeyURL(s.site)
+
+	linkStyle := lipgloss.NewStyle().
+		Foreground(theme.TextSubtle).
+		Underline(true)
 
 	// Interstitial screen
 	if !s.showingInput {
-		subtitle := common.Body.Render("Next, create a service account called \"Tero\" and copy its Application key:")
-		instruction := common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL")
+		subtitle := common.Subtitle.Render("Paste your Application key")
+		createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			stepTitle,
+			title,
 			"",
 			subtitle,
 			"",
-			common.URL.Render("  "+url),
-			"",
-			instruction,
+			createLink,
 		)
 	}
 
 	// Input screen
-	var statusLine string
-	if s.copiedURL {
-		statusLine = common.Success.Render("✓ URL copied to clipboard")
-	}
-
-	subtitle := common.Body.Render("Create a service account called \"Tero\", then paste its Application key here:")
+	subtitle := common.Subtitle.Render("Paste your Application key")
+	createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 	parts := []string{
-		stepTitle,
+		title,
 		"",
 		subtitle,
 		"",
-		common.URL.Render("  " + url),
+		s.input.View(),
+		"",
+		createLink,
 	}
-
-	if statusLine != "" {
-		parts = append(parts, "", statusLine)
-	}
-
-	parts = append(parts, "", s.input.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }

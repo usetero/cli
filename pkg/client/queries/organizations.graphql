@@ -17,6 +17,7 @@ mutation CreateOrganizationAndBootstrap($input: CreateOrganizationInput!) {
             id
             name
             createdAt
+            workosOrganizationID
         }
         account {
             id

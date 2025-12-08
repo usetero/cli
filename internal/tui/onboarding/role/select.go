@@ -1,6 +1,8 @@
 package role
 
 import (
+	"context"
+
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -19,6 +21,11 @@ import (
 type RoleSaver interface {
 	SetRole(role string) error
 	GetRole() string
+}
+
+// TokenRefresher refreshes the access token scoped to an organization.
+type TokenRefresher interface {
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) error
 }
 
 const (
@@ -54,7 +61,8 @@ func DefaultKeyMap() KeyMap {
 // SelectStep handles selecting the user's role in the organization.
 type SelectStep struct {
 	// Services (defined by consumer interfaces)
-	roleSaver RoleSaver
+	roleSaver      RoleSaver
+	tokenRefresher TokenRefresher
 
 	// Pass-through to next step
 	preferencesService *preferences.Service
@@ -70,12 +78,15 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new role selection step.
-func NewSelectStep(apiClient api.Client, preferencesService *preferences.Service, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
 	if preferencesService == nil {
 		panic("preferencesService cannot be nil")
+	}
+	if tokenRefresher == nil {
+		panic("tokenRefresher cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
@@ -102,6 +113,7 @@ func NewSelectStep(apiClient api.Client, preferencesService *preferences.Service
 
 	return &SelectStep{
 		roleSaver:          preferencesService,
+		tokenRefresher:     tokenRefresher,
 		preferencesService: preferencesService,
 		apiClient:          apiClient,
 		logger:             logger,
@@ -278,7 +290,7 @@ func (s *SelectStep) Next() step.Step {
 	organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
 	// Pass accumulated context (role), organization service, client, preferences service, and logger to next step
-	return organization.NewSelectStep(role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.logger, s.globalBindings)
+	return organization.NewSelectStep(role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings)
 }
 
 // Help returns the key bindings for this step

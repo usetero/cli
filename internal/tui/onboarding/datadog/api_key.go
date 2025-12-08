@@ -260,47 +260,41 @@ func (s *APIKeyStep) View() string {
 		)
 	}
 
-	stepTitle := common.Title.Render("Step 2 of 3: Get your API key")
+	title := common.Title.Render("Connect Datadog")
 	url := ddvendor.GetAPIKeyURL(s.site)
+
+	linkStyle := lipgloss.NewStyle().
+		Foreground(theme.TextSubtle).
+		Underline(true)
 
 	// Interstitial screen
 	if !s.showingInput {
-		subtitle := common.Body.Render("Datadog uses two keys for access. First, your API key:")
-		instruction := common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL")
+		subtitle := common.Subtitle.Render("Paste your API key")
+		createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			stepTitle,
+			title,
 			"",
 			subtitle,
 			"",
-			common.URL.Render("  "+url),
-			"",
-			instruction,
+			createLink,
 		)
 	}
 
 	// Input screen
-	var statusLine string
-	if s.copiedURL {
-		statusLine = common.Success.Render("✓ URL copied to clipboard")
-	}
-
-	subtitle := common.Body.Render("Create an API key in Datadog, then paste it here:")
+	subtitle := common.Subtitle.Render("Paste your API key")
+	createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 	parts := []string{
-		stepTitle,
+		title,
 		"",
 		subtitle,
 		"",
-		common.URL.Render("  " + url),
+		s.input.View(),
+		"",
+		createLink,
 	}
-
-	if statusLine != "" {
-		parts = append(parts, "", statusLine)
-	}
-
-	parts = append(parts, "", s.input.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }

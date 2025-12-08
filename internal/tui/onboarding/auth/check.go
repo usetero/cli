@@ -202,7 +202,7 @@ func (s *CheckAuthStep) Next() step.Step {
 
 	// Has valid auth - create authenticated client and go to role selection
 	apiClient := client.New(s.apiEndpoint, s.accessToken)
-	return role.NewSelectStep(apiClient, s.preferencesService, s.logger, s.globalBindings)
+	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)
 }
 
 // Help returns the key bindings for this step

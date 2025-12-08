@@ -21,14 +21,6 @@ import (
 	"github.com/usetero/cli/pkg/client"
 )
 
-// Authenticator defines the interface for authentication operations.
-// Consumer-driven interface - this step only needs these methods.
-type Authenticator interface {
-	IsAuthenticated() bool
-	StartDeviceAuth(ctx context.Context) (*authservice.DeviceAuth, error)
-	WaitForAuth(ctx context.Context, deviceCode string, interval time.Duration) (*authservice.Result, error)
-}
-
 // authState tracks the current state of the authentication flow
 type authState int
 
@@ -40,10 +32,8 @@ const (
 
 // AuthenticateStep handles device code flow authentication.
 type AuthenticateStep struct {
-	// Services (defined by consumer interfaces)
-	authenticator Authenticator
-
-	// Pass-through to next step
+	// Services
+	authService        *authservice.Service
 	preferencesService *preferences.Service
 	apiEndpoint        string
 	logger             log.Logger
@@ -74,12 +64,12 @@ type authCompleteMsg struct {
 }
 
 // NewAuthenticateStep creates a new authentication step
-func NewAuthenticateStep(logger log.Logger, authenticator Authenticator, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
+func NewAuthenticateStep(logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
-	if authenticator == nil {
-		panic("authenticator cannot be nil")
+	if authService == nil {
+		panic("authService cannot be nil")
 	}
 	if preferencesService == nil {
 		panic("preferencesService cannot be nil")
@@ -92,7 +82,7 @@ func NewAuthenticateStep(logger log.Logger, authenticator Authenticator, prefere
 	sp.Style = lipgloss.NewStyle().Foreground(theme.Primary)
 
 	return &AuthenticateStep{
-		authenticator:      authenticator,
+		authService:        authService,
 		preferencesService: preferencesService,
 		apiEndpoint:        apiEndpoint,
 		logger:             logger,
@@ -105,7 +95,7 @@ func NewAuthenticateStep(logger log.Logger, authenticator Authenticator, prefere
 // Init initializes the auth step by starting device authorization
 func (s *AuthenticateStep) Init() tea.Cmd {
 	// Check if already authenticated
-	if s.authenticator.IsAuthenticated() {
+	if s.authService.IsAuthenticated() {
 		s.logger.Info("already authenticated")
 		s.state = stateComplete
 		return nil
@@ -118,7 +108,7 @@ func (s *AuthenticateStep) Init() tea.Cmd {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
-			deviceAuth, err := s.authenticator.StartDeviceAuth(ctx)
+			deviceAuth, err := s.authService.StartDeviceAuth(ctx)
 			return deviceAuthMsg{deviceAuth: deviceAuth, err: err}
 		},
 	)
@@ -224,7 +214,7 @@ func (s *AuthenticateStep) pollForAuth() tea.Cmd {
 		ctx := context.Background()
 		interval := time.Duration(s.deviceAuth.Interval) * time.Second
 
-		result, err := s.authenticator.WaitForAuth(ctx, s.deviceAuth.DeviceCode, interval)
+		result, err := s.authService.WaitForAuth(ctx, s.deviceAuth.DeviceCode, interval)
 		return authCompleteMsg{result: result, err: err}
 	}
 }
@@ -250,10 +240,22 @@ func (s *AuthenticateStep) View() string {
 		// Title
 		parts = append(parts, common.Title.Render("Authenticate with Tero"), "")
 
+		// Code - prominently displayed so user can verify it matches the browser
+		parts = append(parts,
+			common.Body.Render("Your code: ")+common.Title.Render(s.deviceAuth.UserCode),
+			"",
+		)
+
 		// URL
 		parts = append(parts,
 			common.Body.Render("Visit this URL to sign in:"),
 			common.URL.Render(s.deviceAuth.VerificationURIComplete),
+			"",
+		)
+
+		// Instruction
+		parts = append(parts,
+			common.Subtitle.Render("Confirm the code matches, then click \"Confirm\" in your browser."),
 			"",
 		)
 
@@ -350,5 +352,5 @@ func (s *AuthenticateStep) Next() step.Step {
 	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken)
 
 	// Pass authenticated client, preferences service, and other dependencies to next step
-	return role.NewSelectStep(apiClient, s.preferencesService, s.logger, s.globalBindings)
+	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)
 }
