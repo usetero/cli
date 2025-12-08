@@ -26,13 +26,14 @@ type AccountLister interface {
 	List(ctx context.Context, orgID string) ([]api.Account, error)
 }
 
-// accountItem implements list.Item for the list component
-type accountItem struct {
-	id   string
-	name string
+// AccountItem implements list.Item for the list component.
+// Exported for testing.
+type AccountItem struct {
+	ID   string
+	Name string
 }
 
-func (i accountItem) FilterValue() string { return i.name }
+func (i AccountItem) FilterValue() string { return i.Name }
 
 // accountDelegate renders each account in the list
 type accountDelegate struct{}
@@ -41,14 +42,14 @@ func (d accountDelegate) Height() int                             { return 1 }
 func (d accountDelegate) Spacing() int                            { return 0 }
 func (d accountDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	i, ok := item.(accountItem)
+	i, ok := item.(AccountItem)
 	if !ok {
 		return
 	}
 
 	theme := styles.CurrentTheme()
 
-	str := i.name
+	str := i.Name
 	if index == m.Index() {
 		fn := lipgloss.NewStyle().
 			Foreground(theme.Primary).
@@ -133,7 +134,7 @@ func (s *SelectStep) Init() tea.Cmd {
 		// Build list items from accounts
 		items := make([]list.Item, len(accounts))
 		for i, account := range accounts {
-			items[i] = accountItem{id: account.ID, name: account.Name}
+			items[i] = AccountItem{ID: account.ID, Name: account.Name}
 		}
 
 		return remotelist.LoadResultMsg{Items: items, Err: nil}
@@ -151,8 +152,8 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Extract accounts from items
 			s.accountsList = make([]api.Account, 0, len(msg.Items))
 			for _, item := range msg.Items {
-				if accountItem, ok := item.(accountItem); ok {
-					s.accountsList = append(s.accountsList, api.Account{ID: accountItem.id, Name: accountItem.name})
+				if ai, ok := item.(AccountItem); ok {
+					s.accountsList = append(s.accountsList, api.Account{ID: ai.ID, Name: ai.Name})
 				}
 			}
 
@@ -201,10 +202,10 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				break
 			}
 			selected := s.remoteList.SelectedItem()
-			if account, ok := selected.(accountItem); ok {
-				s.selectedAccountID = account.id
-				s.logger.Info("account selected", "id", account.id, "name", account.name)
-				if err := s.defaultAccountSaver.SetDefaultAccountID(account.id); err != nil {
+			if ai, ok := selected.(AccountItem); ok {
+				s.selectedAccountID = ai.ID
+				s.logger.Info("account selected", "id", ai.ID, "name", ai.Name)
+				if err := s.defaultAccountSaver.SetDefaultAccountID(ai.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				}
 			}
