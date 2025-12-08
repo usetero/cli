@@ -53,6 +53,49 @@ Fourth, optionally check the view. Call `View()` and look for key content. Don't
 
 The pattern repeats at every level. Testing a step? Create it, send messages, check state. Testing a mode that orchestrates steps? Same pattern, just one level up. Testing the root TUI? Same pattern, just testing coordination across modes.
 
+## Testing Async Commands
+
+Many operations return a `tea.Cmd`—a function that performs async work and returns a message. To test the full flow, execute the command and send its result back through `Update()`:
+
+```go
+func TestSelectStep_Update(t *testing.T) {
+    t.Run("refreshes token after selecting organization", func(t *testing.T) {
+        // Arrange
+        refreshed := false
+        step := NewSelectStep(
+            &mockTokenRefresher{
+                refreshFunc: func(ctx context.Context, orgID string) (string, error) {
+                    refreshed = true
+                    return "new-token", nil
+                },
+            },
+            // ... other deps
+        )
+        
+        // Act: select an org (returns a command that refreshes token)
+        updated, cmd := step.Update(tea.KeyMsg{Type: tea.KeyEnter})
+        
+        // Execute the command to get the resulting message
+        if cmd != nil {
+            msg := cmd()
+            updated, _ = updated.Update(msg)
+        }
+        
+        // Assert
+        if !refreshed {
+            t.Error("expected token refresh to be called")
+        }
+        if !updated.IsComplete() {
+            t.Error("expected step to be complete after token refresh")
+        }
+    })
+}
+```
+
+The key insight: `tea.Cmd` is just `func() tea.Msg`. Call it to get the message, then send that message through `Update()`. This simulates what Bubble Tea does at runtime without needing a real terminal.
+
+For commands that batch multiple operations, `tea.Batch()` returns a command that executes all inner commands. In tests, you may need to execute commands multiple times until no more are returned.
+
 ## State and Propagation
 
 The hardest bugs to catch are propagation bugs. A step sets error state correctly, but the mode doesn't pass it to the layout, so the footer never shows it. Or the mode reads error state *before* updating the step, so it's always one message behind.
