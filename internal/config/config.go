@@ -119,3 +119,17 @@ func (c *Config) Save() error {
 
 	return os.WriteFile(path, data, 0o600)
 }
+
+// Clear removes the config file from disk
+func (c *Config) Clear() error {
+	path, err := configPath(c.namespace)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
