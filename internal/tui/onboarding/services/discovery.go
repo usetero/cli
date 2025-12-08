@@ -263,7 +263,8 @@ func (s *DiscoveryStep) Error() error {
 // Next returns the log event discovery step
 func (s *DiscoveryStep) Next() step.Step {
 	// Control plane auto-enables top services, so we go directly to log event discovery
-	return log_events.NewDiscoveryStep(s.role, s.orgID, s.accountID, s.datadogAccountID, s.apiClient, s.logger, s.globalBindings)
+	logDiscoveryPoller := api.NewDatadogAccountService(s.apiClient, s.logger)
+	return log_events.NewDiscoveryStep(s.role, s.orgID, s.accountID, s.datadogAccountID, logDiscoveryPoller, s.apiClient, s.logger, s.globalBindings)
 }
 
 // Help returns the key bindings for this step
