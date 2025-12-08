@@ -14,12 +14,25 @@ import (
 
 // RefreshToken exchanges a refresh token for a new access token.
 func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*auth.RefreshResponse, error) {
+	return c.refreshToken(ctx, refreshToken, "")
+}
+
+// RefreshTokenWithOrganization exchanges a refresh token for a new access token scoped to an organization.
+// The organizationID should be the WorkOS organization ID.
+func (c *Client) RefreshTokenWithOrganization(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error) {
+	return c.refreshToken(ctx, refreshToken, organizationID)
+}
+
+func (c *Client) refreshToken(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error) {
 	endpoint := fmt.Sprintf("%s/user_management/authenticate", c.baseURL)
 
 	data := url.Values{}
 	data.Set("client_id", c.clientID)
 	data.Set("refresh_token", refreshToken)
 	data.Set("grant_type", "refresh_token")
+	if organizationID != "" {
+		data.Set("organization_id", organizationID)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {

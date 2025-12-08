@@ -9,6 +9,7 @@ type OAuthProvider interface {
 	AuthorizeDevice(ctx context.Context) (*DeviceAuthResponse, error)
 	PollAuthentication(ctx context.Context, deviceCode string) (*AuthenticationResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*RefreshResponse, error)
+	RefreshTokenWithOrganization(ctx context.Context, refreshToken, organizationID string) (*RefreshResponse, error)
 }
 
 // DeviceAuthResponse represents the response from device authorization.

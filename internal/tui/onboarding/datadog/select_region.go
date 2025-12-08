@@ -147,20 +147,25 @@ func (s *SelectRegionStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // View renders the region selection UI
 func (s *SelectRegionStep) View() string {
 	common := styles.Common()
+	theme := styles.CurrentTheme()
 
-	header := RenderHeader()
+	title := common.Title.Render("Connect Datadog")
+	subtitle := common.Subtitle.Render("Which region?")
 
-	stepTitle := common.Title.Render("Step 1 of 3: Select your region")
-	subtitle := common.Help.Render("Select the region that matches your Datadog URL:")
+	linkStyle := lipgloss.NewStyle().
+		Foreground(theme.TextSubtle).
+		Underline(true)
+	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		header,
-		stepTitle,
+		title,
 		"",
 		subtitle,
 		"",
 		s.list.View(),
+		"",
+		docsLink,
 	)
 }
 

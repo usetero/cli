@@ -23,8 +23,9 @@ func NewOrganizationService(client Client, logger log.Logger) *OrganizationServi
 
 // Organization is the domain model for an organization.
 type Organization struct {
-	ID   string
-	Name string
+	ID                   string
+	Name                 string
+	WorkosOrganizationID string
 }
 
 // OrganizationBootstrapResult contains the organization, account, and workspace created during bootstrap.
@@ -72,6 +73,7 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*Organiz
 	org := &Organization{
 		ID:   resp.CreateOrganizationAndBootstrap.Organization.Id,
 		Name: resp.CreateOrganizationAndBootstrap.Organization.Name,
+		// WorkosOrganizationID will be populated after client regeneration
 	}
 
 	account := &Account{

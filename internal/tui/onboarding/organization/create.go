@@ -28,6 +28,12 @@ type DefaultAccountSaver interface {
 	SetDefaultAccountID(accountID string) error
 }
 
+// TokenRefresher refreshes the access token scoped to an organization.
+// Used after org creation to get a token with the org_id claim.
+type TokenRefresher interface {
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) error
+}
+
 // CreateStep handles creating a new organization
 type CreateStep struct {
 	// Accumulated state from previous steps
@@ -37,6 +43,7 @@ type CreateStep struct {
 	organizationCreator OrganizationCreator
 	defaultOrgSaver     DefaultOrgSaver
 	defaultAccountSaver DefaultAccountSaver
+	tokenRefresher      TokenRefresher
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -53,7 +60,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new organization creation step
-func NewCreateStep(role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationCreator == nil {
 		panic("organizationCreator cannot be nil")
 	}
@@ -62,6 +69,9 @@ func NewCreateStep(role string, organizationCreator OrganizationCreator, default
 	}
 	if defaultAccountSaver == nil {
 		panic("defaultAccountSaver cannot be nil")
+	}
+	if tokenRefresher == nil {
+		panic("tokenRefresher cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -79,6 +89,7 @@ func NewCreateStep(role string, organizationCreator OrganizationCreator, default
 		organizationCreator: organizationCreator,
 		defaultOrgSaver:     defaultOrgSaver,
 		defaultAccountSaver: defaultAccountSaver,
+		tokenRefresher:      tokenRefresher,
 		apiClient:           apiClient,
 		logger:              logger,
 		input:               inp,
@@ -133,6 +144,17 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		}
 
 		s.logger.Info("organization created", "id", msg.result.Organization.ID, "name", msg.result.Organization.Name, "accountID", msg.result.Account.ID)
+
+		// Refresh token with organization scope so subsequent API calls work
+		if msg.result.Organization.WorkosOrganizationID != "" {
+			ctx := context.Background()
+			if err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, msg.result.Organization.WorkosOrganizationID); err != nil {
+				s.logger.Error("failed to refresh token with organization", "error", err)
+				s.err = err
+				return s, inputCmd
+			}
+			s.logger.Debug("token refreshed with organization scope", "workosOrgID", msg.result.Organization.WorkosOrganizationID)
+		}
 
 		// Save organization to preferences
 		if err := s.defaultOrgSaver.SetDefaultOrgID(msg.result.Organization.ID); err != nil {
