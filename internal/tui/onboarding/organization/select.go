@@ -84,8 +84,15 @@ type SelectStep struct {
 	orgs                []api.Organization
 	selectedOrgID       string
 	selectedWorkosOrgID string
+	tokenRefreshed      bool
+	refreshingToken     bool
 	width               int
 	globalBindings      []key.Binding
+}
+
+// tokenRefreshMsg is sent when token refresh completes
+type tokenRefreshMsg struct {
+	err error
 }
 
 // NewSelectStep creates a new organization selection step
@@ -150,9 +157,54 @@ func (s *SelectStep) Init() tea.Cmd {
 	})
 }
 
+// refreshToken returns a command that refreshes the token with org scope
+func (s *SelectStep) refreshToken() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID)
+		return tokenRefreshMsg{err: err}
+	}
+}
+
+// selectOrg handles org selection - sets state and returns refresh command if needed
+func (s *SelectStep) selectOrg(orgID, workosOrgID string) tea.Cmd {
+	s.selectedOrgID = orgID
+	s.selectedWorkosOrgID = workosOrgID
+
+	// "Create new" doesn't need token refresh
+	if orgID == createNewOrgID {
+		s.tokenRefreshed = true
+		return nil
+	}
+
+	// Existing org needs token refresh
+	if workosOrgID != "" {
+		s.refreshingToken = true
+		return s.refreshToken()
+	}
+
+	// No workos org ID - skip refresh
+	s.tokenRefreshed = true
+	return nil
+}
+
 // Update handles messages
 func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 	var cmds []tea.Cmd
+
+	// Handle token refresh completion
+	switch msg := msg.(type) {
+	case tokenRefreshMsg:
+		s.refreshingToken = false
+		s.tokenRefreshed = true
+		if msg.err != nil {
+			s.logger.Error("failed to refresh token with organization", "error", msg.err)
+			// Continue anyway - token refresh is best-effort
+		} else {
+			s.logger.Debug("token refreshed with organization scope")
+		}
+		return s, nil
+	}
 
 	// Handle remotelist's LoadResultMsg to apply auto-selection logic
 	switch msg := msg.(type) {
@@ -171,29 +223,30 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 			// Case 1: No orgs → auto-select "create" to fast-forward
 			if len(s.orgs) == 0 {
-				s.selectedOrgID = createNewOrgID
 				s.logger.Debug("auto-selected create organization", "reason", "no organizations found")
+				cmd := s.selectOrg(createNewOrgID, "")
+				cmds = append(cmds, cmd)
 			}
 
 			// Case 2: Has preference AND exists → auto-select
 			if userPref != "" {
 				for _, org := range s.orgs {
 					if org.ID == userPref {
-						s.selectedOrgID = userPref
-						s.selectedWorkosOrgID = org.WorkosOrganizationID
 						s.logger.Debug("auto-selected organization from preference", "id", userPref, "name", org.Name)
+						cmd := s.selectOrg(org.ID, org.WorkosOrganizationID)
+						cmds = append(cmds, cmd)
 					}
 				}
 			}
 
 			// Case 3: No preference AND only 1 org → auto-select and save
 			if userPref == "" && len(s.orgs) == 1 {
-				s.selectedOrgID = s.orgs[0].ID
-				s.selectedWorkosOrgID = s.orgs[0].WorkosOrganizationID
 				s.logger.Info("auto-selected organization", "id", s.orgs[0].ID, "name", s.orgs[0].Name, "reason", "only one available")
 				if err := s.defaultOrgSaver.SetDefaultOrgID(s.orgs[0].ID); err != nil {
 					s.logger.Error("failed to save organization preference", "error", err)
 				}
+				cmd := s.selectOrg(s.orgs[0].ID, s.orgs[0].WorkosOrganizationID)
+				cmds = append(cmds, cmd)
 			}
 
 			// Case 4: User must select from list (selectedOrgID remains empty)
@@ -213,20 +266,21 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			}
 			selected := s.remoteList.SelectedItem()
 			if org, ok := selected.(orgItem); ok {
-				s.selectedOrgID = org.id
-				s.selectedWorkosOrgID = org.workosOrganizationID
 				s.logger.Info("organization selected", "id", org.id, "name", org.name)
 				if err := s.defaultOrgSaver.SetDefaultOrgID(org.id); err != nil {
 					s.logger.Error("failed to save organization preference", "error", err)
 				}
+				cmd := s.selectOrg(org.id, org.workosOrganizationID)
+				cmds = append(cmds, cmd)
 			}
 		case "n":
 			if !s.remoteList.IsLoaded() {
 				break
 			}
 			// User pressed 'n' to create new organization
-			s.selectedOrgID = createNewOrgID
 			s.logger.Info("user chose to create new organization")
+			cmd := s.selectOrg(createNewOrgID, "")
+			cmds = append(cmds, cmd)
 		}
 	}
 
@@ -264,9 +318,9 @@ func (s *SelectStep) SetSize(width, height int) {
 	s.remoteList.SetWidth(width)
 }
 
-// IsComplete returns true if an organization has been selected
+// IsComplete returns true if an organization has been selected and token refreshed
 func (s *SelectStep) IsComplete() bool {
-	return s.selectedOrgID != ""
+	return s.selectedOrgID != "" && s.tokenRefreshed
 }
 
 // IsCreateSelected returns true if user chose to create a new organization
@@ -282,9 +336,9 @@ func (s *SelectStep) SelectedOrgID() string {
 	return s.selectedOrgID
 }
 
-// IsBusy returns true while loading organizations
+// IsBusy returns true while loading organizations or refreshing token
 func (s *SelectStep) IsBusy() bool {
-	return !s.remoteList.IsLoaded()
+	return !s.remoteList.IsLoaded() || s.refreshingToken
 }
 
 // HasError returns true if the remotelist has an error
@@ -306,15 +360,6 @@ func (s *SelectStep) Next() step.Step {
 
 		// User wants to create new org - pass role forward
 		return NewCreateStep(s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings)
-	}
-
-	// Refresh token with org scope before proceeding
-	if s.selectedWorkosOrgID != "" {
-		ctx := context.Background()
-		if err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID); err != nil {
-			s.logger.Error("failed to refresh token with organization", "error", err)
-			// Continue anyway - the token refresh is best-effort
-		}
 	}
 
 	// Create account service for next step

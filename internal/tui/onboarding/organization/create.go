@@ -50,13 +50,15 @@ type CreateStep struct {
 	logger    log.Logger
 
 	// UI state
-	input          *input.Component
-	creating       bool
-	created        bool
-	createdResult  *api.OrganizationBootstrapResult
-	err            error
-	width          int
-	globalBindings []key.Binding
+	input           *input.Component
+	creating        bool
+	created         bool
+	createdResult   *api.OrganizationBootstrapResult
+	refreshingToken bool
+	tokenRefreshed  bool
+	err             error
+	width           int
+	globalBindings  []key.Binding
 }
 
 // NewCreateStep creates a new organization creation step
@@ -104,6 +106,11 @@ type createOrgMsg struct {
 	err    error
 }
 
+// createTokenRefreshMsg is sent when token refresh completes after org creation
+type createTokenRefreshMsg struct {
+	err error
+}
+
 // Init focuses the input
 func (s *CreateStep) Init() tea.Cmd {
 	return nil // Input is already focused in constructor
@@ -144,17 +151,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		}
 
 		s.logger.Info("organization created", "id", msg.result.Organization.ID, "name", msg.result.Organization.Name, "accountID", msg.result.Account.ID)
-
-		// Refresh token with organization scope so subsequent API calls work
-		if msg.result.Organization.WorkosOrganizationID != "" {
-			ctx := context.Background()
-			if err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, msg.result.Organization.WorkosOrganizationID); err != nil {
-				s.logger.Error("failed to refresh token with organization", "error", err)
-				s.err = err
-				return s, inputCmd
-			}
-			s.logger.Debug("token refreshed with organization scope", "workosOrgID", msg.result.Organization.WorkosOrganizationID)
-		}
+		s.createdResult = msg.result
 
 		// Save organization to preferences
 		if err := s.defaultOrgSaver.SetDefaultOrgID(msg.result.Organization.ID); err != nil {
@@ -172,14 +169,40 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		}
 		s.logger.Debug("account saved to preferences", "accountID", msg.result.Account.ID)
 
-		// Clear any previous error and mark success
-		s.err = nil
+		// Refresh token with organization scope
+		if msg.result.Organization.WorkosOrganizationID != "" {
+			s.refreshingToken = true
+			return s, tea.Batch(inputCmd, s.refreshToken(msg.result.Organization.WorkosOrganizationID))
+		}
+
+		// No workos org ID - skip refresh, mark complete
 		s.created = true
-		s.createdResult = msg.result
+		s.tokenRefreshed = true
+		return s, inputCmd
+
+	case createTokenRefreshMsg:
+		s.refreshingToken = false
+		s.tokenRefreshed = true
+		if msg.err != nil {
+			s.logger.Error("failed to refresh token with organization", "error", msg.err)
+			// Continue anyway - token refresh is best-effort
+		} else {
+			s.logger.Debug("token refreshed with organization scope")
+		}
+		s.created = true
 		return s, inputCmd
 	}
 
 	return s, inputCmd
+}
+
+// refreshToken returns a command that refreshes the token with org scope
+func (s *CreateStep) refreshToken(workosOrgID string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, workosOrgID)
+		return createTokenRefreshMsg{err: err}
+	}
 }
 
 // createOrganization creates a new organization via the API
@@ -234,9 +257,9 @@ func (s *CreateStep) SetSize(width, height int) {
 	}
 }
 
-// IsComplete returns true if the organization has been created successfully
+// IsComplete returns true if the organization has been created and token refreshed
 func (s *CreateStep) IsComplete() bool {
-	return s.created && s.err == nil
+	return s.created && s.tokenRefreshed && s.err == nil
 }
 
 // CreatedOrgID returns the ID of the created organization
@@ -255,9 +278,9 @@ func (s *CreateStep) CreatedAccountID() string {
 	return ""
 }
 
-// IsBusy returns true while creating the organization
+// IsBusy returns true while creating the organization or refreshing token
 func (s *CreateStep) IsBusy() bool {
-	return s.creating
+	return s.creating || s.refreshingToken
 }
 
 // HasError returns true if there was an error creating the organization
