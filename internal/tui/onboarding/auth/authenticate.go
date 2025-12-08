@@ -267,7 +267,7 @@ func (s *AuthenticateStep) View() string {
 
 		// Instruction
 		parts = append(parts,
-			common.Subtitle.Render("Confirm the code matches, then click \"Confirm\" in your browser."),
+			common.Body.Render("Confirm the code matches, then click \"Confirm\" in your browser."),
 			"",
 		)
 
