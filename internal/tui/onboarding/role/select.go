@@ -25,7 +25,7 @@ type RoleSaver interface {
 
 // TokenRefresher refreshes the access token scoped to an organization.
 type TokenRefresher interface {
-	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) error
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
 }
 
 const (

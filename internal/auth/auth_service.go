@@ -212,32 +212,33 @@ func (s *Service) ClearTokens() error {
 }
 
 // RefreshTokenWithOrganization refreshes the access token scoped to an organization.
-// This is used after creating an organization to get a token with the org_id claim.
-func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) error {
+// This is used after creating/selecting an organization to get a token with the org_id claim.
+// Returns the new access token so callers can update their API clients.
+func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error) {
 	s.logger.Debug("refreshing token with organization", "workos_org_id", workosOrgID)
 
 	refreshToken, err := s.storage.Get("refresh_token")
 	if err != nil {
 		s.logger.Error("failed to get refresh token", "error", err)
-		return err
+		return "", err
 	}
 	if refreshToken == "" {
-		return errors.New("no refresh token found")
+		return "", errors.New("no refresh token found")
 	}
 
 	resp, err := s.provider.RefreshTokenWithOrganization(ctx, refreshToken, workosOrgID)
 	if err != nil {
 		s.logger.Error("failed to refresh token with organization", "error", err)
-		return err
+		return "", err
 	}
 
 	if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
 		s.logger.Error("failed to save refreshed tokens", "error", err)
-		return err
+		return "", err
 	}
 
 	s.logger.Info("token refreshed with organization scope", "workos_org_id", workosOrgID)
-	return nil
+	return resp.AccessToken, nil
 }
 
 // saveTokens stores the access and refresh tokens securely.

@@ -11,24 +11,33 @@ import (
 )
 
 type Client struct {
-	gql graphql.Client
+	gql       graphql.Client
+	transport *authTransport
 }
 
 // New creates a new authenticated GraphQL client.
 // The accessToken is added to all requests via Authorization header.
 func New(endpoint string, accessToken string) *Client {
+	transport := &authTransport{
+		accessToken: accessToken,
+		base:        http.DefaultTransport,
+	}
+
 	httpClient := &http.Client{
-		Transport: &authTransport{
-			accessToken: accessToken,
-			base:        http.DefaultTransport,
-		},
+		Transport: transport,
 	}
 
 	baseClient := graphql.NewClient(endpoint, httpClient)
 
 	return &Client{
-		gql: &errorCleaningClient{base: baseClient},
+		gql:       &errorCleaningClient{base: baseClient},
+		transport: transport,
 	}
+}
+
+// SetAccessToken updates the access token used for authentication.
+func (c *Client) SetAccessToken(token string) {
+	c.transport.SetAccessToken(token)
 }
 
 // errorCleaningClient wraps a graphql.Client and cleans up error messages
@@ -105,4 +114,9 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Execute request
 	return t.base.RoundTrip(req)
+}
+
+// SetAccessToken updates the access token used for authentication.
+func (t *authTransport) SetAccessToken(token string) {
+	t.accessToken = token
 }
