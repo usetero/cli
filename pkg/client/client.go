@@ -55,6 +55,16 @@ func cleanGraphQLError(err error) error {
 		return nil
 	}
 
+	// Handle HTTPError (non-200 status codes)
+	// genqlient wraps HTTP errors with the raw JSON response in Error(),
+	// but the parsed errors are available in Response.Errors
+	var httpErr *graphql.HTTPError
+	if errors.As(err, &httpErr) {
+		if len(httpErr.Response.Errors) > 0 {
+			return errors.New(httpErr.Response.Errors[0].Message)
+		}
+	}
+
 	// Handle gqlerror.List (multiple errors)
 	var gqlErrList gqlerror.List
 	if errors.As(err, &gqlErrList) {

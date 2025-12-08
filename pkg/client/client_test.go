@@ -10,6 +10,37 @@ import (
 )
 
 func TestErrorCleaningClient(t *testing.T) {
+	t.Run("extracts message from HTTPError", func(t *testing.T) {
+		// When the control plane returns a non-200 status (e.g., 401),
+		// genqlient wraps it in an HTTPError. The Error() method returns
+		// raw JSON, but Response.Errors contains the parsed error messages.
+		mockBase := &mockGraphQLClient{
+			makeRequestFunc: func(ctx context.Context, req *graphql.Request, resp *graphql.Response) error {
+				return &graphql.HTTPError{
+					Response: graphql.Response{
+						Errors: gqlerror.List{
+							{Message: "authentication required, see https://docs.usetero.com/api"},
+						},
+					},
+				}
+			},
+		}
+
+		client := &errorCleaningClient{base: mockBase}
+		err := client.MakeRequest(context.Background(), &graphql.Request{}, &graphql.Response{})
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		got := err.Error()
+		want := "authentication required, see https://docs.usetero.com/api"
+
+		if got != want {
+			t.Errorf("error message = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("returns clean error messages without GraphQL path prefixes", func(t *testing.T) {
 		// When the GraphQL API returns an error with a path (like "createDatadogAccount"),
 		// gqlerror.Error() formats it as "input: createDatadogAccount <message>".
