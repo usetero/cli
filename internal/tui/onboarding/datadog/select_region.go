@@ -8,7 +8,6 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/pkg/browser"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
@@ -124,7 +123,7 @@ func (s *SelectRegionStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		case "o":
 			// Open Datadog integration docs
 			url := "https://usetero.com/docs/integrations/datadog"
-			err := browser.OpenURL(url)
+			err := openBrowser(url)
 			if err != nil {
 				s.logger.Error("failed to open browser", "error", err, "url", url)
 			} else {
