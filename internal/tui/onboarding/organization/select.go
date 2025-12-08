@@ -296,12 +296,22 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the organization selection UI
 func (s *SelectStep) View() string {
-	// If still loading or has error, just show the remotelist (loader or empty)
-	if s.remoteList.IsBusy() || s.remoteList.HasError() {
+	common := styles.Common()
+
+	// Show loading state during initial load or token refresh
+	if s.remoteList.IsBusy() {
 		return s.remoteList.View()
 	}
 
-	common := styles.Common()
+	// Show loading during token refresh (after auto-selection)
+	if s.refreshingToken {
+		return common.Body.Render("Selecting organization...")
+	}
+
+	// Show error state
+	if s.remoteList.HasError() {
+		return s.remoteList.View()
+	}
 
 	title := common.Title.Render("Select your organization")
 	subtitle := common.Subtitle.Render("This will be your default workspace")
