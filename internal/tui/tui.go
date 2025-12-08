@@ -11,23 +11,18 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
 	"github.com/usetero/cli/internal/tui/styles"
-	"github.com/usetero/cli/internal/workos"
 )
 
 const (
 	// Minimum window dimensions
 	minWidth  = 80
 	minHeight = 24
-
-	// WorkOS authentication configuration
-	workosBaseURL = "https://api.workos.com"
 )
 
 var (
@@ -83,15 +78,9 @@ type TUI struct {
 }
 
 // New creates a new TUI model
-func New(cfg *config.Config, apiEndpoint string, workosClientID string, namespace string, logger log.Logger) tea.Model {
-	// Create WorkOS client for authentication
-	workosClient := workos.NewClient(workosBaseURL, workosClientID)
-
-	// Create keyring for secure token storage (namespaced by environment)
-	tokenStore := keyring.New(namespace)
-
+func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint string, logger log.Logger) tea.Model {
 	// Create domain services
-	authService := auth.NewService(workosClient, tokenStore, logger)
+	authService := auth.NewService(oauthProvider, tokenStore, logger)
 	preferencesService := preferences.NewService(cfg, logger)
 
 	// Start with onboarding mode

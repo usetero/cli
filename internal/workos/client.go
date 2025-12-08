@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const baseURL = "https://api.workos.com"
+
 // Client provides access to WorkOS device code flow authentication.
 type Client struct {
 	baseURL    string
@@ -13,7 +15,7 @@ type Client struct {
 }
 
 // NewClient creates a new WorkOS client.
-func NewClient(baseURL, clientID string) *Client {
+func NewClient(clientID string) *Client {
 	return &Client{
 		baseURL:    baseURL,
 		clientID:   clientID,
