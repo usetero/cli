@@ -64,18 +64,20 @@ func NewDiscoveryStep(
 	orgID string,
 	accountID string,
 	datadogAccountID *string,
+	progressPoller LogDiscoveryProgressPoller,
 	apiClient api.Client,
 	logger log.Logger,
 	globalBindings []key.Binding,
 ) step.Step {
+	if progressPoller == nil {
+		panic("progressPoller cannot be nil")
+	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
-
-	progressPoller := api.NewDatadogAccountService(apiClient, logger)
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
