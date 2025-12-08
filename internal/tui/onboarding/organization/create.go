@@ -236,14 +236,14 @@ func (s *CreateStep) View() string {
 	}
 
 	title := common.Title.Render("Create a new organization")
-	subtitle := common.Subtitle.Render("Enter your organization name")
+	prompt := common.Body.Render("Enter your organization name")
 	help := common.Help.Render("This will be your default workspace")
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
 		"",
-		subtitle,
+		prompt,
 		"",
 		s.input.View(),
 		"",

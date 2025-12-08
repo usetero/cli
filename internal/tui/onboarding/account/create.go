@@ -171,7 +171,7 @@ func (s *CreateStep) View() string {
 	}
 
 	title := common.Title.Render("Create a new account")
-	subtitle := common.Subtitle.Render("Enter your account name")
+	prompt := common.Body.Render("Enter your account name")
 
 	// Input with cursor marker
 	inputCursor := s.input.Cursor()
@@ -193,7 +193,7 @@ func (s *CreateStep) View() string {
 		lipgloss.Left,
 		title,
 		"",
-		subtitle,
+		prompt,
 		"",
 		inputLine,
 		"",
