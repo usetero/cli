@@ -1,0 +1,365 @@
+package api_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/pkg/client"
+)
+
+func TestDatadogAccountService_HasAccount(t *testing.T) {
+	t.Run("returns true when datadog account exists", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
+				return &client.GetAccountResponse{
+					Accounts: client.GetAccountAccountsAccountConnection{
+						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+							{
+								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+									Id: "acc-1",
+									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+										Id:   "dd-123",
+										Name: "Production DD",
+										Site: client.DatadogAccountSiteUs1,
+									},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !hasAccount {
+			t.Error("expected HasAccount to return true")
+		}
+	})
+
+	t.Run("returns false when datadog account is empty", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
+				return &client.GetAccountResponse{
+					Accounts: client.GetAccountAccountsAccountConnection{
+						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+							{
+								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+									Id: "acc-1",
+									// Empty DatadogAccount - zero value has empty Id
+									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if hasAccount {
+			t.Error("expected HasAccount to return false")
+		}
+	})
+
+	t.Run("returns false when no account found", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
+				return &client.GetAccountResponse{
+					Accounts: client.GetAccountAccountsAccountConnection{
+						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if hasAccount {
+			t.Error("expected HasAccount to return false")
+		}
+	})
+}
+
+func TestDatadogAccountService_GetAccount(t *testing.T) {
+	t.Run("returns datadog account when exists", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
+				return &client.GetAccountResponse{
+					Accounts: client.GetAccountAccountsAccountConnection{
+						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+							{
+								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+									Id: "acc-1",
+									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+										Id:   "dd-123",
+										Name: "Production DD",
+										Site: client.DatadogAccountSiteUs1,
+									},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		account, err := svc.GetAccount(context.Background(), "acc-1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if account == nil {
+			t.Fatal("expected account, got nil")
+		}
+		if account.ID != "dd-123" {
+			t.Errorf("account.ID = %q, want %q", account.ID, "dd-123")
+		}
+		if account.Name != "Production DD" {
+			t.Errorf("account.Name = %q, want %q", account.Name, "Production DD")
+		}
+		if account.Site != "US1" {
+			t.Errorf("account.Site = %q, want %q", account.Site, "US1")
+		}
+	})
+
+	t.Run("returns nil when no datadog account", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
+				return &client.GetAccountResponse{
+					Accounts: client.GetAccountAccountsAccountConnection{
+						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+							{
+								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+									Id:             "acc-1",
+									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		account, err := svc.GetAccount(context.Background(), "acc-1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if account != nil {
+			t.Errorf("expected nil, got %+v", account)
+		}
+	})
+}
+
+func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
+	t.Run("returns true for valid key", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
+				return &client.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+						Valid: true,
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "api-key", "US1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !valid {
+			t.Error("expected valid=true")
+		}
+		if errMsg != "" {
+			t.Errorf("expected empty error message, got %q", errMsg)
+		}
+	})
+
+	t.Run("returns false with error message for invalid key", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
+				return &client.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+						Valid: false,
+						Error: "API key not found",
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if valid {
+			t.Error("expected valid=false")
+		}
+		if errMsg != "API key not found" {
+			t.Errorf("errMsg = %q, want %q", errMsg, "API key not found")
+		}
+	})
+
+	t.Run("returns default error message when none provided", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
+				return &client.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+						Valid: false,
+						Error: "",
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if valid {
+			t.Error("expected valid=false")
+		}
+		if errMsg != "Invalid API key" {
+			t.Errorf("errMsg = %q, want %q", errMsg, "Invalid API key")
+		}
+	})
+
+	t.Run("propagates client errors", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
+				return nil, errors.New("network error")
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		_, _, err := svc.ValidateAPIKey(context.Background(), "key", "US1")
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestDatadogAccountService_GetLogDiscoveryProgress(t *testing.T) {
+	t.Run("returns progress with percent complete", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetDatadogAccountLogDiscoveryProgressFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error) {
+				return &client.GetDatadogAccountLogDiscoveryProgressResponse{
+					DatadogAccounts: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnection{
+						Edges: []client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
+							{
+								Node: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
+									Id: "dd-123",
+									LogEventDiscoveryProgress: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountLogEventDiscoveryProgress{
+										Status:                 client.DiscoveryStatusDiscovering,
+										PercentComplete:        75.5,
+										WeeklyVolume:           1000000,
+										WeeklyDiscoveredVolume: 755000,
+									},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		progress, err := svc.GetLogDiscoveryProgress(context.Background(), "dd-123")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if progress == nil {
+			t.Fatal("expected progress, got nil")
+		}
+		if progress.Status != api.DiscoveryStatusDiscovering {
+			t.Errorf("Status = %q, want %q", progress.Status, api.DiscoveryStatusDiscovering)
+		}
+		if progress.PercentComplete == nil || *progress.PercentComplete != 75.5 {
+			t.Errorf("PercentComplete = %v, want 75.5", progress.PercentComplete)
+		}
+		if progress.WeeklyVolume != 1000000 {
+			t.Errorf("WeeklyVolume = %d, want 1000000", progress.WeeklyVolume)
+		}
+	})
+
+	t.Run("returns nil percent when zero", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetDatadogAccountLogDiscoveryProgressFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error) {
+				return &client.GetDatadogAccountLogDiscoveryProgressResponse{
+					DatadogAccounts: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnection{
+						Edges: []client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
+							{
+								Node: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
+									Id: "dd-123",
+									LogEventDiscoveryProgress: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountLogEventDiscoveryProgress{
+										Status:          client.DiscoveryStatusPending,
+										PercentComplete: 0,
+									},
+								},
+							},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		progress, err := svc.GetLogDiscoveryProgress(context.Background(), "dd-123")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if progress.PercentComplete != nil {
+			t.Errorf("PercentComplete = %v, want nil", progress.PercentComplete)
+		}
+	})
+
+	t.Run("returns nil when no datadog account found", func(t *testing.T) {
+		mockClient := &apitest.MockClient{
+			GetDatadogAccountLogDiscoveryProgressFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error) {
+				return &client.GetDatadogAccountLogDiscoveryProgressResponse{
+					DatadogAccounts: client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnection{
+						Edges: []client.GetDatadogAccountLogDiscoveryProgressDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{},
+					},
+				}, nil
+			},
+		}
+
+		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		progress, err := svc.GetLogDiscoveryProgress(context.Background(), "dd-123")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if progress != nil {
+			t.Errorf("expected nil, got %+v", progress)
+		}
+	})
+}
