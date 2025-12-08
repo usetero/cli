@@ -241,27 +241,27 @@ func (s *AppKeyStep) View() string {
 
 	// Interstitial screen
 	if !s.showingInput {
-		subtitle := common.Subtitle.Render("Paste your Application key")
+		question := common.Body.Render("Paste your Application key")
 		createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
 			"",
-			subtitle,
+			question,
 			"",
 			createLink,
 		)
 	}
 
 	// Input screen
-	subtitle := common.Subtitle.Render("Paste your Application key")
+	question := common.Body.Render("Paste your Application key")
 	createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
 
 	parts := []string{
 		title,
 		"",
-		subtitle,
+		question,
 		"",
 		s.input.View(),
 		"",
