@@ -305,6 +305,17 @@ func (s *SelectStep) View() string {
 
 	// Show loading during token refresh (after auto-selection)
 	if s.refreshingToken {
+		// Find the selected org name
+		orgName := ""
+		for _, org := range s.orgs {
+			if org.ID == s.selectedOrgID {
+				orgName = org.Name
+				break
+			}
+		}
+		if orgName != "" {
+			return common.Body.Render("Selecting " + orgName + "...")
+		}
 		return common.Body.Render("Selecting organization...")
 	}
 
