@@ -3,9 +3,9 @@ package input
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/v2/textinput"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/components"
 	"github.com/usetero/cli/internal/tui/styles"
@@ -25,12 +25,12 @@ func New(logger log.Logger) *Component {
 	theme := styles.CurrentTheme()
 
 	ti := textinput.New()
-	ti.VirtualCursor = false
+	ti.SetVirtualCursor(false)
 	ti.Prompt = "> "
 	ti.CharLimit = 256
 	ti.Focus() // Focus immediately like Crush does
 
-	ti.Styles = textinput.Styles{
+	ti.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
 			Text:        lipgloss.NewStyle().Foreground(theme.Text),
 			Placeholder: lipgloss.NewStyle().Foreground(theme.TextSubtle),
@@ -46,7 +46,7 @@ func New(logger log.Logger) *Component {
 			Shape: tea.CursorBar,
 			Blink: true,
 		},
-	}
+	})
 
 	return &Component{model: ti, logger: logger}
 }

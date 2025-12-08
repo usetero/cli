@@ -1,8 +1,8 @@
 package step
 
 import (
-	"github.com/charmbracelet/bubbles/v2/help"
-	tea "github.com/charmbracelet/bubbletea/v2"
+	"charm.land/bubbles/v2/help"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Step represents a single step in the onboarding flow.

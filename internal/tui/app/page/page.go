@@ -1,8 +1,8 @@
 package page
 
 import (
-	"github.com/charmbracelet/bubbles/v2/help"
-	tea "github.com/charmbracelet/bubbletea/v2"
+	"charm.land/bubbles/v2/help"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Page represents a page within the app mode (chat, services, discovery, etc.)

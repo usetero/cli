@@ -1,6 +1,6 @@
 package components
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 // Component is the interface that all TUI components must implement.
 //

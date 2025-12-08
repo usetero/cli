@@ -1,6 +1,6 @@
 package tuitest
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 // DrainCmds executes all commands from a tea.Cmd, handling batches recursively.
 // Returns all resulting messages flattened into a single slice.
