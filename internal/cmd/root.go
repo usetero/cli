@@ -50,8 +50,12 @@ Just run 'tero' to start an interactive chat session.`,
 				}
 
 				logger.Info("reset complete", "namespace", namespace)
-				fmt.Println("Reset complete. All preferences and authentication cleared.")
-				return nil
+
+				// Reload config after clearing
+				cfg, err = config.Load(namespace)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Get endpoint from flag (allows override of env var/default)
