@@ -30,8 +30,9 @@ type DefaultAccountSaver interface {
 
 // TokenRefresher refreshes the access token scoped to an organization.
 // Used after org creation to get a token with the org_id claim.
+// Returns the new access token so callers can update their API clients.
 type TokenRefresher interface {
-	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) error
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
 }
 
 // CreateStep handles creating a new organization
@@ -108,7 +109,8 @@ type createOrgMsg struct {
 
 // createTokenRefreshMsg is sent when token refresh completes after org creation
 type createTokenRefreshMsg struct {
-	err error
+	accessToken string
+	err         error
 }
 
 // Init focuses the input
@@ -188,6 +190,8 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Continue anyway - token refresh is best-effort
 		} else {
 			s.logger.Debug("token refreshed with organization scope")
+			// Update the API client with the new token
+			s.apiClient.SetAccessToken(msg.accessToken)
 		}
 		s.created = true
 		return s, inputCmd
@@ -200,8 +204,8 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 func (s *CreateStep) refreshToken(workosOrgID string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, workosOrgID)
-		return createTokenRefreshMsg{err: err}
+		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, workosOrgID)
+		return createTokenRefreshMsg{accessToken: accessToken, err: err}
 	}
 }
 

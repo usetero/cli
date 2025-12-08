@@ -92,7 +92,8 @@ type SelectStep struct {
 
 // tokenRefreshMsg is sent when token refresh completes
 type tokenRefreshMsg struct {
-	err error
+	accessToken string
+	err         error
 }
 
 // NewSelectStep creates a new organization selection step
@@ -161,8 +162,8 @@ func (s *SelectStep) Init() tea.Cmd {
 func (s *SelectStep) refreshToken() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID)
-		return tokenRefreshMsg{err: err}
+		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID)
+		return tokenRefreshMsg{accessToken: accessToken, err: err}
 	}
 }
 
@@ -202,6 +203,8 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Continue anyway - token refresh is best-effort
 		} else {
 			s.logger.Debug("token refreshed with organization scope")
+			// Update the API client with the new token
+			s.apiClient.SetAccessToken(msg.accessToken)
 		}
 		return s, nil
 	}
