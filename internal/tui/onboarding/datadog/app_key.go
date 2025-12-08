@@ -233,7 +233,7 @@ func (s *AppKeyStep) View() string {
 		)
 	}
 
-	title := common.Title.Render("Connect Datadog")
+	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 3 of 3)")
 	url := ddvendor.GetAppKeyURL(s.site)
 
 	linkStyle := lipgloss.NewStyle().
