@@ -9,8 +9,8 @@ import (
 )
 
 func NewRootCmd(logger log.Logger, version string) *cobra.Command {
-	// Load CLI configuration (env vars + smart defaults)
-	cliConfig := config.LoadCLIConfig(version)
+	// Load CLI configuration
+	cliConfig := config.LoadCLIConfig()
 
 	rootCmd := &cobra.Command{
 		Use:     "tero",
