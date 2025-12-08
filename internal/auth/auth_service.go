@@ -156,7 +156,7 @@ func (s *Service) IsAuthenticated() bool {
 	return accessToken != ""
 }
 
-// GetAccessToken retrieves the stored access token.
+// GetAccessToken retrieves the stored access token, refreshing if expired.
 func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	accessToken, err := s.storage.Get("access_token")
 	if err != nil {
@@ -166,6 +166,34 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	if accessToken == "" {
 		return "", errors.New("no access token found")
 	}
+
+	// Check if token is expired
+	if isTokenExpired(accessToken) {
+		s.logger.Debug("access token expired, refreshing")
+		refreshToken, err := s.storage.Get("refresh_token")
+		if err != nil {
+			s.logger.Error("failed to get refresh token", "error", err)
+			return "", err
+		}
+		if refreshToken == "" {
+			return "", errors.New("no refresh token found")
+		}
+
+		resp, err := s.provider.RefreshToken(ctx, refreshToken)
+		if err != nil {
+			s.logger.Error("failed to refresh token", "error", err)
+			return "", err
+		}
+
+		if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
+			s.logger.Error("failed to save refreshed tokens", "error", err)
+			return "", err
+		}
+
+		s.logger.Debug("token refreshed successfully")
+		return resp.AccessToken, nil
+	}
+
 	return accessToken, nil
 }
 

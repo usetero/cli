@@ -8,6 +8,7 @@ import "context"
 type OAuthProvider interface {
 	AuthorizeDevice(ctx context.Context) (*DeviceAuthResponse, error)
 	PollAuthentication(ctx context.Context, deviceCode string) (*AuthenticationResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*RefreshResponse, error)
 }
 
 // DeviceAuthResponse represents the response from device authorization.
@@ -25,6 +26,12 @@ type AuthenticationResponse struct {
 	AccessToken  string
 	RefreshToken string
 	User         User
+}
+
+// RefreshResponse represents a successful token refresh.
+type RefreshResponse struct {
+	AccessToken  string
+	RefreshToken string
 }
 
 // OAuth error types - provider-agnostic
