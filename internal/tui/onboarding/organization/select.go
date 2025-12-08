@@ -28,8 +28,9 @@ type OrganizationLister interface {
 
 // orgItem implements list.Item for the list component
 type orgItem struct {
-	id   string
-	name string
+	id                   string
+	name                 string
+	workosOrganizationID string
 }
 
 func (i orgItem) FilterValue() string { return i.name }
@@ -79,11 +80,12 @@ type SelectStep struct {
 	logger    log.Logger
 
 	// UI state
-	remoteList     *remotelist.Component
-	orgs           []api.Organization
-	selectedOrgID  string
-	width          int
-	globalBindings []key.Binding
+	remoteList          *remotelist.Component
+	orgs                []api.Organization
+	selectedOrgID       string
+	selectedWorkosOrgID string
+	width               int
+	globalBindings      []key.Binding
 }
 
 // NewSelectStep creates a new organization selection step
@@ -141,7 +143,7 @@ func (s *SelectStep) Init() tea.Cmd {
 		// Build list items from orgs
 		items := make([]list.Item, len(orgs))
 		for i, org := range orgs {
-			items[i] = orgItem{id: org.ID, name: org.Name}
+			items[i] = orgItem{id: org.ID, name: org.Name, workosOrganizationID: org.WorkosOrganizationID}
 		}
 
 		return remotelist.LoadResultMsg{Items: items, Err: nil}
@@ -160,7 +162,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			s.orgs = make([]api.Organization, 0, len(msg.Items))
 			for _, item := range msg.Items {
 				if orgItem, ok := item.(orgItem); ok {
-					s.orgs = append(s.orgs, api.Organization{ID: orgItem.id, Name: orgItem.name})
+					s.orgs = append(s.orgs, api.Organization{ID: orgItem.id, Name: orgItem.name, WorkosOrganizationID: orgItem.workosOrganizationID})
 				}
 			}
 
@@ -178,6 +180,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				for _, org := range s.orgs {
 					if org.ID == userPref {
 						s.selectedOrgID = userPref
+						s.selectedWorkosOrgID = org.WorkosOrganizationID
 						s.logger.Debug("auto-selected organization from preference", "id", userPref, "name", org.Name)
 					}
 				}
@@ -186,6 +189,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Case 3: No preference AND only 1 org → auto-select and save
 			if userPref == "" && len(s.orgs) == 1 {
 				s.selectedOrgID = s.orgs[0].ID
+				s.selectedWorkosOrgID = s.orgs[0].WorkosOrganizationID
 				s.logger.Info("auto-selected organization", "id", s.orgs[0].ID, "name", s.orgs[0].Name, "reason", "only one available")
 				if err := s.defaultOrgSaver.SetDefaultOrgID(s.orgs[0].ID); err != nil {
 					s.logger.Error("failed to save organization preference", "error", err)
@@ -210,6 +214,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			selected := s.remoteList.SelectedItem()
 			if org, ok := selected.(orgItem); ok {
 				s.selectedOrgID = org.id
+				s.selectedWorkosOrgID = org.workosOrganizationID
 				s.logger.Info("organization selected", "id", org.id, "name", org.name)
 				if err := s.defaultOrgSaver.SetDefaultOrgID(org.id); err != nil {
 					s.logger.Error("failed to save organization preference", "error", err)
@@ -301,6 +306,15 @@ func (s *SelectStep) Next() step.Step {
 
 		// User wants to create new org - pass role forward
 		return NewCreateStep(s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings)
+	}
+
+	// Refresh token with org scope before proceeding
+	if s.selectedWorkosOrgID != "" {
+		ctx := context.Background()
+		if err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID); err != nil {
+			s.logger.Error("failed to refresh token with organization", "error", err)
+			// Continue anyway - the token refresh is best-effort
+		}
 	}
 
 	// Create account service for next step

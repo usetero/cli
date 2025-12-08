@@ -5,6 +5,7 @@ query ListOrganizations {
                 id
                 name
                 createdAt
+                workosOrganizationID
             }
         }
         totalCount
