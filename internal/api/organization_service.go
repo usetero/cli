@@ -71,9 +71,9 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*Organiz
 	}
 
 	org := &Organization{
-		ID:   resp.CreateOrganizationAndBootstrap.Organization.Id,
-		Name: resp.CreateOrganizationAndBootstrap.Organization.Name,
-		// WorkosOrganizationID will be populated after client regeneration
+		ID:                   resp.CreateOrganizationAndBootstrap.Organization.Id,
+		Name:                 resp.CreateOrganizationAndBootstrap.Organization.Name,
+		WorkosOrganizationID: resp.CreateOrganizationAndBootstrap.Organization.WorkosOrganizationID,
 	}
 
 	account := &Account{
