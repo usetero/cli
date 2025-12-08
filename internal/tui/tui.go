@@ -83,12 +83,12 @@ type TUI struct {
 }
 
 // New creates a new TUI model
-func New(cfg *config.Config, apiEndpoint string, workosClientID string, logger log.Logger) tea.Model {
+func New(cfg *config.Config, apiEndpoint string, workosClientID string, namespace string, logger log.Logger) tea.Model {
 	// Create WorkOS client for authentication
 	workosClient := workos.NewClient(workosBaseURL, workosClientID)
 
-	// Create keyring for secure token storage
-	tokenStore := keyring.New()
+	// Create keyring for secure token storage (namespaced by environment)
+	tokenStore := keyring.New(namespace)
 
 	// Create domain services
 	authService := auth.NewService(workosClient, tokenStore, logger)

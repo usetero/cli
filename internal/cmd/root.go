@@ -21,8 +21,8 @@ your observability data across all your tools.
 
 Just run 'tero' to start an interactive chat session.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Load user preferences
-			cfg, err := config.Load()
+			// Load user preferences (namespaced by environment)
+			cfg, err := config.Load(cliConfig.Namespace())
 			if err != nil {
 				return err
 			}
@@ -31,7 +31,7 @@ Just run 'tero' to start an interactive chat session.`,
 			endpoint, _ := cmd.Flags().GetString("endpoint")
 
 			// Create and run the TUI
-			p := tea.NewProgram(tui.New(cfg, endpoint, cliConfig.WorkOSClientID, logger))
+			p := tea.NewProgram(tui.New(cfg, endpoint, cliConfig.WorkOSClientID, cliConfig.Namespace(), logger))
 			if _, err := p.Run(); err != nil {
 				logger.Error("bubbletea program error", "error", err)
 				return err

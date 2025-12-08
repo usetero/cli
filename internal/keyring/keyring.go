@@ -6,24 +6,24 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-const (
-	serviceName = "tero-cli"
-	defaultUser = "default"
-)
+const baseServiceName = "tero-cli"
 
 // Keyring provides secure storage for sensitive data using the system keyring.
 // It implements the app.SecureStorage interface using generic key-value operations.
 // On macOS it uses Keychain, on Windows it uses Credential Manager, on Linux it uses Secret Service.
 type Keyring struct {
 	service string
-	user    string
 }
 
 // New creates a new keyring.
-func New() *Keyring {
+// If namespace is non-empty, credentials are stored separately (e.g., for non-production environments).
+func New(namespace string) *Keyring {
+	service := baseServiceName
+	if namespace != "" {
+		service = baseServiceName + ":" + namespace
+	}
 	return &Keyring{
-		service: serviceName,
-		user:    defaultUser,
+		service: service,
 	}
 }
 
