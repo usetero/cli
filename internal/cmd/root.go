@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"

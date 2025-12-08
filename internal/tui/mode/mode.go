@@ -1,6 +1,6 @@
 package mode
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 // Mode represents a distinct mode of the TUI (onboarding, app, etc.)
 // Each mode is self-contained and manages its own state and UI.

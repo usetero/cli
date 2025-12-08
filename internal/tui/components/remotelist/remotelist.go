@@ -1,7 +1,7 @@
 package remotelist
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/components"
 	"github.com/usetero/cli/internal/tui/components/list"

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/tui/layouts/layoutstest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"

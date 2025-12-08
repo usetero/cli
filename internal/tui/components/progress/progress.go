@@ -1,8 +1,8 @@
 package progress
 
 import (
-	"github.com/charmbracelet/bubbles/v2/progress"
-	tea "github.com/charmbracelet/bubbletea/v2"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/tui/styles"
 )
 
@@ -17,7 +17,7 @@ func New(width int) *Progress {
 	theme := styles.CurrentTheme()
 
 	p := progress.New(
-		progress.WithGradient(styles.ColorToHex(theme.Primary), styles.ColorToHex(theme.Secondary)),
+		progress.WithColors(theme.Primary, theme.Secondary),
 		progress.WithWidth(width),
 		progress.WithFillCharacters('█', '░'),
 	)

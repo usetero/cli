@@ -1,6 +1,6 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss/v2"
+import "charm.land/lipgloss/v2"
 
 // CommonStyles provides commonly used text styles for the TUI.
 // These styles are cached and reused across the application for consistency and performance.

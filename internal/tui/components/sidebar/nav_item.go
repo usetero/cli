@@ -4,8 +4,8 @@ import (
 	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/tui/styles"
 )
 

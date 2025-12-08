@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/v2/key"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
@@ -131,7 +131,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.TerminalVersionMsg:
 		// Detect Ghostty
-		termVersion := strings.ToLower(string(msg))
+		termVersion := strings.ToLower(msg.Name)
 		m.logger.Debug("received terminal version", "version", termVersion)
 		if !m.sendProgressBar {
 			m.sendProgressBar = strings.Contains(termVersion, "ghostty")
@@ -206,21 +206,23 @@ func (m *TUI) View() tea.View {
 			AltScreen:       true,
 		}
 
-		view.Layer = lipgloss.NewCanvas(
-			lipgloss.NewLayer(
-				lipgloss.NewStyle().
-					Width(m.width).
-					Height(m.height).
-					Align(lipgloss.Center, lipgloss.Center).
-					Render(
-						lipgloss.NewStyle().
-							Padding(1, 4).
-							Foreground(theme.Text).
-							BorderStyle(lipgloss.RoundedBorder()).
-							BorderForeground(theme.Primary).
-							Render("Window too small!"),
-					),
-			),
+		view.SetContent(
+			lipgloss.NewCanvas(
+				lipgloss.NewLayer(
+					lipgloss.NewStyle().
+						Width(m.width).
+						Height(m.height).
+						Align(lipgloss.Center, lipgloss.Center).
+						Render(
+							lipgloss.NewStyle().
+								Padding(1, 4).
+								Foreground(theme.Text).
+								BorderStyle(lipgloss.RoundedBorder()).
+								BorderForeground(theme.Primary).
+								Render("Window too small!"),
+						),
+				),
+			).Render(),
 		)
 
 		return view
@@ -250,7 +252,7 @@ func (m *TUI) View() tea.View {
 		BackgroundColor: theme.Background,
 		AltScreen:       true,
 	}
-	view.Layer = canvas
+	view.SetContent(canvas.Render())
 	view.Cursor = cursor
 	view.MouseMode = tea.MouseModeCellMotion
 

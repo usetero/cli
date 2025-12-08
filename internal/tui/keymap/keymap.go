@@ -1,6 +1,6 @@
 package keymap
 
-import "github.com/charmbracelet/bubbles/v2/key"
+import "charm.land/bubbles/v2/key"
 
 // Simple implements help.KeyMap with a basic list of key bindings.
 // Use this when you need to return dynamic keymaps from Help() methods

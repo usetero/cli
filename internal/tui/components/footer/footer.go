@@ -1,9 +1,9 @@
 package footer
 
 import (
-	"github.com/charmbracelet/bubbles/v2/help"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/help"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/components"
@@ -53,7 +53,7 @@ func (c *Component) Update(msg tea.Msg) tea.Cmd {
 	case tea.WindowSizeMsg:
 		c.logger.Debug("footer received window size", "width", msg.Width, "height", msg.Height)
 		c.width = msg.Width
-		c.help.Width = msg.Width
+		c.help.SetWidth(msg.Width)
 	}
 
 	return nil
