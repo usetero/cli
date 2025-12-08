@@ -27,14 +27,15 @@ type OrganizationLister interface {
 	List(ctx context.Context) ([]api.Organization, error)
 }
 
-// orgItem implements list.Item for the list component
-type orgItem struct {
-	id                   string
-	name                 string
-	workosOrganizationID string
+// OrgItem implements list.Item for the list component.
+// Exported for testing.
+type OrgItem struct {
+	ID                   string
+	Name                 string
+	WorkosOrganizationID string
 }
 
-func (i orgItem) FilterValue() string { return i.name }
+func (i OrgItem) FilterValue() string { return i.Name }
 
 // orgDelegate renders each organization in the list
 type orgDelegate struct{}
@@ -43,14 +44,14 @@ func (d orgDelegate) Height() int                             { return 1 }
 func (d orgDelegate) Spacing() int                            { return 0 }
 func (d orgDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d orgDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	i, ok := item.(orgItem)
+	i, ok := item.(OrgItem)
 	if !ok {
 		return
 	}
 
 	theme := styles.CurrentTheme()
 
-	str := i.name
+	str := i.Name
 	if index == m.Index() {
 		fn := lipgloss.NewStyle().
 			Foreground(theme.Primary).
@@ -153,7 +154,7 @@ func (s *SelectStep) Init() tea.Cmd {
 		// Build list items from orgs
 		items := make([]list.Item, len(orgs))
 		for i, org := range orgs {
-			items[i] = orgItem{id: org.ID, name: org.Name, workosOrganizationID: org.WorkosOrganizationID}
+			items[i] = OrgItem{ID: org.ID, Name: org.Name, WorkosOrganizationID: org.WorkosOrganizationID}
 		}
 
 		return remotelist.LoadResultMsg{Items: items, Err: nil}
@@ -235,8 +236,8 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Extract orgs from items
 			s.orgs = make([]api.Organization, 0, len(msg.Items))
 			for _, item := range msg.Items {
-				if orgItem, ok := item.(orgItem); ok {
-					s.orgs = append(s.orgs, api.Organization{ID: orgItem.id, Name: orgItem.name, WorkosOrganizationID: orgItem.workosOrganizationID})
+				if orgItem, ok := item.(OrgItem); ok {
+					s.orgs = append(s.orgs, api.Organization{ID: orgItem.ID, Name: orgItem.Name, WorkosOrganizationID: orgItem.WorkosOrganizationID})
 				}
 			}
 
@@ -287,12 +288,12 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				break
 			}
 			selected := s.remoteList.SelectedItem()
-			if org, ok := selected.(orgItem); ok {
-				s.logger.Info("organization selected", "id", org.id, "name", org.name)
-				if err := s.defaultOrgSaver.SetDefaultOrgID(org.id); err != nil {
+			if org, ok := selected.(OrgItem); ok {
+				s.logger.Info("organization selected", "id", org.ID, "name", org.Name)
+				if err := s.defaultOrgSaver.SetDefaultOrgID(org.ID); err != nil {
 					s.logger.Error("failed to save organization preference", "error", err)
 				}
-				cmd := s.selectOrg(org.id, org.workosOrganizationID)
+				cmd := s.selectOrg(org.ID, org.WorkosOrganizationID)
 				cmds = append(cmds, cmd)
 			}
 		case "n":
