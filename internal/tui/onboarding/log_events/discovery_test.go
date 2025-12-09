@@ -36,7 +36,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -69,7 +69,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert: not complete, poller was called
@@ -98,7 +98,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -122,7 +122,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

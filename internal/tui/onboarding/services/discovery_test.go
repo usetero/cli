@@ -35,7 +35,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -66,7 +66,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert: not complete, poller was called
@@ -95,7 +95,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -132,7 +132,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		if !updated.HasError() {
@@ -142,7 +142,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		// Act: press enter to retry
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -166,7 +166,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

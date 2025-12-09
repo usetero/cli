@@ -32,7 +32,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Type app key
@@ -43,7 +43,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Act: press enter to submit
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -70,7 +70,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Type app key
@@ -81,7 +81,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Submit
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -110,13 +110,13 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Act: press enter without typing
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -148,7 +148,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Type app key and submit (first attempt fails)
@@ -157,7 +157,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		}
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		if !updated.HasError() {
@@ -167,7 +167,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Act: press enter to retry
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

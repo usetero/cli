@@ -42,7 +42,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands and process messages
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -79,7 +79,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands and process messages
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -108,7 +108,10 @@ func TestSelectStep_Update(t *testing.T) {
 		}
 
 		// Verify it selected "create new"
-		selectStep := updated.(*organization.SelectStep)
+		selectStep, ok := updated.(*organization.SelectStep)
+		if !ok {
+			t.Fatal("expected *organization.SelectStep")
+		}
 		if !selectStep.IsCreateSelected() {
 			t.Error("expected create to be selected when no orgs exist")
 		}
@@ -168,7 +171,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands and process messages
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -210,7 +213,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands and process messages
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

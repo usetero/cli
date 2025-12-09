@@ -37,7 +37,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -68,7 +68,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 		// Execute all commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -94,7 +94,10 @@ func TestSelectStep_Update(t *testing.T) {
 			t.Error("expected step to auto-select create and complete")
 		}
 
-		selectStep := updated.(*account.SelectStep)
+		selectStep, ok := updated.(*account.SelectStep)
+		if !ok {
+			t.Fatal("expected *account.SelectStep")
+		}
 		if !selectStep.IsCreateSelected() {
 			t.Error("expected create to be selected when no accounts exist")
 		}
@@ -183,7 +186,10 @@ func TestSelectStep_Update(t *testing.T) {
 			t.Error("expected step to complete after pressing n")
 		}
 
-		selectStep := updated.(*account.SelectStep)
+		selectStep, ok := updated.(*account.SelectStep)
+		if !ok {
+			t.Fatal("expected *account.SelectStep")
+		}
 		if !selectStep.IsCreateSelected() {
 			t.Error("expected create to be selected")
 		}

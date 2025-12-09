@@ -41,7 +41,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		// Execute commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -73,7 +73,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		// Execute commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -109,7 +109,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		// Execute commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -146,7 +146,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		// Execute commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -177,7 +177,7 @@ func TestCreateStep_Update(t *testing.T) {
 		updated, _ := step.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
 		updated, cmd := updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		if !updated.HasError() {
