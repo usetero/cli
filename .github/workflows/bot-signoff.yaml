@@ -34,6 +34,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    if: "!startsWith(github.event.head_commit.message, 'chore(master): release')"
     steps:
       - name: Generate a token
         id: generate-token
