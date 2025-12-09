@@ -131,7 +131,7 @@ func (s *Service) WaitForAuth(ctx context.Context, deviceCode string, interval t
 
 			case errors.As(err, &expiredErr):
 				s.logger.Error("device code expired")
-				return nil, errors.New("device code expired - please restart authentication")
+				return nil, errors.New("device code expired - press 'r' to restart")
 
 			case errors.As(err, &deniedErr):
 				s.logger.Info("user denied authorization")
