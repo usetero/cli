@@ -24,7 +24,7 @@ name: bot-signoff
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GOPRIVATE: github.com/usetero/
@@ -34,7 +34,6 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: "!startsWith(github.event.head_commit.message, 'chore(master): release')"
     steps:
       - name: Generate a token
         id: generate-token
