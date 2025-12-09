@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/atotto/clipboard"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/atotto/clipboard"
 	"github.com/pkg/browser"
 	authservice "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
@@ -298,7 +298,7 @@ func isRecoverableError(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return msg == "device code expired - please restart authentication" ||
+	return msg == "device code expired - press 'r' to restart" ||
 		msg == "user denied authorization"
 }
 
