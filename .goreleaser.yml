@@ -60,6 +60,17 @@ brews:
     test: |
       system "#{bin}/tero", "--version"
 
+scoops:
+  - name: tero
+    directory: bucket
+    repository:
+      owner: usetero
+      name: scoop-bucket
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://usetero.com"
+    description: "Improve your observability data quality from the terminal"
+    license: "Apache-2.0"
+
 release:
   github:
     owner: usetero
