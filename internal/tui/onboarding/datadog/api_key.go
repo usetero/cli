@@ -259,40 +259,41 @@ func (s *APIKeyStep) View() string {
 		)
 	}
 
-	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 2 of 3)")
-	url := ddvendor.GetAPIKeyURL(s.site)
+	title := common.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
 		Foreground(theme.TextSubtle).
 		Underline(true)
+	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	// Interstitial screen
 	if !s.showingInput {
-		question := common.Body.Render("Paste your API key")
-		createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
+		prompt := common.Body.Render("First, create an API key.")
+		action := common.Subtitle.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
 			"",
-			question,
+			prompt,
 			"",
-			createLink,
+			action,
+			"",
+			docsLink,
 		)
 	}
 
 	// Input screen
-	question := common.Body.Render("Paste your API key")
-	createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
+	prompt := common.Body.Render("Paste your API key")
 
 	parts := []string{
 		title,
 		"",
-		question,
+		prompt,
 		"",
 		s.input.View(),
 		"",
-		createLink,
+		docsLink,
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)

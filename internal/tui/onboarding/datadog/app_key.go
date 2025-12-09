@@ -232,40 +232,43 @@ func (s *AppKeyStep) View() string {
 		)
 	}
 
-	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 3 of 3)")
-	url := ddvendor.GetAppKeyURL(s.site)
+	title := common.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
 		Foreground(theme.TextSubtle).
 		Underline(true)
+	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	// Interstitial screen
 	if !s.showingInput {
-		question := common.Body.Render("Paste your Application key")
-		createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
+		prompt := common.Body.Render("Now, create a Service Account application key.")
+		explanation := common.Subtitle.Render("This lets Tero read your telemetry data and discover waste.")
+		action := common.Subtitle.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
 			"",
-			question,
+			prompt,
+			explanation,
 			"",
-			createLink,
+			action,
+			"",
+			docsLink,
 		)
 	}
 
 	// Input screen
-	question := common.Body.Render("Paste your Application key")
-	createLink := common.Help.Render("Create one at ") + linkStyle.Render(url)
+	prompt := common.Body.Render("Paste the application key")
 
 	parts := []string{
 		title,
 		"",
-		question,
+		prompt,
 		"",
 		s.input.View(),
 		"",
-		createLink,
+		docsLink,
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
