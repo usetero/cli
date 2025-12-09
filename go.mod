@@ -12,15 +12,15 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/rivo/uniseg v0.4.7
-	github.com/spf13/cobra v1.10.1
-	github.com/vektah/gqlparser/v2 v2.5.19
+	github.com/spf13/cobra v1.10.2
+	github.com/vektah/gqlparser/v2 v2.5.31
 	github.com/zalando/go-keyring v0.2.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
-	github.com/agnivade/levenshtein v1.1.1 // indirect
+	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/alexflint/go-arg v1.5.1 // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
