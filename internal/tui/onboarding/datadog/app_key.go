@@ -243,7 +243,7 @@ func (s *AppKeyStep) View() string {
 	if !s.showingInput {
 		prompt := common.Body.Render("Now, create a Service Account application key.")
 		explanation := common.Subtitle.Render("This lets Tero read your telemetry data and discover waste.")
-		action := common.Subtitle.Render("Press Enter to open Datadog.")
+		action := common.Action.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
