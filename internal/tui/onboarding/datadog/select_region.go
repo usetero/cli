@@ -148,8 +148,8 @@ func (s *SelectRegionStep) View() string {
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
-	title := common.Title.Render("Connect Datadog") + common.Help.Render(" (Step 1 of 3)")
-	explanation := common.Subtitle.Render("Tero connects to your Datadog account to discover your services and analyze your telemetry.")
+	title := common.Title.Render("Connect to Datadog")
+	explanation := common.Subtitle.Render("Tero needs two keys to access your data - that's how Datadog works.")
 	question := common.Body.Render("Which region is your Datadog account in?")
 
 	linkStyle := lipgloss.NewStyle().
