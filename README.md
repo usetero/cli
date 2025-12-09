@@ -26,8 +26,7 @@ Connect your Datadog account (read-only) and Tero will:
 curl -sSfL https://sh.usetero.com | sh
 
 # Or with Homebrew
-brew tap usetero/tap
-brew install tero
+brew install usetero/tap/tero
 ```
 
 **Run:**
