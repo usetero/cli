@@ -269,7 +269,7 @@ func (s *APIKeyStep) View() string {
 	// Interstitial screen
 	if !s.showingInput {
 		prompt := common.Body.Render("First, create an API key.")
-		action := common.Subtitle.Render("Press Enter to open Datadog.")
+		action := common.Action.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,

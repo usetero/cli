@@ -245,7 +245,7 @@ func (s *DiscoveryStep) View() string {
 func (s *DiscoveryStep) renderLoading(theme *styles.Theme) string {
 	common := styles.Common()
 
-	title := common.Body.Bold(true).Render("Understanding your log patterns and identifying waste...")
+	title := common.Title.Render("Understanding your log patterns and identifying waste...")
 	subtitle := common.Subtitle.Render("This may take a few minutes depending on volume.")
 	statusMsg := s.spinner.View() + " " + common.Body.Render("Connecting to Datadog...")
 
@@ -275,7 +275,7 @@ func (s *DiscoveryStep) renderError(theme *styles.Theme) string {
 func (s *DiscoveryStep) renderInProgress(theme *styles.Theme) string {
 	common := styles.Common()
 
-	title := common.Body.Bold(true).Render("Understanding your log patterns and identifying waste...")
+	title := common.Title.Render("Understanding your log patterns and identifying waste...")
 	subtitle := common.Subtitle.Render("This may take a few minutes depending on volume.")
 
 	// Create progress bar with gradient - match content width
