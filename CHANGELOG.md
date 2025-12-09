@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.4.0](https://github.com/usetero/cli/compare/v1.3.0...v1.4.0) (2025-12-09)
+
+
+### Features
+
+* **auth:** auto-open browser when device auth starts ([a18653f](https://github.com/usetero/cli/commit/a18653fdd209c34d723059041ed37d734f1f1103))
+* **auth:** auto-refresh expired access tokens ([71bceca](https://github.com/usetero/cli/commit/71bcecaf9d3235bb44258035c5b29e7b53cf596b))
+* **auth:** refresh token with org scope after org creation ([8b28daf](https://github.com/usetero/cli/commit/8b28dafa5727aef8e144105a2e7073a64787bff3))
+* **cli:** add --reset flag to clear preferences and auth ([c66af84](https://github.com/usetero/cli/commit/c66af840e9e568486212f090dddf83a57255cb43))
+* **config:** namespace credentials and config by environment ([74f05a8](https://github.com/usetero/cli/commit/74f05a82ca45f041cd39095b295cf73531238f65))
+
+
+### Bug Fixes
+
+* **auth:** improve expired device code error message ([b50d793](https://github.com/usetero/cli/commit/b50d793ad4569d73fc082388b0006b0ae65dc2e4))
+* **auth:** use body style for instruction text ([6e91c3f](https://github.com/usetero/cli/commit/6e91c3f19322fa8272b1fb6718b07a0707e45e00))
+* **cli:** --reset flag continues into TUI instead of exiting ([c274ad1](https://github.com/usetero/cli/commit/c274ad181317a8f2bf8d476938036b741e86bda7))
+* **client:** extract message from genqlient HTTPError ([c470a2e](https://github.com/usetero/cli/commit/c470a2ef3dee3bb40639f2a547ea8a0721e33139))
+* **client:** regenerate client with workosOrganizationID field ([9e9aee3](https://github.com/usetero/cli/commit/9e9aee38715976f4540e53b1d02c4b4261216c12))
+* **client:** update API client token after org-scoped refresh ([bbeac04](https://github.com/usetero/cli/commit/bbeac0414f73ea73b68996557589462ec647375c))
+* **datadog:** prevent browser opening during tests ([11f3b97](https://github.com/usetero/cli/commit/11f3b9721fdacd30bee0e7718eb5e2e2cfa2eba5))
+* **install:** remove nested color codes from success message ([a2201db](https://github.com/usetero/cli/commit/a2201db5597b2b4fce6245f81051179058e240a3))
+* **onboarding:** add context and step counter to Datadog flow ([f882347](https://github.com/usetero/cli/commit/f88234700e61daff4998669db0b0bc9725aa4862))
+* **onboarding:** clarify Datadog region question ([7f967c9](https://github.com/usetero/cli/commit/7f967c9ef560bbe564839c9930af891d3eb0bc99))
+* **onboarding:** consistent text styling across screens ([0fd2dc5](https://github.com/usetero/cli/commit/0fd2dc5618fb02151c24d6a05bfc3b3b11e3686b))
+* **onboarding:** correct text hierarchy - prompts white, explanations muted ([1f2630b](https://github.com/usetero/cli/commit/1f2630beef875b3e8178ad75dce1ff93743912db))
+* **onboarding:** improve Datadog connection flow copy ([8beab8e](https://github.com/usetero/cli/commit/8beab8eecb3c569a6cd1849da3f8d3a9556bd074))
+* **org:** refresh token with org scope when selecting existing org ([63053e4](https://github.com/usetero/cli/commit/63053e487274272052747700b31a673d3d09cb72))
+* **org:** show loading state during token refresh after auto-selection ([97eaebf](https://github.com/usetero/cli/commit/97eaebfa2e8966313d37666c91a62b8b068d96af))
+* **org:** show org name when auto-selecting ([a6cea1c](https://github.com/usetero/cli/commit/a6cea1ce6d6806bd49fc60da8495ed763060d81a))
+* **org:** use spinner loader during token refresh ([351b8e8](https://github.com/usetero/cli/commit/351b8e8958515842bf6c79510a20733ebf9509aa))
+* resolve linter errors in tests and workos ([9bb90e9](https://github.com/usetero/cli/commit/9bb90e9c38d9680e3becdd29e2e4773900c966a9))
+
 ## [1.3.0](https://github.com/usetero/cli/compare/v1.2.3...v1.3.0) (2025-12-03)
 
 
