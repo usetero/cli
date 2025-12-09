@@ -60,7 +60,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		// Execute token refresh command
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -128,7 +128,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		// Execute create command (which fails)
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -190,7 +190,7 @@ func TestCreateStep_Update(t *testing.T) {
 			updated, cmd = updated.Update(msg)
 		}
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -248,7 +248,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		// Execute token refresh command
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -290,7 +290,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Verify error state
@@ -354,7 +354,7 @@ func TestCreateStep_IsComplete(t *testing.T) {
 
 		// Execute token refresh
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Now should be complete

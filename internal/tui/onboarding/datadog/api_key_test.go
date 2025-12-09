@@ -30,7 +30,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		// Transition to input screen (press enter on interstitial)
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Type API key
@@ -41,7 +41,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		// Act: press enter to submit
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -68,7 +68,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Type API key
@@ -79,7 +79,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		// Submit
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -108,13 +108,13 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		// Transition to input screen
 		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Act: press enter without typing anything
 		updated, cmd = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

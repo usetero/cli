@@ -38,14 +38,17 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
 		if !updated.IsComplete() {
 			t.Error("expected step to complete when datadog exists")
 		}
-		checkStep := updated.(*datadog.CheckDatadogStep)
+		checkStep, ok := updated.(*datadog.CheckDatadogStep)
+		if !ok {
+			t.Fatal("expected *datadog.CheckDatadogStep")
+		}
 		if checkStep.NeedsDatadogSetup() {
 			t.Error("expected NeedsDatadogSetup to be false when datadog exists")
 		}
@@ -67,14 +70,17 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
 		if !updated.IsComplete() {
 			t.Error("expected step to complete when no datadog")
 		}
-		checkStep := updated.(*datadog.CheckDatadogStep)
+		checkStep, ok := updated.(*datadog.CheckDatadogStep)
+		if !ok {
+			t.Fatal("expected *datadog.CheckDatadogStep")
+		}
 		if !checkStep.NeedsDatadogSetup() {
 			t.Error("expected NeedsDatadogSetup to be true when no datadog")
 		}
@@ -96,7 +102,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
@@ -132,7 +138,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		cmd := step.Init()
 		updated := step
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		if !updated.HasError() {
@@ -142,7 +148,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		// Act: press 'r' to retry
 		updated, cmd = updated.Update(keyMsg('r'))
 		for _, msg := range tuitest.DrainCmds(cmd) {
-			updated, cmd = updated.Update(msg)
+			updated, _ = updated.Update(msg)
 		}
 
 		// Assert

@@ -24,7 +24,10 @@ func TestSelectRegionStep_Update(t *testing.T) {
 		if !updated.IsComplete() {
 			t.Error("expected step to complete after selection")
 		}
-		selectStep := updated.(*datadog.SelectRegionStep)
+		selectStep, ok := updated.(*datadog.SelectRegionStep)
+		if !ok {
+			t.Fatal("expected *datadog.SelectRegionStep")
+		}
 		if selectStep.SelectedRegion() == "" {
 			t.Error("expected a region to be selected")
 		}

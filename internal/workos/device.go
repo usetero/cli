@@ -31,7 +31,7 @@ func (c *Client) AuthorizeDevice(ctx context.Context) (*auth.DeviceAuthResponse,
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -85,7 +85,7 @@ func (c *Client) PollAuthentication(ctx context.Context, deviceCode string) (*au
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
