@@ -31,6 +31,9 @@ brew install usetero/tap/tero
 # Scoop (Windows)
 scoop bucket add tero https://github.com/usetero/scoop-bucket
 scoop install tero
+
+# Docker
+docker pull usetero/tero
 ```
 
 **Run:**
