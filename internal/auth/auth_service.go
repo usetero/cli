@@ -211,6 +211,36 @@ func (s *Service) ClearTokens() error {
 	return nil
 }
 
+// RefreshTokenWithoutOrganization refreshes the access token without any organization scope.
+// This is used for bootstrap flows where the user needs a user-scoped token to create an org.
+// Returns the new access token so callers can update their API clients.
+func (s *Service) RefreshTokenWithoutOrganization(ctx context.Context) (string, error) {
+	s.logger.Debug("refreshing token without organization scope")
+
+	refreshToken, err := s.storage.Get("refresh_token")
+	if err != nil {
+		s.logger.Error("failed to get refresh token", "error", err)
+		return "", err
+	}
+	if refreshToken == "" {
+		return "", errors.New("no refresh token found")
+	}
+
+	resp, err := s.provider.RefreshToken(ctx, refreshToken)
+	if err != nil {
+		s.logger.Error("failed to refresh token without organization", "error", err)
+		return "", err
+	}
+
+	if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
+		s.logger.Error("failed to save refreshed tokens", "error", err)
+		return "", err
+	}
+
+	s.logger.Info("token refreshed without organization scope")
+	return resp.AccessToken, nil
+}
+
 // RefreshTokenWithOrganization refreshes the access token scoped to an organization.
 // This is used after creating/selecting an organization to get a token with the org_id claim.
 // Returns the new access token so callers can update their API clients.
