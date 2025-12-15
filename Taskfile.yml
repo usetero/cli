@@ -100,23 +100,14 @@ tasks:
   reset:
     desc: Reset development environment (auth, config, logs)
     cmds:
-      - task: reset:auth
-      - task: reset:config
+      - go run ./cmd/tero reset
+      - task: reset:logs
 
-  reset:auth:
-    desc: Clear authentication tokens from keychain
-    cmds:
-      - security delete-generic-password -s "tero-cli" -a "access_token" 2>/dev/null || true
-      - security delete-generic-password -s "tero-cli" -a "refresh_token" 2>/dev/null || true
-      - 'echo "Cleared: authentication tokens"'
-
-  reset:config:
-    desc: Clear config files and logs
+  reset:logs:
+    desc: Clear log files
     cmds:
       - rm -f /tmp/tero.log
-      - rm -rf ~/.tero/
-      - rm -rf ~/.config/tero/
-      - 'echo "Cleared: config files and logs"'
+      - 'echo "Cleared: log files"'
 
   # Release tasks
   build:version:
