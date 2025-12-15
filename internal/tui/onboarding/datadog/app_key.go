@@ -12,11 +12,11 @@ import (
 	"github.com/usetero/cli/internal/api"
 	ddvendor "github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/input"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/services"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // DatadogAccountCreator creates Datadog accounts

@@ -4,8 +4,8 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // Component is a loading indicator with an animated spinner

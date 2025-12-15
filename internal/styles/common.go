@@ -1,3 +1,5 @@
+// Package styles provides consistent styling for CLI output.
+// Used by both TUI components and traditional CLI commands.
 package styles
 
 import "charm.land/lipgloss/v2"

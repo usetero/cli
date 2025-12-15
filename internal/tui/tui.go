@@ -13,10 +13,10 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 const (

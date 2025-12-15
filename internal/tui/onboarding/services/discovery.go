@@ -12,10 +12,10 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/log_events"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 const (

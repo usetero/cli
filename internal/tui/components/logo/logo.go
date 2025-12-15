@@ -6,7 +6,7 @@ import (
 	"image/color"
 	"strings"
 
-	"github.com/usetero/cli/internal/tui/styles"
+	"github.com/usetero/cli/internal/styles"
 )
 
 // Opts are the options for rendering the Tero logo.

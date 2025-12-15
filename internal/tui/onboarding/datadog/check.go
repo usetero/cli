@@ -8,10 +8,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/services"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // DatadogAccountChecker checks if an account has a Datadog integration

@@ -8,9 +8,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // shouldSkipToApp returns true if TERO_SKIP_TO_APP environment variable is set to "true"

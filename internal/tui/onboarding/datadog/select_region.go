@@ -11,10 +11,10 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // regionItem implements list.Item for the list component

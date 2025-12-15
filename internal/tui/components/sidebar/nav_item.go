@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
-	"github.com/usetero/cli/internal/tui/styles"
+	"github.com/usetero/cli/internal/styles"
 )
 
 // NavItem represents a single navigation item in the sidebar

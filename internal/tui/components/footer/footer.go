@@ -6,8 +6,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 // Component is a footer component that displays help text and error state
