@@ -7,8 +7,8 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/logo"
-	"github.com/usetero/cli/internal/tui/styles"
 )
 
 const diag = `╱`

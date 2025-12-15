@@ -14,10 +14,10 @@ import (
 	authservice "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/role"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/styles"
 	"github.com/usetero/cli/pkg/client"
 )
 

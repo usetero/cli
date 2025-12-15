@@ -3,7 +3,7 @@ package progress
 import (
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/tui/styles"
+	"github.com/usetero/cli/internal/styles"
 )
 
 // Progress wraps the Bubbles progress component with Tero styling.
