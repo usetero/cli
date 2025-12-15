@@ -16,6 +16,15 @@ func NewRootCmd(logger log.Logger, version string) *cobra.Command {
 	// Load CLI configuration
 	cliConfig := config.LoadCLIConfig()
 
+	rootCmd := newRootCmd(logger, version, cliConfig)
+
+	// Subcommands
+	rootCmd.AddCommand(NewAuthCmd(logger, cliConfig))
+
+	return rootCmd
+}
+
+func newRootCmd(logger log.Logger, version string, cliConfig *config.CLIConfig) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:     "tero",
 		Short:   "Tero - Your telemetry quality platform",
@@ -78,9 +87,6 @@ Just run 'tero' to start an interactive chat session.`,
 	rootCmd.PersistentFlags().String("endpoint", cliConfig.APIEndpoint, "Tero control plane endpoint")
 	rootCmd.PersistentFlags().BoolP("debug", "d", cliConfig.Debug, "Enable debug logging")
 	rootCmd.Flags().Bool("reset", false, "Clear all preferences and authentication")
-
-	// Subcommands (add later)
-	// rootCmd.AddCommand(NewMCPCmd())
 
 	return rootCmd
 }
