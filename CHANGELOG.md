@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.0](https://github.com/usetero/cli/compare/v1.6.0...v1.7.0) (2025-12-15)
+
+
+### Features
+
+* **cmd:** add tero reset subcommand ([1438789](https://github.com/usetero/cli/commit/14387892fa448cb1f03fcaa14cdedc78848fec2c))
+
+
+### Bug Fixes
+
+* **auth:** refresh token without org when --no-org is set ([1f892ba](https://github.com/usetero/cli/commit/1f892ba5b7a6ae92beef51c38f34785c70d7acec))
+* **styles:** detect terminal background for theme selection ([3cf0f2b](https://github.com/usetero/cli/commit/3cf0f2b89e226281b0fdb5e1f5e75791dd0394e3))
+
 ## [1.6.0](https://github.com/usetero/cli/compare/v1.5.0...v1.6.0) (2025-12-15)
 
 
