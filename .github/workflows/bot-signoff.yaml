@@ -23,7 +23,8 @@ name: bot-signoff
     branches: ["master"]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # PRs use their ref (unique per PR), master uses commit SHA (unique per push)
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
