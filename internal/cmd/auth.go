@@ -17,6 +17,7 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
 	"github.com/usetero/cli/pkg/client"
 )
@@ -52,6 +53,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 		Short: "Authenticate with Tero",
 		Long:  "Authenticate with Tero using the device authorization flow.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			s := styles.Common()
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -66,15 +68,15 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			// Print instructions
-			fmt.Println("Opening browser to authenticate...")
-			fmt.Printf("If the browser doesn't open, visit: %s\n", deviceAuth.VerificationURIComplete)
-			fmt.Printf("And enter code: %s\n", deviceAuth.UserCode)
+			fmt.Println(s.Body.Render("Opening browser to authenticate..."))
+			fmt.Println(s.Help.Render("If the browser doesn't open, visit: ") + s.URL.Render(deviceAuth.VerificationURIComplete))
+			fmt.Println(s.Help.Render("And enter code: ") + s.Title.Render(deviceAuth.UserCode))
 
 			// Try to open browser
 			_ = browser.OpenURL(deviceAuth.VerificationURIComplete)
 
 			// Poll for completion
-			fmt.Println("\nWaiting for authentication...")
+			fmt.Println(s.Help.Render("\nWaiting for authentication..."))
 			interval := time.Duration(deviceAuth.Interval) * time.Second
 			if interval == 0 {
 				interval = 5 * time.Second
@@ -85,11 +87,11 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 				return fmt.Errorf("authentication failed: %w", err)
 			}
 
-			fmt.Printf("\nAuthenticated as %s\n", result.User.Email)
+			fmt.Println(s.Success.Render("\n✓ Authenticated as " + result.User.Email))
 
 			// If --no-org flag is set, skip org selection
 			if noOrg {
-				fmt.Println("Skipping organization selection (--no-org)")
+				fmt.Println(s.Help.Render("Skipping organization selection (--no-org)"))
 				return nil
 			}
 
@@ -98,13 +100,13 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			orgs, err := fetchOrganizations(ctx, apiClient)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
-				fmt.Printf("\nCould not fetch organizations: %v\n", err)
-				fmt.Println("Run 'tero auth switch' to select an organization later")
-				return nil
+				fmt.Println(s.Help.Render("\nCould not fetch organizations: " + err.Error()))
+				fmt.Println(s.Help.Render("Run 'tero auth switch' to select an organization later"))
+				return nil //nolint:nilerr // intentional - login succeeded, org fetch is optional
 			}
 
 			if len(orgs) == 0 {
-				fmt.Println("\nNo organizations found. Create one to get started.")
+				fmt.Println(s.Help.Render("\nNo organizations found. Create one to get started."))
 				return nil
 			}
 
@@ -112,7 +114,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			var selectedOrg *org
 			if len(orgs) == 1 {
 				selectedOrg = &orgs[0]
-				fmt.Printf("\nUsing organization: %s\n", selectedOrg.Name)
+				fmt.Println(s.Body.Render("\nUsing organization: ") + s.Title.Render(selectedOrg.Name))
 			} else {
 				// Prompt user to select
 				selectedOrg, err = promptOrgSelection(orgs)
@@ -130,7 +132,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			// Update the API client with new token (not strictly needed, but consistent)
 			apiClient.SetAccessToken(newToken)
 
-			fmt.Printf("Switched to organization: %s\n", selectedOrg.Name)
+			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
 		},
 	}
@@ -147,6 +149,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Long:  "Switch to a different organization. Lists available orgs if none specified.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			s := styles.Common()
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -168,7 +171,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			}
 
 			if len(orgs) == 0 {
-				fmt.Println("No organizations found")
+				fmt.Println(s.Help.Render("No organizations found"))
 				return nil
 			}
 
@@ -200,7 +203,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 				return fmt.Errorf("failed to switch organization: %w", err)
 			}
 
-			fmt.Printf("Switched to organization: %s\n", selectedOrg.Name)
+			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
 		},
 	}
@@ -234,6 +237,7 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Short: "Clear stored credentials",
 		Long:  "Remove stored authentication credentials.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			s := styles.Common()
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -243,7 +247,7 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 				return fmt.Errorf("failed to clear credentials: %w", err)
 			}
 
-			fmt.Println("Logged out successfully")
+			fmt.Println(s.Success.Render("✓ Logged out successfully"))
 			return nil
 		},
 	}
@@ -255,6 +259,7 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Short: "Show authentication status",
 		Long:  "Show current authentication status including user and token state.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			s := styles.Common()
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 
@@ -265,8 +270,8 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			}
 
 			if token == "" {
-				fmt.Println("Not authenticated")
-				fmt.Println("Run 'tero auth login' to authenticate")
+				fmt.Println(s.Help.Render("Not authenticated"))
+				fmt.Println(s.Help.Render("Run 'tero auth login' to authenticate"))
 				return nil
 			}
 
@@ -274,7 +279,7 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			claims, err := parseTokenClaims(token)
 			if err != nil {
 				// Token exists but can't be parsed - still authenticated, just can't show details
-				fmt.Println("Authenticated (invalid token format)")
+				fmt.Println(s.Body.Render("Authenticated (invalid token format)"))
 				return nil //nolint:nilerr // intentional - we report status, not error
 			}
 
@@ -290,9 +295,9 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			email, _ := claims["email"].(string)
 			workosOrgID, _ := claims["org_id"].(string)
 
-			fmt.Println("Authenticated")
+			fmt.Println(s.Success.Render("✓ Authenticated"))
 			if email != "" {
-				fmt.Printf("  User: %s\n", email)
+				fmt.Println(s.Help.Render("  User: ") + s.Body.Render(email))
 			}
 
 			// Try to get org name from API
@@ -311,17 +316,17 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 						}
 					}
 				}
-				fmt.Printf("  Organization: %s\n", orgName)
+				fmt.Println(s.Help.Render("  Organization: ") + s.Body.Render(orgName))
 			} else {
-				fmt.Println("  Organization: (none)")
+				fmt.Println(s.Help.Render("  Organization: ") + s.Help.Render("(none)"))
 			}
 
 			if !expiresAt.IsZero() {
 				if expired {
-					fmt.Printf("  Token: expired at %s\n", expiresAt.Format(time.RFC3339))
-					fmt.Println("  Run 'tero auth login' to re-authenticate")
+					fmt.Println(s.Help.Render("  Token: ") + s.Error.Render("expired at "+expiresAt.Format(time.RFC3339)))
+					fmt.Println(s.Help.Render("  Run 'tero auth login' to re-authenticate"))
 				} else {
-					fmt.Printf("  Token: valid until %s\n", expiresAt.Format(time.RFC3339))
+					fmt.Println(s.Help.Render("  Token: ") + s.Body.Render("valid until "+expiresAt.Format(time.RFC3339)))
 				}
 			}
 
@@ -350,11 +355,12 @@ func fetchOrganizations(ctx context.Context, apiClient *client.Client) ([]org, e
 
 // promptOrgSelection prompts the user to select an organization
 func promptOrgSelection(orgs []org) (*org, error) {
-	fmt.Println("\nSelect an organization:")
+	s := styles.Common()
+	fmt.Println(s.Title.Render("\nSelect an organization:"))
 	for i, o := range orgs {
 		fmt.Printf("  %d. %s\n", i+1, o.Name)
 	}
-	fmt.Print("Enter number: ")
+	fmt.Print(s.Action.Render("Enter number: "))
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
