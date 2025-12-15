@@ -1,3 +1,4 @@
 FROM scratch
-COPY tero /usr/local/bin/tero
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/tero /usr/local/bin/tero
 ENTRYPOINT ["tero"]

@@ -71,35 +71,16 @@ scoops:
     description: "Improve your observability data quality from the terminal"
     license: "Apache-2.0"
 
-dockers:
-  - image_templates:
-      - "usetero/tero:{{ .Version }}-amd64"
-      - "usetero/tero:latest-amd64"
-    use: buildx
-    goos: linux
-    goarch: amd64
-    build_flag_templates:
-      - "--platform=linux/amd64"
+dockers_v2:
+  - images:
+      - "usetero/tero"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64
     dockerfile: Dockerfile
-  - image_templates:
-      - "usetero/tero:{{ .Version }}-arm64"
-      - "usetero/tero:latest-arm64"
-    use: buildx
-    goos: linux
-    goarch: arm64
-    build_flag_templates:
-      - "--platform=linux/arm64"
-    dockerfile: Dockerfile
-
-docker_manifests:
-  - name_template: "usetero/tero:{{ .Version }}"
-    image_templates:
-      - "usetero/tero:{{ .Version }}-amd64"
-      - "usetero/tero:{{ .Version }}-arm64"
-  - name_template: "usetero/tero:latest"
-    image_templates:
-      - "usetero/tero:latest-amd64"
-      - "usetero/tero:latest-arm64"
 
 release:
   github:
