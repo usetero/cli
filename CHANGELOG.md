@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.5.0](https://github.com/usetero/cli/compare/v1.4.0...v1.5.0) (2025-12-15)
+
+
+### Features
+
+* **auth:** add auth commands for API authentication ([7b7e70f](https://github.com/usetero/cli/commit/7b7e70f869e6d24629621c6ddad2651ee33491d4))
+* **release:** add Docker Hub publishing ([6664122](https://github.com/usetero/cli/commit/6664122265c29c33cffbdc5c11150a02b35aefbf))
+* **release:** add Scoop bucket publishing for Windows ([1a6895c](https://github.com/usetero/cli/commit/1a6895c1f80aa076d0f706949eab02729cc1fc61))
+
+
+### Bug Fixes
+
+* **ci:** don't cancel in-progress signoff on master pushes ([0ae0394](https://github.com/usetero/cli/commit/0ae0394e42ecee85a2744fb526161fed08d8110b))
+* **ci:** skip signoff for release-please commits ([91ad45e](https://github.com/usetero/cli/commit/91ad45e11144a9b3fef541947955d6e5b1cde83d))
+* **deps:** update go dependencies (minor/patch) ([#16](https://github.com/usetero/cli/issues/16)) ([eb4a5b5](https://github.com/usetero/cli/commit/eb4a5b5c3ecb6f1503a01973cd780fdb1fff30ed))
+* **deps:** upgrade gopkg.in/yaml.v2 to v3 ([f23df38](https://github.com/usetero/cli/commit/f23df386a3f14935b06d157a53af21f26a2cd22e))
+
 ## [1.4.0](https://github.com/usetero/cli/compare/v1.3.0...v1.4.0) (2025-12-09)
 
 
