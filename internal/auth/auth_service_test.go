@@ -106,6 +106,74 @@ func TestService_GetAccessToken(t *testing.T) {
 	})
 }
 
+func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
+	t.Run("refreshes token without org scope", func(t *testing.T) {
+		newToken := makeTestToken(time.Now().Add(10 * time.Minute))
+		var savedAccessToken, savedRefreshToken string
+
+		storage := &authtest.MockSecureStorage{
+			GetFunc: func(key string) (string, error) {
+				if key == "refresh_token" {
+					return "stored_refresh_token", nil
+				}
+				return "", nil
+			},
+			SetFunc: func(key, value string) error {
+				switch key {
+				case "access_token":
+					savedAccessToken = value
+				case "refresh_token":
+					savedRefreshToken = value
+				}
+				return nil
+			},
+		}
+
+		provider := &authtest.MockOAuthProvider{
+			RefreshTokenFunc: func(ctx context.Context, refreshToken string) (*auth.RefreshResponse, error) {
+				if refreshToken != "stored_refresh_token" {
+					t.Errorf("unexpected refresh token: %s", refreshToken)
+				}
+				return &auth.RefreshResponse{
+					AccessToken:  newToken,
+					RefreshToken: "new_refresh_token",
+				}, nil
+			},
+		}
+
+		svc := auth.NewService(provider, storage, logtest.New(t))
+
+		token, err := svc.RefreshTokenWithoutOrganization(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if token != newToken {
+			t.Errorf("got %q, want %q", token, newToken)
+		}
+		if savedAccessToken != newToken {
+			t.Errorf("access token not saved: got %q, want %q", savedAccessToken, newToken)
+		}
+		if savedRefreshToken != "new_refresh_token" {
+			t.Errorf("refresh token not saved: got %q, want %q", savedRefreshToken, "new_refresh_token")
+		}
+	})
+
+	t.Run("returns error when no refresh token", func(t *testing.T) {
+		storage := &authtest.MockSecureStorage{
+			GetFunc: func(key string) (string, error) {
+				return "", nil
+			},
+		}
+
+		svc := auth.NewService(&authtest.MockOAuthProvider{}, storage, logtest.New(t))
+
+		_, err := svc.RefreshTokenWithoutOrganization(context.Background())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
 // makeTestToken creates a JWT with the given expiration time.
 func makeTestToken(exp time.Time) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`))
