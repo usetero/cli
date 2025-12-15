@@ -89,9 +89,13 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 
 			fmt.Println(s.Success.Render("\n✓ Authenticated as " + result.User.Email))
 
-			// If --no-org flag is set, skip org selection
+			// If --no-org flag is set, refresh token without org scope and return
 			if noOrg {
-				fmt.Println(s.Help.Render("Skipping organization selection (--no-org)"))
+				_, err := authService.RefreshTokenWithoutOrganization(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to get user-scoped token: %w", err)
+				}
+				fmt.Println(s.Help.Render("Using user-scoped token (no organization)"))
 				return nil
 			}
 
