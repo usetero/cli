@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/config"
@@ -46,28 +44,6 @@ Just run 'tero' to start an interactive chat session.`,
 			// Create token store (namespaced by environment)
 			tokenStore := keyring.New(namespace)
 
-			// Handle --reset flag
-			reset, _ := cmd.Flags().GetBool("reset")
-			if reset {
-				if err := cfg.Clear(); err != nil {
-					return fmt.Errorf("failed to clear preferences: %w", err)
-				}
-				if err := tokenStore.Delete("access_token"); err != nil {
-					return fmt.Errorf("failed to clear access token: %w", err)
-				}
-				if err := tokenStore.Delete("refresh_token"); err != nil {
-					return fmt.Errorf("failed to clear refresh token: %w", err)
-				}
-
-				logger.Info("reset complete", "namespace", namespace)
-
-				// Reload config after clearing
-				cfg, err = config.Load(namespace)
-				if err != nil {
-					return err
-				}
-			}
-
 			// Get endpoint from flag (allows override of env var/default)
 			endpoint, _ := cmd.Flags().GetString("endpoint")
 
@@ -87,7 +63,6 @@ Just run 'tero' to start an interactive chat session.`,
 	// Global flags with defaults from CLI config
 	rootCmd.PersistentFlags().String("endpoint", cliConfig.APIEndpoint, "Tero control plane endpoint")
 	rootCmd.PersistentFlags().BoolP("debug", "d", cliConfig.Debug, "Enable debug logging")
-	rootCmd.Flags().Bool("reset", false, "Clear all preferences and authentication")
 
 	return rootCmd
 }
