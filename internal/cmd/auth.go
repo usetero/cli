@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bufio"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +18,15 @@ import (
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/workos"
+	"github.com/usetero/cli/pkg/client"
 )
+
+// org represents an organization for selection
+type org struct {
+	ID       string
+	Name     string
+	WorkosID string
+}
 
 func NewAuthCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
 	authCmd := &cobra.Command{
@@ -27,12 +39,15 @@ func NewAuthCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
 	authCmd.AddCommand(newTokenCmd(logger, cliConfig))
 	authCmd.AddCommand(newLogoutCmd(logger, cliConfig))
 	authCmd.AddCommand(newStatusCmd(logger, cliConfig))
+	authCmd.AddCommand(newSwitchCmd(logger, cliConfig))
 
 	return authCmd
 }
 
 func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
-	return &cobra.Command{
+	var noOrg bool
+
+	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Authenticate with Tero",
 		Long:  "Authenticate with Tero using the device authorization flow.",
@@ -71,6 +86,121 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			fmt.Printf("\nAuthenticated as %s\n", result.User.Email)
+
+			// If --no-org flag is set, skip org selection
+			if noOrg {
+				fmt.Println("Skipping organization selection (--no-org)")
+				return nil
+			}
+
+			// Fetch organizations
+			apiClient := client.New(cliConfig.APIEndpoint, result.AccessToken)
+			orgs, err := fetchOrganizations(ctx, apiClient)
+			if err != nil {
+				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
+				fmt.Printf("\nCould not fetch organizations: %v\n", err)
+				fmt.Println("Run 'tero auth switch' to select an organization later")
+				return nil
+			}
+
+			if len(orgs) == 0 {
+				fmt.Println("\nNo organizations found. Create one to get started.")
+				return nil
+			}
+
+			// Auto-select if only one org
+			var selectedOrg *org
+			if len(orgs) == 1 {
+				selectedOrg = &orgs[0]
+				fmt.Printf("\nUsing organization: %s\n", selectedOrg.Name)
+			} else {
+				// Prompt user to select
+				selectedOrg, err = promptOrgSelection(orgs)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Refresh token with selected org
+			newToken, err := authService.RefreshTokenWithOrganization(ctx, selectedOrg.WorkosID)
+			if err != nil {
+				return fmt.Errorf("failed to select organization: %w", err)
+			}
+
+			// Update the API client with new token (not strictly needed, but consistent)
+			apiClient.SetAccessToken(newToken)
+
+			fmt.Printf("Switched to organization: %s\n", selectedOrg.Name)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&noOrg, "no-org", false, "Skip organization selection (for bootstrap flow)")
+
+	return cmd
+}
+
+func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+	return &cobra.Command{
+		Use:   "switch [organization]",
+		Short: "Switch to a different organization",
+		Long:  "Switch to a different organization. Lists available orgs if none specified.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			namespace := cliConfig.Namespace()
+			tokenStore := keyring.New(namespace)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			authService := auth.NewService(workosClient, tokenStore, logger)
+
+			ctx := cmd.Context()
+
+			// Get current token
+			token, err := authService.GetAccessToken(ctx)
+			if err != nil {
+				return fmt.Errorf("not authenticated: run 'tero auth login' first")
+			}
+
+			// Fetch organizations
+			apiClient := client.New(cliConfig.APIEndpoint, token)
+			orgs, err := fetchOrganizations(ctx, apiClient)
+			if err != nil {
+				return fmt.Errorf("failed to fetch organizations: %w", err)
+			}
+
+			if len(orgs) == 0 {
+				fmt.Println("No organizations found")
+				return nil
+			}
+
+			var selectedOrg *org
+
+			// If org name provided as argument, find it
+			if len(args) == 1 {
+				orgName := args[0]
+				for i := range orgs {
+					if strings.EqualFold(orgs[i].Name, orgName) {
+						selectedOrg = &orgs[i]
+						break
+					}
+				}
+				if selectedOrg == nil {
+					return fmt.Errorf("organization %q not found", orgName)
+				}
+			} else {
+				// Prompt user to select
+				selectedOrg, err = promptOrgSelection(orgs)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Refresh token with selected org
+			_, err = authService.RefreshTokenWithOrganization(ctx, selectedOrg.WorkosID)
+			if err != nil {
+				return fmt.Errorf("failed to switch organization: %w", err)
+			}
+
+			fmt.Printf("Switched to organization: %s\n", selectedOrg.Name)
 			return nil
 		},
 	}
@@ -158,15 +288,34 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 
 			// Extract user info
 			email, _ := claims["email"].(string)
-			orgID, _ := claims["org_id"].(string)
+			workosOrgID, _ := claims["org_id"].(string)
 
 			fmt.Println("Authenticated")
 			if email != "" {
 				fmt.Printf("  User: %s\n", email)
 			}
-			if orgID != "" {
-				fmt.Printf("  Organization: %s\n", orgID)
+
+			// Try to get org name from API
+			if workosOrgID != "" {
+				orgName := workosOrgID // fallback to ID
+				workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+				authService := auth.NewService(workosClient, tokenStore, logger)
+				if currentToken, err := authService.GetAccessToken(cmd.Context()); err == nil {
+					apiClient := client.New(cliConfig.APIEndpoint, currentToken)
+					if orgs, err := fetchOrganizations(cmd.Context(), apiClient); err == nil {
+						for _, o := range orgs {
+							if o.WorkosID == workosOrgID {
+								orgName = o.Name
+								break
+							}
+						}
+					}
+				}
+				fmt.Printf("  Organization: %s\n", orgName)
+			} else {
+				fmt.Println("  Organization: (none)")
 			}
+
 			if !expiresAt.IsZero() {
 				if expired {
 					fmt.Printf("  Token: expired at %s\n", expiresAt.Format(time.RFC3339))
@@ -179,6 +328,47 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			return nil
 		},
 	}
+}
+
+// fetchOrganizations fetches the list of organizations from the API
+func fetchOrganizations(ctx context.Context, apiClient *client.Client) ([]org, error) {
+	resp, err := apiClient.ListOrganizations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	orgs := make([]org, 0, len(resp.Organizations.Edges))
+	for _, edge := range resp.Organizations.Edges {
+		orgs = append(orgs, org{
+			ID:       edge.Node.Id,
+			Name:     edge.Node.Name,
+			WorkosID: edge.Node.WorkosOrganizationID,
+		})
+	}
+	return orgs, nil
+}
+
+// promptOrgSelection prompts the user to select an organization
+func promptOrgSelection(orgs []org) (*org, error) {
+	fmt.Println("\nSelect an organization:")
+	for i, o := range orgs {
+		fmt.Printf("  %d. %s\n", i+1, o.Name)
+	}
+	fmt.Print("Enter number: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, fmt.Errorf("failed to read input: %w", err)
+	}
+
+	input = strings.TrimSpace(input)
+	num, err := strconv.Atoi(input)
+	if err != nil || num < 1 || num > len(orgs) {
+		return nil, fmt.Errorf("invalid selection: %s", input)
+	}
+
+	return &orgs[num-1], nil
 }
 
 // parseTokenClaims extracts claims from a JWT token without verification.
