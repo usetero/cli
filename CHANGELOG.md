@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.6.0](https://github.com/usetero/cli/compare/v1.5.0...v1.6.0) (2025-12-15)
+
+
+### Features
+
+* **auth:** add org selection and switch command ([a113c52](https://github.com/usetero/cli/commit/a113c520aac0ba0b1b4600006891824fb53100c1))
+* **auth:** add styles and tests to auth commands ([8ad0f3e](https://github.com/usetero/cli/commit/8ad0f3e075805b2c49ed69a17b4bc605f4a76fde))
+
+
+### Bug Fixes
+
+* **ci:** use conventional Docker Hub secret names ([c1dd141](https://github.com/usetero/cli/commit/c1dd1413bddf398502b9cac5d4d7efc2c1ea9d70))
+* **ci:** use correct Docker Hub secret names ([f51b02f](https://github.com/usetero/cli/commit/f51b02f3ab14cfd11c89e033ca9f2414fc7c4d0f))
+
 ## [1.5.0](https://github.com/usetero/cli/compare/v1.4.0...v1.5.0) (2025-12-15)
 
 
