@@ -2,6 +2,9 @@ package styles
 
 import (
 	"image/color"
+	"os"
+
+	"charm.land/lipgloss/v2"
 )
 
 // Theme holds all colors and styles for the TUI
@@ -44,11 +47,10 @@ type Theme struct {
 
 var currentTheme *Theme
 
-// CurrentTheme returns the current theme (always dark mode like Crush)
+// CurrentTheme returns the current theme based on terminal background
 func CurrentTheme() *Theme {
 	if currentTheme == nil {
-		// Always use dark theme like Crush
-		currentTheme = getTheme(true)
+		currentTheme = getTheme(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
 	}
 	return currentTheme
 }
