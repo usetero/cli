@@ -139,7 +139,7 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// If 401 and we have a refresh function, try to refresh and retry
 	if resp.StatusCode == http.StatusUnauthorized && t.refreshFunc != nil {
 		// Close the original response body
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		// Try to refresh the token
 		newToken, refreshErr := t.refreshFunc()
