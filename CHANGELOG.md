@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.8.0](https://github.com/usetero/cli/compare/v1.7.0...v1.8.0) (2026-01-13)
+
+
+### Features
+
+* **tui:** redesign theme system and unify discovery step ([10c99a1](https://github.com/usetero/cli/commit/10c99a1b46b220f3c1365d65c9215e17860fd014))
+
+
+### Bug Fixes
+
+* address lint errors in client tests ([179b2cc](https://github.com/usetero/cli/commit/179b2ccc2a059416f75aeeaf8b19f71eb5e96d31))
+* **ci:** prevent master pushes from cancelling each other ([075c36d](https://github.com/usetero/cli/commit/075c36d8fd6738e50a9d9defed5a923dcbd945d3))
+
 ## [1.7.0](https://github.com/usetero/cli/compare/v1.6.0...v1.7.0) (2025-12-15)
 
 
