@@ -121,8 +121,11 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 			},
 		}
 
-		req, _ := http.NewRequest("POST", "http://example.com/graphql", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://example.com/graphql", nil)
 		resp, err := transport.RoundTrip(req)
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+		}
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -163,8 +166,11 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 			},
 		}
 
-		req, _ := http.NewRequest("POST", "http://example.com/graphql", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://example.com/graphql", nil)
 		resp, _ := transport.RoundTrip(req)
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+		}
 
 		if refreshCalled {
 			t.Error("refresh should not be called for non-401 errors")
@@ -191,8 +197,11 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 			// No refreshFunc - should just return the 401
 		}
 
-		req, _ := http.NewRequest("POST", "http://example.com/graphql", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://example.com/graphql", nil)
 		resp, err := transport.RoundTrip(req)
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+		}
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
