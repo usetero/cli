@@ -8,16 +8,15 @@ import (
 
 // MockClient implements api.Client for testing.
 type MockClient struct {
-	SetAccessTokenFunc                            func(token string)
-	ListOrganizationsFunc                         func(ctx context.Context) (*client.ListOrganizationsResponse, error)
-	CreateOrganizationAndBootstrapFunc            func(ctx context.Context, input client.CreateOrganizationInput) (*client.CreateOrganizationAndBootstrapResponse, error)
-	ListAccountsFunc                              func(ctx context.Context, organizationID string) (*client.ListAccountsResponse, error)
-	CreateAccountFunc                             func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error)
-	GetAccountFunc                                func(ctx context.Context, accountID string) (*client.GetAccountResponse, error)
-	ValidateDatadogApiKeyFunc                     func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error)
-	CreateDatadogAccountWithCredentialsFunc       func(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
-	GetDatadogAccountServiceDiscoveryProgressFunc func(ctx context.Context, id string) (*client.GetDatadogAccountServiceDiscoveryProgressResponse, error)
-	GetDatadogAccountLogDiscoveryProgressFunc     func(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error)
+	SetAccessTokenFunc                      func(token string)
+	ListOrganizationsFunc                   func(ctx context.Context) (*client.ListOrganizationsResponse, error)
+	CreateOrganizationAndBootstrapFunc      func(ctx context.Context, input client.CreateOrganizationInput) (*client.CreateOrganizationAndBootstrapResponse, error)
+	ListAccountsFunc                        func(ctx context.Context, organizationID string) (*client.ListAccountsResponse, error)
+	CreateAccountFunc                       func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error)
+	GetAccountFunc                          func(ctx context.Context, accountID string) (*client.GetAccountResponse, error)
+	ValidateDatadogApiKeyFunc               func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error)
+	CreateDatadogAccountWithCredentialsFunc func(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
+	GetDatadogAccountStatusFunc             func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
 }
 
 func (m *MockClient) SetAccessToken(token string) {
@@ -75,16 +74,9 @@ func (m *MockClient) CreateDatadogAccountWithCredentials(ctx context.Context, in
 	return nil, nil
 }
 
-func (m *MockClient) GetDatadogAccountServiceDiscoveryProgress(ctx context.Context, id string) (*client.GetDatadogAccountServiceDiscoveryProgressResponse, error) {
-	if m.GetDatadogAccountServiceDiscoveryProgressFunc != nil {
-		return m.GetDatadogAccountServiceDiscoveryProgressFunc(ctx, id)
-	}
-	return nil, nil
-}
-
-func (m *MockClient) GetDatadogAccountLogDiscoveryProgress(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error) {
-	if m.GetDatadogAccountLogDiscoveryProgressFunc != nil {
-		return m.GetDatadogAccountLogDiscoveryProgressFunc(ctx, id)
+func (m *MockClient) GetDatadogAccountStatus(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
+	if m.GetDatadogAccountStatusFunc != nil {
+		return m.GetDatadogAccountStatusFunc(ctx, id)
 	}
 	return nil, nil
 }

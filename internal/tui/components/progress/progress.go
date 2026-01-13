@@ -12,19 +12,19 @@ type Progress struct {
 }
 
 // New creates a new progress bar with Tero theming.
-// Uses a gradient from Primary to Secondary colors.
+// Uses a gradient from Brand.GradientStart to Brand.GradientEnd.
 func New(width int) *Progress {
 	theme := styles.CurrentTheme()
 
 	p := progress.New(
-		progress.WithColors(theme.Primary, theme.Secondary),
+		progress.WithColors(theme.Brand.GradientStart, theme.Brand.GradientEnd),
 		progress.WithWidth(width),
 		progress.WithFillCharacters('█', '░'),
 	)
 
 	// Style the percentage text and empty sections
-	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Text)
-	p.EmptyColor = theme.TextMuted
+	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Page.Text)
+	p.EmptyColor = theme.Page.TextMuted
 
 	return &Progress{
 		model: &p,

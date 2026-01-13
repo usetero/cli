@@ -11,10 +11,6 @@ tasks:
     cmds:
       - npx get-graphql-schema http://localhost:8081/graphql > schema.graphql
       - go run github.com/Khan/genqlient
-    sources:
-      - "queries/*.graphql"
-    generates:
-      - "generated.go"
 
   # Build tasks
   build:

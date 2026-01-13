@@ -15,7 +15,6 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/input"
 	"github.com/usetero/cli/internal/tui/keymap"
-	"github.com/usetero/cli/internal/tui/onboarding/services"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
 
@@ -235,7 +234,7 @@ func (s *AppKeyStep) View() string {
 	title := common.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle).
+		Foreground(theme.Page.TextMuted).
 		Underline(true)
 	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
@@ -304,12 +303,12 @@ func (s *AppKeyStep) Error() error {
 
 // Next returns the next step after account creation
 func (s *AppKeyStep) Next() step.Step {
-	// Create service service for next step
-	serviceService := api.NewServiceService(s.apiClient, s.logger)
+	// Create datadog account service for status polling
+	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
-	// Datadog account created - move to service discovery
+	// Datadog account created - move to unified discovery step
 	datadogAccountID := s.createdAccount.ID
-	return services.NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, serviceService, s.apiClient, s.logger, s.globalBindings)
+	return NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings)
 }
 
 // Help returns the key bindings for this step

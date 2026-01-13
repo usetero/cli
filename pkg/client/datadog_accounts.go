@@ -12,12 +12,7 @@ func (c *Client) ValidateDatadogApiKey(ctx context.Context, input ValidateDatado
 	return ValidateDatadogApiKey(ctx, c.gql, input)
 }
 
-// GetDatadogAccountServiceDiscoveryProgress gets the service discovery progress for a Datadog account
-func (c *Client) GetDatadogAccountServiceDiscoveryProgress(ctx context.Context, id string) (*GetDatadogAccountServiceDiscoveryProgressResponse, error) {
-	return GetDatadogAccountServiceDiscoveryProgress(ctx, c.gql, id)
-}
-
-// GetDatadogAccountLogDiscoveryProgress gets the log event discovery progress for a Datadog account
-func (c *Client) GetDatadogAccountLogDiscoveryProgress(ctx context.Context, id string) (*GetDatadogAccountLogDiscoveryProgressResponse, error) {
-	return GetDatadogAccountLogDiscoveryProgress(ctx, c.gql, id)
+// GetDatadogAccountStatus gets the discovery status for a Datadog account
+func (c *Client) GetDatadogAccountStatus(ctx context.Context, id string) (*GetDatadogAccountStatusResponse, error) {
+	return GetDatadogAccountStatus(ctx, c.gql, id)
 }

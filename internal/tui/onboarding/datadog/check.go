@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
-	"github.com/usetero/cli/internal/tui/onboarding/services"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
 
@@ -198,12 +197,12 @@ func (s *CheckDatadogStep) Next() step.Step {
 		return NewSelectRegionStep(s.role, s.orgID, s.accountID, s.apiClient, s.logger, s.globalBindings)
 	}
 
-	// Create service service for next step
-	serviceService := api.NewServiceService(s.apiClient, s.logger)
+	// Create datadog account service for status polling
+	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
-	// Datadog account exists - go to service discovery
+	// Datadog account exists - go to unified discovery step
 	datadogAccountID := s.datadogAccount.ID
-	return services.NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, serviceService, s.apiClient, s.logger, s.globalBindings)
+	return NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings)
 }
 
 // Help returns the key bindings for this step

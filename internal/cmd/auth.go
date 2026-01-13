@@ -100,7 +100,10 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			// Fetch organizations
-			apiClient := client.New(cliConfig.APIEndpoint, result.AccessToken)
+			refreshFunc := func() (string, error) {
+				return authService.GetAccessToken(ctx)
+			}
+			apiClient := client.New(cliConfig.APIEndpoint, result.AccessToken, refreshFunc)
 			orgs, err := fetchOrganizations(ctx, apiClient)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
@@ -168,7 +171,10 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			}
 
 			// Fetch organizations
-			apiClient := client.New(cliConfig.APIEndpoint, token)
+			refreshFunc := func() (string, error) {
+				return authService.GetAccessToken(ctx)
+			}
+			apiClient := client.New(cliConfig.APIEndpoint, token, refreshFunc)
 			orgs, err := fetchOrganizations(ctx, apiClient)
 			if err != nil {
 				return fmt.Errorf("failed to fetch organizations: %w", err)
@@ -310,7 +316,10 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 				workosClient := workos.NewClient(cliConfig.WorkOSClientID)
 				authService := auth.NewService(workosClient, tokenStore, logger)
 				if currentToken, err := authService.GetAccessToken(cmd.Context()); err == nil {
-					apiClient := client.New(cliConfig.APIEndpoint, currentToken)
+					refreshFunc := func() (string, error) {
+						return authService.GetAccessToken(cmd.Context())
+					}
+					apiClient := client.New(cliConfig.APIEndpoint, currentToken, refreshFunc)
 					if orgs, err := fetchOrganizations(cmd.Context(), apiClient); err == nil {
 						for _, o := range orgs {
 							if o.WorkosID == workosOrgID {

@@ -13,7 +13,7 @@ import (
 type NavItem struct {
 	label     string
 	stat      string      // Optional stat to display on the right (e.g., "2", "1.54m/hr", "23% ↑2%")
-	statColor color.Color // Color for the stat (theme.Error for red, nil for default theme.Field)
+	statColor color.Color // Color for the stat (e.g., theme.Error.Fg for red, nil for default muted)
 	active    bool
 	indicator bool        // If true, shows a red dot (e.g., for unread messages or new activity)
 	shortcut  key.Binding // Optional keyboard shortcut (e.g., Alt+1)
@@ -37,26 +37,26 @@ func (n NavItem) Render(width int, theme *styles.Theme) string {
 	// Build the left side: shortcut + label + indicator
 	var leftSide string
 
-	// Shortcut (if present)
-	shortcutStyle := lipgloss.NewStyle().Foreground(theme.Field)
+	// Shortcut (if present) - muted text on panel
+	shortcutStyle := lipgloss.NewStyle().Foreground(theme.Panel.TextMuted)
 	if n.shortcut.Keys() != nil && len(n.shortcut.Keys()) > 0 {
 		// Get the help text (e.g., "⌥1")
 		shortcutText := n.shortcut.Help().Key
 		leftSide = shortcutStyle.Render(shortcutText) + " "
 	}
 
-	// Active items use primary color, inactive use text color
+	// Active items use accent color, inactive use panel text
 	var labelStyle, statStyle lipgloss.Style
 	if n.active {
-		labelStyle = lipgloss.NewStyle().Foreground(theme.Primary).Bold(true)
-		statStyle = lipgloss.NewStyle().Foreground(theme.Primary)
+		labelStyle = lipgloss.NewStyle().Foreground(theme.Accent).Bold(true)
+		statStyle = lipgloss.NewStyle().Foreground(theme.Accent)
 	} else {
-		labelStyle = lipgloss.NewStyle().Foreground(theme.Text)
-		// Use custom stat color if provided, otherwise default to theme.Field
+		labelStyle = lipgloss.NewStyle().Foreground(theme.Panel.Text)
+		// Use custom stat color if provided, otherwise default to muted
 		if n.statColor != nil {
 			statStyle = lipgloss.NewStyle().Foreground(n.statColor)
 		} else {
-			statStyle = lipgloss.NewStyle().Foreground(theme.Field)
+			statStyle = lipgloss.NewStyle().Foreground(theme.Panel.TextMuted)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (n NavItem) Render(width int, theme *styles.Theme) string {
 
 	// Add indicator dot if needed
 	if n.indicator {
-		indicatorStyle := lipgloss.NewStyle().Foreground(theme.Error)
+		indicatorStyle := lipgloss.NewStyle().Foreground(theme.Error.Fg)
 		leftSide += indicatorStyle.Render("•")
 	}
 

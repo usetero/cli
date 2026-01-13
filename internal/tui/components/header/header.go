@@ -53,8 +53,8 @@ func (c *Component) View() string {
 
 	// Render just the TERO wordmark
 	logoView := logo.Render(logo.Opts{
-		TitleColorA: theme.Primary,
-		TitleColorB: theme.Secondary,
+		TitleColorA: theme.Brand.GradientStart,
+		TitleColorB: theme.Brand.GradientEnd,
 	})
 
 	// Calculate dimensions
@@ -63,7 +63,7 @@ func (c *Component) View() string {
 
 	// Left diagonal field (6 chars wide, like Crush)
 	const leftWidth = 6
-	fieldStyle := lipgloss.NewStyle().Foreground(theme.Field)
+	fieldStyle := lipgloss.NewStyle().Foreground(theme.Brand.GradientStart)
 	leftFieldRow := fieldStyle.Render(strings.Repeat(diag, leftWidth))
 	leftField := new(strings.Builder)
 	for range fieldHeight {

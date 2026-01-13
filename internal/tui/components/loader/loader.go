@@ -23,7 +23,7 @@ func New(message string) *Component {
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(theme.Primary)
+	s.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &Component{
 		spinner: s,
@@ -48,7 +48,7 @@ func (c *Component) View() string {
 	theme := styles.CurrentTheme()
 
 	style := lipgloss.NewStyle().
-		Foreground(theme.Primary)
+		Foreground(theme.Accent)
 
 	return c.spinner.View() + " " + style.Render(c.message+"...")
 }

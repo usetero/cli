@@ -32,17 +32,17 @@ func New(logger log.Logger) *Component {
 
 	ti.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.Text),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.TextSubtle),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.Primary),
+			Text:        lipgloss.NewStyle().Foreground(theme.Input.Text),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.Input.Placeholder),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.Accent),
 		},
 		Blurred: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.TextMuted),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.TextSubtle),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.TextMuted),
+			Text:        lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.Input.Placeholder),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: theme.Primary,
+			Color: theme.Accent,
 			Shape: tea.CursorBar,
 			Blink: true,
 		},

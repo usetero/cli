@@ -465,10 +465,10 @@ type DatadogAccount implements Node {
   logIndexes: [DatadogLogIndex!]
 
   """
-  Status of this Datadog account in the discovery pipeline.
-  Derived from the status of all services discovered from this account.
+  Aggregated service status for this Datadog account.
+  Shows overall discovery progress across all services - useful for onboarding.
   """
-  status: DatadogAccountStatus!
+  statusAggregate: StatusAggregate!
 }
 
 """A connection to a list of items."""
@@ -518,54 +518,6 @@ enum DatadogAccountSite {
   US1_FED
   AP1
   AP2
-}
-
-"""
-Datadog account status derived from service discovery progress.
-Tracks where the account is in the discovery pipeline: pending -> in_progress -> ready.
-"""
-type DatadogAccountStatus {
-  """Current status derived from service statuses"""
-  status: DatadogAccountStatusState!
-
-  """Average percent complete across all services"""
-  percentComplete: Float
-
-  """Total number of services"""
-  total: Int!
-
-  """Count of services with READY status"""
-  ready: Int!
-
-  """Count of services with PENDING_* status"""
-  pending: Int!
-
-  """Count of services with ERROR_* status"""
-  error: Int!
-
-  """Count of disabled services"""
-  disabled: Int!
-
-  """First error message encountered (empty if no errors)"""
-  errorMessage: String
-}
-
-"""Current status of a Datadog account in the discovery pipeline."""
-enum DatadogAccountStatusState {
-  """All services are disabled"""
-  DISABLED
-
-  """No services discovered yet, or all enabled services are pending"""
-  PENDING
-
-  """Some enabled services ready, others still in progress"""
-  IN_PROGRESS
-
-  """All enabled services have completed discovery"""
-  READY
-
-  """One or more enabled services have discovery errors"""
-  ERROR
 }
 
 """
@@ -2436,13 +2388,8 @@ type ServiceStatus {
   """Log event discovery progress (0-100), null if no volume data yet"""
   percentComplete: Float
 
-  """Total service log volume in the rolling window, null if no fresh data"""
-  serviceVolume: Int
-
-  """
-  Total discovered log event volume in the rolling window, null if no log events
-  """
-  discoveredVolume: Int
+  """Whether service volumes exist from this integration"""
+  hasServiceVolumes: Boolean!
 
   """Number of log events discovered for this service"""
   logEventCount: Int!
@@ -2456,9 +2403,6 @@ type ServiceStatus {
 
 """Current status of a service in the discovery pipeline."""
 enum ServiceStatusState {
-  """Service is disabled - not participating in discovery"""
-  DISABLED
-
   """Waiting for service volume discovery"""
   PENDING_VOLUME
 
@@ -2573,6 +2517,36 @@ input ServiceWhereInput {
   """log_events edge predicates"""
   hasLogEvents: Boolean
   hasLogEventsWith: [LogEventWhereInput!]
+}
+
+"""
+Aggregated status across multiple entities.
+Used for rollup views like onboarding progress.
+"""
+type StatusAggregate {
+  """
+  Overall status: PENDING, IN_PROGRESS, READY, ERROR
+  Derived from component statuses (ERROR > PENDING > IN_PROGRESS > READY)
+  """
+  status: String!
+
+  """Average percent complete across all entities"""
+  percentComplete: Float
+
+  """Total number of entities"""
+  total: Int!
+
+  """Count of entities with READY status"""
+  ready: Int!
+
+  """Count of entities with PENDING_* status"""
+  pending: Int!
+
+  """Count of entities with ERROR_* status"""
+  error: Int!
+
+  """First error message encountered (empty if no errors)"""
+  errorMessage: String
 }
 
 type Team implements Node {

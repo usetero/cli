@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Khan/genqlient/graphql"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -15,12 +17,22 @@ type Client struct {
 	transport *authTransport
 }
 
-// New creates a new authenticated GraphQL client.
-// The accessToken is added to all requests via Authorization header.
-func New(endpoint string, accessToken string) *Client {
+// New creates a new authenticated GraphQL client with automatic token refresh and retry.
+// - Retries transient errors (connection reset, 502/503/504) up to 3 times with backoff
+// - When a request returns 401, the refreshFunc is called to get a new token and the request is retried
+func New(endpoint string, accessToken string, refreshFunc RefreshFunc) *Client {
+	// Configure retryable HTTP client
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 100 * time.Millisecond
+	retryClient.RetryWaitMax = 2 * time.Second
+	retryClient.Logger = nil // Disable logging
+
+	// Wrap with auth transport for token handling
 	transport := &authTransport{
 		accessToken: accessToken,
-		base:        http.DefaultTransport,
+		base:        retryClient.StandardClient().Transport,
+		refreshFunc: refreshFunc,
 	}
 
 	httpClient := &http.Client{
@@ -99,10 +111,16 @@ func cleanGraphQLError(err error) error {
 	return err
 }
 
+// RefreshFunc is a function that refreshes the access token.
+// It returns the new token or an error.
+type RefreshFunc func() (string, error)
+
 // authTransport adds Authorization header to all requests
+// and automatically refreshes the token on 401 responses.
 type authTransport struct {
 	accessToken string
 	base        http.RoundTripper
+	refreshFunc RefreshFunc
 }
 
 func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -113,7 +131,31 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("Authorization", "Bearer "+t.accessToken)
 
 	// Execute request
-	return t.base.RoundTrip(req)
+	resp, err := t.base.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// If 401 and we have a refresh function, try to refresh and retry
+	if resp.StatusCode == http.StatusUnauthorized && t.refreshFunc != nil {
+		// Close the original response body
+		resp.Body.Close()
+
+		// Try to refresh the token
+		newToken, refreshErr := t.refreshFunc()
+		if refreshErr != nil {
+			// Refresh failed, return the original 401
+			// Re-execute to get a fresh response since we closed the body
+			return t.base.RoundTrip(req)
+		}
+
+		// Update token and retry
+		t.accessToken = newToken
+		req.Header.Set("Authorization", "Bearer "+t.accessToken)
+		return t.base.RoundTrip(req)
+	}
+
+	return resp, nil
 }
 
 // SetAccessToken updates the access token used for authentication.

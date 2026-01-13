@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/pkg/client"
@@ -29,13 +28,27 @@ type DatadogAccount struct {
 	Site string // GraphQL enum value (US1, US5, EU1, etc.)
 }
 
-// LogEventDiscoveryProgress tracks progress of log event discovery for a Datadog account.
-type LogEventDiscoveryProgress struct {
-	Status                 DiscoveryStatus
-	WeeklyVolume           int64
-	DiscoveredWeeklyVolume float64
-	PercentComplete        *float64 // nullable
-	LastError              string
+// DatadogAccountStatusState represents the discovery pipeline state.
+type DatadogAccountStatusState string
+
+const (
+	DatadogAccountStatusDisabled   DatadogAccountStatusState = "DISABLED"
+	DatadogAccountStatusPending    DatadogAccountStatusState = "PENDING"
+	DatadogAccountStatusInProgress DatadogAccountStatusState = "IN_PROGRESS"
+	DatadogAccountStatusReady      DatadogAccountStatusState = "READY"
+	DatadogAccountStatusError      DatadogAccountStatusState = "ERROR"
+)
+
+// DatadogAccountStatus tracks the discovery status for a Datadog account.
+type DatadogAccountStatus struct {
+	Status          DatadogAccountStatusState
+	PercentComplete float64
+	Total           int
+	Ready           int
+	Pending         int
+	Error           int
+	Disabled        int
+	ErrorMessage    string
 }
 
 // HasAccount checks if an account has a Datadog integration configured
@@ -149,13 +162,14 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, accountID, na
 	}, nil
 }
 
-// GetLogDiscoveryProgress gets the log event discovery progress for a Datadog account
-func (s *DatadogAccountService) GetLogDiscoveryProgress(ctx context.Context, datadogAccountID string) (*LogEventDiscoveryProgress, error) {
-	s.logger.Debug("fetching log discovery progress", "datadogAccountID", datadogAccountID)
+// GetStatus gets the discovery status for a Datadog account.
+// This is used during onboarding to track overall progress.
+func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error) {
+	s.logger.Debug("fetching datadog account status", "datadogAccountID", datadogAccountID)
 
-	resp, err := s.client.GetDatadogAccountLogDiscoveryProgress(ctx, datadogAccountID)
+	resp, err := s.client.GetDatadogAccountStatus(ctx, datadogAccountID)
 	if err != nil {
-		s.logger.Error("failed to fetch log discovery progress", "error", err)
+		s.logger.Error("failed to fetch datadog account status", "error", err)
 		return nil, err
 	}
 
@@ -164,34 +178,23 @@ func (s *DatadogAccountService) GetLogDiscoveryProgress(ctx context.Context, dat
 		return nil, nil
 	}
 
-	progress := resp.DatadogAccounts.Edges[0].Node.LogEventDiscoveryProgress
-	if progress.Status == "" {
-		s.logger.Debug("no discovery progress available")
-		return nil, nil
+	statusNode := resp.DatadogAccounts.Edges[0].Node.Status
+
+	result := &DatadogAccountStatus{
+		Status:          DatadogAccountStatusState(statusNode.Status),
+		PercentComplete: statusNode.PercentComplete,
+		Total:           statusNode.Total,
+		Ready:           statusNode.Ready,
+		Pending:         statusNode.Pending,
+		Error:           statusNode.Error,
+		Disabled:        statusNode.Disabled,
+		ErrorMessage:    statusNode.ErrorMessage,
 	}
 
-	// Map percentComplete - handle nullable field
-	var percentComplete *float64
-	if progress.PercentComplete != 0 {
-		percentComplete = &progress.PercentComplete
-	}
-
-	result := &LogEventDiscoveryProgress{
-		Status:                 DiscoveryStatus(progress.Status),
-		PercentComplete:        percentComplete,
-		WeeklyVolume:           int64(progress.WeeklyVolume),
-		DiscoveredWeeklyVolume: progress.WeeklyDiscoveredVolume,
-		LastError:              progress.LastError,
-	}
-
-	percentStr := "nil"
-	if result.PercentComplete != nil {
-		percentStr = fmt.Sprintf("%.2f", *result.PercentComplete)
-	}
-
-	s.logger.Debug("fetched log discovery progress",
+	s.logger.Debug("fetched datadog account status",
 		log.String("status", string(result.Status)),
-		log.String("percentComplete", percentStr))
+		log.Int("total", result.Total),
+		log.Int("ready", result.Ready))
 
 	return result, nil
 }

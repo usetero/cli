@@ -82,7 +82,7 @@ func NewAPIKeyStep(role string, orgID string, accountID string, site string, api
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Primary)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &APIKeyStep{
 		role:            role,
@@ -247,7 +247,7 @@ func (s *APIKeyStep) View() string {
 	// Show validating state
 	if s.validating {
 		titleStyle := lipgloss.NewStyle().
-			Foreground(theme.Primary).
+			Foreground(theme.Accent).
 			Bold(false)
 
 		title := titleStyle.Render("Verifying your Datadog API key...")
@@ -262,7 +262,7 @@ func (s *APIKeyStep) View() string {
 	title := common.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle).
+		Foreground(theme.Page.TextMuted).
 		Underline(true)
 	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
