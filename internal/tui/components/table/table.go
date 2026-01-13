@@ -33,15 +33,15 @@ func New(columns []Column) *Table {
 	t.SetStyles(table.Styles{
 		Header: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(theme.Primary).
+			Foreground(theme.Accent).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(theme.Border).
+			BorderForeground(theme.BorderDefault).
 			BorderBottom(true),
 		Selected: lipgloss.NewStyle().
-			Foreground(theme.Primary).
+			Foreground(theme.Accent).
 			Bold(true),
 		Cell: lipgloss.NewStyle().
-			Foreground(theme.Text),
+			Foreground(theme.Page.Text),
 	})
 
 	return &Table{

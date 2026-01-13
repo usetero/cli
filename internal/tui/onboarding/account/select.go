@@ -52,13 +52,13 @@ func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	str := i.Name
 	if index == m.Index() {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Primary).
+			Foreground(theme.Accent).
 			Bold(true).
 			Render
 		_, _ = fmt.Fprint(w, fn("> "+str))
 	} else {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Text).
+			Foreground(theme.Page.Text).
 			Render
 		_, _ = fmt.Fprint(w, fn("  "+str))
 	}

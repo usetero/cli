@@ -216,7 +216,7 @@ func (s *SelectStep) View() string {
 		if i == s.selected {
 			// Selected option
 			nameStyle := lipgloss.NewStyle().
-				Foreground(theme.Primary).
+				Foreground(theme.Accent).
 				Bold(true)
 
 			view = nameStyle.Render("> "+opt.name) + "\n  " + common.Help.Render(opt.description)

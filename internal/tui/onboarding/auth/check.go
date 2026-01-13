@@ -201,7 +201,10 @@ func (s *CheckAuthStep) Next() step.Step {
 	}
 
 	// Has valid auth - create authenticated client and go to role selection
-	apiClient := client.New(s.apiEndpoint, s.accessToken)
+	refreshFunc := func() (string, error) {
+		return s.authService.GetAccessToken(context.Background())
+	}
+	apiClient := client.New(s.apiEndpoint, s.accessToken, refreshFunc)
 	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)
 }
 

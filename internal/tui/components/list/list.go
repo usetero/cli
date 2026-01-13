@@ -43,11 +43,11 @@ func New(items []Item, delegate ItemDelegate) *List {
 
 	// Apply theme-aware styles
 	l.Styles.Title = lipgloss.NewStyle().
-		Foreground(theme.Primary).
+		Foreground(theme.Accent).
 		Bold(true)
 
 	l.Styles.TitleBar = lipgloss.NewStyle().
-		Foreground(theme.Primary)
+		Foreground(theme.Accent)
 
 	// Set initial height based on item count (scales down for fewer items)
 	// Since pagination is disabled by default, we don't need extra space

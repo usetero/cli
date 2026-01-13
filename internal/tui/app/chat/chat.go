@@ -93,7 +93,7 @@ func (m *model) View() string {
 
 	// Render chat content inline
 	chatContent := lipgloss.NewStyle().
-		Foreground(theme.Text).
+		Foreground(theme.Page.Text).
 		Render(
 			lipgloss.Place(
 				contentWidth,

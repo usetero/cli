@@ -27,13 +27,13 @@ func New(logger log.Logger) *Component {
 	theme := styles.CurrentTheme()
 	helpModel := help.New()
 	helpModel.Styles = help.Styles{
-		ShortKey:       lipgloss.NewStyle().Foreground(theme.TextMuted),
-		ShortDesc:      lipgloss.NewStyle().Foreground(theme.TextSubtle),
-		ShortSeparator: lipgloss.NewStyle().Foreground(theme.Border),
-		Ellipsis:       lipgloss.NewStyle().Foreground(theme.Border),
-		FullKey:        lipgloss.NewStyle().Foreground(theme.TextMuted),
-		FullDesc:       lipgloss.NewStyle().Foreground(theme.TextSubtle),
-		FullSeparator:  lipgloss.NewStyle().Foreground(theme.Border),
+		ShortKey:       lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+		ShortDesc:      lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+		ShortSeparator: lipgloss.NewStyle().Foreground(theme.BorderDefault),
+		Ellipsis:       lipgloss.NewStyle().Foreground(theme.BorderDefault),
+		FullKey:        lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+		FullDesc:       lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+		FullSeparator:  lipgloss.NewStyle().Foreground(theme.BorderDefault),
 	}
 
 	return &Component{
@@ -99,8 +99,8 @@ func (c *Component) renderError() string {
 	theme := styles.CurrentTheme()
 
 	labelStyle := lipgloss.NewStyle().
-		Background(theme.ErrorBackground).
-		Foreground(theme.Text).
+		Background(theme.Error.Bg).
+		Foreground(theme.Page.Text).
 		Padding(0, 1).
 		Bold(true)
 
@@ -113,8 +113,8 @@ func (c *Component) renderError() string {
 	message := ansi.Truncate(c.err.Error(), widthLeft, "…")
 
 	messageStyle := lipgloss.NewStyle().
-		Background(theme.ErrorBackground).
-		Foreground(theme.Text).
+		Background(theme.Error.Bg).
+		Foreground(theme.Page.Text).
 		Width(widthLeft+2).
 		Padding(0, 1)
 

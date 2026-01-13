@@ -74,7 +74,7 @@ func (c *Component) renderSection(text string, theme *styles.Theme) string {
 		remainingWidth = 0
 	}
 
-	lineStyle := lipgloss.NewStyle().Foreground(theme.Border)
+	lineStyle := lipgloss.NewStyle().Foreground(theme.BorderDefault)
 	return text + " " + lineStyle.Render(strings.Repeat(char, remainingWidth))
 }
 
@@ -91,14 +91,14 @@ func (c *Component) Render() string {
 		Width(c.width).
 		Height(c.height)
 
-	// Create diagonal lines that span the full sidebar width
-	fieldStyle := lipgloss.NewStyle().Foreground(theme.Field)
+	// Create diagonal lines that span the full sidebar width (brand element)
+	fieldStyle := lipgloss.NewStyle().Foreground(theme.Brand.GradientEnd)
 	divider := fieldStyle.Render(strings.Repeat(diag, c.width))
 
-	// Render ASCII logo
+	// Render ASCII logo with brand gradient
 	logoView := logo.Render(logo.Opts{
-		TitleColorA: theme.Primary,
-		TitleColorB: theme.Secondary,
+		TitleColorA: theme.Brand.GradientStart,
+		TitleColorB: theme.Brand.GradientEnd,
 	})
 
 	// Split logo into lines so we can add version to the last line
@@ -106,7 +106,7 @@ func (c *Component) Render() string {
 
 	// Version text (right-aligned on same line as last logo line)
 	versionText := lipgloss.NewStyle().
-		Foreground(theme.Field).
+		Foreground(theme.Panel.TextMuted).
 		Render("v0.0.1")
 
 	// Add version to the last line of the logo
@@ -132,13 +132,13 @@ func (c *Component) Render() string {
 	contractsHeader := c.renderSection("Contracts", theme)
 
 	// Org/Account section (no header, just the name)
-	orgStyle := lipgloss.NewStyle().Foreground(theme.Text)
+	orgStyle := lipgloss.NewStyle().Foreground(theme.Panel.Text)
 	orgName := orgStyle.Render(c.orgName)
 	// TODO: Add accountName and workspace if > 1
 
 	// User info (right under org)
-	userNameStyle := lipgloss.NewStyle().Foreground(theme.Text)
-	userEmailStyle := lipgloss.NewStyle().Foreground(theme.Field)
+	userNameStyle := lipgloss.NewStyle().Foreground(theme.Panel.Text)
+	userEmailStyle := lipgloss.NewStyle().Foreground(theme.Panel.TextMuted)
 
 	// Define key bindings for navigation
 	chatKey := key.NewBinding(
@@ -174,13 +174,13 @@ func (c *Component) Render() string {
 	logsItem := NewNavItem("Logs", c.logsRate, nil, false, false, logsKey)
 	// Waste is red because 23% is over the typical 10% goal (in reality, this would come from control plane)
 	// The 'w' suffix indicates week-over-week change
-	wasteItem := NewNavItem("Waste", fmt.Sprintf("%d%% %sw", c.wastePercent, c.wasteTrend), theme.Error, false, true, wasteKey) // Show indicator for demo
+	wasteItem := NewNavItem("Waste", fmt.Sprintf("%d%% %sw", c.wastePercent, c.wasteTrend), theme.Error.Fg, false, true, wasteKey) // Show indicator for demo
 
 	// Contracts section - Saved, DD Renewal
 	// Saved is green because it's a positive outcome (money saved)
-	savedItem := NewNavItem("Saved", c.savedAmount, theme.Success, false, false, savedKey)
+	savedItem := NewNavItem("Saved", c.savedAmount, theme.Success.Fg, false, false, savedKey)
 	// Renewal date is red because -23d means renewing 23 days early (bad)
-	renewalItem := NewNavItem("DD Renewal", fmt.Sprintf("%dd, %s", c.renewalDays, c.renewalAmount), theme.Error, false, false, renewalKey)
+	renewalItem := NewNavItem("DD Renewal", fmt.Sprintf("%dd, %s", c.renewalDays, c.renewalAmount), theme.Error.Fg, false, false, renewalKey)
 
 	// All content
 	content := lipgloss.JoinVertical(

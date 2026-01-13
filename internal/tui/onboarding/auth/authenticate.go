@@ -79,7 +79,7 @@ func NewAuthenticateStep(logger log.Logger, authService *authservice.Service, pr
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Primary)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &AuthenticateStep{
 		authService:        authService,
@@ -236,7 +236,7 @@ func (s *AuthenticateStep) View() string {
 	common := styles.Common()
 	theme := styles.CurrentTheme()
 
-	mutedStyle := lipgloss.NewStyle().Foreground(theme.TextMuted)
+	mutedStyle := lipgloss.NewStyle().Foreground(theme.Page.TextMuted)
 
 	switch s.state {
 	case stateInitializing:
@@ -361,7 +361,10 @@ func (s *AuthenticateStep) Help() help.KeyMap {
 // Creates an authenticated API client and passes it to the role step
 func (s *AuthenticateStep) Next() step.Step {
 	// Create authenticated API client with the access token from auth result
-	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken)
+	refreshFunc := func() (string, error) {
+		return s.authService.GetAccessToken(context.Background())
+	}
+	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken, refreshFunc)
 
 	// Pass authenticated client, preferences service, and other dependencies to next step
 	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)

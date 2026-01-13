@@ -202,7 +202,7 @@ func (m *TUI) View() tea.View {
 	// Check minimum window size
 	if !DisableMinSizeCheck && (m.width < minWidth || m.height < minHeight) {
 		view := tea.View{
-			BackgroundColor: theme.Background,
+			BackgroundColor: theme.Page.Bg,
 			AltScreen:       true,
 		}
 
@@ -216,9 +216,9 @@ func (m *TUI) View() tea.View {
 						Render(
 							lipgloss.NewStyle().
 								Padding(1, 4).
-								Foreground(theme.Text).
+								Foreground(theme.Page.Text).
 								BorderStyle(lipgloss.RoundedBorder()).
-								BorderForeground(theme.Primary).
+								BorderForeground(theme.Accent).
 								Render("Window too small!"),
 						),
 				),
@@ -249,7 +249,7 @@ func (m *TUI) View() tea.View {
 
 	// Build final view
 	view := tea.View{
-		BackgroundColor: theme.Background,
+		BackgroundColor: theme.Page.Bg,
 		AltScreen:       true,
 	}
 	view.SetContent(canvas.Render())

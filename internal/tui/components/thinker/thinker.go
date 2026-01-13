@@ -109,13 +109,13 @@ func (a *Component) View() string {
 
 	// Style the components
 	labelStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
+		Foreground(theme.Page.TextMuted)
 
 	charsStyle := lipgloss.NewStyle().
-		Foreground(theme.Primary)
+		Foreground(theme.Accent)
 
 	ellipsisStyle := lipgloss.NewStyle().
-		Foreground(theme.TextMuted)
+		Foreground(theme.Page.TextMuted)
 
 	// Compose: "Thinking [random chars]..."
 	return labelStyle.Render(label) +

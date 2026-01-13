@@ -42,16 +42,16 @@ func (d regionDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 
 	if index == m.Index() {
 		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.Primary).
+			Foreground(theme.Accent).
 			Bold(true)
 		domainStyle := lipgloss.NewStyle().
-			Foreground(theme.TextSubtle)
+			Foreground(theme.Page.TextMuted)
 		_, _ = fmt.Fprintf(w, "%s  %s", nameStyle.Render("> "+i.displayName), domainStyle.Render(i.domain))
 	} else {
 		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.Text)
+			Foreground(theme.Page.Text)
 		domainStyle := lipgloss.NewStyle().
-			Foreground(theme.TextMuted)
+			Foreground(theme.Page.TextMuted)
 		_, _ = fmt.Fprintf(w, "%s  %s", nameStyle.Render("  "+i.displayName), domainStyle.Render(i.domain))
 	}
 }
@@ -153,7 +153,7 @@ func (s *SelectRegionStep) View() string {
 	question := common.Body.Render("Which region is your Datadog account in?")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.TextSubtle).
+		Foreground(theme.Page.TextMuted).
 		Underline(true)
 	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 

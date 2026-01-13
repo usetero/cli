@@ -25,6 +25,5 @@ type Client interface {
 	// Datadog operations
 	ValidateDatadogApiKey(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error)
 	CreateDatadogAccountWithCredentials(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
-	GetDatadogAccountServiceDiscoveryProgress(ctx context.Context, id string) (*client.GetDatadogAccountServiceDiscoveryProgressResponse, error)
-	GetDatadogAccountLogDiscoveryProgress(ctx context.Context, id string) (*client.GetDatadogAccountLogDiscoveryProgressResponse, error)
+	GetDatadogAccountStatus(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
 }
