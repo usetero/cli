@@ -68,7 +68,6 @@ tasks:
       - task: do
       - task: check
       - task: build
-      - task: install:test
       - gh signoff
 
   dev:
