@@ -8,7 +8,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.0-beta.3.0.20251119143523-0334bb4562ca
 	github.com/Khan/genqlient v0.8.1
 	github.com/atotto/clipboard v0.1.4
-	github.com/charmbracelet/x/ansi v0.11.3
+	github.com/charmbracelet/x/ansi v0.11.4
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -31,7 +31,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
-	github.com/clipperhouse/displaywidth v0.6.1 // indirect
+	github.com/clipperhouse/displaywidth v0.7.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
