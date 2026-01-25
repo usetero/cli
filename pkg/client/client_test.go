@@ -144,6 +144,67 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 		}
 	})
 
+	t.Run("preserves request body on retry after 401", func(t *testing.T) {
+		// This tests the bug where request body was consumed on first attempt
+		// and not available for the retry, causing empty body errors.
+		requestBody := `{"query":"{ viewer { id } }"}`
+		var bodiesReceived []string
+
+		mockRT := &mockRoundTripper{
+			roundTripFunc: func(req *http.Request) (*http.Response, error) {
+				// Read and record the body
+				body, _ := io.ReadAll(req.Body)
+				bodiesReceived = append(bodiesReceived, string(body))
+
+				if len(bodiesReceived) == 1 {
+					// First call: return 401
+					return &http.Response{
+						StatusCode: http.StatusUnauthorized,
+						Body:       io.NopCloser(bytes.NewBufferString(`{"errors":[{"message":"token expired"}]}`)),
+						Header:     make(http.Header),
+					}, nil
+				}
+				// Second call: return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(`{"data":{}}`)),
+					Header:     make(http.Header),
+				}, nil
+			},
+		}
+
+		transport := &authTransport{
+			accessToken: "expired-token",
+			base:        mockRT,
+			refreshFunc: func() (string, error) {
+				return "new-token", nil
+			},
+		}
+
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://example.com/graphql",
+			bytes.NewBufferString(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := transport.RoundTrip(req)
+		if resp != nil {
+			defer func() { _ = resp.Body.Close() }()
+		}
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(bodiesReceived) != 2 {
+			t.Fatalf("expected 2 requests, got %d", len(bodiesReceived))
+		}
+		// Both requests should have the full body
+		if bodiesReceived[0] != requestBody {
+			t.Errorf("first request body = %q, want %q", bodiesReceived[0], requestBody)
+		}
+		if bodiesReceived[1] != requestBody {
+			t.Errorf("second request body = %q, want %q (body not preserved on retry)", bodiesReceived[1], requestBody)
+		}
+	})
+
 	t.Run("does not refresh on non-401 errors", func(t *testing.T) {
 		refreshCalled := false
 

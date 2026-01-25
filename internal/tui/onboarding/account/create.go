@@ -26,8 +26,8 @@ type AccountCreator interface {
 // CreateStep handles creating a new account
 type CreateStep struct {
 	// Accumulated state from previous steps
-	role  string
-	orgID string
+	role string
+	org  api.Organization
 
 	// Services (defined by consumer interfaces)
 	accountCreator      AccountCreator
@@ -48,7 +48,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new account creation step for the given organization
-func NewCreateStep(role string, orgID string, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountCreator == nil {
 		panic("accountCreator cannot be nil")
 	}
@@ -68,7 +68,7 @@ func NewCreateStep(role string, orgID string, accountCreator AccountCreator, def
 
 	return &CreateStep{
 		role:                role,
-		orgID:               orgID,
+		org:                 org,
 		accountCreator:      accountCreator,
 		defaultAccountSaver: defaultAccountSaver,
 		apiClient:           apiClient,
@@ -126,6 +126,9 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 		s.logger.Info("account created", "id", msg.account.ID, "name", msg.account.Name)
 
+		// Set account ID on client for subsequent requests
+		s.apiClient.SetAccountID(msg.account.ID)
+
 		// Save account to preferences
 		if err := s.defaultAccountSaver.SetDefaultAccountID(msg.account.ID); err != nil {
 			s.logger.Error("failed to save account preference", "error", err)
@@ -148,9 +151,9 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 func (s *CreateStep) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		s.logger.Info("creating account", "name", name, "organizationID", s.orgID)
+		s.logger.Info("creating account", "name", name, "organizationID", s.org.ID)
 
-		account, err := s.accountCreator.Create(ctx, s.orgID, name)
+		account, err := s.accountCreator.Create(ctx, s.org.ID, name)
 		if err != nil {
 			return createAccountMsg{err: err}
 		}
@@ -211,19 +214,6 @@ func (s *CreateStep) SetSize(width, height int) {
 	}
 }
 
-// IsComplete returns true if the account has been created successfully
-func (s *CreateStep) IsComplete() bool {
-	return s.created && s.err == nil
-}
-
-// CreatedAccountID returns the ID of the created account
-func (s *CreateStep) CreatedAccountID() string {
-	if s.createdAccount != nil {
-		return s.createdAccount.ID
-	}
-	return ""
-}
-
 // IsBusy returns true while creating the account
 func (s *CreateStep) IsBusy() bool {
 	return s.creating
@@ -240,12 +230,19 @@ func (s *CreateStep) Error() error {
 }
 
 // Next returns the next step after creating account
-func (s *CreateStep) Next() step.Step {
+func (s *CreateStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.created || s.createdAccount == nil {
+		return nil, step.ErrNotReady
+	}
+
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Check for Datadog with accumulated data
-	return datadog.NewCheckDatadogStep(s.role, s.orgID, s.CreatedAccountID(), datadogService, s.apiClient, s.logger, s.globalBindings)
+	return datadog.NewCheckDatadogStep(s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

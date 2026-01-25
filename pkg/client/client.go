@@ -1,8 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +17,11 @@ import (
 type Client struct {
 	gql       graphql.Client
 	transport *authTransport
+}
+
+// SetAccountID sets the account ID header for scoped requests.
+func (c *Client) SetAccountID(accountID string) {
+	c.transport.SetAccountID(accountID)
 }
 
 // New creates a new authenticated GraphQL client with automatic token refresh and retry.
@@ -119,6 +126,7 @@ type RefreshFunc func() (string, error)
 // and automatically refreshes the token on 401 responses.
 type authTransport struct {
 	accessToken string
+	accountID   string
 	base        http.RoundTripper
 	refreshFunc RefreshFunc
 }
@@ -127,8 +135,25 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Clone request to avoid modifying the original
 	req = req.Clone(req.Context())
 
+	// Buffer the body so we can retry if needed (body can only be read once)
+	var bodyBytes []byte
+	if req.Body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(req.Body)
+		req.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	}
+
 	// Add Authorization header
 	req.Header.Set("Authorization", "Bearer "+t.accessToken)
+
+	// Add Account ID header if set
+	if t.accountID != "" {
+		req.Header.Set("X-Account-ID", t.accountID)
+	}
 
 	// Execute request
 	resp, err := t.base.RoundTrip(req)
@@ -145,13 +170,20 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		newToken, refreshErr := t.refreshFunc()
 		if refreshErr != nil {
 			// Refresh failed, return the original 401
-			// Re-execute to get a fresh response since we closed the body
+			// Reset body for retry
+			if bodyBytes != nil {
+				req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			}
 			return t.base.RoundTrip(req)
 		}
 
 		// Update token and retry
 		t.accessToken = newToken
 		req.Header.Set("Authorization", "Bearer "+t.accessToken)
+		// Reset body for retry
+		if bodyBytes != nil {
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
 		return t.base.RoundTrip(req)
 	}
 
@@ -161,4 +193,9 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // SetAccessToken updates the access token used for authentication.
 func (t *authTransport) SetAccessToken(token string) {
 	t.accessToken = token
+}
+
+// SetAccountID sets the account ID for the X-Account-ID header.
+func (t *authTransport) SetAccountID(accountID string) {
+	t.accountID = accountID
 }

@@ -9,6 +9,7 @@ import (
 // MockClient implements api.Client for testing.
 type MockClient struct {
 	SetAccessTokenFunc                      func(token string)
+	SetAccountIDFunc                        func(accountID string)
 	ListOrganizationsFunc                   func(ctx context.Context) (*client.ListOrganizationsResponse, error)
 	CreateOrganizationAndBootstrapFunc      func(ctx context.Context, input client.CreateOrganizationInput) (*client.CreateOrganizationAndBootstrapResponse, error)
 	ListAccountsFunc                        func(ctx context.Context, organizationID string) (*client.ListAccountsResponse, error)
@@ -22,6 +23,12 @@ type MockClient struct {
 func (m *MockClient) SetAccessToken(token string) {
 	if m.SetAccessTokenFunc != nil {
 		m.SetAccessTokenFunc(token)
+	}
+}
+
+func (m *MockClient) SetAccountID(accountID string) {
+	if m.SetAccountIDFunc != nil {
+		m.SetAccountIDFunc(accountID)
 	}
 }
 

@@ -12,10 +12,19 @@ import (
 	"github.com/usetero/cli/internal/tui/components/remotelist"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
 	"github.com/usetero/cli/internal/tui/onboarding/account/accounttest"
+	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// isComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
+func isComplete(s step.Step) bool {
+	_, err := s.Next()
+	return err != step.ErrNotReady
+}
+
 func TestSelectStep_Update(t *testing.T) {
+	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+
 	t.Run("auto-selects when only one account exists", func(t *testing.T) {
 		// Arrange
 		lister := &accounttest.MockAccountLister{
@@ -29,11 +38,11 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with one account
 		items := []list.Item{account.AccountItem{ID: "acc-1", Name: "Production"}}
-		updated, cmd := step.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
+		updated, cmd := s.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
 
 		// Execute all commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -41,7 +50,7 @@ func TestSelectStep_Update(t *testing.T) {
 		}
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isComplete(updated) {
 			t.Error("expected step to auto-select single account and complete")
 		}
 	})
@@ -57,14 +66,14 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
 			account.AccountItem{ID: "acc-1", Name: "Production"},
 			account.AccountItem{ID: "acc-2", Name: "Staging"},
 		}
-		updated, cmd := step.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
+		updated, cmd := s.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
 
 		// Execute all commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -72,7 +81,7 @@ func TestSelectStep_Update(t *testing.T) {
 		}
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isComplete(updated) {
 			t.Error("expected step to auto-select from preference and complete")
 		}
 	})
@@ -84,22 +93,23 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with no accounts
-		updated, _ := step.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
+		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isComplete(updated) {
 			t.Error("expected step to auto-select create and complete")
 		}
 
-		selectStep, ok := updated.(*account.SelectStep)
-		if !ok {
-			t.Fatal("expected *account.SelectStep")
+		// Check that Next() returns a CreateStep (not nil)
+		nextStep, err := updated.Next()
+		if err != nil {
+			t.Fatalf("expected no error from Next(), got %v", err)
 		}
-		if !selectStep.IsCreateSelected() {
-			t.Error("expected create to be selected when no accounts exist")
+		if nextStep == nil {
+			t.Error("expected Next() to return a step when create is selected")
 		}
 	})
 
@@ -114,17 +124,17 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
 			account.AccountItem{ID: "acc-1", Name: "Production"},
 			account.AccountItem{ID: "acc-2", Name: "Staging"},
 		}
-		updated, _ := step.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
+		updated, _ := s.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
 
 		// Assert: should NOT be complete - user must select
-		if updated.IsComplete() {
+		if isComplete(updated) {
 			t.Error("expected step to require manual selection")
 		}
 	})
@@ -142,14 +152,14 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
 			account.AccountItem{ID: "acc-1", Name: "Production"},
 			account.AccountItem{ID: "acc-2", Name: "Staging"},
 		}
-		updated, _ := step.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
+		updated, _ := s.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
 
 		// Act: user presses enter to select
 		updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -158,7 +168,7 @@ func TestSelectStep_Update(t *testing.T) {
 		if savedID == "" {
 			t.Error("expected account preference to be saved")
 		}
-		if !updated.IsComplete() {
+		if !isComplete(updated) {
 			t.Error("expected step to complete after selection")
 		}
 	})
@@ -170,45 +180,49 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
 			account.AccountItem{ID: "acc-1", Name: "Production"},
 		}
-		updated, _ := step.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
+		updated, _ := s.Update(remotelist.LoadResultMsg{Items: items, Err: nil})
 
 		// Act: user presses 'n' to create new
 		updated, _ = updated.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isComplete(updated) {
 			t.Error("expected step to complete after pressing n")
 		}
 
-		selectStep, ok := updated.(*account.SelectStep)
-		if !ok {
-			t.Fatal("expected *account.SelectStep")
+		// Check that Next() returns a CreateStep (not nil)
+		nextStep, err := updated.Next()
+		if err != nil {
+			t.Fatalf("expected no error from Next(), got %v", err)
 		}
-		if !selectStep.IsCreateSelected() {
-			t.Error("expected create to be selected")
+		if nextStep == nil {
+			t.Error("expected Next() to return a step when create is selected")
 		}
 	})
 }
 
-func TestSelectStep_IsComplete(t *testing.T) {
-	t.Run("returns false before selection", func(t *testing.T) {
+func TestSelectStep_Next(t *testing.T) {
+	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+
+	t.Run("returns ErrNotReady before selection", func(t *testing.T) {
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := account.NewSelectStep("admin", "org-1", lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Assert
-		if step.IsComplete() {
-			t.Error("expected step to NOT be complete before any selection")
+		_, err := s.Next()
+		if err != step.ErrNotReady {
+			t.Errorf("expected ErrNotReady before selection, got %v", err)
 		}
 	})
 }

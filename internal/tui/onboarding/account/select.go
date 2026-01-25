@@ -67,8 +67,8 @@ func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.
 // SelectStep handles selecting an account or choosing to create one.
 type SelectStep struct {
 	// Accumulated state from previous steps
-	role  string
-	orgID string
+	role string
+	org  api.Organization
 
 	// Services (defined by consumer interfaces)
 	accountLister       AccountLister
@@ -87,7 +87,7 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new account selection step for the given organization
-func NewSelectStep(role string, orgID string, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountLister == nil {
 		panic("accountLister cannot be nil")
 	}
@@ -106,7 +106,7 @@ func NewSelectStep(role string, orgID string, accountLister AccountLister, defau
 
 	return &SelectStep{
 		role:                role,
-		orgID:               orgID,
+		org:                 org,
 		accountLister:       accountLister,
 		defaultAccountSaver: defaultAccountSaver,
 		apiClient:           apiClient,
@@ -122,10 +122,10 @@ func (s *SelectStep) Init() tea.Cmd {
 	return s.remoteList.InitWithLoader(func() tea.Msg {
 		ctx := context.Background()
 
-		s.logger.Info("loading accounts", "organizationID", s.orgID)
-		accounts, err := s.accountLister.List(ctx, s.orgID)
+		s.logger.Info("loading accounts", "organizationID", s.org.ID)
+		accounts, err := s.accountLister.List(ctx, s.org.ID)
 		if err != nil {
-			s.logger.Error("failed to load accounts", "error", err, "organizationID", s.orgID)
+			s.logger.Error("failed to load accounts", "error", err, "organizationID", s.org.ID)
 			return remotelist.LoadResultMsg{Items: nil, Err: err}
 		}
 
@@ -171,6 +171,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				for _, account := range s.accountsList {
 					if account.ID == userPref {
 						s.selectedAccountID = userPref
+						s.apiClient.SetAccountID(userPref)
 						s.logger.Debug("auto-selected account from preference", "id", userPref, "name", account.Name)
 					}
 				}
@@ -179,6 +180,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			// Case 3: No preference AND only 1 account → auto-select and save
 			if userPref == "" && len(s.accountsList) == 1 {
 				s.selectedAccountID = s.accountsList[0].ID
+				s.apiClient.SetAccountID(s.accountsList[0].ID)
 				if err := s.defaultAccountSaver.SetDefaultAccountID(s.accountsList[0].ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				} else {
@@ -204,6 +206,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			selected := s.remoteList.SelectedItem()
 			if ai, ok := selected.(AccountItem); ok {
 				s.selectedAccountID = ai.ID
+				s.apiClient.SetAccountID(ai.ID)
 				s.logger.Info("account selected", "id", ai.ID, "name", ai.Name)
 				if err := s.defaultAccountSaver.SetDefaultAccountID(ai.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
@@ -253,16 +256,6 @@ func (s *SelectStep) SetSize(width, height int) {
 	s.remoteList.SetWidth(width)
 }
 
-// IsComplete returns true if an account has been selected
-func (s *SelectStep) IsComplete() bool {
-	return s.selectedAccountID != ""
-}
-
-// IsCreateSelected returns true if user chose to create a new account
-func (s *SelectStep) IsCreateSelected() bool {
-	return s.selectedAccountID == createNewAccountID
-}
-
 // IsBusy returns true while loading accounts
 func (s *SelectStep) IsBusy() bool {
 	return !s.remoteList.IsLoaded()
@@ -278,34 +271,32 @@ func (s *SelectStep) Error() error {
 	return s.remoteList.Error()
 }
 
-// OrganizationID returns the organization ID this step is operating on
-func (s *SelectStep) OrganizationID() string {
-	return s.orgID
-}
-
-// SelectedAccountID returns the ID of the selected account (excluding "create new")
-func (s *SelectStep) SelectedAccountID() string {
-	if s.selectedAccountID == createNewAccountID {
-		return ""
-	}
-	return s.selectedAccountID
-}
-
 // Next returns the next step after account selection
-func (s *SelectStep) Next() step.Step {
-	// Conditional branching based on user's selection
-	if s.IsCreateSelected() {
-		// Create account service for next step
-		accountService := api.NewAccountService(s.apiClient, s.logger)
+func (s *SelectStep) Next() (step.Step, error) {
+	if s.selectedAccountID == "" {
+		return nil, step.ErrNotReady
+	}
 
-		return NewCreateStep(s.role, s.orgID, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings)
+	// User wants to create new account
+	if s.selectedAccountID == createNewAccountID {
+		accountService := api.NewAccountService(s.apiClient, s.logger)
+		return NewCreateStep(s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
+	}
+
+	// Find the selected account
+	var selectedAccount api.Account
+	for _, account := range s.accountsList {
+		if account.ID == s.selectedAccountID {
+			selectedAccount = account
+			break
+		}
 	}
 
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// User selected existing account, check for Datadog
-	return datadog.NewCheckDatadogStep(s.role, s.orgID, s.SelectedAccountID(), datadogService, s.apiClient, s.logger, s.globalBindings)
+	return datadog.NewCheckDatadogStep(s.role, s.org, selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

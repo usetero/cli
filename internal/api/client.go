@@ -13,6 +13,9 @@ type Client interface {
 	// SetAccessToken updates the access token used for authentication.
 	SetAccessToken(token string)
 
+	// SetAccountID sets the account ID header for scoped requests.
+	SetAccountID(accountID string)
+
 	// Organization operations
 	ListOrganizations(ctx context.Context) (*client.ListOrganizationsResponse, error)
 	CreateOrganizationAndBootstrap(ctx context.Context, input client.CreateOrganizationInput) (*client.CreateOrganizationAndBootstrapResponse, error)
