@@ -6,6 +6,7 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/tui"
 	"github.com/usetero/cli/internal/workos"
 )
@@ -50,8 +51,17 @@ Just run 'tero' to start an interactive chat session.`,
 			// Create WorkOS client for authentication
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
 
+			// Create PowerSync config
+			powersyncConfig := &powersync.Config{
+				Endpoint:  cliConfig.PowerSyncEndpoint,
+				Namespace: namespace,
+			}
+
 			// Create and run the TUI
-			p := tea.NewProgram(tui.New(cfg, tokenStore, workosClient, endpoint, logger))
+			p := tea.NewProgram(
+				tui.New(cfg, tokenStore, workosClient, endpoint, powersyncConfig, logger),
+				tea.WithFilter(tui.MouseEventFilter),
+			)
 			if _, err := p.Run(); err != nil {
 				logger.Error("bubbletea program error", "error", err)
 				return err

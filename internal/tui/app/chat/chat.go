@@ -1,16 +1,21 @@
 package chat
 
 import (
-	"charm.land/bubbles/v2/help"
+	"fmt"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/app/page"
-	"github.com/usetero/cli/internal/tui/keymap"
-	"github.com/usetero/cli/internal/tui/layouts"
 )
+
+// DatabaseReadyMsg is sent when the database is ready for queries.
+type DatabaseReadyMsg struct {
+	DB sqlite.Database
+}
 
 // model represents the chat page state
 type model struct {
@@ -18,114 +23,161 @@ type model struct {
 	orgID     string
 	accountID string
 
-	// TODO: Add services when we know what chat needs
+	// Data layer
+	db sqlite.Database
+
+	// Sync status display
+	serviceCount int64
+	syncError    error
 
 	// Logger
 	logger log.Logger
 
-	// Layout
-	layout layouts.Layout
+	// Dimensions (set by app)
+	width  int
+	height int
 	ready  bool
-
-	// Global key bindings (passed from TUI)
-	globalBindings []key.Binding
 }
 
 // New creates a new chat page model.
-// Takes the accumulated onboarding data (orgID, accountID) plus logger and services.
-func New(orgID string, accountID string, logger log.Logger, globalBindings []key.Binding) page.Page {
+func New(orgID string, accountID string, logger log.Logger) page.Page {
 	return &model{
-		orgID:          orgID,
-		accountID:      accountID,
-		logger:         logger,
-		ready:          false,
-		layout:         layouts.NewSidebar(logger),
-		globalBindings: globalBindings,
+		orgID:     orgID,
+		accountID: accountID,
+		logger:    logger,
 	}
 }
 
-// Init is called when the program starts
+// Init is called when the page is first loaded
 func (m *model) Init() tea.Cmd {
 	return nil
 }
 
-// SetSize sets the width and height available for rendering
-func (m *model) SetSize(width, height int) {
-	m.layout.SetSize(width, height)
-	m.ready = true
-}
-
-// Update handles incoming messages and updates state
+// Update handles incoming messages
 func (m *model) Update(msg tea.Msg) tea.Cmd {
-	// Note: WindowSizeMsg is handled by parent (tui.go), not here
-	// Pages only handle their own specific messages
+	switch msg := msg.(type) {
+	case DatabaseReadyMsg:
+		m.db = msg.DB
+		m.logger.Info("chat received database")
+		return m.queryServiceCount()
 
-	// Combine page bindings + global bindings
-	var bindings []key.Binding
-	bindings = append(bindings, m.Help().ShortHelp()...)
-	bindings = append(bindings, m.globalBindings...)
-	m.layout.SetKeyBindings(bindings)
-
-	// Pass error state to layout (always set, even if nil to clear previous errors)
-	m.layout.SetError(m.Error())
-
-	// Cascade to layout
-	cmd := m.layout.Update(msg)
-
-	switch msg.(type) {
-	case tea.KeyMsg:
-		// Handle key messages when needed
+	case serviceCountMsg:
+		if msg.err != nil {
+			m.syncError = msg.err
+			m.logger.Error("failed to query service count", "error", msg.err)
+		} else {
+			m.serviceCount = msg.count
+			m.logger.Info("queried service count", "count", msg.count)
+		}
+		return nil
 	}
-
-	return cmd
+	return nil
 }
 
-// View renders the page content as a string (implements pages.Page interface)
+// queryServiceCount queries the number of services from the local database.
+func (m *model) queryServiceCount() tea.Cmd {
+	return func() tea.Msg {
+		if m.db == nil {
+			return serviceCountMsg{err: fmt.Errorf("database not ready")}
+		}
+		count, err := m.db.Count("services")
+		return serviceCountMsg{count: count, err: err}
+	}
+}
+
+// serviceCountMsg is the result of querying the service count.
+type serviceCountMsg struct {
+	count int64
+	err   error
+}
+
+// View renders just the page content (no chrome)
 func (m *model) View() string {
 	if !m.ready {
 		return ""
 	}
 
-	// Ask layout for available content dimensions
-	contentWidth, contentHeight := m.layout.ContentSize()
-
 	theme := styles.CurrentTheme()
 
-	// Render chat content inline
-	chatContent := lipgloss.NewStyle().
+	var status string
+	if m.db == nil {
+		status = "Connecting to PowerSync..."
+	} else if m.syncError != nil {
+		status = fmt.Sprintf("Sync error: %v", m.syncError)
+	} else {
+		status = fmt.Sprintf("Connected to PowerSync. Synced %d services.", m.serviceCount)
+	}
+
+	content := lipgloss.NewStyle().
 		Foreground(theme.Page.Text).
 		Render(
 			lipgloss.Place(
-				contentWidth,
-				contentHeight,
+				m.width,
+				m.height,
 				lipgloss.Center,
 				lipgloss.Center,
-				"Chat interface coming soon...",
+				status,
 			),
 		)
 
-	// Layout handles sidebar + content + footer composition
-	return m.layout.Render(chatContent)
+	return content
 }
 
-// IsBusy returns true if the chat is performing a background operation.
-// Currently never busy - will be true when streaming messages in the future.
+// SetSize sets the dimensions available for content
+func (m *model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+	m.ready = true
+}
+
+// Title returns the page title
+func (m *model) Title() string {
+	return "Chat"
+}
+
+// Metadata returns context to display in sidebar/header
+func (m *model) Metadata() []page.Metadata {
+	return []page.Metadata{
+		{Label: "Organization", Value: m.orgID, Priority: 1},
+		{Label: "Account", Value: m.accountID, Priority: 2},
+	}
+}
+
+// AcceptsNaturalLanguage returns true - chat accepts free-form input
+func (m *model) AcceptsNaturalLanguage() bool {
+	return true
+}
+
+// Commands returns available slash commands
+func (m *model) Commands() []page.Command {
+	return []page.Command{
+		{Name: "services", Description: "View and manage services"},
+		{Name: "policies", Description: "View and manage policies"},
+		{Name: "help", Description: "Show available commands"},
+	}
+}
+
+// KeyBindings returns keyboard shortcuts for the footer
+func (m *model) KeyBindings() []key.Binding {
+	return []key.Binding{
+		key.NewBinding(
+			key.WithKeys("ctrl+l"),
+			key.WithHelp("ctrl+l", "clear"),
+		),
+	}
+}
+
+// IsBusy returns true if chat is streaming a response
 func (m *model) IsBusy() bool {
-	return false
+	return m.db == nil // Busy while waiting for sync
 }
 
-// HasError returns false - chat page has no error state currently
+// HasError returns true if chat is in an error state
 func (m *model) HasError() bool {
-	return false
+	return m.syncError != nil
 }
 
-// Error returns nil - chat page has no error state currently
+// Error returns the current error
 func (m *model) Error() error {
-	return nil
-}
-
-// Help returns key bindings for the chat page
-func (m *model) Help() help.KeyMap {
-	// Chat page has no custom bindings yet - will add when we implement message sending
-	return keymap.Simple{Keys: []key.Binding{}}
+	return m.syncError
 }

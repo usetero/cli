@@ -5,12 +5,18 @@ import (
 	"os"
 )
 
-const productionEndpoint = "https://api.usetero.com/graphql"
+const (
+	productionEndpoint          = "https://api.usetero.com/graphql"
+	productionPowerSyncEndpoint = "https://powersync.usetero.com"
+)
 
 // CLIConfig holds configuration for the Tero CLI.
 type CLIConfig struct {
 	// APIEndpoint is the Tero control plane GraphQL endpoint
 	APIEndpoint string
+
+	// PowerSyncEndpoint is the PowerSync service endpoint for local-first sync
+	PowerSyncEndpoint string
 
 	// WorkOSClientID is the WorkOS OAuth client ID for authentication
 	WorkOSClientID string
@@ -22,9 +28,10 @@ type CLIConfig struct {
 // LoadCLIConfig loads CLI configuration from environment variables and defaults.
 func LoadCLIConfig() *CLIConfig {
 	return &CLIConfig{
-		APIEndpoint:    getEnvOrDefault("TERO_API_ENDPOINT", productionEndpoint),
-		WorkOSClientID: getEnvOrDefault("TERO_WORKOS_CLIENT_ID", "client_01JQCC2D06JF9ASFA6GRHMFA3N"),
-		Debug:          os.Getenv("TERO_DEBUG") == "true" || os.Getenv("TERO_DEBUG") == "1",
+		APIEndpoint:       getEnvOrDefault("TERO_API_ENDPOINT", productionEndpoint),
+		PowerSyncEndpoint: getEnvOrDefault("TERO_POWERSYNC_ENDPOINT", productionPowerSyncEndpoint),
+		WorkOSClientID:    getEnvOrDefault("TERO_WORKOS_CLIENT_ID", "client_01JQCC2D06JF9ASFA6GRHMFA3N"),
+		Debug:             os.Getenv("TERO_DEBUG") == "true" || os.Getenv("TERO_DEBUG") == "1",
 	}
 }
 

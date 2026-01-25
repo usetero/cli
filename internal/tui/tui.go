@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
@@ -60,7 +61,9 @@ func DefaultKeyMap() KeyMap {
 type TUI struct {
 	config             *config.Config
 	logger             log.Logger
+	authService        *auth.Service
 	preferencesService *preferences.Service
+	powersyncConfig    *powersync.Config
 
 	// Current mode (onboarding or app)
 	currentMode mode.Mode
@@ -78,7 +81,7 @@ type TUI struct {
 }
 
 // New creates a new TUI model
-func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint string, logger log.Logger) tea.Model {
+func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint string, powersyncConfig *powersync.Config, logger log.Logger) tea.Model {
 	// Create domain services
 	authService := auth.NewService(oauthProvider, tokenStore, logger)
 	preferencesService := preferences.NewService(cfg, logger)
@@ -89,7 +92,9 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 	return &TUI{
 		config:             cfg,
 		logger:             logger,
+		authService:        authService,
 		preferencesService: preferencesService,
+		powersyncConfig:    powersyncConfig,
 		currentMode:        onboardingMode,
 		keyMap:             DefaultKeyMap(),
 	}
@@ -167,15 +172,15 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch mode := m.currentMode.(type) {
 		case *onboarding.Onboarding:
 			// Onboarding complete - extract final state
-			orgID := mode.OrganizationID()
-			accountID := mode.AccountID()
+			org := mode.Organization()
+			account := mode.Account()
 
 			m.logger.Info("onboarding completed, transitioning to app",
-				"orgID", orgID,
-				"accountID", accountID)
+				"orgID", org.ID,
+				"accountID", account.ID)
 
-			// Create app mode (chat page will be created when we know what services it needs)
-			m.currentMode = tuiapp.New(orgID, accountID, m.logger, globalBindings)
+			// Create app mode with PowerSync for local-first data
+			m.currentMode = tuiapp.New(org, account, m.authService, m.powersyncConfig, m.logger, globalBindings)
 
 			// Set size on new mode before initializing
 			if m.width > 0 && m.height > 0 {
@@ -206,24 +211,18 @@ func (m *TUI) View() tea.View {
 			AltScreen:       true,
 		}
 
-		view.SetContent(
-			lipgloss.NewCanvas(
-				lipgloss.NewLayer(
-					lipgloss.NewStyle().
-						Width(m.width).
-						Height(m.height).
-						Align(lipgloss.Center, lipgloss.Center).
-						Render(
-							lipgloss.NewStyle().
-								Padding(1, 4).
-								Foreground(theme.Page.Text).
-								BorderStyle(lipgloss.RoundedBorder()).
-								BorderForeground(theme.Accent).
-								Render("Window too small!"),
-						),
-				),
-			).Render(),
-		)
+		view.Content = lipgloss.NewStyle().
+			Width(m.width).
+			Height(m.height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Render(
+				lipgloss.NewStyle().
+					Padding(1, 4).
+					Foreground(theme.Page.Text).
+					BorderStyle(lipgloss.RoundedBorder()).
+					BorderForeground(theme.Accent).
+					Render("Window too small!"),
+			)
 
 		return view
 	}
@@ -244,15 +243,15 @@ func (m *TUI) View() tea.View {
 	//     layers = append(layers, m.dialog.GetLayers()...)
 	// }
 
-	// Create canvas from layers
-	canvas := lipgloss.NewCanvas(layers...)
+	// Create compositor from layers
+	comp := lipgloss.NewCompositor(layers...)
 
 	// Build final view
 	view := tea.View{
 		BackgroundColor: theme.Page.Bg,
 		AltScreen:       true,
 	}
-	view.SetContent(canvas.Render())
+	view.Content = comp.Render()
 	view.Cursor = cursor
 	view.MouseMode = tea.MouseModeCellMotion
 
