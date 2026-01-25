@@ -3,6 +3,7 @@ package remotelist
 import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/components/loader"
@@ -24,6 +25,7 @@ type LoadResultMsg struct {
 
 // Component is a list that loads items asynchronously
 type Component struct {
+	theme      *styles.Theme
 	list       *list.List
 	loader     *loader.Component
 	state      state
@@ -36,13 +38,14 @@ type Component struct {
 var _ components.Component = (*Component)(nil)
 
 // New creates a new remote list component
-func New(delegate list.ItemDelegate, loadingMessage string, logger log.Logger) *Component {
-	l := list.New([]list.Item{}, delegate)
+func New(theme *styles.Theme, delegate list.ItemDelegate, loadingMessage string, logger log.Logger) *Component {
+	l := list.New(theme, []list.Item{}, delegate)
 	// Don't set height here - let it be set when items load
 
 	return &Component{
+		theme:  theme,
 		list:   l,
-		loader: loader.New(loadingMessage),
+		loader: loader.New(theme, loadingMessage),
 		state:  stateLoading,
 		logger: logger,
 	}

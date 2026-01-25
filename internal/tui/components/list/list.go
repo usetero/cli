@@ -24,15 +24,16 @@ type (
 
 // List is a wrapper around bubbles list with consistent theming
 type List struct {
-	list list.Model
+	theme *styles.Theme
+	list  list.Model
 }
 
 // Compile-time check that List implements components.Component
 var _ components.Component = (*List)(nil)
 
 // New creates a new list with consistent theming and filtering enabled
-func New(items []Item, delegate ItemDelegate) *List {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, items []Item, delegate ItemDelegate) *List {
+	colors := theme.Colors
 
 	l := list.New(items, delegate, 0, 0)
 	l.SetShowTitle(false)
@@ -43,11 +44,11 @@ func New(items []Item, delegate ItemDelegate) *List {
 
 	// Apply theme-aware styles
 	l.Styles.Title = lipgloss.NewStyle().
-		Foreground(theme.Accent).
+		Foreground(colors.Accent).
 		Bold(true)
 
 	l.Styles.TitleBar = lipgloss.NewStyle().
-		Foreground(theme.Accent)
+		Foreground(colors.Accent)
 
 	// Set initial height based on item count (scales down for fewer items)
 	// Since pagination is disabled by default, we don't need extra space
@@ -61,7 +62,8 @@ func New(items []Item, delegate ItemDelegate) *List {
 	}
 
 	return &List{
-		list: l,
+		theme: theme,
+		list:  l,
 	}
 }
 

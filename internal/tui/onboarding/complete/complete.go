@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
@@ -21,18 +22,28 @@ func shouldSkipToApp() bool {
 
 // CompleteStep shows the onboarding completion message
 type CompleteStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
+	// Accumulated state from previous steps
+	org     api.Organization
+	account api.Account
+
 	logger         log.Logger
 	width          int
 	globalBindings []key.Binding
 }
 
 // NewCompleteStep creates a new completion step
-func NewCompleteStep(logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCompleteStep(theme *styles.Theme, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 
 	return &CompleteStep{
+		theme:          theme,
+		org:            org,
+		account:        account,
 		logger:         logger,
 		width:          80,
 		globalBindings: globalBindings,
@@ -52,18 +63,18 @@ func (s *CompleteStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the completion message
 func (s *CompleteStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
-	title := common.Title.Render("You're all set!")
+	title := themeStyles.Title.Render("You're all set!")
 
-	body1 := common.Body.Render("We've analyzed your logs and identified waste patterns, quality issues,")
-	body2 := common.Body.Render("and opportunities for improvement.")
+	body1 := themeStyles.Body.Render("We've analyzed your logs and identified waste patterns, quality issues,")
+	body2 := themeStyles.Body.Render("and opportunities for improvement.")
 
-	body3 := common.Body.Render("We're reviewing the results now to make sure everything looks good.")
-	body4 := common.Body.Render("We'll reach out shortly to schedule a walkthrough.")
+	body3 := themeStyles.Body.Render("We're reviewing the results now to make sure everything looks good.")
+	body4 := themeStyles.Body.Render("We'll reach out shortly to schedule a walkthrough.")
 
-	contact := common.Help.Render("Questions in the meantime? Reach out: ") +
-		common.URL.Render("team@usetero.com")
+	contact := themeStyles.Help.Render("Questions in the meantime? Reach out: ") +
+		themeStyles.URL.Render("team@usetero.com")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -84,16 +95,6 @@ func (s *CompleteStep) SetSize(width, height int) {
 	s.width = width
 }
 
-// IsComplete returns true if TERO_SKIP_TO_APP is enabled (development mode),
-// otherwise returns false to keep the completion message visible
-func (s *CompleteStep) IsComplete() bool {
-	if shouldSkipToApp() {
-		s.logger.Info("skip to app enabled, completing onboarding")
-		return true
-	}
-	return false
-}
-
 // IsBusy returns false - no background work
 func (s *CompleteStep) IsBusy() bool {
 	return false
@@ -109,12 +110,26 @@ func (s *CompleteStep) Error() error {
 	return nil
 }
 
-// Next returns nil - this is the final step
-func (s *CompleteStep) Next() step.Step {
-	return nil
+// Next returns (nil, nil) when ready (skip to app enabled), otherwise ErrNotReady
+func (s *CompleteStep) Next() (step.Step, error) {
+	if shouldSkipToApp() {
+		s.logger.Info("skip to app enabled, completing onboarding")
+		return nil, nil
+	}
+	return nil, step.ErrNotReady
 }
 
 // Help returns empty key bindings - no actions available
 func (s *CompleteStep) Help() help.KeyMap {
 	return keymap.Simple{Keys: []key.Binding{}}
+}
+
+// Organization returns the organization from completed onboarding
+func (s *CompleteStep) Organization() api.Organization {
+	return s.org
+}
+
+// Account returns the account from completed onboarding
+func (s *CompleteStep) Account() api.Account {
+	return s.account
 }

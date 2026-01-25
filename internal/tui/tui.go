@@ -64,6 +64,7 @@ type TUI struct {
 	authService        *auth.Service
 	preferencesService *preferences.Service
 	powersyncConfig    *powersync.Config
+	theme              *styles.Theme
 
 	// Current mode (onboarding or app)
 	currentMode mode.Mode
@@ -82,12 +83,15 @@ type TUI struct {
 
 // New creates a new TUI model
 func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint string, powersyncConfig *powersync.Config, logger log.Logger) tea.Model {
+	// Create theme first - it's used by everything
+	theme := styles.NewTheme(true) // dark mode
+
 	// Create domain services
 	authService := auth.NewService(oauthProvider, tokenStore, logger)
 	preferencesService := preferences.NewService(cfg, logger)
 
 	// Start with onboarding mode
-	onboardingMode := onboarding.New(logger, authService, preferencesService, apiEndpoint, globalBindings)
+	onboardingMode := onboarding.New(theme, logger, authService, preferencesService, apiEndpoint, globalBindings)
 
 	return &TUI{
 		config:             cfg,
@@ -95,6 +99,7 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 		authService:        authService,
 		preferencesService: preferencesService,
 		powersyncConfig:    powersyncConfig,
+		theme:              theme,
 		currentMode:        onboardingMode,
 		keyMap:             DefaultKeyMap(),
 	}
@@ -180,7 +185,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				"accountID", account.ID)
 
 			// Create app mode with PowerSync for local-first data
-			m.currentMode = tuiapp.New(org, account, m.authService, m.powersyncConfig, m.logger, globalBindings)
+			m.currentMode = tuiapp.New(m.theme, org, account, m.authService, m.powersyncConfig, m.logger, globalBindings)
 
 			// Set size on new mode before initializing
 			if m.width > 0 && m.height > 0 {
@@ -202,12 +207,12 @@ func (m *TUI) isBusy() bool {
 
 // View renders the application
 func (m *TUI) View() tea.View {
-	theme := styles.CurrentTheme()
+	colors := m.theme.Colors
 
 	// Check minimum window size
 	if !DisableMinSizeCheck && (m.width < minWidth || m.height < minHeight) {
 		view := tea.View{
-			BackgroundColor: theme.Page.Bg,
+			BackgroundColor: colors.Page.Bg,
 			AltScreen:       true,
 		}
 
@@ -218,9 +223,9 @@ func (m *TUI) View() tea.View {
 			Render(
 				lipgloss.NewStyle().
 					Padding(1, 4).
-					Foreground(theme.Page.Text).
+					Foreground(colors.Page.Text).
 					BorderStyle(lipgloss.RoundedBorder()).
-					BorderForeground(theme.Accent).
+					BorderForeground(colors.Accent).
 					Render("Window too small!"),
 			)
 
@@ -248,7 +253,7 @@ func (m *TUI) View() tea.View {
 
 	// Build final view
 	view := tea.View{
-		BackgroundColor: theme.Page.Bg,
+		BackgroundColor: colors.Page.Bg,
 		AltScreen:       true,
 	}
 	view.Content = comp.Render()

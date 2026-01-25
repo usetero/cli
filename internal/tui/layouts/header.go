@@ -5,17 +5,21 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/header"
 )
 
 // Header is a layout with a header at the top and content below.
 // Uses Base to add footer+padding to everything.
 type Header struct {
+	// Theme
+	theme *styles.Theme
+
 	// Nested layouts
 	base *Base
 
 	// Child components
-	header *header.Component
+	header *header.Header
 
 	// State
 	width  int
@@ -23,10 +27,11 @@ type Header struct {
 }
 
 // NewHeader creates a new header layout
-func NewHeader(logger log.Logger) *Header {
+func NewHeader(theme *styles.Theme, logger log.Logger) *Header {
 	return &Header{
-		base:   NewBase(logger),
-		header: header.New(logger),
+		theme:  theme,
+		base:   NewBase(theme, logger),
+		header: header.New(theme, logger),
 	}
 }
 
@@ -46,7 +51,7 @@ func (h *Header) SetSize(width, height int) {
 
 	// Header gets width after base padding (calculate directly to avoid calling ContentSize during init)
 	baseWidth := width - (horizontalPadding * 2)
-	h.header.Update(tea.WindowSizeMsg{Width: baseWidth, Height: height})
+	h.header.SetSize(baseWidth)
 }
 
 // SetKeyBindings updates the key bindings shown in the footer

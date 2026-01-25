@@ -8,25 +8,28 @@ import (
 
 // Progress wraps the Bubbles progress component with Tero styling.
 type Progress struct {
+	theme *styles.Theme
 	model *progress.Model
 }
 
 // New creates a new progress bar with Tero theming.
 // Uses a gradient from Brand.GradientStart to Brand.GradientEnd.
-func New(width int) *Progress {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, width int) *Progress {
+	colors := theme.Colors
 
 	p := progress.New(
-		progress.WithColors(theme.Brand.GradientStart, theme.Brand.GradientEnd),
+		progress.WithColors(colors.Brand.GradientStart, colors.Brand.GradientEnd),
 		progress.WithWidth(width),
 		progress.WithFillCharacters('█', '░'),
 	)
 
 	// Style the percentage text and empty sections
-	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Page.Text)
-	p.EmptyColor = theme.Page.TextMuted
+	p.PercentFormat = " %.1f%%"
+	p.PercentageStyle = p.PercentageStyle.Foreground(colors.Page.Text)
+	p.EmptyColor = colors.Page.TextMuted
 
 	return &Progress{
+		theme: theme,
 		model: &p,
 	}
 }

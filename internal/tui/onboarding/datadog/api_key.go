@@ -34,11 +34,14 @@ type DatadogAPIKeyValidator interface {
 
 // APIKeyStep handles collecting the user's Datadog API key.
 type APIKeyStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
-	role      string
-	orgID     string
-	accountID string
-	site      string // Selected Datadog site (US1, EU1, etc.)
+	role    string
+	org     api.Organization
+	account api.Account
+	site    string // Selected Datadog site (US1, EU1, etc.)
 
 	// Services (defined by consumer interfaces)
 	apiKeyValidator DatadogAPIKeyValidator
@@ -61,7 +64,7 @@ type APIKeyStep struct {
 }
 
 // NewAPIKeyStep creates a new Datadog API key collection step
-func NewAPIKeyStep(role string, orgID string, accountID string, site string, apiKeyValidator DatadogAPIKeyValidator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewAPIKeyStep(theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKeyValidator DatadogAPIKeyValidator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiKeyValidator == nil {
 		panic("apiKeyValidator cannot be nil")
 	}
@@ -72,9 +75,9 @@ func NewAPIKeyStep(role string, orgID string, accountID string, site string, api
 		panic("logger cannot be nil")
 	}
 
-	theme := styles.CurrentTheme()
+	colors := theme.Colors
 
-	inp := input.New(logger)
+	inp := input.New(theme, logger)
 	inp.SetPlaceholder("Enter your Datadog API key...")
 	inp.SetWidth(50)
 	inp.SetEchoMode(textinput.EchoPassword)
@@ -82,12 +85,13 @@ func NewAPIKeyStep(role string, orgID string, accountID string, site string, api
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &APIKeyStep{
+		theme:           theme,
 		role:            role,
-		orgID:           orgID,
-		accountID:       accountID,
+		org:             org,
+		account:         account,
 		site:            site,
 		apiKeyValidator: apiKeyValidator,
 		apiClient:       apiClient,
@@ -229,13 +233,13 @@ func (s *APIKeyStep) validateAPIKey(apiKey string) tea.Cmd {
 
 // View renders the Datadog API key step UI
 func (s *APIKeyStep) View() string {
-	common := styles.Common()
-	theme := styles.CurrentTheme()
+	themeStyles := s.theme.Styles
+	colors := s.theme.Colors
 
 	// Show success state
 	if s.validated {
-		title := common.Success.Render("✓ Datadog API key verified!")
-		help := common.Help.Render("Press Enter to continue")
+		title := themeStyles.Success.Render("✓ Datadog API key verified!")
+		help := themeStyles.Help.Render("Press Enter to continue")
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
@@ -247,7 +251,7 @@ func (s *APIKeyStep) View() string {
 	// Show validating state
 	if s.validating {
 		titleStyle := lipgloss.NewStyle().
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			Bold(false)
 
 		title := titleStyle.Render("Verifying your Datadog API key...")
@@ -259,17 +263,17 @@ func (s *APIKeyStep) View() string {
 		)
 	}
 
-	title := common.Title.Render("Connect to Datadog")
+	title := themeStyles.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.Page.TextMuted).
+		Foreground(colors.Page.TextMuted).
 		Underline(true)
-	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
+	docsLink := themeStyles.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	// Interstitial screen
 	if !s.showingInput {
-		prompt := common.Body.Render("First, create an API key.")
-		action := common.Action.Render("Press Enter to open Datadog.")
+		prompt := themeStyles.Body.Render("First, create an API key.")
+		action := themeStyles.Action.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -284,7 +288,7 @@ func (s *APIKeyStep) View() string {
 	}
 
 	// Input screen
-	prompt := common.Body.Render("Paste your API key")
+	prompt := themeStyles.Body.Render("Paste your API key")
 
 	parts := []string{
 		title,
@@ -307,11 +311,6 @@ func (s *APIKeyStep) SetSize(width, height int) {
 	}
 }
 
-// IsComplete returns true if a valid Datadog API key has been collected and validated
-func (s *APIKeyStep) IsComplete() bool {
-	return s.validated && s.validatedKey != ""
-}
-
 // IsBusy returns true while validating
 func (s *APIKeyStep) IsBusy() bool {
 	return s.validating
@@ -328,11 +327,18 @@ func (s *APIKeyStep) Error() error {
 }
 
 // Next returns the next step after API key validation
-func (s *APIKeyStep) Next() step.Step {
+func (s *APIKeyStep) Next() (step.Step, error) {
+	if s.validationErr != nil {
+		return nil, s.validationErr
+	}
+	if !s.validated || s.validatedKey == "" {
+		return nil, step.ErrNotReady
+	}
+
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
-	return NewAppKeyStep(s.role, s.orgID, s.accountID, s.site, s.validatedKey, datadogService, s.apiClient, s.logger, s.globalBindings)
+	return NewAppKeyStep(s.theme, s.role, s.org, s.account, s.site, s.validatedKey, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

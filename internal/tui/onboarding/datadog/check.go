@@ -21,10 +21,13 @@ type DatadogAccountChecker interface {
 
 // CheckDatadogStep checks if the account has a Datadog integration configured
 type CheckDatadogStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
-	role      string
-	orgID     string
-	accountID string
+	role    string
+	org     api.Organization
+	account api.Account
 
 	// Services (defined by consumer interfaces)
 	datadogChecker DatadogAccountChecker
@@ -44,7 +47,7 @@ type CheckDatadogStep struct {
 }
 
 // NewCheckDatadogStep creates a new Datadog account check step
-func NewCheckDatadogStep(role string, orgID string, accountID string, datadogChecker DatadogAccountChecker, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCheckDatadogStep(theme *styles.Theme, role string, org api.Organization, account api.Account, datadogChecker DatadogAccountChecker, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if datadogChecker == nil {
 		panic("datadogChecker cannot be nil")
 	}
@@ -56,9 +59,10 @@ func NewCheckDatadogStep(role string, orgID string, accountID string, datadogChe
 	}
 
 	return &CheckDatadogStep{
+		theme:          theme,
 		role:           role,
-		orgID:          orgID,
-		accountID:      accountID,
+		org:            org,
+		account:        account,
 		datadogChecker: datadogChecker,
 		apiClient:      apiClient,
 		logger:         logger,
@@ -84,9 +88,9 @@ func (s *CheckDatadogStep) Init() tea.Cmd {
 func (s *CheckDatadogStep) checkDatadogAccount() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		s.logger.Info("checking datadog account", log.String("accountID", s.accountID))
+		s.logger.Info("checking datadog account", log.String("accountID", s.account.ID))
 
-		hasDatadog, err := s.datadogChecker.HasAccount(ctx, s.accountID)
+		hasDatadog, err := s.datadogChecker.HasAccount(ctx, s.account.ID)
 		if err != nil {
 			return checkDatadogMsg{err: err}
 		}
@@ -96,12 +100,12 @@ func (s *CheckDatadogStep) checkDatadogAccount() tea.Cmd {
 		}
 
 		// Fetch the Datadog account details
-		account, err := s.datadogChecker.GetAccount(ctx, s.accountID)
+		datadogAccount, err := s.datadogChecker.GetAccount(ctx, s.account.ID)
 		if err != nil {
 			return checkDatadogMsg{err: err}
 		}
 
-		return checkDatadogMsg{hasDatadog: true, datadogAccount: account}
+		return checkDatadogMsg{hasDatadog: true, datadogAccount: datadogAccount}
 	}
 }
 
@@ -146,32 +150,22 @@ func (s *CheckDatadogStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the check UI
 func (s *CheckDatadogStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
 	if s.checking {
-		return common.Title.Render("Checking Datadog account...")
+		return themeStyles.Title.Render("Checking Datadog account...")
 	}
 
 	if s.hasDatadog {
-		return common.Success.Render("✓ Datadog account found")
+		return themeStyles.Success.Render("✓ Datadog account found")
 	}
 
-	return common.Title.Render("No Datadog account found")
+	return themeStyles.Title.Render("No Datadog account found")
 }
 
 // SetSize sets the width available for rendering
 func (s *CheckDatadogStep) SetSize(width, height int) {
 	s.width = width
-}
-
-// IsComplete returns true when check is done successfully
-func (s *CheckDatadogStep) IsComplete() bool {
-	return s.checked && s.err == nil
-}
-
-// NeedsDatadogSetup returns true if account doesn't have Datadog configured
-func (s *CheckDatadogStep) NeedsDatadogSetup() bool {
-	return s.checked && !s.hasDatadog
 }
 
 // IsBusy returns true while checking
@@ -190,11 +184,18 @@ func (s *CheckDatadogStep) Error() error {
 }
 
 // Next returns the next step after checking Datadog account
-func (s *CheckDatadogStep) Next() step.Step {
+func (s *CheckDatadogStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.checked {
+		return nil, step.ErrNotReady
+	}
+
 	// Conditional branching based on whether account has Datadog
-	if s.NeedsDatadogSetup() {
+	if !s.hasDatadog {
 		// No Datadog account - go to Datadog setup flow
-		return NewSelectRegionStep(s.role, s.orgID, s.accountID, s.apiClient, s.logger, s.globalBindings)
+		return NewSelectRegionStep(s.theme, s.role, s.org, s.account, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Create datadog account service for status polling
@@ -202,7 +203,7 @@ func (s *CheckDatadogStep) Next() step.Step {
 
 	// Datadog account exists - go to unified discovery step
 	datadogAccountID := s.datadogAccount.ID
-	return NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings)
+	return NewDiscoveryStep(s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

@@ -25,6 +25,9 @@ type TokenValidator interface {
 
 // CheckAuthStep checks if the user has a valid auth token
 type CheckAuthStep struct {
+	// Theme
+	theme *styles.Theme
+
 	// Services
 	tokenValidator TokenValidator
 	authService    *authservice.Service
@@ -45,7 +48,7 @@ type CheckAuthStep struct {
 }
 
 // NewCheckAuthStep creates a new auth check step
-func NewCheckAuthStep(tokenValidator TokenValidator, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCheckAuthStep(theme *styles.Theme, tokenValidator TokenValidator, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if tokenValidator == nil {
 		panic("tokenValidator cannot be nil")
 	}
@@ -60,6 +63,7 @@ func NewCheckAuthStep(tokenValidator TokenValidator, authService *authservice.Se
 	}
 
 	return &CheckAuthStep{
+		theme:              theme,
 		tokenValidator:     tokenValidator,
 		authService:        authService,
 		preferencesService: preferencesService,
@@ -150,32 +154,22 @@ func (s *CheckAuthStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the check UI
 func (s *CheckAuthStep) View() string {
-	common := styles.Common()
+	styles := s.theme.Styles
 
 	if s.checking {
-		return common.Title.Render("Checking authentication...")
+		return styles.Title.Render("Checking authentication...")
 	}
 
 	if s.hasValidAuth {
-		return common.Success.Render("✓ Already authenticated")
+		return styles.Success.Render("Already authenticated")
 	}
 
-	return common.Title.Render("No authentication found")
+	return styles.Title.Render("No authentication found")
 }
 
 // SetSize sets the width available for rendering
 func (s *CheckAuthStep) SetSize(width, height int) {
 	s.width = width
-}
-
-// IsComplete returns true when check is done successfully
-func (s *CheckAuthStep) IsComplete() bool {
-	return s.checked && s.err == nil
-}
-
-// NeedsAuth returns true if user needs to authenticate
-func (s *CheckAuthStep) NeedsAuth() bool {
-	return s.checked && !s.hasValidAuth
 }
 
 // IsBusy returns true while checking
@@ -194,10 +188,17 @@ func (s *CheckAuthStep) Error() error {
 }
 
 // Next returns the next step after checking auth
-func (s *CheckAuthStep) Next() step.Step {
-	if s.NeedsAuth() {
+func (s *CheckAuthStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.checked {
+		return nil, step.ErrNotReady
+	}
+
+	if !s.hasValidAuth {
 		// No valid auth - go to auth step
-		return NewAuthenticateStep(s.logger, s.authService, s.preferencesService, s.apiEndpoint, s.globalBindings)
+		return NewAuthenticateStep(s.theme, s.logger, s.authService, s.preferencesService, s.apiEndpoint, s.globalBindings), nil
 	}
 
 	// Has valid auth - create authenticated client and go to role selection
@@ -205,7 +206,7 @@ func (s *CheckAuthStep) Next() step.Step {
 		return s.authService.GetAccessToken(context.Background())
 	}
 	apiClient := client.New(s.apiEndpoint, s.accessToken, refreshFunc)
-	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)
+	return role.NewSelectStep(s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

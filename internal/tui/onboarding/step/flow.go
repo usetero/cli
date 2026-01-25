@@ -11,9 +11,10 @@ import (
 // Steps transition automatically when complete by calling Next() to get the next step.
 // Uses pointer receiver pattern for efficiency.
 type Flow struct {
-	current Step
-	width   int
-	height  int
+	current  Step
+	lastStep Step // The final step before flow completed (for extracting accumulated state)
+	width    int
+	height   int
 }
 
 // NewFlow creates a new flow starting with the given step
@@ -41,24 +42,31 @@ func (f *Flow) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	f.current, cmd = f.current.Update(msg)
 
-	// Auto-transition when current step completes
-	if f.current.IsComplete() {
-		// Transition to next step, skipping any that are already complete
-		// (e.g., from saved preferences). This loop handles chains of
-		// pre-satisfied steps gracefully.
-		for f.current.IsComplete() {
-			nextStep := f.current.Next()
-			if nextStep == nil {
-				// No more steps - flow complete
-				f.current = nil
-				return cmd
-			}
-
-			f.current = nextStep
-			f.current.SetSize(f.width, f.height)
-			initCmd := f.current.Init()
-			cmd = tea.Batch(cmd, initCmd)
+	// Try to transition to next step
+	// Loop handles chains of pre-satisfied steps (e.g., from saved preferences)
+	for {
+		nextStep, err := f.current.Next()
+		if err == ErrNotReady {
+			// Step not complete yet, stay on current step
+			break
 		}
+		if err != nil {
+			// Step failed - stay on current step, it will show error
+			break
+		}
+		if nextStep == nil {
+			// No more steps - flow complete
+			// Save the last step so we can extract accumulated state
+			f.lastStep = f.current
+			f.current = nil
+			return cmd
+		}
+
+		// Transition to next step
+		f.current = nextStep
+		f.current.SetSize(f.width, f.height)
+		initCmd := f.current.Init()
+		cmd = tea.Batch(cmd, initCmd)
 	}
 
 	return cmd
@@ -113,6 +121,12 @@ func (f *Flow) Error() error {
 // Current returns the current step (for debugging/inspection)
 func (f *Flow) Current() Step {
 	return f.current
+}
+
+// LastStep returns the final step before flow completed.
+// Use this to extract accumulated state after IsComplete() returns true.
+func (f *Flow) LastStep() Step {
+	return f.lastStep
 }
 
 // Help delegates to the current step's help

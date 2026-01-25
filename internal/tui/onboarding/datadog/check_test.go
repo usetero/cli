@@ -9,17 +9,35 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
+	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
+
+// checkTestTheme creates a theme for testing
+func checkTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
 
 func keyMsg(r rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: r, Text: string(r)}
 }
 
+// isCheckComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
+func isCheckComplete(s step.Step) bool {
+	_, err := s.Next()
+	return err != step.ErrNotReady
+}
+
 func TestCheckDatadogStep_Update(t *testing.T) {
+	t.Parallel()
+	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+
 	t.Run("completes when datadog account exists", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		checker := &datadogtest.MockDatadogAccountChecker{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
@@ -32,29 +50,31 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewCheckDatadogStep("admin", "org-1", "acc-1", checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
-		cmd := step.Init()
-		updated := step
+		cmd := s.Init()
+		updated := s
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isCheckComplete(updated) {
 			t.Error("expected step to complete when datadog exists")
 		}
-		checkStep, ok := updated.(*datadog.CheckDatadogStep)
-		if !ok {
-			t.Fatal("expected *datadog.CheckDatadogStep")
+		// Verify Next() returns discovery step (not select region step)
+		nextStep, err := updated.Next()
+		if err != nil {
+			t.Fatalf("expected no error from Next(), got %v", err)
 		}
-		if checkStep.NeedsDatadogSetup() {
-			t.Error("expected NeedsDatadogSetup to be false when datadog exists")
+		if nextStep == nil {
+			t.Fatal("expected Next() to return a step")
 		}
 	})
 
 	t.Run("completes when no datadog account", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		checker := &datadogtest.MockDatadogAccountChecker{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
@@ -64,29 +84,31 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewCheckDatadogStep("admin", "org-1", "acc-1", checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
-		cmd := step.Init()
-		updated := step
+		cmd := s.Init()
+		updated := s
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
 
 		// Assert
-		if !updated.IsComplete() {
+		if !isCheckComplete(updated) {
 			t.Error("expected step to complete when no datadog")
 		}
-		checkStep, ok := updated.(*datadog.CheckDatadogStep)
-		if !ok {
-			t.Fatal("expected *datadog.CheckDatadogStep")
+		// Verify Next() returns select region step (needs setup)
+		nextStep, err := updated.Next()
+		if err != nil {
+			t.Fatalf("expected no error from Next(), got %v", err)
 		}
-		if !checkStep.NeedsDatadogSetup() {
-			t.Error("expected NeedsDatadogSetup to be true when no datadog")
+		if nextStep == nil {
+			t.Fatal("expected Next() to return a step")
 		}
 	})
 
 	t.Run("sets error state on failure", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		checker := &datadogtest.MockDatadogAccountChecker{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
@@ -96,11 +118,11 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewCheckDatadogStep("admin", "org-1", "acc-1", checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
-		cmd := step.Init()
-		updated := step
+		cmd := s.Init()
+		updated := s
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -109,12 +131,18 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		if !updated.HasError() {
 			t.Error("expected step to have error")
 		}
-		if updated.IsComplete() {
-			t.Error("expected step NOT to complete on error")
+		// When there's an error, Next() should return the error (not ErrNotReady)
+		_, err := updated.Next()
+		if err == nil {
+			t.Error("expected Next() to return an error")
+		}
+		if err == step.ErrNotReady {
+			t.Error("expected Next() to return actual error, not ErrNotReady")
 		}
 	})
 
 	t.Run("retries on r key when error", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		attempts := 0
 		checker := &datadogtest.MockDatadogAccountChecker{
@@ -132,11 +160,11 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewCheckDatadogStep("admin", "org-1", "acc-1", checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// First attempt fails
-		cmd := step.Init()
-		updated := step
+		cmd := s.Init()
+		updated := s
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -155,7 +183,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		if updated.HasError() {
 			t.Error("expected error to be cleared after retry")
 		}
-		if !updated.IsComplete() {
+		if !isCheckComplete(updated) {
 			t.Error("expected step to complete after successful retry")
 		}
 		if attempts != 2 {

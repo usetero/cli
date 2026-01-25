@@ -13,7 +13,9 @@ import (
 )
 
 func TestErrorCleaningClient(t *testing.T) {
+	t.Parallel()
 	t.Run("extracts message from HTTPError", func(t *testing.T) {
+		t.Parallel()
 		// When the control plane returns a non-200 status (e.g., 401),
 		// genqlient wraps it in an HTTPError. The Error() method returns
 		// raw JSON, but Response.Errors contains the parsed error messages.
@@ -45,6 +47,7 @@ func TestErrorCleaningClient(t *testing.T) {
 	})
 
 	t.Run("returns clean error messages without GraphQL path prefixes", func(t *testing.T) {
+		t.Parallel()
 		// When the GraphQL API returns an error with a path (like "createDatadogAccount"),
 		// gqlerror.Error() formats it as "input: createDatadogAccount <message>".
 		// We extract just the message so users see clean, friendly errors.
@@ -88,7 +91,9 @@ func (m *mockGraphQLClient) MakeRequest(ctx context.Context, req *graphql.Reques
 }
 
 func TestAuthTransport_RefreshesOn401(t *testing.T) {
+	t.Parallel()
 	t.Run("refreshes token and retries on 401", func(t *testing.T) {
+		t.Parallel()
 		callCount := 0
 		refreshCalled := false
 
@@ -145,6 +150,7 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 	})
 
 	t.Run("preserves request body on retry after 401", func(t *testing.T) {
+		t.Parallel()
 		// This tests the bug where request body was consumed on first attempt
 		// and not available for the retry, causing empty body errors.
 		requestBody := `{"query":"{ viewer { id } }"}`
@@ -206,6 +212,7 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 	})
 
 	t.Run("does not refresh on non-401 errors", func(t *testing.T) {
+		t.Parallel()
 		refreshCalled := false
 
 		mockRT := &mockRoundTripper{
@@ -242,6 +249,7 @@ func TestAuthTransport_RefreshesOn401(t *testing.T) {
 	})
 
 	t.Run("works without refresh func (backwards compatible)", func(t *testing.T) {
+		t.Parallel()
 		mockRT := &mockRoundTripper{
 			roundTripFunc: func(req *http.Request) (*http.Response, error) {
 				return &http.Response{

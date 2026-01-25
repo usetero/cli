@@ -35,6 +35,7 @@ const (
 	DatadogAccountStatusDisabled    DatadogAccountStatusState = "DISABLED"
 	DatadogAccountStatusInactive    DatadogAccountStatusState = "INACTIVE"
 	DatadogAccountStatusBroken      DatadogAccountStatusState = "BROKEN"
+	DatadogAccountStatusStale       DatadogAccountStatusState = "STALE"
 	DatadogAccountStatusDiscovering DatadogAccountStatusState = "DISCOVERING"
 	DatadogAccountStatusAnalyzing   DatadogAccountStatusState = "ANALYZING"
 	DatadogAccountStatusReady       DatadogAccountStatusState = "READY"
@@ -51,6 +52,7 @@ type DatadogAccountStatus struct {
 	ReadyServices       int
 	AnalyzingServices   int
 	DiscoveringServices int
+	StaleServices       int
 	BrokenServices      int
 	DisabledServices    int
 	InactiveServices    int
@@ -195,6 +197,7 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		ReadyServices:       statusNode.LogReadyServices,
 		AnalyzingServices:   statusNode.LogAnalyzingServices,
 		DiscoveringServices: statusNode.LogDiscoveringServices,
+		StaleServices:       statusNode.LogStaleServices,
 		BrokenServices:      statusNode.LogBrokenServices,
 		DisabledServices:    statusNode.LogDisabledServices,
 		InactiveServices:    statusNode.LogInactiveServices,

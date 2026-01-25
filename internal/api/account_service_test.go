@@ -12,7 +12,9 @@ import (
 )
 
 func TestAccountService_List(t *testing.T) {
+	t.Parallel()
 	t.Run("transforms GraphQL edges to domain accounts", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
 				return &client.ListAccountsResponse{
@@ -44,6 +46,7 @@ func TestAccountService_List(t *testing.T) {
 	})
 
 	t.Run("returns empty slice when no accounts", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
 				return &client.ListAccountsResponse{
@@ -66,6 +69,7 @@ func TestAccountService_List(t *testing.T) {
 	})
 
 	t.Run("propagates client errors", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
 				return nil, errors.New("network error")
@@ -85,7 +89,9 @@ func TestAccountService_List(t *testing.T) {
 }
 
 func TestAccountService_Create(t *testing.T) {
+	t.Parallel()
 	t.Run("creates account and returns domain model", func(t *testing.T) {
+		t.Parallel()
 		var capturedInput client.CreateAccountInput
 		mockClient := &apitest.MockClient{
 			CreateAccountFunc: func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error) {
@@ -117,6 +123,7 @@ func TestAccountService_Create(t *testing.T) {
 	})
 
 	t.Run("propagates client errors", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			CreateAccountFunc: func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error) {
 				return nil, errors.New("validation error")

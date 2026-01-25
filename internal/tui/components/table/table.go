@@ -14,6 +14,7 @@ type Row = table.Row
 
 // Table is a wrapper around bubbles table with consistent theming
 type Table struct {
+	theme *styles.Theme
 	table table.Model
 }
 
@@ -21,8 +22,8 @@ type Table struct {
 var _ components.Component = (*Table)(nil)
 
 // New creates a new table with consistent theming
-func New(columns []Column) *Table {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, columns []Column) *Table {
+	colors := theme.Colors
 
 	t := table.New(
 		table.WithColumns(columns),
@@ -33,18 +34,19 @@ func New(columns []Column) *Table {
 	t.SetStyles(table.Styles{
 		Header: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(theme.BorderDefault).
+			BorderForeground(colors.BorderDefault).
 			BorderBottom(true),
 		Selected: lipgloss.NewStyle().
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			Bold(true),
 		Cell: lipgloss.NewStyle().
-			Foreground(theme.Page.Text),
+			Foreground(colors.Page.Text),
 	})
 
 	return &Table{
+		theme: theme,
 		table: t,
 	}
 }

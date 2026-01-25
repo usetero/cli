@@ -5,6 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/footer"
 	"github.com/usetero/cli/internal/tui/keymap"
 )
@@ -18,6 +19,9 @@ const (
 // Base is the foundation layout that wraps content with a footer and padding.
 // All other layouts compose with Base to get consistent footer and padding.
 type Base struct {
+	// Theme
+	theme *styles.Theme
+
 	// Child components
 	footer *footer.Component
 
@@ -27,9 +31,10 @@ type Base struct {
 }
 
 // NewBase creates a new base layout
-func NewBase(logger log.Logger) *Base {
+func NewBase(theme *styles.Theme, logger log.Logger) *Base {
 	return &Base{
-		footer: footer.New(logger),
+		theme:  theme,
+		footer: footer.New(theme, logger),
 	}
 }
 

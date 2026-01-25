@@ -53,6 +53,17 @@ func (s *Service) SetDefaultOrgID(orgID string) error {
 	return s.store.Save()
 }
 
+// GetDefaultOrgName returns the default organization name
+func (s *Service) GetDefaultOrgName() string {
+	return s.store.Get("default_org_name")
+}
+
+// SetDefaultOrgName saves the default organization name
+func (s *Service) SetDefaultOrgName(orgName string) error {
+	s.store.Set("default_org_name", orgName)
+	return s.store.Save()
+}
+
 // GetDefaultAccountID returns the default account ID
 func (s *Service) GetDefaultAccountID() string {
 	return s.store.Get("default_account_id")

@@ -8,6 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components"
 	"github.com/usetero/cli/internal/tui/components/thinker"
 )
@@ -19,6 +20,9 @@ type TickMsg struct {
 
 // Component streams text word-by-word with a thinking animation.
 type Component struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	id int // unique ID for this component
 
 	// Content
@@ -49,11 +53,12 @@ func nextID() int {
 }
 
 // New creates a new streaming text component.
-func New(text string) *Component {
+func New(theme *styles.Theme, text string) *Component {
 	// Split text by whitespace into words
 	words := strings.Fields(text)
 
 	return &Component{
+		theme:    theme,
 		id:       nextID(),
 		text:     text,
 		words:    words,
@@ -61,7 +66,7 @@ func New(text string) *Component {
 		width:    0, // Will be set by parent via SetWidth
 		thinking: true,
 		done:     false,
-		thinker:  thinker.New(),
+		thinker:  thinker.New(theme),
 		tickRate: 50 * time.Millisecond, // Default: 50ms per word
 	}
 }

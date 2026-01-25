@@ -36,7 +36,9 @@ type AccountItem struct {
 func (i AccountItem) FilterValue() string { return i.Name }
 
 // accountDelegate renders each account in the list
-type accountDelegate struct{}
+type accountDelegate struct {
+	theme *styles.Theme
+}
 
 func (d accountDelegate) Height() int                             { return 1 }
 func (d accountDelegate) Spacing() int                            { return 0 }
@@ -47,18 +49,18 @@ func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		return
 	}
 
-	theme := styles.CurrentTheme()
+	colors := d.theme.Colors
 
 	str := i.Name
 	if index == m.Index() {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			Bold(true).
 			Render
 		_, _ = fmt.Fprint(w, fn("> "+str))
 	} else {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Page.Text).
+			Foreground(colors.Page.Text).
 			Render
 		_, _ = fmt.Fprint(w, fn("  "+str))
 	}
@@ -66,6 +68,9 @@ func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 // SelectStep handles selecting an account or choosing to create one.
 type SelectStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
 	role string
 	org  api.Organization
@@ -87,7 +92,7 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new account selection step for the given organization
-func NewSelectStep(role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(theme *styles.Theme, role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountLister == nil {
 		panic("accountLister cannot be nil")
 	}
@@ -101,10 +106,11 @@ func NewSelectStep(role string, org api.Organization, accountLister AccountListe
 		panic("logger cannot be nil")
 	}
 
-	delegate := accountDelegate{}
-	remoteList := remotelist.New(delegate, "Loading accounts", logger)
+	delegate := accountDelegate{theme: theme}
+	remoteList := remotelist.New(theme, delegate, "Loading accounts", logger)
 
 	return &SelectStep{
+		theme:               theme,
 		role:                role,
 		org:                 org,
 		accountLister:       accountLister,
@@ -236,10 +242,10 @@ func (s *SelectStep) View() string {
 		return s.remoteList.View()
 	}
 
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
-	title := common.Title.Render("Select your account")
-	subtitle := common.Subtitle.Render("This groups your observability tools and services")
+	title := themeStyles.Title.Render("Select your account")
+	subtitle := themeStyles.Subtitle.Render("This groups your observability tools and services")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -280,7 +286,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new account
 	if s.selectedAccountID == createNewAccountID {
 		accountService := api.NewAccountService(s.apiClient, s.logger)
-		return NewCreateStep(s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
+		return NewCreateStep(s.theme, s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Find the selected account
@@ -296,7 +302,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// User selected existing account, check for Datadog
-	return datadog.NewCheckDatadogStep(s.role, s.org, selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.theme, s.role, s.org, selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

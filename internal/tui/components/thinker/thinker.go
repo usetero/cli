@@ -42,6 +42,7 @@ func nextID() int {
 
 // Component is an animated thinking spinner.
 type Component struct {
+	theme         *styles.Theme
 	id            int
 	frame         int
 	ellipsisFrame int
@@ -51,8 +52,9 @@ type Component struct {
 var _ components.Component = (*Component)(nil)
 
 // New creates a new animation component.
-func New() *Component {
+func New(theme *styles.Theme) *Component {
 	return &Component{
+		theme:         theme,
 		id:            nextID(),
 		frame:         0,
 		ellipsisFrame: 0,
@@ -99,7 +101,7 @@ func (a *Component) tick() tea.Cmd {
 
 // View renders the animation.
 func (a *Component) View() string {
-	theme := styles.CurrentTheme()
+	colors := a.theme.Colors
 
 	// Generate random characters for this frame
 	var chars strings.Builder
@@ -109,13 +111,13 @@ func (a *Component) View() string {
 
 	// Style the components
 	labelStyle := lipgloss.NewStyle().
-		Foreground(theme.Page.TextMuted)
+		Foreground(colors.Page.TextMuted)
 
 	charsStyle := lipgloss.NewStyle().
-		Foreground(theme.Accent)
+		Foreground(colors.Accent)
 
 	ellipsisStyle := lipgloss.NewStyle().
-		Foreground(theme.Page.TextMuted)
+		Foreground(colors.Page.TextMuted)
 
 	// Compose: "Thinking [random chars]..."
 	return labelStyle.Render(label) +

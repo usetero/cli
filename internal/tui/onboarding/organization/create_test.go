@@ -9,13 +9,29 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/organization"
 	"github.com/usetero/cli/internal/tui/onboarding/organization/organizationtest"
+	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// testTheme creates a theme for testing
+func testTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
+
+// isCreateComplete checks if a step is complete by checking Next() returns a next step or nil (done)
+// It returns false if Next() returns ErrNotReady or any other error
+func isCreateComplete(s step.Step) bool {
+	_, err := s.Next()
+	return err == nil
+}
+
 func TestCreateStep_Update(t *testing.T) {
+	t.Parallel()
 	t.Run("creates organization on enter with valid input", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		createCalled := false
 		createdName := ""
@@ -44,15 +60,15 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type organization name
 		for _, r := range "Acme Inc" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
 
 		// Press enter to submit
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// Execute create command
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -70,12 +86,13 @@ func TestCreateStep_Update(t *testing.T) {
 		if createdName != "Acme Inc" {
 			t.Errorf("expected name 'Acme Inc', got %q", createdName)
 		}
-		if !updated.IsComplete() {
+		if !isCreateComplete(updated) {
 			t.Error("expected step to be complete after creation and token refresh")
 		}
 	})
 
 	t.Run("does not submit on enter with empty input", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		createCalled := false
 
@@ -91,21 +108,22 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Press enter without typing anything
-		updated, _ := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, _ := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// Assert
 		if createCalled {
 			t.Error("expected organization creator NOT to be called with empty input")
 		}
-		if updated.IsComplete() {
+		if isCreateComplete(updated) {
 			t.Error("expected step to NOT be complete")
 		}
 	})
 
 	t.Run("sets error state when creation fails", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		creator := &organizationtest.MockOrgCreator{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
@@ -118,13 +136,13 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Existing Org" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// Execute create command (which fails)
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -135,12 +153,13 @@ func TestCreateStep_Update(t *testing.T) {
 		if !updated.HasError() {
 			t.Error("expected step to have error after creation fails")
 		}
-		if updated.IsComplete() {
+		if isCreateComplete(updated) {
 			t.Error("expected step to NOT be complete when there's an error")
 		}
 	})
 
 	t.Run("saves org and account IDs to preferences", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		savedOrgID := ""
 		savedAccountID := ""
@@ -177,13 +196,13 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "New Org" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// Execute commands
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -203,6 +222,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("refreshes token and updates API client after creation", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		refreshedOrgID := ""
 		tokenSet := ""
@@ -234,13 +254,13 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test Org" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// Execute create command
 		for _, msg := range tuitest.DrainCmds(cmd) {
@@ -261,6 +281,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("clears error and allows retry on enter", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		callCount := 0
 
@@ -282,13 +303,13 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit (first attempt fails)
 		for _, r := range "Retry Org" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -308,8 +329,10 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 }
 
-func TestCreateStep_IsComplete(t *testing.T) {
-	t.Run("returns false until created and token refreshed", func(t *testing.T) {
+func TestCreateStep_Next(t *testing.T) {
+	t.Parallel()
+	t.Run("returns ErrNotReady until created and token refreshed", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		creator := &organizationtest.MockOrgCreator{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
@@ -329,16 +352,16 @@ func TestCreateStep_IsComplete(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := organization.NewCreateStep("admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test" {
-			step.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+			s.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		}
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 		// After submit but before create completes
-		if updated.IsComplete() {
+		if isCreateComplete(updated) {
 			t.Error("should not be complete while creating")
 		}
 
@@ -348,7 +371,7 @@ func TestCreateStep_IsComplete(t *testing.T) {
 		}
 
 		// After create but before token refresh
-		if updated.IsComplete() {
+		if isCreateComplete(updated) {
 			t.Error("should not be complete before token refresh")
 		}
 
@@ -358,7 +381,7 @@ func TestCreateStep_IsComplete(t *testing.T) {
 		}
 
 		// Now should be complete
-		if !updated.IsComplete() {
+		if !isCreateComplete(updated) {
 			t.Error("should be complete after token refresh")
 		}
 	})

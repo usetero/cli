@@ -9,16 +9,24 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
 	"github.com/usetero/cli/internal/tui/onboarding/account/accounttest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// createTestTheme creates a theme for testing
+func createTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
+
 func TestCreateStep_Update(t *testing.T) {
+	t.Parallel()
 	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
 
 	t.Run("creates account on enter", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		created := false
 		creator := &accounttest.MockAccountCreator{
@@ -31,7 +39,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep("admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -59,6 +67,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("does not submit empty input", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		created := false
 		creator := &accounttest.MockAccountCreator{
@@ -71,7 +80,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep("admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Act: press enter without typing anything
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -93,6 +102,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("sets error state on failure", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		creator := &accounttest.MockAccountCreator{
 			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
@@ -103,7 +113,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep("admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -135,6 +145,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("saves account ID to preferences", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		savedID := ""
 		creator := &accounttest.MockAccountCreator{
@@ -151,7 +162,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep("admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type and submit
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
@@ -169,6 +180,7 @@ func TestCreateStep_Update(t *testing.T) {
 	})
 
 	t.Run("clears error on retry", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		attempts := 0
 		creator := &accounttest.MockAccountCreator{
@@ -184,7 +196,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep("admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type and submit (first attempt - fails)
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})

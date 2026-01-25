@@ -8,6 +8,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/components/remotelist"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
@@ -16,6 +17,11 @@ import (
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// selectTestTheme creates a theme for testing
+func selectTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
+
 // isComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
 func isComplete(s step.Step) bool {
 	_, err := s.Next()
@@ -23,9 +29,11 @@ func isComplete(s step.Step) bool {
 }
 
 func TestSelectStep_Update(t *testing.T) {
+	t.Parallel()
 	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
 
 	t.Run("auto-selects when only one account exists", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{
 			ListFunc: func(ctx context.Context, orgID string) ([]api.Account, error) {
@@ -38,7 +46,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with one account
 		items := []list.Item{account.AccountItem{ID: "acc-1", Name: "Production"}}
@@ -56,6 +64,7 @@ func TestSelectStep_Update(t *testing.T) {
 	})
 
 	t.Run("auto-selects from saved preference", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{
@@ -66,7 +75,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
@@ -87,13 +96,14 @@ func TestSelectStep_Update(t *testing.T) {
 	})
 
 	t.Run("auto-selects create when no accounts exist", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with no accounts
 		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
@@ -114,6 +124,7 @@ func TestSelectStep_Update(t *testing.T) {
 	})
 
 	t.Run("requires manual selection when multiple accounts and no preference", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{
@@ -124,7 +135,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
@@ -140,6 +151,7 @@ func TestSelectStep_Update(t *testing.T) {
 	})
 
 	t.Run("saves preference when manually selecting account", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		savedID := ""
 		lister := &accounttest.MockAccountLister{}
@@ -152,7 +164,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -174,13 +186,14 @@ func TestSelectStep_Update(t *testing.T) {
 	})
 
 	t.Run("selects create when user presses n", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -208,16 +221,18 @@ func TestSelectStep_Update(t *testing.T) {
 }
 
 func TestSelectStep_Next(t *testing.T) {
+	t.Parallel()
 	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
 
 	t.Run("returns ErrNotReady before selection", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		lister := &accounttest.MockAccountLister{}
 		saver := &accounttest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep("admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Assert
 		_, err := s.Next()

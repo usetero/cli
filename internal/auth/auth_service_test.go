@@ -14,7 +14,9 @@ import (
 )
 
 func TestService_GetAccessToken(t *testing.T) {
+	t.Parallel()
 	t.Run("returns stored token when not expired", func(t *testing.T) {
+		t.Parallel()
 		validToken := makeTestToken(time.Now().Add(10 * time.Minute))
 
 		storage := &authtest.MockSecureStorage{
@@ -38,6 +40,7 @@ func TestService_GetAccessToken(t *testing.T) {
 	})
 
 	t.Run("refreshes token when expired", func(t *testing.T) {
+		t.Parallel()
 		expiredToken := makeTestToken(time.Now().Add(-10 * time.Minute))
 		newToken := makeTestToken(time.Now().Add(10 * time.Minute))
 
@@ -77,6 +80,7 @@ func TestService_GetAccessToken(t *testing.T) {
 	})
 
 	t.Run("returns error when refresh fails", func(t *testing.T) {
+		t.Parallel()
 		expiredToken := makeTestToken(time.Now().Add(-10 * time.Minute))
 
 		storage := &authtest.MockSecureStorage{
@@ -107,7 +111,9 @@ func TestService_GetAccessToken(t *testing.T) {
 }
 
 func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
+	t.Parallel()
 	t.Run("refreshes token without org scope", func(t *testing.T) {
+		t.Parallel()
 		newToken := makeTestToken(time.Now().Add(10 * time.Minute))
 		var savedAccessToken, savedRefreshToken string
 
@@ -159,6 +165,7 @@ func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
 	})
 
 	t.Run("returns error when no refresh token", func(t *testing.T) {
+		t.Parallel()
 		storage := &authtest.MockSecureStorage{
 			GetFunc: func(key string) (string, error) {
 				return "", nil

@@ -10,16 +10,15 @@ import (
 
 // MockStep implements step.Step for testing
 type MockStep struct {
-	InitFunc       func() tea.Cmd
-	UpdateFunc     func(tea.Msg) (step.Step, tea.Cmd)
-	ViewFunc       func() string
-	SetSizeFunc    func(width, height int)
-	IsCompleteFunc func() bool
-	IsBusyFunc     func() bool
-	HasErrorFunc   func() bool
-	ErrorFunc      func() error
-	HelpFunc       func() help.KeyMap
-	NextFunc       func() step.Step
+	InitFunc     func() tea.Cmd
+	UpdateFunc   func(tea.Msg) (step.Step, tea.Cmd)
+	ViewFunc     func() string
+	SetSizeFunc  func(width, height int)
+	IsBusyFunc   func() bool
+	HasErrorFunc func() bool
+	ErrorFunc    func() error
+	HelpFunc     func() help.KeyMap
+	NextFunc     func() (step.Step, error)
 
 	// State for testing
 	Err error
@@ -60,13 +59,6 @@ func (m *MockStep) SetSize(width, height int) {
 	}
 }
 
-func (m *MockStep) IsComplete() bool {
-	if m.IsCompleteFunc != nil {
-		return m.IsCompleteFunc()
-	}
-	return false
-}
-
 func (m *MockStep) IsBusy() bool {
 	if m.IsBusyFunc != nil {
 		return m.IsBusyFunc()
@@ -95,9 +87,9 @@ func (m *MockStep) Help() help.KeyMap {
 	return keymap.Simple{Keys: []key.Binding{}}
 }
 
-func (m *MockStep) Next() step.Step {
+func (m *MockStep) Next() (step.Step, error) {
 	if m.NextFunc != nil {
 		return m.NextFunc()
 	}
-	return nil
+	return nil, step.ErrNotReady
 }

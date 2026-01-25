@@ -31,6 +31,11 @@ type Account implements Node {
   """Parent organization this account belongs to"""
   organizationID: ID!
 
+  """
+  Denormalized for PowerSync. Auto-set via trigger from organization.workos_organization_id.
+  """
+  workosOrganizationID: String!
+
   """Human-readable name within the organization"""
   name: String!
 
@@ -120,6 +125,21 @@ input AccountWhereInput {
   organizationIDNEQ: ID
   organizationIDIn: [ID!]
   organizationIDNotIn: [ID!]
+
+  """workos_organization_id field predicates"""
+  workosOrganizationID: String
+  workosOrganizationIDNEQ: String
+  workosOrganizationIDIn: [String!]
+  workosOrganizationIDNotIn: [String!]
+  workosOrganizationIDGT: String
+  workosOrganizationIDGTE: String
+  workosOrganizationIDLT: String
+  workosOrganizationIDLTE: String
+  workosOrganizationIDContains: String
+  workosOrganizationIDHasPrefix: String
+  workosOrganizationIDHasSuffix: String
+  workosOrganizationIDEqualFold: String
+  workosOrganizationIDContainsFold: String
 
   """name field predicates"""
   name: String
@@ -530,7 +550,9 @@ type DatadogAccountStatus {
   """Account ID (denormalized from Datadog account)"""
   accountId: ID!
 
-  """Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+  """
+  Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+  """
   logStatus: DatadogAccountStatusLogStatus!
 
   """Total service log volume across all active services"""
@@ -556,6 +578,9 @@ type DatadogAccountStatus {
 
   """Services with BROKEN status"""
   logBrokenServices: Int!
+
+  """Services with STALE status"""
+  logStaleServices: Int!
 
   """Services with DISCOVERING status"""
   logDiscoveringServices: Int!
@@ -597,7 +622,9 @@ type DatadogAccountStatus {
   logWarningAt: Time
 }
 
-"""Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+"""
+Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+"""
 enum DatadogAccountStatusLogStatus {
   """All services have discovery turned off"""
   DISABLED
@@ -607,6 +634,9 @@ enum DatadogAccountStatusLogStatus {
 
   """At least one service has discovery errors (5+ consecutive failures)"""
   BROKEN
+
+  """At least one service has stale data (older than 48 hours)"""
+  STALE
 
   """At least one service is still being discovered (no volume data yet)"""
   DISCOVERING
@@ -1167,6 +1197,11 @@ type LogEvent implements Node {
   """Unique identifier of the log event"""
   id: ID!
 
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from service.account_id.
+  """
+  accountID: UUID!
+
   """Service that produces this event"""
   serviceID: ID!
 
@@ -1242,6 +1277,11 @@ enum LogEventOrderField {
 type LogEventPolicy implements Node {
   """Unique identifier"""
   id: ID!
+
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
+  """
+  accountID: UUID!
 
   """The log event this policy applies to"""
   logEventID: ID!
@@ -1377,6 +1417,16 @@ input LogEventPolicyWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
 
   """log_event_id field predicates"""
   logEventID: ID
@@ -1583,6 +1633,16 @@ input LogEventWhereInput {
   idLT: ID
   idLTE: ID
 
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
   """service_id field predicates"""
   serviceID: ID
   serviceIDNEQ: ID
@@ -1687,6 +1747,11 @@ type Message implements Node {
   """Unique identifier of the message"""
   id: ID!
 
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from conversation.account_id.
+  """
+  accountID: UUID!
+
   """Conversation this message belongs to"""
   conversationID: ID!
 
@@ -1762,6 +1827,16 @@ input MessageWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
 
   """conversation_id field predicates"""
   conversationID: ID
@@ -2397,7 +2472,9 @@ type ServiceStatus {
   """The Datadog account performing discovery"""
   datadogAccountId: ID!
 
-  """Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+  """
+  Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+  """
   logStatus: ServiceStatusLogStatus!
 
   """Total service log volume in the rolling window"""
@@ -2458,7 +2535,9 @@ type ServiceStatus {
   logWarningAt: Time
 }
 
-"""Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+"""
+Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+"""
 enum ServiceStatusLogStatus {
   """Discovery is turned off for this service (enabled = false)"""
   DISABLED
@@ -2468,6 +2547,9 @@ enum ServiceStatusLogStatus {
 
   """Discovery is failing repeatedly (5+ consecutive errors)"""
   BROKEN
+
+  """Volume data exists but is older than 48 hours"""
+  STALE
 
   """Discovery is enabled but no volume data exists yet"""
   DISCOVERING
@@ -2581,6 +2663,11 @@ type Team implements Node {
   """Unique identifier of the team"""
   id: ID!
 
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
+  """
+  accountID: UUID!
+
   """Parent workspace this team belongs to"""
   workspaceID: ID!
 
@@ -2652,6 +2739,16 @@ input TeamWhereInput {
   idGTE: ID
   idLT: ID
   idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
 
   """workspace_id field predicates"""
   workspaceID: ID

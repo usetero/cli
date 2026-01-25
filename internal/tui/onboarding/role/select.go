@@ -60,6 +60,9 @@ func DefaultKeyMap() KeyMap {
 
 // SelectStep handles selecting the user's role in the organization.
 type SelectStep struct {
+	// Theme
+	theme *styles.Theme
+
 	// Services (defined by consumer interfaces)
 	roleSaver      RoleSaver
 	tokenRefresher TokenRefresher
@@ -78,7 +81,7 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new role selection step.
-func NewSelectStep(apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(theme *styles.Theme, apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -112,6 +115,7 @@ func NewSelectStep(apiClient api.Client, preferencesService *preferences.Service
 	}
 
 	return &SelectStep{
+		theme:              theme,
 		roleSaver:          preferencesService,
 		tokenRefresher:     tokenRefresher,
 		preferencesService: preferencesService,
@@ -190,10 +194,10 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the role selection UI.
 func (s *SelectStep) View() string {
-	common := styles.Common()
-	theme := styles.CurrentTheme()
+	themeStyles := s.theme.Styles
+	colors := s.theme.Colors
 
-	title := common.Title.Render("What's your role in this organization?")
+	title := themeStyles.Title.Render("What's your role in this organization?")
 
 	// Options
 	options := []struct {
@@ -216,13 +220,13 @@ func (s *SelectStep) View() string {
 		if i == s.selected {
 			// Selected option
 			nameStyle := lipgloss.NewStyle().
-				Foreground(theme.Accent).
+				Foreground(colors.Accent).
 				Bold(true)
 
-			view = nameStyle.Render("> "+opt.name) + "\n  " + common.Help.Render(opt.description)
+			view = nameStyle.Render("> "+opt.name) + "\n  " + themeStyles.Help.Render(opt.description)
 		} else {
 			// Unselected option
-			view = common.Body.Render("  "+opt.name) + "\n  " + common.Subtitle.Render(opt.description)
+			view = themeStyles.Body.Render("  "+opt.name) + "\n  " + themeStyles.Help.Render(opt.description)
 		}
 		optionViews = append(optionViews, view)
 	}
@@ -244,25 +248,6 @@ func (s *SelectStep) SetSize(width, height int) {
 	s.width = width
 }
 
-// IsComplete returns true if a role has been selected and saved successfully
-func (s *SelectStep) IsComplete() bool {
-	// Not complete if there's an error
-	if s.err != nil {
-		return false
-	}
-
-	role := s.roleSaver.GetRole()
-	isComplete := role == Platform || role == Engineer
-
-	s.logger.Debug("role IsComplete check", "role", role, "isComplete", isComplete, "platform", Platform, "engineer", Engineer)
-
-	if isComplete {
-		s.logger.Debug("role step complete", "role", role)
-	}
-
-	return isComplete
-}
-
 // IsBusy returns false - role selection is never busy.
 func (s *SelectStep) IsBusy() bool {
 	return false
@@ -279,18 +264,23 @@ func (s *SelectStep) Error() error {
 }
 
 // Next returns the next step after role selection
-func (s *SelectStep) Next() step.Step {
-	// Get role from selected index (already synced with saved role in constructor)
-	role := Platform
-	if s.selected == 1 {
-		role = Engineer
+func (s *SelectStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
 	}
+
+	role := s.roleSaver.GetRole()
+	if role != Platform && role != Engineer {
+		return nil, step.ErrNotReady
+	}
+
+	s.logger.Debug("role step complete", "role", role)
 
 	// Create organization service for next step
 	organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
 	// Pass accumulated context (role), organization service, client, preferences service, and logger to next step
-	return organization.NewSelectStep(role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings)
+	return organization.NewSelectStep(s.theme, role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

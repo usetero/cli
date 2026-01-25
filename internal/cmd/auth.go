@@ -53,7 +53,8 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 		Short: "Authenticate with Tero",
 		Long:  "Authenticate with Tero using the device authorization flow.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := styles.Common()
+			theme := styles.NewTheme(true)
+			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -156,7 +157,8 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Long:  "Switch to a different organization. Lists available orgs if none specified.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := styles.Common()
+			theme := styles.NewTheme(true)
+			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -247,7 +249,8 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Short: "Clear stored credentials",
 		Long:  "Remove stored authentication credentials.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := styles.Common()
+			theme := styles.NewTheme(true)
+			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
@@ -269,7 +272,8 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 		Short: "Show authentication status",
 		Long:  "Show current authentication status including user and token state.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := styles.Common()
+			theme := styles.NewTheme(true)
+			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 
@@ -368,7 +372,8 @@ func fetchOrganizations(ctx context.Context, apiClient *client.Client) ([]org, e
 
 // promptOrgSelection prompts the user to select an organization
 func promptOrgSelection(orgs []org) (*org, error) {
-	s := styles.Common()
+	theme := styles.NewTheme(true)
+	s := theme.Styles
 	fmt.Println(s.Title.Render("\nSelect an organization:"))
 	for i, o := range orgs {
 		fmt.Printf("  %d. %s\n", i+1, o.Name)

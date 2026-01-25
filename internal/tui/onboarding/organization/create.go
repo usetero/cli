@@ -37,6 +37,9 @@ type TokenRefresher interface {
 
 // CreateStep handles creating a new organization
 type CreateStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
 	role string
 
@@ -63,7 +66,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new organization creation step
-func NewCreateStep(role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(theme *styles.Theme, role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationCreator == nil {
 		panic("organizationCreator cannot be nil")
 	}
@@ -83,11 +86,12 @@ func NewCreateStep(role string, organizationCreator OrganizationCreator, default
 		panic("logger cannot be nil")
 	}
 
-	inp := input.New(logger)
+	inp := input.New(theme, logger)
 	inp.SetPlaceholder("Acme Inc.")
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
+		theme:               theme,
 		role:                role,
 		organizationCreator: organizationCreator,
 		defaultOrgSaver:     defaultOrgSaver,
@@ -226,18 +230,18 @@ func (s *CreateStep) createOrganization(name string) tea.Cmd {
 
 // View renders the create organization UI
 func (s *CreateStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			common.Title.Render("Creating organization..."),
+			themeStyles.Title.Render("Creating organization..."),
 		)
 	}
 
-	title := common.Title.Render("Create a new organization")
-	prompt := common.Body.Render("Enter your organization name")
-	help := common.Help.Render("This will be your default workspace")
+	title := themeStyles.Title.Render("Create a new organization")
+	prompt := themeStyles.Body.Render("Enter your organization name")
+	help := themeStyles.Help.Render("This will be your default workspace")
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -261,27 +265,6 @@ func (s *CreateStep) SetSize(width, height int) {
 	}
 }
 
-// IsComplete returns true if the organization has been created and token refreshed
-func (s *CreateStep) IsComplete() bool {
-	return s.created && s.tokenRefreshed && s.err == nil
-}
-
-// CreatedOrgID returns the ID of the created organization
-func (s *CreateStep) CreatedOrgID() string {
-	if s.createdResult != nil {
-		return s.createdResult.Organization.ID
-	}
-	return ""
-}
-
-// CreatedAccountID returns the ID of the created account
-func (s *CreateStep) CreatedAccountID() string {
-	if s.createdResult != nil && s.createdResult.Account != nil {
-		return s.createdResult.Account.ID
-	}
-	return ""
-}
-
 // IsBusy returns true while creating the organization or refreshing token
 func (s *CreateStep) IsBusy() bool {
 	return s.creating || s.refreshingToken
@@ -298,10 +281,17 @@ func (s *CreateStep) Error() error {
 }
 
 // Next returns the next step after creating organization
-func (s *CreateStep) Next() step.Step {
+func (s *CreateStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.created || !s.tokenRefreshed {
+		return nil, step.ErrNotReady
+	}
+
 	// Skip account selection since bootstrap creates it automatically
 	// Go to Datadog region selection
-	return datadog.NewSelectRegionStep(s.role, s.CreatedOrgID(), s.CreatedAccountID(), s.apiClient, s.logger, s.globalBindings)
+	return datadog.NewSelectRegionStep(s.theme, s.role, *s.createdResult.Organization, *s.createdResult.Account, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

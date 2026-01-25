@@ -13,6 +13,7 @@ import (
 
 // Component wraps textinput.Model with sensible defaults
 type Component struct {
+	theme  *styles.Theme
 	model  textinput.Model
 	logger log.Logger
 }
@@ -21,8 +22,8 @@ type Component struct {
 var _ components.Component = (*Component)(nil)
 
 // New creates a new input component with themed defaults
-func New(logger log.Logger) *Component {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, logger log.Logger) *Component {
+	colors := theme.Colors
 
 	ti := textinput.New()
 	ti.SetVirtualCursor(false)
@@ -32,23 +33,23 @@ func New(logger log.Logger) *Component {
 
 	ti.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.Input.Text),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.Input.Placeholder),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.Accent),
+			Text:        lipgloss.NewStyle().Foreground(colors.Input.Text),
+			Placeholder: lipgloss.NewStyle().Foreground(colors.Input.Placeholder),
+			Prompt:      lipgloss.NewStyle().Foreground(colors.Accent),
 		},
 		Blurred: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.Input.Placeholder),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
+			Text:        lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+			Placeholder: lipgloss.NewStyle().Foreground(colors.Input.Placeholder),
+			Prompt:      lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: theme.Accent,
+			Color: colors.Accent,
 			Shape: tea.CursorBar,
 			Blink: true,
 		},
 	})
 
-	return &Component{model: ti, logger: logger}
+	return &Component{theme: theme, model: ti, logger: logger}
 }
 
 // Init initializes the component

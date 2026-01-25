@@ -8,11 +8,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
+
+// discoveryTestTheme creates a theme for testing
+func discoveryTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
 
 // isDiscoveryComplete checks if a step is complete by checking Next() returns nil error
 func isDiscoveryComplete(s step.Step) bool {
@@ -21,10 +27,12 @@ func isDiscoveryComplete(s step.Step) bool {
 }
 
 func TestDiscoveryStep_Update(t *testing.T) {
+	t.Parallel()
 	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
 	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
 
 	t.Run("completes when status is ready", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -39,7 +47,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -58,6 +66,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("stays busy while status is analyzing", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -73,7 +82,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -92,6 +101,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("sets error state on failure", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -101,7 +111,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -120,6 +130,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("retries on enter key when error", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		attempts := 0
@@ -139,7 +150,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()
@@ -171,6 +182,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("view shows volume when analyzing", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -180,6 +192,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 					PercentComplete:   67,
 					ServiceLogVolume:  2400000,
 					ServiceCount:      12,
+					ActiveServices:    12,
 					ReadyServices:     8,
 					AnalyzingServices: 4,
 				}, nil
@@ -187,7 +200,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -207,6 +220,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("shows inactive state when all services have zero volume", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -220,7 +234,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -252,12 +266,13 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		if !contains(view, "no recent log data") {
 			t.Errorf("expected view to show 'no recent log data', got: %s", view)
 		}
-		if !contains(view, "⚠ Send logs to Datadog") {
-			t.Errorf("expected view to show guidance '⚠ Send logs to Datadog', got: %s", view)
+		if !contains(view, "Send logs to Datadog") {
+			t.Errorf("expected view to show guidance 'Send logs to Datadog', got: %s", view)
 		}
 	})
 
 	t.Run("does not show inactive state when some services are active", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -272,7 +287,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -289,6 +304,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	})
 
 	t.Run("shows error when status is DISABLED", func(t *testing.T) {
+		t.Parallel()
 		// Arrange - DISABLED during onboarding is a bug (auto-enable should have worked)
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
@@ -302,7 +318,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep("admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -320,6 +336,154 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		err := updated.Error()
 		if err == nil || !contains(err.Error(), "disabled") {
 			t.Errorf("expected error to mention 'disabled', got: %v", err)
+		}
+	})
+
+	t.Run("shows stale state as our problem", func(t *testing.T) {
+		t.Parallel()
+		// Arrange - STALE means our system hasn't run in 48+ hours
+		ddAccountID := "dd-123"
+		poller := &datadogtest.MockStatusPoller{
+			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
+				return &api.DatadogAccountStatus{
+					Status:        api.DatadogAccountStatusStale,
+					ServiceCount:  19,
+					StaleServices: 19,
+				}, nil
+			},
+		}
+		logger := logtest.New(t)
+
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+
+		// Act
+		cmd := s.Init()
+		updated := s
+		for _, msg := range tuitest.DrainCmds(cmd) {
+			updated, _ = updated.Update(msg)
+		}
+
+		// Assert: view should indicate it's our problem
+		view := updated.View()
+		if !contains(view, "out of date") {
+			t.Errorf("expected view to say 'out of date', got: %s", view)
+		}
+		if !contains(view, "48 hours") {
+			t.Errorf("expected view to mention '48 hours', got: %s", view)
+		}
+		if !contains(view, "on our end") {
+			t.Errorf("expected view to say 'on our end', got: %s", view)
+		}
+
+		// Should NOT tell user to send data (it's not their fault)
+		if contains(view, "Send logs") {
+			t.Errorf("should NOT tell user to send logs for STALE status, got: %s", view)
+		}
+	})
+
+	t.Run("shows discovering state waiting for our analysis", func(t *testing.T) {
+		t.Parallel()
+		// Arrange - DISCOVERING with services but no progress means our pipeline is slow
+		ddAccountID := "dd-123"
+		poller := &datadogtest.MockStatusPoller{
+			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
+				return &api.DatadogAccountStatus{
+					Status:              api.DatadogAccountStatusDiscovering,
+					ServiceCount:        19,
+					ActiveServices:      19,
+					DiscoveringServices: 19,
+					ReadyServices:       0,
+					AnalyzingServices:   0,
+				}, nil
+			},
+		}
+		logger := logtest.New(t)
+
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+
+		// Act
+		cmd := s.Init()
+		updated := s
+		for _, msg := range tuitest.DrainCmds(cmd) {
+			updated, _ = updated.Update(msg)
+		}
+
+		// Assert: view should say waiting for analysis (our system), not waiting for data (their fault)
+		view := updated.View()
+		if !contains(view, "19 services") {
+			t.Errorf("expected view to show '19 services', got: %s", view)
+		}
+		if !contains(view, "waiting for analysis") {
+			t.Errorf("expected view to say 'waiting for analysis', got: %s", view)
+		}
+
+		// Should NOT blame the user
+		if contains(view, "Send logs") {
+			t.Errorf("should NOT tell user to send logs when DISCOVERING, got: %s", view)
+		}
+	})
+
+	t.Run("shows broken status as error", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		ddAccountID := "dd-123"
+		poller := &datadogtest.MockStatusPoller{
+			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
+				return &api.DatadogAccountStatus{
+					Status:         api.DatadogAccountStatusBroken,
+					ServiceCount:   5,
+					BrokenServices: 5,
+				}, nil
+			},
+		}
+		logger := logtest.New(t)
+
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+
+		// Act
+		cmd := s.Init()
+		updated := s
+		for _, msg := range tuitest.DrainCmds(cmd) {
+			updated, _ = updated.Update(msg)
+		}
+
+		// Assert
+		if !updated.HasError() {
+			t.Error("expected HasError() to return true for BROKEN status")
+		}
+	})
+
+	t.Run("shows broken services as issues when analyzing", func(t *testing.T) {
+		t.Parallel()
+		// Arrange - some services broken while others are fine
+		ddAccountID := "dd-123"
+		poller := &datadogtest.MockStatusPoller{
+			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
+				return &api.DatadogAccountStatus{
+					Status:            api.DatadogAccountStatusAnalyzing,
+					ServiceCount:      10,
+					ActiveServices:    10,
+					ReadyServices:     5,
+					AnalyzingServices: 3,
+					BrokenServices:    2,
+				}, nil
+			},
+		}
+		logger := logtest.New(t)
+
+		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+
+		// Act
+		cmd := s.Init()
+		updated := s
+		for _, msg := range tuitest.DrainCmds(cmd) {
+			updated, _ = updated.Update(msg)
+		}
+
+		// Assert: should surface broken services as an issue
+		view := updated.View()
+		if !contains(view, "2 services have errors") {
+			t.Errorf("expected view to show broken services issue, got: %s", view)
 		}
 	})
 }

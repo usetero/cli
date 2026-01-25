@@ -34,11 +34,13 @@ func NewNavItem(label string, stat string, statColor color.Color, active bool, i
 // Render renders the navigation item with left-aligned label and right-aligned stat
 // Format: "⌥1 Chat                2" or "⌥1 Chat•               2"
 func (n NavItem) Render(width int, theme *styles.Theme) string {
+	colors := theme.Colors
+
 	// Build the left side: shortcut + label + indicator
 	var leftSide string
 
 	// Shortcut (if present) - muted text on panel
-	shortcutStyle := lipgloss.NewStyle().Foreground(theme.Panel.TextMuted)
+	shortcutStyle := lipgloss.NewStyle().Foreground(colors.Panel.TextMuted)
 	if n.shortcut.Keys() != nil && len(n.shortcut.Keys()) > 0 {
 		// Get the help text (e.g., "⌥1")
 		shortcutText := n.shortcut.Help().Key
@@ -48,15 +50,15 @@ func (n NavItem) Render(width int, theme *styles.Theme) string {
 	// Active items use accent color, inactive use panel text
 	var labelStyle, statStyle lipgloss.Style
 	if n.active {
-		labelStyle = lipgloss.NewStyle().Foreground(theme.Accent).Bold(true)
-		statStyle = lipgloss.NewStyle().Foreground(theme.Accent)
+		labelStyle = lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
+		statStyle = lipgloss.NewStyle().Foreground(colors.Accent)
 	} else {
-		labelStyle = lipgloss.NewStyle().Foreground(theme.Panel.Text)
+		labelStyle = lipgloss.NewStyle().Foreground(colors.Panel.Text)
 		// Use custom stat color if provided, otherwise default to muted
 		if n.statColor != nil {
 			statStyle = lipgloss.NewStyle().Foreground(n.statColor)
 		} else {
-			statStyle = lipgloss.NewStyle().Foreground(theme.Panel.TextMuted)
+			statStyle = lipgloss.NewStyle().Foreground(colors.Panel.TextMuted)
 		}
 	}
 
@@ -65,7 +67,7 @@ func (n NavItem) Render(width int, theme *styles.Theme) string {
 
 	// Add indicator dot if needed
 	if n.indicator {
-		indicatorStyle := lipgloss.NewStyle().Foreground(theme.Error.Fg)
+		indicatorStyle := lipgloss.NewStyle().Foreground(colors.Error.Fg)
 		leftSide += indicatorStyle.Render("•")
 	}
 

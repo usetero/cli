@@ -5,6 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/sidebar"
 )
 
@@ -15,11 +16,14 @@ const (
 // Sidebar is a layout with a sidebar on the left and content on the right.
 // Wraps everything in Base layout for footer and padding.
 type Sidebar struct {
+	// Theme
+	theme *styles.Theme
+
 	// Nested layouts
 	base *Base
 
 	// Child components
-	sidebar sidebar.Component
+	sidebar *sidebar.Sidebar
 
 	// State
 	width  int
@@ -27,10 +31,11 @@ type Sidebar struct {
 }
 
 // NewSidebar creates a new sidebar layout
-func NewSidebar(logger log.Logger) *Sidebar {
+func NewSidebar(theme *styles.Theme, logger log.Logger) *Sidebar {
 	return &Sidebar{
-		base:    NewBase(logger),
-		sidebar: sidebar.New(logger),
+		theme:   theme,
+		base:    NewBase(theme, logger),
+		sidebar: sidebar.New(theme, logger),
 	}
 }
 
@@ -97,7 +102,7 @@ func (s *Sidebar) Render(content string) string {
 	styledContent := contentStyle.Render(content)
 
 	// Render sidebar
-	sidebarView := s.sidebar.Render()
+	sidebarView := s.sidebar.View()
 
 	// Compose sidebar (left) + content (right) using layers
 	layers := []*lipgloss.Layer{
@@ -105,8 +110,8 @@ func (s *Sidebar) Render(content string) string {
 		lipgloss.NewLayer(styledContent).X(SidebarWidth).Y(0),
 	}
 
-	canvas := lipgloss.NewCanvas(layers...)
-	composedView := canvas.Render()
+	comp := lipgloss.NewCompositor(layers...)
+	composedView := comp.Render()
 
 	// Wrap in base layout (adds footer and padding)
 	return s.base.Render(composedView)

@@ -38,7 +38,9 @@ type OrgItem struct {
 func (i OrgItem) FilterValue() string { return i.Name }
 
 // orgDelegate renders each organization in the list
-type orgDelegate struct{}
+type orgDelegate struct {
+	theme *styles.Theme
+}
 
 func (d orgDelegate) Height() int                             { return 1 }
 func (d orgDelegate) Spacing() int                            { return 0 }
@@ -49,18 +51,18 @@ func (d orgDelegate) Render(w io.Writer, m list.Model, index int, item list.Item
 		return
 	}
 
-	theme := styles.CurrentTheme()
+	colors := d.theme.Colors
 
 	str := i.Name
 	if index == m.Index() {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			Bold(true).
 			Render
 		_, _ = fmt.Fprint(w, fn("> "+str))
 	} else {
 		fn := lipgloss.NewStyle().
-			Foreground(theme.Page.Text).
+			Foreground(colors.Page.Text).
 			Render
 		_, _ = fmt.Fprint(w, fn("  "+str))
 	}
@@ -68,6 +70,9 @@ func (d orgDelegate) Render(w io.Writer, m list.Model, index int, item list.Item
 
 // SelectStep handles selecting an organization or choosing to create one.
 type SelectStep struct {
+	// Theme
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
 	role string
 
@@ -100,7 +105,7 @@ type tokenRefreshMsg struct {
 }
 
 // NewSelectStep creates a new organization selection step
-func NewSelectStep(role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(theme *styles.Theme, role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationLister == nil {
 		panic("organizationLister cannot be nil")
 	}
@@ -120,10 +125,11 @@ func NewSelectStep(role string, organizationLister OrganizationLister, apiClient
 		panic("logger cannot be nil")
 	}
 
-	delegate := orgDelegate{}
-	remoteList := remotelist.New(delegate, "Loading organizations", logger)
+	delegate := orgDelegate{theme: theme}
+	remoteList := remotelist.New(theme, delegate, "Loading organizations", logger)
 
 	return &SelectStep{
+		theme:               theme,
 		role:                role,
 		organizationLister:  organizationLister,
 		defaultOrgSaver:     defaultOrgSaver,
@@ -193,7 +199,7 @@ func (s *SelectStep) selectOrg(orgID, workosOrgID string) tea.Cmd {
 				break
 			}
 		}
-		s.refreshLoader = loader.New("Selecting " + orgName)
+		s.refreshLoader = loader.New(s.theme, "Selecting "+orgName)
 
 		return tea.Batch(s.refreshLoader.Init(), s.refreshToken())
 	}
@@ -316,7 +322,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the organization selection UI
 func (s *SelectStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
 	// Show loading state during initial load or token refresh
 	if s.remoteList.IsBusy() {
@@ -333,8 +339,8 @@ func (s *SelectStep) View() string {
 		return s.remoteList.View()
 	}
 
-	title := common.Title.Render("Select your organization")
-	subtitle := common.Subtitle.Render("This will be your default workspace")
+	title := themeStyles.Title.Render("Select your organization")
+	subtitle := themeStyles.Help.Render("This will be your default workspace")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -349,24 +355,6 @@ func (s *SelectStep) View() string {
 func (s *SelectStep) SetSize(width, height int) {
 	s.width = width
 	s.remoteList.SetWidth(width)
-}
-
-// IsComplete returns true if an organization has been selected and token refreshed
-func (s *SelectStep) IsComplete() bool {
-	return s.selectedOrgID != "" && s.tokenRefreshed
-}
-
-// IsCreateSelected returns true if user chose to create a new organization
-func (s *SelectStep) IsCreateSelected() bool {
-	return s.selectedOrgID == createNewOrgID
-}
-
-// SelectedOrgID returns the ID of the selected organization (excluding "create new")
-func (s *SelectStep) SelectedOrgID() string {
-	if s.selectedOrgID == createNewOrgID {
-		return ""
-	}
-	return s.selectedOrgID
 }
 
 // IsBusy returns true while loading organizations or refreshing token
@@ -385,21 +373,32 @@ func (s *SelectStep) Error() error {
 }
 
 // Next returns the next step after organization selection
-func (s *SelectStep) Next() step.Step {
-	// Conditional branching based on user's selection
-	if s.IsCreateSelected() {
-		// Create organization service for next step
-		organizationService := api.NewOrganizationService(s.apiClient, s.logger)
+func (s *SelectStep) Next() (step.Step, error) {
+	// Not ready yet
+	if s.selectedOrgID == "" || !s.tokenRefreshed {
+		return nil, step.ErrNotReady
+	}
 
-		// User wants to create new org - pass role forward
-		return NewCreateStep(s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings)
+	// User wants to create new org
+	if s.selectedOrgID == createNewOrgID {
+		organizationService := api.NewOrganizationService(s.apiClient, s.logger)
+		return NewCreateStep(s.theme, s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings), nil
+	}
+
+	// Find the selected org
+	var selectedOrg api.Organization
+	for _, org := range s.orgs {
+		if org.ID == s.selectedOrgID {
+			selectedOrg = org
+			break
+		}
 	}
 
 	// Create account service for next step
 	accountService := api.NewAccountService(s.apiClient, s.logger)
 
-	// User selected existing org - pass role, orgID, and services forward
-	return account.NewSelectStep(s.role, s.SelectedOrgID(), accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings)
+	// User selected existing org - pass role, org, and services forward
+	return account.NewSelectStep(s.theme, s.role, selectedOrg, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

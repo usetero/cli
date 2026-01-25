@@ -19,6 +19,9 @@ type DatabaseReadyMsg struct {
 
 // model represents the chat page state
 type model struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Identity - which org/account this chat session belongs to
 	orgID     string
 	accountID string
@@ -40,8 +43,9 @@ type model struct {
 }
 
 // New creates a new chat page model.
-func New(orgID string, accountID string, logger log.Logger) page.Page {
+func New(theme *styles.Theme, orgID string, accountID string, logger log.Logger) page.Page {
 	return &model{
+		theme:     theme,
 		orgID:     orgID,
 		accountID: accountID,
 		logger:    logger,
@@ -97,7 +101,7 @@ func (m *model) View() string {
 		return ""
 	}
 
-	theme := styles.CurrentTheme()
+	colors := m.theme.Colors
 
 	var status string
 	if m.db == nil {
@@ -109,7 +113,7 @@ func (m *model) View() string {
 	}
 
 	content := lipgloss.NewStyle().
-		Foreground(theme.Page.Text).
+		Foreground(colors.Page.Text).
 		Render(
 			lipgloss.Place(
 				m.width,

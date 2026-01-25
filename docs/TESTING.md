@@ -281,6 +281,27 @@ This means tests need to be readable. Don't be clever. Don't compress everything
 
 Tests should be fast. No network, no real authentication, no actual database. Mock external dependencies so tests run in milliseconds. This makes them useful during development—you can run them constantly as you work.
 
+**Always use `t.Parallel()`.** Every test function and every `t.Run()` subtest should call `t.Parallel()` as its first line. This lets Go run tests concurrently, dramatically speeding up the test suite:
+
+```go
+func TestSelectStep_Update(t *testing.T) {
+    t.Parallel()  // Always first
+    
+    t.Run("selects organization on enter", func(t *testing.T) {
+        t.Parallel()  // Subtests too
+        // ...
+    })
+}
+```
+
+The only exception: tests using `t.Setenv()` cannot run in parallel (Go enforces this).
+
+Run tests with `task test`, which enables race detection and parallel execution:
+
+```bash
+task test  # Runs: go test -race -p {cpus} -parallel {cpus*2} ./...
+```
+
 Tests should be deterministic. No randomness, no time dependencies, no order dependencies. Every run should produce the same results. Flaky tests are worse than no tests—they train you to ignore failures.
 
 When tests fail, they should tell you clearly what broke. Use assertions that give good error messages. Better yet, structure tests so that when something fails, you can immediately see what was expected and what happened.

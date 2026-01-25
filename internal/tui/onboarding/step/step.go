@@ -1,9 +1,14 @@
 package step
 
 import (
+	"errors"
+
 	"charm.land/bubbles/v2/help"
 	tea "charm.land/bubbletea/v2"
 )
+
+// ErrNotReady is returned by Next() when the step is not yet complete.
+var ErrNotReady = errors.New("step not ready")
 
 // Step represents a single step in the onboarding flow.
 // Steps are self-contained components that collect user input and pass data forward.
@@ -24,9 +29,6 @@ type Step interface {
 	// SetSize sets the width and height available for rendering
 	SetSize(width, height int)
 
-	// IsComplete returns true if this step has finished collecting input
-	IsComplete() bool
-
 	// IsBusy returns true if this step is performing a background operation
 	// (e.g., network request, validation, etc.)
 	IsBusy() bool
@@ -40,8 +42,11 @@ type Step interface {
 	// Help returns the key bindings for this step
 	Help() help.KeyMap
 
-	// Next returns the next step in the flow after this step completes.
-	// Returns nil if this is the final step in the onboarding flow.
-	// Each step passes accumulated data as constructor parameters to its successor.
-	Next() Step
+	// Next returns the next step in the flow.
+	// Returns:
+	//   - (nextStep, nil) - transition to nextStep
+	//   - (nil, nil) - flow complete, no more steps
+	//   - (nil, ErrNotReady) - step not complete yet, stay on current step
+	//   - (nil, err) - step failed with error
+	Next() (Step, error)
 }

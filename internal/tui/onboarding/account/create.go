@@ -25,6 +25,9 @@ type AccountCreator interface {
 
 // CreateStep handles creating a new account
 type CreateStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
 	role string
 	org  api.Organization
@@ -48,7 +51,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new account creation step for the given organization
-func NewCreateStep(role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(theme *styles.Theme, role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountCreator == nil {
 		panic("accountCreator cannot be nil")
 	}
@@ -62,11 +65,12 @@ func NewCreateStep(role string, org api.Organization, accountCreator AccountCrea
 		panic("logger cannot be nil")
 	}
 
-	inp := input.New(logger)
+	inp := input.New(theme, logger)
 	inp.SetPlaceholder("Production")
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
+		theme:               theme,
 		role:                role,
 		org:                 org,
 		accountCreator:      accountCreator,
@@ -164,17 +168,17 @@ func (s *CreateStep) createAccount(name string) tea.Cmd {
 
 // View renders the create account UI
 func (s *CreateStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			common.Title.Render("Creating account..."),
+			themeStyles.Title.Render("Creating account..."),
 		)
 	}
 
-	title := common.Title.Render("Create a new account")
-	prompt := common.Body.Render("Enter your account name")
+	title := themeStyles.Title.Render("Create a new account")
+	prompt := themeStyles.Body.Render("Enter your account name")
 
 	// Input with cursor marker
 	inputCursor := s.input.Cursor()
@@ -190,7 +194,7 @@ func (s *CreateStep) View() string {
 		inputLine = inputView
 	}
 
-	help := common.Help.Render("This groups your observability tools and services")
+	help := themeStyles.Help.Render("This groups your observability tools and services")
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -242,7 +246,7 @@ func (s *CreateStep) Next() (step.Step, error) {
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Check for Datadog with accumulated data
-	return datadog.NewCheckDatadogStep(s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.theme, s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

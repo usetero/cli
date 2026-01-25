@@ -2,6 +2,8 @@ package styles
 
 import (
 	"image/color"
+
+	"charm.land/lipgloss/v2"
 )
 
 // Surface defines colors for a background surface.
@@ -33,9 +35,8 @@ type StatusColors struct {
 	Bg color.Color // Background
 }
 
-// Theme holds all semantic color tokens, organized by surface/context.
-// Use the nested structs to find colors that are guaranteed to work together.
-type Theme struct {
+// Colors holds all semantic color tokens, organized by surface/context.
+type Colors struct {
 	IsDark bool
 
 	// Surfaces - colors grouped by where they appear
@@ -56,23 +57,37 @@ type Theme struct {
 	Warning StatusColors
 }
 
-var currentTheme *Theme
-
-// CurrentTheme returns the current theme.
-// Currently forced to dark theme for consistent brand experience.
-func CurrentTheme() *Theme {
-	if currentTheme == nil {
-		// Force dark theme (set to false for light theme, or use
-		// lipgloss.HasDarkBackground(os.Stdin, os.Stdout) to auto-detect)
-		currentTheme = BuildTheme(DefaultPalette(), true)
-	}
-	return currentTheme
+// Styles holds pre-built lipgloss styles derived from colors.
+type Styles struct {
+	Title    lipgloss.Style // Page/step titles (Accent + Bold)
+	Subtitle lipgloss.Style // Subtitle/explanatory text (TextMuted)
+	Body     lipgloss.Style // Main text content (Text)
+	Help     lipgloss.Style // Secondary help text (TextMuted)
+	Action   lipgloss.Style // User action prompts (Accent)
+	URL      lipgloss.Style // URL displays (TextMuted)
+	Success  lipgloss.Style // Success messages (Success + Bold)
+	Error    lipgloss.Style // Error messages (Error)
 }
 
-// BuildTheme constructs a theme from a palette
-func BuildTheme(p Palette, isDark bool) *Theme {
+// Theme holds colors and pre-built styles. Created once at startup.
+type Theme struct {
+	Colors *Colors
+	Styles *Styles
+}
+
+// NewTheme creates a new theme. Use isDark=true for dark mode.
+func NewTheme(isDark bool) *Theme {
+	colors := buildColors(DefaultPalette(), isDark)
+	return &Theme{
+		Colors: colors,
+		Styles: buildStyles(colors),
+	}
+}
+
+// buildColors constructs colors from a palette
+func buildColors(p Palette, isDark bool) *Colors {
 	if isDark {
-		return &Theme{
+		return &Colors{
 			IsDark: true,
 
 			Page: Surface{
@@ -117,7 +132,7 @@ func BuildTheme(p Palette, isDark bool) *Theme {
 	}
 
 	// Light theme - flip the shade numbers
-	return &Theme{
+	return &Colors{
 		IsDark: false,
 
 		Page: Surface{
@@ -158,5 +173,19 @@ func BuildTheme(p Palette, isDark bool) *Theme {
 			Fg: MustHex(p.Warning[S600]),
 			Bg: MustHex(p.Warning[S100]),
 		},
+	}
+}
+
+// buildStyles creates pre-built styles from colors
+func buildStyles(c *Colors) *Styles {
+	return &Styles{
+		Title:    lipgloss.NewStyle().Foreground(c.Accent).Bold(true),
+		Subtitle: lipgloss.NewStyle().Foreground(c.Page.TextMuted),
+		Body:     lipgloss.NewStyle().Foreground(c.Page.Text),
+		Help:     lipgloss.NewStyle().Foreground(c.Page.TextMuted),
+		Action:   lipgloss.NewStyle().Foreground(c.Accent),
+		URL:      lipgloss.NewStyle().Foreground(c.Page.TextMuted),
+		Success:  lipgloss.NewStyle().Foreground(c.Success.Fg).Bold(true),
+		Error:    lipgloss.NewStyle().Foreground(c.Error.Fg),
 	}
 }

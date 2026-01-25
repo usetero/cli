@@ -36,6 +36,9 @@ const (
 // It renders pages with appropriate chrome (sidebar or header) based on
 // window size, and manages the command bar and popover stack.
 type App struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Base layer - always chat
 	chat page.Page
 
@@ -72,12 +75,13 @@ type App struct {
 }
 
 // New creates a new app starting with the chat page
-func New(org api.Organization, account api.Account, tokenProvider tokenProvider, powersyncConfig *powersync.Config, logger log.Logger, globalBindings []key.Binding) *App {
+func New(theme *styles.Theme, org api.Organization, account api.Account, tokenProvider tokenProvider, powersyncConfig *powersync.Config, logger log.Logger, globalBindings []key.Binding) *App {
 	return &App{
-		chat:            chat.New(org.ID, account.ID, logger),
-		sidebar:         sidebar.New(logger),
-		header:          header.New(logger),
-		commandbar:      commandbar.New(logger),
+		theme:           theme,
+		chat:            chat.New(theme, org.ID, account.ID, logger),
+		sidebar:         sidebar.New(theme, logger),
+		header:          header.New(theme, logger),
+		commandbar:      commandbar.New(theme, logger),
 		logger:          logger,
 		tokenProvider:   tokenProvider,
 		powersyncConfig: powersyncConfig,
@@ -217,7 +221,7 @@ func (a *App) View() string {
 		return ""
 	}
 
-	theme := styles.CurrentTheme()
+	colors := a.theme.Colors
 	a.updateChrome()
 
 	// Get command bar view and height
@@ -275,7 +279,7 @@ func (a *App) View() string {
 	return lipgloss.NewStyle().
 		Width(a.width).
 		Height(a.height).
-		Background(theme.Page.Bg).
+		Background(colors.Page.Bg).
 		Render(view)
 }
 

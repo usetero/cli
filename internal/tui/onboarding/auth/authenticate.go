@@ -32,6 +32,9 @@ const (
 
 // AuthenticateStep handles device code flow authentication.
 type AuthenticateStep struct {
+	// Theme
+	theme *styles.Theme
+
 	// Services
 	authService        *authservice.Service
 	preferencesService *preferences.Service
@@ -64,7 +67,7 @@ type authCompleteMsg struct {
 }
 
 // NewAuthenticateStep creates a new authentication step
-func NewAuthenticateStep(logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
+func NewAuthenticateStep(theme *styles.Theme, logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
@@ -75,13 +78,14 @@ func NewAuthenticateStep(logger log.Logger, authService *authservice.Service, pr
 		panic("preferencesService cannot be nil")
 	}
 
-	theme := styles.CurrentTheme()
+	colors := theme.Colors
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &AuthenticateStep{
+		theme:              theme,
 		authService:        authService,
 		preferencesService: preferencesService,
 		apiEndpoint:        apiEndpoint,
@@ -233,41 +237,41 @@ func (s *AuthenticateStep) pollForAuth() tea.Cmd {
 
 // View renders the auth step
 func (s *AuthenticateStep) View() string {
-	common := styles.Common()
-	theme := styles.CurrentTheme()
+	styles := s.theme.Styles
+	colors := s.theme.Colors
 
-	mutedStyle := lipgloss.NewStyle().Foreground(theme.Page.TextMuted)
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 
 	switch s.state {
 	case stateInitializing:
-		return common.Title.Render("Initializing authentication...")
+		return styles.Title.Render("Initializing authentication...")
 
 	case stateReady:
 		if s.deviceAuth == nil {
-			return common.Title.Render("Loading...")
+			return styles.Title.Render("Loading...")
 		}
 
 		var parts []string
 
 		// Title
-		parts = append(parts, common.Title.Render("Authenticate with Tero"), "")
+		parts = append(parts, styles.Title.Render("Authenticate with Tero"), "")
 
 		// Code - prominently displayed so user can verify it matches the browser
 		parts = append(parts,
-			common.Body.Render("Your code: ")+common.Title.Render(s.deviceAuth.UserCode),
+			styles.Body.Render("Your code: ")+styles.Title.Render(s.deviceAuth.UserCode),
 			"",
 		)
 
 		// URL
 		parts = append(parts,
-			common.Body.Render("Visit this URL to sign in:"),
-			common.URL.Render(s.deviceAuth.VerificationURIComplete),
+			styles.Body.Render("Visit this URL to sign in:"),
+			styles.URL.Render(s.deviceAuth.VerificationURIComplete),
 			"",
 		)
 
 		// Instruction
 		parts = append(parts,
-			common.Body.Render("Confirm the code matches, then click \"Confirm\" in your browser."),
+			styles.Body.Render("Confirm the code matches, then click \"Confirm\" in your browser."),
 			"",
 		)
 
@@ -275,17 +279,17 @@ func (s *AuthenticateStep) View() string {
 		if s.polling {
 			parts = append(parts, s.spinner.View()+" "+mutedStyle.Render("Waiting for authentication..."))
 		} else if s.openFailed {
-			parts = append(parts, common.Error.Render("Couldn't open browser. Press 'c' to copy URL"))
+			parts = append(parts, styles.Error.Render("Couldn't open browser. Press 'c' to copy URL"))
 		} else if s.copiedToClipboard {
-			parts = append(parts, common.Success.Render("✓ URL copied to clipboard"))
+			parts = append(parts, styles.Success.Render("URL copied to clipboard"))
 		} else {
-			parts = append(parts, common.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL"))
+			parts = append(parts, styles.Action.Render("Press Enter to open in browser, or press 'c' to copy the URL"))
 		}
 
 		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 
 	case stateComplete:
-		return common.Title.Render("✓ Authentication successful!")
+		return styles.Title.Render("Authentication successful!")
 
 	default:
 		return ""
@@ -305,11 +309,6 @@ func isRecoverableError(err error) bool {
 // SetSize sets the width available for rendering
 func (s *AuthenticateStep) SetSize(width, height int) {
 	s.width = width
-}
-
-// IsComplete returns true if authentication is complete
-func (s *AuthenticateStep) IsComplete() bool {
-	return s.state == stateComplete
 }
 
 // IsBusy returns true while waiting for authentication
@@ -359,7 +358,11 @@ func (s *AuthenticateStep) Help() help.KeyMap {
 
 // Next returns the next step after auth completes (role selection)
 // Creates an authenticated API client and passes it to the role step
-func (s *AuthenticateStep) Next() step.Step {
+func (s *AuthenticateStep) Next() (step.Step, error) {
+	if s.state != stateComplete {
+		return nil, step.ErrNotReady
+	}
+
 	// Create authenticated API client with the access token from auth result
 	refreshFunc := func() (string, error) {
 		return s.authService.GetAccessToken(context.Background())
@@ -367,5 +370,5 @@ func (s *AuthenticateStep) Next() step.Step {
 	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken, refreshFunc)
 
 	// Pass authenticated client, preferences service, and other dependencies to next step
-	return role.NewSelectStep(apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings)
+	return role.NewSelectStep(s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
 }

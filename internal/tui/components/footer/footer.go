@@ -12,6 +12,7 @@ import (
 
 // Component is a footer component that displays help text and error state
 type Component struct {
+	theme  *styles.Theme
 	help   help.Model
 	keyMap help.KeyMap
 	err    error // Current error state (persistent until cleared)
@@ -23,20 +24,21 @@ type Component struct {
 var _ components.Component = (*Component)(nil)
 
 // New creates a new footer component
-func New(logger log.Logger) *Component {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, logger log.Logger) *Component {
+	colors := theme.Colors
 	helpModel := help.New()
 	helpModel.Styles = help.Styles{
-		ShortKey:       lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
-		ShortDesc:      lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
-		ShortSeparator: lipgloss.NewStyle().Foreground(theme.BorderDefault),
-		Ellipsis:       lipgloss.NewStyle().Foreground(theme.BorderDefault),
-		FullKey:        lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
-		FullDesc:       lipgloss.NewStyle().Foreground(theme.Page.TextMuted),
-		FullSeparator:  lipgloss.NewStyle().Foreground(theme.BorderDefault),
+		ShortKey:       lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+		ShortDesc:      lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+		ShortSeparator: lipgloss.NewStyle().Foreground(colors.BorderDefault),
+		Ellipsis:       lipgloss.NewStyle().Foreground(colors.BorderDefault),
+		FullKey:        lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+		FullDesc:       lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+		FullSeparator:  lipgloss.NewStyle().Foreground(colors.BorderDefault),
 	}
 
 	return &Component{
+		theme:  theme,
 		help:   helpModel,
 		logger: logger,
 	}
@@ -96,11 +98,11 @@ func (c *Component) View() string {
 
 // renderError renders an error banner
 func (c *Component) renderError() string {
-	theme := styles.CurrentTheme()
+	colors := c.theme.Colors
 
 	labelStyle := lipgloss.NewStyle().
-		Background(theme.Error.Bg).
-		Foreground(theme.Page.Text).
+		Background(colors.Error.Bg).
+		Foreground(colors.Page.Text).
 		Padding(0, 1).
 		Bold(true)
 
@@ -113,8 +115,8 @@ func (c *Component) renderError() string {
 	message := ansi.Truncate(c.err.Error(), widthLeft, "…")
 
 	messageStyle := lipgloss.NewStyle().
-		Background(theme.Error.Bg).
-		Foreground(theme.Page.Text).
+		Background(colors.Error.Bg).
+		Foreground(colors.Page.Text).
 		Width(widthLeft+2).
 		Padding(0, 1)
 

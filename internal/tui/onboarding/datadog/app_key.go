@@ -31,12 +31,15 @@ type createAccountMsg struct {
 
 // AppKeyStep handles collecting the user's Datadog application key.
 type AppKeyStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
-	role      string
-	orgID     string
-	accountID string
-	site      string // Selected Datadog site
-	apiKey    string // Validated API key from previous step
+	role    string
+	org     api.Organization
+	account api.Account
+	site    string // Selected Datadog site
+	apiKey  string // Validated API key from previous step
 
 	// Services (defined by consumer interfaces)
 	accountCreator DatadogAccountCreator
@@ -58,7 +61,7 @@ type AppKeyStep struct {
 }
 
 // NewAppKeyStep creates a new Datadog app key collection step
-func NewAppKeyStep(role string, orgID string, accountID string, site string, apiKey string, accountCreator DatadogAccountCreator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewAppKeyStep(theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, accountCreator DatadogAccountCreator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountCreator == nil {
 		panic("accountCreator cannot be nil")
 	}
@@ -69,16 +72,17 @@ func NewAppKeyStep(role string, orgID string, accountID string, site string, api
 		panic("logger cannot be nil")
 	}
 
-	inp := input.New(logger)
+	inp := input.New(theme, logger)
 	inp.SetPlaceholder("Enter your Datadog application key...")
 	inp.SetWidth(50)
 	inp.SetEchoMode(textinput.EchoPassword)
 	inp.SetEchoCharacter('•')
 
 	return &AppKeyStep{
+		theme:          theme,
 		role:           role,
-		orgID:          orgID,
-		accountID:      accountID,
+		org:            org,
+		account:        account,
 		site:           site,
 		apiKey:         apiKey,
 		accountCreator: accountCreator,
@@ -200,11 +204,11 @@ func (s *AppKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		s.logger.Debug("creating datadog account", log.String("accountID", s.accountID), log.String("site", s.site))
+		s.logger.Debug("creating datadog account", log.String("accountID", s.account.ID), log.String("site", s.site))
 
-		account, err := s.accountCreator.CreateAccount(
+		datadogAccount, err := s.accountCreator.CreateAccount(
 			ctx,
-			s.accountID,
+			s.account.ID,
 			"Datadog", // Default name
 			s.site,
 			s.apiKey,
@@ -214,35 +218,35 @@ func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 			return createAccountMsg{err: err}
 		}
 
-		return createAccountMsg{account: account}
+		return createAccountMsg{account: datadogAccount}
 	}
 }
 
 // View renders the app key input UI
 func (s *AppKeyStep) View() string {
-	common := styles.Common()
-	theme := styles.CurrentTheme()
+	themeStyles := s.theme.Styles
+	colors := s.theme.Colors
 
 	if s.creating {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			"",
-			common.Body.Render("Creating Datadog account..."),
+			themeStyles.Body.Render("Creating Datadog account..."),
 		)
 	}
 
-	title := common.Title.Render("Connect to Datadog")
+	title := themeStyles.Title.Render("Connect to Datadog")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.Page.TextMuted).
+		Foreground(colors.Page.TextMuted).
 		Underline(true)
-	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
+	docsLink := themeStyles.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	// Interstitial screen
 	if !s.showingInput {
-		prompt := common.Body.Render("Now, create a Service Account application key.")
-		explanation := common.Subtitle.Render("This lets Tero read your telemetry data and discover waste.")
-		action := common.Action.Render("Press Enter to open Datadog.")
+		prompt := themeStyles.Body.Render("Now, create a Service Account application key.")
+		explanation := themeStyles.Subtitle.Render("This lets Tero read your telemetry data and discover waste.")
+		action := themeStyles.Action.Render("Press Enter to open Datadog.")
 
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -258,7 +262,7 @@ func (s *AppKeyStep) View() string {
 	}
 
 	// Input screen
-	prompt := common.Body.Render("Paste the application key")
+	prompt := themeStyles.Body.Render("Paste the application key")
 
 	parts := []string{
 		title,
@@ -281,11 +285,6 @@ func (s *AppKeyStep) SetSize(width, height int) {
 	}
 }
 
-// IsComplete returns true if Datadog account has been created successfully
-func (s *AppKeyStep) IsComplete() bool {
-	return s.created && s.createdAccount != nil && s.err == nil
-}
-
 // IsBusy returns true while creating the account
 func (s *AppKeyStep) IsBusy() bool {
 	return s.creating
@@ -302,13 +301,20 @@ func (s *AppKeyStep) Error() error {
 }
 
 // Next returns the next step after account creation
-func (s *AppKeyStep) Next() step.Step {
+func (s *AppKeyStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.created || s.createdAccount == nil {
+		return nil, step.ErrNotReady
+	}
+
 	// Create datadog account service for status polling
 	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Datadog account created - move to unified discovery step
 	datadogAccountID := s.createdAccount.ID
-	return NewDiscoveryStep(s.role, s.orgID, s.accountID, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings)
+	return NewDiscoveryStep(s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

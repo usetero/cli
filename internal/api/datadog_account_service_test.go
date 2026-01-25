@@ -12,7 +12,9 @@ import (
 )
 
 func TestDatadogAccountService_HasAccount(t *testing.T) {
+	t.Parallel()
 	t.Run("returns true when datadog account exists", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
 				return &client.GetAccountResponse{
@@ -46,6 +48,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 	})
 
 	t.Run("returns false when datadog account is empty", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
 				return &client.GetAccountResponse{
@@ -76,6 +79,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 	})
 
 	t.Run("returns false when no account found", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
 				return &client.GetAccountResponse{
@@ -99,7 +103,9 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 }
 
 func TestDatadogAccountService_GetAccount(t *testing.T) {
+	t.Parallel()
 	t.Run("returns datadog account when exists", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
 				return &client.GetAccountResponse{
@@ -142,6 +148,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 	})
 
 	t.Run("returns nil when no datadog account", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
 				return &client.GetAccountResponse{
@@ -172,7 +179,9 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 }
 
 func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
+	t.Parallel()
 	t.Run("returns true for valid key", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
 				return &client.ValidateDatadogApiKeyResponse{
@@ -198,6 +207,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	})
 
 	t.Run("returns false with error message for invalid key", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
 				return &client.ValidateDatadogApiKeyResponse{
@@ -224,6 +234,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	})
 
 	t.Run("returns default error message when none provided", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
 				return &client.ValidateDatadogApiKeyResponse{
@@ -250,6 +261,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	})
 
 	t.Run("propagates client errors", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
 				return nil, errors.New("network error")
@@ -266,7 +278,9 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 }
 
 func TestDatadogAccountService_GetStatus(t *testing.T) {
+	t.Parallel()
 	t.Run("returns status with percent complete", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
 				return &client.GetDatadogAccountStatusResponse{
@@ -315,6 +329,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 	})
 
 	t.Run("returns nil when no datadog account found", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
 				return &client.GetDatadogAccountStatusResponse{
@@ -337,6 +352,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 	})
 
 	t.Run("propagates client errors", func(t *testing.T) {
+		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
 				return nil, errors.New("network error")

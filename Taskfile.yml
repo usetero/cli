@@ -2,6 +2,10 @@ version: "3"
 
 vars:
   CONTROL_PLANE_DIR: ../control-plane
+  CPU_COUNT:
+    sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"
+  PARALLEL_COUNT:
+    sh: echo $(({{.CPU_COUNT}} * 2))
 
 tasks:
   # Client generation
@@ -29,9 +33,9 @@ tasks:
       - go run ./cmd/tero {{.CLI_ARGS}}
 
   test:
-    desc: Run tests
+    desc: Run tests (parallel, with race detection)
     cmds:
-      - go test ./...
+      - gotestsum --format short-verbose -- -race -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} ./...
 
   lint:
     desc: Run golangci-lint

@@ -15,7 +15,8 @@ func NewResetCmd(cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Clear all preferences and authentication",
 		Long:  "Remove stored authentication tokens and user preferences for the current environment.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := styles.Common()
+			theme := styles.NewTheme(true)
+			s := theme.Styles
 			namespace := cliConfig.Namespace()
 
 			// Clear preferences

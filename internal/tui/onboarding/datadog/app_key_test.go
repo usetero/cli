@@ -9,13 +9,31 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
+	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// appKeyTestTheme creates a theme for testing
+func appKeyTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
+}
+
+// isAppKeyComplete checks if a step is complete by checking Next() returns nil error
+func isAppKeyComplete(s step.Step) bool {
+	_, err := s.Next()
+	return err == nil
+}
+
 func TestAppKeyStep_Update(t *testing.T) {
+	t.Parallel()
+	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+
 	t.Run("creates datadog account on enter", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		created := false
 		creator := &datadogtest.MockDatadogAccountCreator{
@@ -27,10 +45,10 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewAppKeyStep("admin", "org-1", "acc-1", "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -50,12 +68,13 @@ func TestAppKeyStep_Update(t *testing.T) {
 		if !created {
 			t.Error("expected datadog account to be created")
 		}
-		if !updated.IsComplete() {
+		if !isAppKeyComplete(updated) {
 			t.Error("expected step to complete after creation")
 		}
 	})
 
 	t.Run("sets error state on failure", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		creator := &datadogtest.MockDatadogAccountCreator{
 			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
@@ -65,10 +84,10 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewAppKeyStep("admin", "org-1", "acc-1", "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -88,12 +107,13 @@ func TestAppKeyStep_Update(t *testing.T) {
 		if !updated.HasError() {
 			t.Error("expected step to have error")
 		}
-		if updated.IsComplete() {
+		if isAppKeyComplete(updated) {
 			t.Error("expected step NOT to complete on error")
 		}
 	})
 
 	t.Run("does not submit empty input", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		created := false
 		creator := &datadogtest.MockDatadogAccountCreator{
@@ -105,10 +125,10 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewAppKeyStep("admin", "org-1", "acc-1", "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -123,12 +143,13 @@ func TestAppKeyStep_Update(t *testing.T) {
 		if created {
 			t.Error("expected account NOT to be created with empty input")
 		}
-		if updated.IsComplete() {
+		if isAppKeyComplete(updated) {
 			t.Error("expected step NOT to complete with empty input")
 		}
 	})
 
 	t.Run("retries on enter when error", func(t *testing.T) {
+		t.Parallel()
 		// Arrange
 		attempts := 0
 		creator := &datadogtest.MockDatadogAccountCreator{
@@ -143,10 +164,10 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		step := datadog.NewAppKeyStep("admin", "org-1", "acc-1", "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
-		updated, cmd := step.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		for _, msg := range tuitest.DrainCmds(cmd) {
 			updated, _ = updated.Update(msg)
 		}
@@ -174,7 +195,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		if updated.HasError() {
 			t.Error("expected error to be cleared after retry")
 		}
-		if !updated.IsComplete() {
+		if !isAppKeyComplete(updated) {
 			t.Error("expected step to complete after successful retry")
 		}
 		if attempts != 2 {

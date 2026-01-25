@@ -4,42 +4,38 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/layouts"
 	authcheck "github.com/usetero/cli/internal/tui/onboarding/auth"
+	"github.com/usetero/cli/internal/tui/onboarding/complete"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
-
-// PreferencesReader reads onboarding completion state from preferences
-type PreferencesReader interface {
-	GetDefaultOrgID() string
-	GetDefaultAccountID() string
-}
 
 // Onboarding orchestrates the onboarding flow.
 // It manages the step-by-step progression through authentication,
 // role selection, organization setup, account setup, and datadog integration.
-// When complete, it exposes the final state (orgID, accountID) for app creation.
+// When complete, it exposes the final state (org, account) for app creation.
 type Onboarding struct {
-	// Services
-	preferencesService PreferencesReader
-
 	// Flow and layout management
 	flow   *step.Flow
 	layout layouts.Layout
+	theme  *styles.Theme
 
 	// State
 	ready          bool
-	orgID          string // Set when onboarding completes
-	accountID      string // Set when onboarding completes
+	org            api.Organization // Set when onboarding completes
+	account        api.Account      // Set when onboarding completes
 	globalBindings []key.Binding
 	logger         log.Logger
 }
 
 // New creates a new onboarding model starting with auth
 func New(
+	theme *styles.Theme,
 	logger log.Logger,
 	authService *auth.Service,
 	preferencesService *preferences.Service,
@@ -49,16 +45,16 @@ func New(
 	// Start onboarding flow with auth check step
 	// Check step validates existing auth, or proceeds to auth step if needed
 	flow := step.NewFlow(
-		authcheck.NewCheckAuthStep(authService, authService, preferencesService, apiEndpoint, logger, globalBindings),
+		authcheck.NewCheckAuthStep(theme, authService, authService, preferencesService, apiEndpoint, logger, globalBindings),
 	)
 
 	return &Onboarding{
-		flow:               flow,
-		layout:             layouts.NewHeader(logger),
-		ready:              false,
-		logger:             logger,
-		preferencesService: preferencesService,
-		globalBindings:     globalBindings,
+		flow:           flow,
+		layout:         layouts.NewHeader(theme, logger),
+		theme:          theme,
+		ready:          false,
+		logger:         logger,
+		globalBindings: globalBindings,
 	}
 }
 
@@ -84,13 +80,14 @@ func (m *Onboarding) Update(msg tea.Msg) tea.Cmd {
 	// Cascade to layout
 	layoutCmd := m.layout.Update(msg)
 
-	// Check if flow completed and extract org/account IDs
-	if m.flow.IsComplete() && m.orgID == "" {
-		// Flow completed - extract final state from preferences
-		// The onboarding flow sets these in preferences as it progresses
-		m.orgID = m.preferencesService.GetDefaultOrgID()
-		m.accountID = m.preferencesService.GetDefaultAccountID()
-		m.logger.Info("onboarding completed", "orgID", m.orgID, "accountID", m.accountID)
+	// Check if flow completed and extract org/account from final step
+	if m.flow.IsComplete() && m.org.ID == "" {
+		// Flow completed - extract final state from the last step
+		if lastStep, ok := m.flow.LastStep().(*complete.CompleteStep); ok {
+			m.org = lastStep.Organization()
+			m.account = lastStep.Account()
+			m.logger.Info("onboarding completed", "orgID", m.org.ID, "accountID", m.account.ID)
+		}
 	}
 
 	return tea.Batch(layoutCmd, flowCmd)
@@ -146,14 +143,14 @@ func (m *Onboarding) Error() error {
 	return m.flow.Error()
 }
 
-// OrganizationID returns the organization ID from completed onboarding
+// Organization returns the organization from completed onboarding
 // Only valid after IsComplete() returns true
-func (m *Onboarding) OrganizationID() string {
-	return m.orgID
+func (m *Onboarding) Organization() api.Organization {
+	return m.org
 }
 
-// AccountID returns the account ID from completed onboarding
+// Account returns the account from completed onboarding
 // Only valid after IsComplete() returns true
-func (m *Onboarding) AccountID() string {
-	return m.accountID
+func (m *Onboarding) Account() api.Account {
+	return m.account
 }

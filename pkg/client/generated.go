@@ -279,7 +279,7 @@ var AllDatadogAccountSite = []DatadogAccountSite{
 	DatadogAccountSiteAp2,
 }
 
-// Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY
+// Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
 type DatadogAccountStatusLogStatus string
 
 const (
@@ -289,6 +289,8 @@ const (
 	DatadogAccountStatusLogStatusInactive DatadogAccountStatusLogStatus = "INACTIVE"
 	// At least one service has discovery errors (5+ consecutive failures)
 	DatadogAccountStatusLogStatusBroken DatadogAccountStatusLogStatus = "BROKEN"
+	// At least one service has stale data (older than 48 hours)
+	DatadogAccountStatusLogStatusStale DatadogAccountStatusLogStatus = "STALE"
 	// At least one service is still being discovered (no volume data yet)
 	DatadogAccountStatusLogStatusDiscovering DatadogAccountStatusLogStatus = "DISCOVERING"
 	DatadogAccountStatusLogStatusAnalyzing   DatadogAccountStatusLogStatus = "ANALYZING"
@@ -300,6 +302,7 @@ var AllDatadogAccountStatusLogStatus = []DatadogAccountStatusLogStatus{
 	DatadogAccountStatusLogStatusDisabled,
 	DatadogAccountStatusLogStatusInactive,
 	DatadogAccountStatusLogStatusBroken,
+	DatadogAccountStatusLogStatusStale,
 	DatadogAccountStatusLogStatusDiscovering,
 	DatadogAccountStatusLogStatusAnalyzing,
 	DatadogAccountStatusLogStatusReady,
@@ -462,7 +465,7 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 //
 // View that provides status for each Datadog account based on service statuses
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus struct {
-	// Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY
+	// Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
 	LogStatus DatadogAccountStatusLogStatus `json:"logStatus"`
 	// Overall coverage percentage
 	LogPercentComplete float64 `json:"logPercentComplete"`
@@ -480,6 +483,8 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	LogAnalyzingServices int `json:"logAnalyzingServices"`
 	// Services with DISCOVERING status
 	LogDiscoveringServices int `json:"logDiscoveringServices"`
+	// Services with STALE status
+	LogStaleServices int `json:"logStaleServices"`
 	// Services with BROKEN status
 	LogBrokenServices int `json:"logBrokenServices"`
 	// Services with DISABLED status
@@ -531,6 +536,11 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetLogDiscoveringServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDiscoveringServices, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDiscoveringServices() int {
 	return v.LogDiscoveringServices
+}
+
+// GetLogStaleServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogStaleServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogStaleServices() int {
+	return v.LogStaleServices
 }
 
 // GetLogBrokenServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogBrokenServices, and is useful for accessing the field via an interface.
@@ -1688,6 +1698,7 @@ query GetDatadogAccountStatus ($id: ID!) {
 					logReadyServices
 					logAnalyzingServices
 					logDiscoveringServices
+					logStaleServices
 					logBrokenServices
 					logDisabledServices
 					logInactiveServices

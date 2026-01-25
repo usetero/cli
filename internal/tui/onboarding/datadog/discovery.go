@@ -49,8 +49,11 @@ type statusFetchedMsg struct {
 	err    error
 }
 
-// DiscoveryStep shows unified discovery progress with a single progress bar
+// DiscoveryStep shows discovery progress focused on what users care about
 type DiscoveryStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
 	role             string
 	org              api.Organization
@@ -65,15 +68,17 @@ type DiscoveryStep struct {
 	globalBindings []key.Binding
 
 	// UI state
-	loading bool
-	err     error
-	status  *api.DatadogAccountStatus
-	spinner spinner.Model
-	width   int
+	loading   bool
+	err       error
+	status    *api.DatadogAccountStatus
+	spinner   spinner.Model
+	width     int
+	startTime time.Time
 }
 
-// NewDiscoveryStep creates a new unified discovery step
+// NewDiscoveryStep creates a new discovery step
 func NewDiscoveryStep(
+	theme *styles.Theme,
 	role string,
 	org api.Organization,
 	account api.Account,
@@ -91,9 +96,10 @@ func NewDiscoveryStep(
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(styles.CurrentTheme().Accent)
+	s.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)
 
 	return &DiscoveryStep{
+		theme:            theme,
 		role:             role,
 		org:              org,
 		account:          account,
@@ -104,6 +110,7 @@ func NewDiscoveryStep(
 		loading:          true,
 		spinner:          s,
 		width:            80,
+		startTime:        time.Now(),
 	}
 }
 
@@ -116,6 +123,7 @@ func (s *DiscoveryStep) Init() tea.Cmd {
 func (s *DiscoveryStep) startPolling() tea.Cmd {
 	s.err = nil
 	s.loading = true
+	s.startTime = time.Now()
 	return tea.Batch(
 		s.spinner.Tick,
 		s.fetchStatus(),
@@ -224,149 +232,206 @@ func (s *DiscoveryStep) isComplete() bool {
 	return s.status != nil && s.status.Status == api.DatadogAccountStatusReady
 }
 
-// isAllInactive returns true if all services are inactive (zero volume)
-func (s *DiscoveryStep) isAllInactive() bool {
-	return s.status != nil && s.status.Status == api.DatadogAccountStatusInactive
-}
-
 // View renders the discovery UI
 func (s *DiscoveryStep) View() string {
-	common := styles.Common()
+	themeStyles := s.theme.Styles
+	colors := s.theme.Colors
 
-	if s.loading {
-		return s.renderLoading(common)
+	if s.loading || s.status == nil {
+		return s.renderLoading(themeStyles)
 	}
 
 	if s.err != nil {
-		return s.renderError(common)
+		return s.renderError(themeStyles)
 	}
 
-	if s.status == nil {
-		return s.renderLoading(common)
+	// Title
+	title := themeStyles.Title.Render("Analyzing your Datadog account")
+
+	// Main status line - what's actually happening
+	statusLine := s.spinner.View() + " " + s.getStatusText(themeStyles)
+
+	// Progress section
+	var progressSection string
+	if s.status.ServiceCount > 0 {
+		progressSection = s.renderProgress(themeStyles, colors)
 	}
 
-	// Render based on status
-	switch s.status.Status {
-	case api.DatadogAccountStatusDiscovering:
-		return s.renderDiscovering(common)
-	case api.DatadogAccountStatusAnalyzing:
-		return s.renderInProgress(common)
-	case api.DatadogAccountStatusInactive:
-		return s.renderInactive(common)
-	case api.DatadogAccountStatusDisabled:
-		return s.renderDisabled(common)
-	case api.DatadogAccountStatusBroken:
-		return s.renderError(common)
-	default:
-		return s.renderInProgress(common)
+	// Issues section - surface problems prominently
+	issuesSection := s.renderIssues(themeStyles, colors)
+
+	// Help text
+	helpText := s.getHelpText(themeStyles)
+
+	// Build the view
+	parts := []string{title, "", statusLine}
+
+	if progressSection != "" {
+		parts = append(parts, "", progressSection)
 	}
+
+	if issuesSection != "" {
+		parts = append(parts, "", issuesSection)
+	}
+
+	if helpText != "" {
+		parts = append(parts, "", helpText)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+}
+
+// getStatusText returns the main status message
+func (s *DiscoveryStep) getStatusText(themeStyles *styles.Styles) string {
+	st := s.status
+
+	// No services yet
+	if st.ServiceCount == 0 {
+		return themeStyles.Body.Render("Looking for services...")
+	}
+
+	// All inactive - no logs (user needs to send data)
+	if st.Status == api.DatadogAccountStatusInactive {
+		return themeStyles.Body.Render(fmt.Sprintf("Found %d services with no recent log data", st.ServiceCount))
+	}
+
+	// Stale - our system hasn't run (our problem)
+	if st.Status == api.DatadogAccountStatusStale {
+		return themeStyles.Body.Render(fmt.Sprintf("Found %d services, but our data is out of date", st.ServiceCount))
+	}
+
+	// Still discovering - waiting on our analysis pipeline
+	if st.DiscoveringServices > 0 && st.AnalyzingServices == 0 && st.ReadyServices == 0 {
+		return themeStyles.Body.Render(fmt.Sprintf("Found %d services, waiting for analysis...", st.ServiceCount))
+	}
+
+	// Actively analyzing
+	if st.AnalyzingServices > 0 || st.ReadyServices > 0 {
+		if st.ServiceLogVolume > 0 {
+			return themeStyles.Body.Render(fmt.Sprintf("Analyzing %s logs from %d services...",
+				formatVolume(st.ServiceLogVolume), st.ActiveServices))
+		}
+		return themeStyles.Body.Render(fmt.Sprintf("Analyzing %d services...", st.ActiveServices))
+	}
+
+	// Fallback
+	return themeStyles.Body.Render(fmt.Sprintf("Processing %d services...", st.ServiceCount))
+}
+
+// renderProgress renders the progress bar and service counts
+func (s *DiscoveryStep) renderProgress(themeStyles *styles.Styles, colors *styles.Colors) string {
+	st := s.status
+
+	// Calculate effective progress
+	// If we have percent complete from API, use it
+	// Otherwise estimate from ready/total
+	var pct float64
+	if st.PercentComplete > 0 {
+		pct = st.PercentComplete
+	} else if st.ActiveServices > 0 {
+		pct = float64(st.ReadyServices) / float64(st.ActiveServices)
+	}
+
+	// Progress bar
+	prog := progress.New(s.theme, 50)
+	progressBar := prog.ViewAs(pct)
+
+	// Service counts - simple and clear
+	readyStyle := lipgloss.NewStyle().Foreground(colors.Success.Fg)
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+
+	var countText string
+	if st.ActiveServices > 0 {
+		countText = fmt.Sprintf("%s / %s",
+			readyStyle.Render(fmt.Sprintf("%d ready", st.ReadyServices)),
+			mutedStyle.Render(fmt.Sprintf("%d services", st.ActiveServices)))
+	}
+
+	if countText != "" {
+		return lipgloss.JoinVertical(lipgloss.Left, progressBar, "", countText)
+	}
+	return progressBar
+}
+
+// renderIssues surfaces any problems the user should know about
+func (s *DiscoveryStep) renderIssues(themeStyles *styles.Styles, colors *styles.Colors) string {
+	st := s.status
+	var issues []string
+
+	warningStyle := lipgloss.NewStyle().Foreground(colors.Warning.Fg)
+	errorStyle := lipgloss.NewStyle().Foreground(colors.Error.Fg)
+
+	// Stale data - this is OUR problem, not theirs
+	if st.StaleServices > 0 || st.Status == api.DatadogAccountStatusStale {
+		issues = append(issues, warningStyle.Render("! Our analysis is more than 48 hours old"))
+	}
+
+	// Broken services
+	if st.BrokenServices > 0 {
+		issues = append(issues, errorStyle.Render(
+			fmt.Sprintf("! %d services have errors", st.BrokenServices)))
+	}
+
+	// Inactive - no log data (user's issue, but only show if not the main status)
+	if st.InactiveServices > 0 && st.Status != api.DatadogAccountStatusInactive {
+		issues = append(issues, warningStyle.Render(
+			fmt.Sprintf("! %d services have no recent logs", st.InactiveServices)))
+	}
+
+	if len(issues) == 0 {
+		return ""
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, issues...)
+}
+
+// getHelpText returns contextual help based on status
+func (s *DiscoveryStep) getHelpText(themeStyles *styles.Styles) string {
+	st := s.status
+
+	// All inactive - user needs to send data
+	if st.Status == api.DatadogAccountStatusInactive {
+		return themeStyles.Help.Render("Send logs to Datadog to continue. We look at the last 7 days of data.")
+	}
+
+	// Stale - our problem
+	if st.Status == api.DatadogAccountStatusStale {
+		return themeStyles.Help.Render("This is on our end. We're working on it - try again soon.")
+	}
+
+	// Still waiting on our pipeline after finding services
+	if st.DiscoveringServices > 0 && st.AnalyzingServices == 0 && st.ReadyServices == 0 {
+		elapsed := time.Since(s.startTime)
+		if elapsed > 30*time.Second {
+			return themeStyles.Help.Render("Taking longer than expected. Our system may be catching up.")
+		}
+	}
+
+	// Normal progress
+	if st.AnalyzingServices > 0 {
+		return themeStyles.Help.Render("Initial analysis takes a few minutes.")
+	}
+
+	return ""
 }
 
 // renderLoading renders the initial loading state
-func (s *DiscoveryStep) renderLoading(common *styles.CommonStyles) string {
-	title := common.Title.Render("Setting up your account...")
-	statusMsg := s.spinner.View() + " " + common.Body.Render("Connecting to Datadog...")
+func (s *DiscoveryStep) renderLoading(themeStyles *styles.Styles) string {
+	title := themeStyles.Title.Render("Analyzing your Datadog account")
+	statusMsg := s.spinner.View() + " " + themeStyles.Body.Render("Connecting...")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
 		"",
 		statusMsg,
-	)
-}
-
-// renderDiscovering renders the discovering state (no volume data yet)
-func (s *DiscoveryStep) renderDiscovering(common *styles.CommonStyles) string {
-	title := common.Title.Render("Setting up your account...")
-	statusMsg := s.spinner.View() + " " + common.Body.Render("Discovering services...")
-
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		title,
-		"",
-		statusMsg,
-	)
-}
-
-// renderInProgress renders the discovery in progress state
-func (s *DiscoveryStep) renderInProgress(common *styles.CommonStyles) string {
-	title := common.Title.Render("Setting up your account...")
-
-	// Build status message with volume if available
-	var statusText string
-	if s.status.ServiceLogVolume > 0 && s.status.DiscoveredLogVolume > 0 {
-		statusText = fmt.Sprintf("Analyzed %s of %s logs across %d services...",
-			formatVolume(s.status.DiscoveredLogVolume),
-			formatVolume(s.status.ServiceLogVolume),
-			s.status.ServiceCount)
-	} else if s.status.ServiceLogVolume > 0 {
-		statusText = fmt.Sprintf("Analyzing %s logs across %d services...", formatVolume(s.status.ServiceLogVolume), s.status.ServiceCount)
-	} else {
-		statusText = fmt.Sprintf("Analyzing %d services...", s.status.ServiceCount)
-	}
-	statusMsg := s.spinner.View() + " " + common.Body.Render(statusText)
-
-	// Progress bar
-	prog := progress.New(60)
-	progressBar := prog.ViewAs(s.status.PercentComplete)
-
-	// Subtle hint about timing
-	hint := common.Help.Render("This initial analysis usually takes a few minutes.")
-
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		title,
-		"",
-		statusMsg,
-		"",
-		progressBar,
-		"",
-		hint,
-	)
-}
-
-// renderInactive renders the state when all services have zero log volume
-func (s *DiscoveryStep) renderInactive(common *styles.CommonStyles) string {
-	theme := styles.CurrentTheme()
-	title := common.Title.Render("Setting up your account...")
-
-	statusText := fmt.Sprintf("Found %d services, but no recent log data", s.status.InactiveServices)
-	statusMsg := s.spinner.View() + " " + common.Body.Render(statusText)
-
-	// Yellow substatus for user action needed
-	warningStyle := lipgloss.NewStyle().Foreground(theme.Warning.Fg)
-	substatus := warningStyle.Render("⚠ Send logs to Datadog to continue. Looking for data from the last 7 days.")
-
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		title,
-		"",
-		statusMsg,
-		"",
-		substatus,
-	)
-}
-
-// renderDisabled renders the error state when all services are disabled
-func (s *DiscoveryStep) renderDisabled(common *styles.CommonStyles) string {
-	title := common.Title.Render("Setting up your account...")
-	statusMsg := common.Body.Render("All services are disabled")
-
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		title,
-		"",
-		statusMsg,
-		"",
-		common.Help.Render("Press enter to retry"),
 	)
 }
 
 // renderError renders the error state
-// Note: The actual error message is displayed by the footer via Error()
-func (s *DiscoveryStep) renderError(common *styles.CommonStyles) string {
-	title := common.Title.Render("Setting up your account...")
-	statusMsg := common.Body.Render("Something went wrong.")
+func (s *DiscoveryStep) renderError(themeStyles *styles.Styles) string {
+	title := themeStyles.Title.Render("Analyzing your Datadog account")
+	statusMsg := themeStyles.Body.Render("Something went wrong.")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -374,7 +439,7 @@ func (s *DiscoveryStep) renderError(common *styles.CommonStyles) string {
 		"",
 		statusMsg,
 		"",
-		common.Help.Render("Press enter to retry"),
+		themeStyles.Help.Render("Press enter to retry"),
 	)
 }
 
@@ -409,10 +474,10 @@ func (s *DiscoveryStep) Error() error {
 		return nil
 	}
 	if s.status.Status == api.DatadogAccountStatusDisabled {
-		return fmt.Errorf("All services are disabled. Enable services to continue.")
+		return fmt.Errorf("all services are disabled")
 	}
 	if s.status.Status == api.DatadogAccountStatusBroken {
-		return fmt.Errorf("Discovery failed")
+		return fmt.Errorf("discovery failed")
 	}
 	return nil
 }
@@ -425,7 +490,7 @@ func (s *DiscoveryStep) Next() (step.Step, error) {
 	if !s.isComplete() {
 		return nil, step.ErrNotReady
 	}
-	return complete.NewCompleteStep(s.org, s.account, s.logger, s.globalBindings), nil
+	return complete.NewCompleteStep(s.theme, s.org, s.account, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

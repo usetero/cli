@@ -27,7 +27,9 @@ type regionItem struct {
 func (i regionItem) FilterValue() string { return i.displayName }
 
 // regionDelegate renders each region in the list
-type regionDelegate struct{}
+type regionDelegate struct {
+	theme *styles.Theme
+}
 
 func (d regionDelegate) Height() int                             { return 1 }
 func (d regionDelegate) Spacing() int                            { return 0 }
@@ -38,30 +40,33 @@ func (d regionDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 		return
 	}
 
-	theme := styles.CurrentTheme()
+	colors := d.theme.Colors
 
 	if index == m.Index() {
 		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.Accent).
+			Foreground(colors.Accent).
 			Bold(true)
 		domainStyle := lipgloss.NewStyle().
-			Foreground(theme.Page.TextMuted)
+			Foreground(colors.Page.TextMuted)
 		_, _ = fmt.Fprintf(w, "%s  %s", nameStyle.Render("> "+i.displayName), domainStyle.Render(i.domain))
 	} else {
 		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.Page.Text)
+			Foreground(colors.Page.Text)
 		domainStyle := lipgloss.NewStyle().
-			Foreground(theme.Page.TextMuted)
+			Foreground(colors.Page.TextMuted)
 		_, _ = fmt.Fprintf(w, "%s  %s", nameStyle.Render("  "+i.displayName), domainStyle.Render(i.domain))
 	}
 }
 
 // SelectRegionStep handles greeting and Datadog region selection
 type SelectRegionStep struct {
+	// Theme for styling
+	theme *styles.Theme
+
 	// Accumulated state from previous steps
-	role      string
-	orgID     string
-	accountID string
+	role    string
+	org     api.Organization
+	account api.Account
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -75,7 +80,7 @@ type SelectRegionStep struct {
 }
 
 // NewSelectRegionStep creates a new Datadog region selection step
-func NewSelectRegionStep(role string, orgID string, accountID string, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectRegionStep(theme *styles.Theme, role string, org api.Organization, account api.Account, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -95,13 +100,14 @@ func NewSelectRegionStep(role string, orgID string, accountID string, apiClient 
 		}
 	}
 
-	delegate := regionDelegate{}
-	l := list.New(items, delegate)
+	delegate := regionDelegate{theme: theme}
+	l := list.New(theme, items, delegate)
 
 	return &SelectRegionStep{
+		theme:          theme,
 		role:           role,
-		orgID:          orgID,
-		accountID:      accountID,
+		org:            org,
+		account:        account,
 		apiClient:      apiClient,
 		logger:         logger,
 		list:           l,
@@ -145,17 +151,17 @@ func (s *SelectRegionStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 // View renders the region selection UI
 func (s *SelectRegionStep) View() string {
-	common := styles.Common()
-	theme := styles.CurrentTheme()
+	themeStyles := s.theme.Styles
+	colors := s.theme.Colors
 
-	title := common.Title.Render("Connect to Datadog")
-	explanation := common.Subtitle.Render("Tero needs two keys to access your data - that's how Datadog works.")
-	question := common.Body.Render("Which region is your Datadog account in?")
+	title := themeStyles.Title.Render("Connect to Datadog")
+	explanation := themeStyles.Subtitle.Render("Tero needs two keys to access your data - that's how Datadog works.")
+	question := themeStyles.Body.Render("Which region is your Datadog account in?")
 
 	linkStyle := lipgloss.NewStyle().
-		Foreground(theme.Page.TextMuted).
+		Foreground(colors.Page.TextMuted).
 		Underline(true)
-	docsLink := common.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
+	docsLink := themeStyles.Help.Render("Need help? ") + linkStyle.Render("docs.usetero.com/integrations/datadog")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -177,16 +183,6 @@ func (s *SelectRegionStep) SetSize(width, height int) {
 	s.list.SetSize(width, 10)
 }
 
-// IsComplete returns true if a region has been selected
-func (s *SelectRegionStep) IsComplete() bool {
-	return s.selectedRegion != ""
-}
-
-// SelectedRegion returns the selected Datadog region site identifier
-func (s *SelectRegionStep) SelectedRegion() string {
-	return s.selectedRegion
-}
-
 // IsBusy returns false - region selection is never busy
 func (s *SelectRegionStep) IsBusy() bool {
 	return false
@@ -203,12 +199,16 @@ func (s *SelectRegionStep) Error() error {
 }
 
 // Next returns the next step after Datadog region selection
-func (s *SelectRegionStep) Next() step.Step {
+func (s *SelectRegionStep) Next() (step.Step, error) {
+	if s.selectedRegion == "" {
+		return nil, step.ErrNotReady
+	}
+
 	// Create Datadog account service for next step
 	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Region selected, continue to API key entry with the selected site
-	return NewAPIKeyStep(s.role, s.orgID, s.accountID, s.selectedRegion, datadogAccountService, s.apiClient, s.logger, s.globalBindings)
+	return NewAPIKeyStep(s.theme, s.role, s.org, s.account, s.selectedRegion, datadogAccountService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

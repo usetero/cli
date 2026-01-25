@@ -5,39 +5,27 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/layouts/layoutstest"
+	"github.com/usetero/cli/internal/tui/onboarding/complete"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/onboarding/step/steptest"
 )
 
-// Mock preferences reader for testing
-type mockPreferencesReader struct {
-	getDefaultOrgIDFunc     func() string
-	getDefaultAccountIDFunc func() string
-}
-
-func (m *mockPreferencesReader) GetDefaultOrgID() string {
-	if m.getDefaultOrgIDFunc != nil {
-		return m.getDefaultOrgIDFunc()
-	}
-	return ""
-}
-
-func (m *mockPreferencesReader) GetDefaultAccountID() string {
-	if m.getDefaultAccountIDFunc != nil {
-		return m.getDefaultAccountIDFunc()
-	}
-	return ""
+// onboardingTestTheme creates a theme for testing
+func onboardingTestTheme() *styles.Theme {
+	return styles.NewTheme(true)
 }
 
 func TestOnboarding_Update(t *testing.T) {
+	// Note: Cannot use t.Parallel() on this test because one subtest uses t.Setenv
 	t.Run("propagates error state from flow to layout immediately", func(t *testing.T) {
 		// This test verifies the bug is fixed: when a step sets an error,
 		// onboarding should propagate it to the layout in the same Update() call
 
 		logger := logtest.New(t)
-		prefs := &mockPreferencesReader{}
 		layout := layoutstest.NewMockLayout()
 
 		// Create a step that will have an error
@@ -45,12 +33,11 @@ func TestOnboarding_Update(t *testing.T) {
 
 		// Create onboarding with the mock step
 		onboarding := &Onboarding{
-			flow:               step.NewFlow(testStep),
-			layout:             layout,
-			ready:              true,
-			logger:             logger,
-			preferencesService: prefs,
-			globalBindings:     nil,
+			flow:           step.NewFlow(testStep),
+			layout:         layout,
+			ready:          true,
+			logger:         logger,
+			globalBindings: nil,
 		}
 
 		// Simulate an error message arriving at the step
@@ -75,69 +62,74 @@ func TestOnboarding_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("completes when flow completes and extracts org and account IDs", func(t *testing.T) {
+	t.Run("completes when flow completes and extracts org and account", func(t *testing.T) {
+		// Note: Cannot use t.Parallel() here because this test uses t.Setenv
 		logger := logtest.New(t)
 
-		expectedOrgID := "org-123"
-		expectedAccountID := "acct-456"
-
-		prefs := &mockPreferencesReader{
-			getDefaultOrgIDFunc: func() string {
-				return expectedOrgID
-			},
-			getDefaultAccountIDFunc: func() string {
-				return expectedAccountID
-			},
-		}
+		expectedOrg := api.Organization{ID: "org-123", Name: "Test Org"}
+		expectedAccount := api.Account{ID: "acct-456", Name: "Test Account"}
 
 		layout := layoutstest.NewMockLayout()
 
-		// Create a completed step
-		completedStep := steptest.NewMockStep()
-		completedStep.IsCompleteFunc = func() bool {
-			return true
+		// Create a complete step that holds the accumulated state
+		// This step will return (nil, nil) immediately to complete the flow
+		// because TERO_SKIP_TO_APP is set in the test environment
+		completeStep := complete.NewCompleteStep(onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
+
+		// Create a step that will transition to complete step
+		testStep := steptest.NewMockStep()
+		transitioned := false
+		testStep.NextFunc = func() (step.Step, error) {
+			if !transitioned {
+				transitioned = true
+				return completeStep, nil
+			}
+			return nil, step.ErrNotReady
 		}
 
 		onboarding := &Onboarding{
-			flow:               step.NewFlow(completedStep),
-			layout:             layout,
-			ready:              true,
-			logger:             logger,
-			preferencesService: prefs,
-			globalBindings:     nil,
+			flow:           step.NewFlow(testStep),
+			layout:         layout,
+			ready:          true,
+			logger:         logger,
+			globalBindings: nil,
 		}
 
-		// Update should extract IDs when complete
+		// Set TERO_SKIP_TO_APP to make completeStep return (nil, nil)
+		t.Setenv("TERO_SKIP_TO_APP", "true")
+
+		// First update triggers transition to complete step, which then completes
 		onboarding.Update(tea.KeyPressMsg{})
 
+		// Verify onboarding completed and extracted the org/account
 		if !onboarding.IsComplete() {
-			t.Error("onboarding should be complete when flow is complete")
+			t.Error("expected onboarding to be complete")
 		}
 
-		if onboarding.OrganizationID() != expectedOrgID {
-			t.Errorf("expected org ID %s, got %s", expectedOrgID, onboarding.OrganizationID())
+		if onboarding.Organization().ID != expectedOrg.ID {
+			t.Errorf("expected org ID %s, got %s", expectedOrg.ID, onboarding.Organization().ID)
 		}
 
-		if onboarding.AccountID() != expectedAccountID {
-			t.Errorf("expected account ID %s, got %s", expectedAccountID, onboarding.AccountID())
+		if onboarding.Account().ID != expectedAccount.ID {
+			t.Errorf("expected account ID %s, got %s", expectedAccount.ID, onboarding.Account().ID)
 		}
 	})
 }
 
 func TestOnboarding_View(t *testing.T) {
+	t.Parallel()
 	t.Run("returns empty string when not ready", func(t *testing.T) {
+		t.Parallel()
 		logger := logtest.New(t)
-		prefs := &mockPreferencesReader{}
 		testStep := steptest.NewMockStep()
 		layout := layoutstest.NewMockLayout()
 
 		onboarding := &Onboarding{
-			flow:               step.NewFlow(testStep),
-			layout:             layout,
-			ready:              false, // Not ready
-			logger:             logger,
-			preferencesService: prefs,
-			globalBindings:     nil,
+			flow:           step.NewFlow(testStep),
+			layout:         layout,
+			ready:          false, // Not ready
+			logger:         logger,
+			globalBindings: nil,
 		}
 
 		view := onboarding.View()

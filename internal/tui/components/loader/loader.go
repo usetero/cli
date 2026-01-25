@@ -10,6 +10,7 @@ import (
 
 // Component is a loading indicator with an animated spinner
 type Component struct {
+	theme   *styles.Theme
 	spinner spinner.Model
 	message string
 }
@@ -18,14 +19,15 @@ type Component struct {
 var _ components.Component = (*Component)(nil)
 
 // New creates a new loading component
-func New(message string) *Component {
-	theme := styles.CurrentTheme()
+func New(theme *styles.Theme, message string) *Component {
+	colors := theme.Colors
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(theme.Accent)
+	s.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &Component{
+		theme:   theme,
 		spinner: s,
 		message: message,
 	}
@@ -45,10 +47,10 @@ func (c *Component) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the loading indicator
 func (c *Component) View() string {
-	theme := styles.CurrentTheme()
+	colors := c.theme.Colors
 
 	style := lipgloss.NewStyle().
-		Foreground(theme.Accent)
+		Foreground(colors.Accent)
 
 	return c.spinner.View() + " " + style.Render(c.message+"...")
 }
