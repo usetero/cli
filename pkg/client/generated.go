@@ -279,28 +279,30 @@ var AllDatadogAccountSite = []DatadogAccountSite{
 	DatadogAccountSiteAp2,
 }
 
-// Current status of a Datadog account in the discovery pipeline.
-type DatadogAccountStatusState string
+// Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY
+type DatadogAccountStatusLogStatus string
 
 const (
-	// All services are disabled
-	DatadogAccountStatusStateDisabled DatadogAccountStatusState = "DISABLED"
-	// No services discovered yet, or all enabled services are pending
-	DatadogAccountStatusStatePending DatadogAccountStatusState = "PENDING"
-	// Some enabled services ready, others still in progress
-	DatadogAccountStatusStateInProgress DatadogAccountStatusState = "IN_PROGRESS"
-	// All enabled services have completed discovery
-	DatadogAccountStatusStateReady DatadogAccountStatusState = "READY"
-	// One or more enabled services have discovery errors
-	DatadogAccountStatusStateError DatadogAccountStatusState = "ERROR"
+	// All services have discovery turned off
+	DatadogAccountStatusLogStatusDisabled DatadogAccountStatusLogStatus = "DISABLED"
+	// All active services have zero log volume
+	DatadogAccountStatusLogStatusInactive DatadogAccountStatusLogStatus = "INACTIVE"
+	// At least one service has discovery errors (5+ consecutive failures)
+	DatadogAccountStatusLogStatusBroken DatadogAccountStatusLogStatus = "BROKEN"
+	// At least one service is still being discovered (no volume data yet)
+	DatadogAccountStatusLogStatusDiscovering DatadogAccountStatusLogStatus = "DISCOVERING"
+	DatadogAccountStatusLogStatusAnalyzing   DatadogAccountStatusLogStatus = "ANALYZING"
+	// All services have fresh data with 90%+ coverage
+	DatadogAccountStatusLogStatusReady DatadogAccountStatusLogStatus = "READY"
 )
 
-var AllDatadogAccountStatusState = []DatadogAccountStatusState{
-	DatadogAccountStatusStateDisabled,
-	DatadogAccountStatusStatePending,
-	DatadogAccountStatusStateInProgress,
-	DatadogAccountStatusStateReady,
-	DatadogAccountStatusStateError,
+var AllDatadogAccountStatusLogStatus = []DatadogAccountStatusLogStatus{
+	DatadogAccountStatusLogStatusDisabled,
+	DatadogAccountStatusLogStatusInactive,
+	DatadogAccountStatusLogStatusBroken,
+	DatadogAccountStatusLogStatusDiscovering,
+	DatadogAccountStatusLogStatusAnalyzing,
+	DatadogAccountStatusLogStatusReady,
 }
 
 // EnableServiceResponse is returned by EnableService on success.
@@ -458,65 +460,92 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus includes the requested fields of the GraphQL type DatadogAccountStatus.
 // The GraphQL type's documentation follows.
 //
-// Datadog account status derived from service discovery progress.
-// Tracks where the account is in the discovery pipeline: pending -> in_progress -> ready.
+// View that provides status for each Datadog account based on service statuses
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus struct {
-	// Current status derived from service statuses
-	Status DatadogAccountStatusState `json:"status"`
-	// Average percent complete across all services
-	PercentComplete float64 `json:"percentComplete"`
+	// Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY
+	LogStatus DatadogAccountStatusLogStatus `json:"logStatus"`
+	// Overall coverage percentage
+	LogPercentComplete float64 `json:"logPercentComplete"`
+	// Total service log volume across all active services
+	LogServiceVolume int `json:"logServiceVolume"`
+	// Total discovered log event volume across all active services
+	LogDiscoveredVolume int `json:"logDiscoveredVolume"`
 	// Total number of services
-	Total int `json:"total"`
-	// Count of services with READY status
-	Ready int `json:"ready"`
-	// Count of services with PENDING_* status
-	Pending int `json:"pending"`
-	// Count of services with ERROR_* status
-	Error int `json:"error"`
-	// Count of disabled services
-	Disabled int `json:"disabled"`
-	// First error message encountered (empty if no errors)
-	ErrorMessage string `json:"errorMessage"`
+	LogServiceCount int `json:"logServiceCount"`
+	// Services not DISABLED or INACTIVE
+	LogActiveServices int `json:"logActiveServices"`
+	// Services with READY status
+	LogReadyServices int `json:"logReadyServices"`
+	// Services with ANALYZING status
+	LogAnalyzingServices int `json:"logAnalyzingServices"`
+	// Services with DISCOVERING status
+	LogDiscoveringServices int `json:"logDiscoveringServices"`
+	// Services with BROKEN status
+	LogBrokenServices int `json:"logBrokenServices"`
+	// Services with DISABLED status
+	LogDisabledServices int `json:"logDisabledServices"`
+	// Services with INACTIVE status
+	LogInactiveServices int `json:"logInactiveServices"`
 }
 
-// GetStatus returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Status, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetStatus() DatadogAccountStatusState {
-	return v.Status
+// GetLogStatus returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogStatus, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogStatus() DatadogAccountStatusLogStatus {
+	return v.LogStatus
 }
 
-// GetPercentComplete returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.PercentComplete, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetPercentComplete() float64 {
-	return v.PercentComplete
+// GetLogPercentComplete returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogPercentComplete, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogPercentComplete() float64 {
+	return v.LogPercentComplete
 }
 
-// GetTotal returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Total, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetTotal() int {
-	return v.Total
+// GetLogServiceVolume returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogServiceVolume, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogServiceVolume() int {
+	return v.LogServiceVolume
 }
 
-// GetReady returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Ready, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetReady() int {
-	return v.Ready
+// GetLogDiscoveredVolume returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDiscoveredVolume, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDiscoveredVolume() int {
+	return v.LogDiscoveredVolume
 }
 
-// GetPending returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Pending, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetPending() int {
-	return v.Pending
+// GetLogServiceCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogServiceCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogServiceCount() int {
+	return v.LogServiceCount
 }
 
-// GetError returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Error, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetError() int {
-	return v.Error
+// GetLogActiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogActiveServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogActiveServices() int {
+	return v.LogActiveServices
 }
 
-// GetDisabled returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Disabled, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetDisabled() int {
-	return v.Disabled
+// GetLogReadyServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogReadyServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogReadyServices() int {
+	return v.LogReadyServices
 }
 
-// GetErrorMessage returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.ErrorMessage, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetErrorMessage() string {
-	return v.ErrorMessage
+// GetLogAnalyzingServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogAnalyzingServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogAnalyzingServices() int {
+	return v.LogAnalyzingServices
+}
+
+// GetLogDiscoveringServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDiscoveringServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDiscoveringServices() int {
+	return v.LogDiscoveringServices
+}
+
+// GetLogBrokenServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogBrokenServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogBrokenServices() int {
+	return v.LogBrokenServices
+}
+
+// GetLogDisabledServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDisabledServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDisabledServices() int {
+	return v.LogDisabledServices
+}
+
+// GetLogInactiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogInactiveServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogInactiveServices() int {
+	return v.LogInactiveServices
 }
 
 // GetDatadogAccountStatusResponse is returned by GetDatadogAccountStatus on success.
@@ -625,7 +654,7 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeEdgeApiKey
 // GetServiceNodeEdgeInstance
 // GetServiceNodeLogEvent
-// GetServiceNodeLogEventDistillation
+// GetServiceNodeLogEventPolicy
 // GetServiceNodeMessage
 // GetServiceNodeOrganization
 // GetServiceNodeService
@@ -641,19 +670,19 @@ type GetServiceNode interface {
 	GetTypename() string
 }
 
-func (v *GetServiceNodeAccount) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeConversation) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeDatadogAccount) implementsGraphQLInterfaceGetServiceNode()       {}
-func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode()      {}
-func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()           {}
-func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()             {}
-func (v *GetServiceNodeLogEventDistillation) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                 {}
-func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()            {}
+func (v *GetServiceNodeAccount) implementsGraphQLInterfaceGetServiceNode()         {}
+func (v *GetServiceNodeConversation) implementsGraphQLInterfaceGetServiceNode()    {}
+func (v *GetServiceNodeDatadogAccount) implementsGraphQLInterfaceGetServiceNode()  {}
+func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode() {}
+func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()      {}
+func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()    {}
+func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()  {}
+func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()         {}
+func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()    {}
+func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()         {}
+func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()            {}
+func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()       {}
 
 func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	if string(b) == "null" {
@@ -690,8 +719,8 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	case "LogEvent":
 		*v = new(GetServiceNodeLogEvent)
 		return json.Unmarshal(b, *v)
-	case "LogEventDistillation":
-		*v = new(GetServiceNodeLogEventDistillation)
+	case "LogEventPolicy":
+		*v = new(GetServiceNodeLogEventPolicy)
 		return json.Unmarshal(b, *v)
 	case "Message":
 		*v = new(GetServiceNodeMessage)
@@ -777,12 +806,12 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 			*GetServiceNodeLogEvent
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetServiceNodeLogEventDistillation:
-		typename = "LogEventDistillation"
+	case *GetServiceNodeLogEventPolicy:
+		typename = "LogEventPolicy"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventDistillation
+			*GetServiceNodeLogEventPolicy
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeMessage:
@@ -889,13 +918,13 @@ type GetServiceNodeLogEvent struct {
 // GetTypename returns GetServiceNodeLogEvent.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEvent) GetTypename() string { return v.Typename }
 
-// GetServiceNodeLogEventDistillation includes the requested fields of the GraphQL type LogEventDistillation.
-type GetServiceNodeLogEventDistillation struct {
+// GetServiceNodeLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
+type GetServiceNodeLogEventPolicy struct {
 	Typename string `json:"__typename"`
 }
 
-// GetTypename returns GetServiceNodeLogEventDistillation.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventDistillation) GetTypename() string { return v.Typename }
+// GetTypename returns GetServiceNodeLogEventPolicy.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventPolicy) GetTypename() string { return v.Typename }
 
 // GetServiceNodeMessage includes the requested fields of the GraphQL type Message.
 type GetServiceNodeMessage struct {
@@ -1650,14 +1679,18 @@ query GetDatadogAccountStatus ($id: ID!) {
 			node {
 				id
 				status {
-					status
-					percentComplete
-					total
-					ready
-					pending
-					error
-					disabled
-					errorMessage
+					logStatus
+					logPercentComplete
+					logServiceVolume
+					logDiscoveredVolume
+					logServiceCount
+					logActiveServices
+					logReadyServices
+					logAnalyzingServices
+					logDiscoveringServices
+					logBrokenServices
+					logDisabledServices
+					logInactiveServices
 				}
 			}
 		}

@@ -521,51 +521,99 @@ enum DatadogAccountSite {
 }
 
 """
-Datadog account status derived from service discovery progress.
-Tracks where the account is in the discovery pipeline: pending -> in_progress -> ready.
+View that provides status for each Datadog account based on service statuses
 """
 type DatadogAccountStatus {
-  """Current status derived from service statuses"""
-  status: DatadogAccountStatusState!
+  """The Datadog account this status belongs to"""
+  datadogAccountId: ID!
 
-  """Average percent complete across all services"""
-  percentComplete: Float
+  """Account ID (denormalized from Datadog account)"""
+  accountId: ID!
+
+  """Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+  logStatus: DatadogAccountStatusLogStatus!
+
+  """Total service log volume across all active services"""
+  logServiceVolume: Int
+
+  """Total discovered log event volume across all active services"""
+  logDiscoveredVolume: Int
+
+  """Overall coverage percentage"""
+  logPercentComplete: Float
 
   """Total number of services"""
-  total: Int!
+  logServiceCount: Int!
 
-  """Count of services with READY status"""
-  ready: Int!
+  """Services not DISABLED or INACTIVE"""
+  logActiveServices: Int!
 
-  """Count of services with PENDING_* status"""
-  pending: Int!
+  """Services with DISABLED status"""
+  logDisabledServices: Int!
 
-  """Count of services with ERROR_* status"""
-  error: Int!
+  """Services with INACTIVE status"""
+  logInactiveServices: Int!
 
-  """Count of disabled services"""
-  disabled: Int!
+  """Services with BROKEN status"""
+  logBrokenServices: Int!
 
-  """First error message encountered (empty if no errors)"""
-  errorMessage: String
+  """Services with DISCOVERING status"""
+  logDiscoveringServices: Int!
+
+  """Services with ANALYZING status"""
+  logAnalyzingServices: Int!
+
+  """Services with READY status"""
+  logReadyServices: Int!
+
+  """Total log events across all services"""
+  logEventCount: Int!
+
+  """Log events with SAVED status"""
+  logSavedCount: Int!
+
+  """Log events with VALUABLE status"""
+  logValuableCount: Int!
+
+  """Log events with WASTE status"""
+  logWasteCount: Int!
+
+  """Log events with ANALYZING status"""
+  logAnalyzingCount: Int!
+
+  """Log events with DISCOVERING status"""
+  logDiscoveringCount: Int!
+
+  """First error message from any broken service"""
+  logError: String
+
+  """When the most recent error occurred"""
+  logErrorAt: Time
+
+  """Most recent warning message"""
+  logWarning: String
+
+  """When the most recent warning occurred"""
+  logWarningAt: Time
 }
 
-"""Current status of a Datadog account in the discovery pipeline."""
-enum DatadogAccountStatusState {
-  """All services are disabled"""
+"""Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+enum DatadogAccountStatusLogStatus {
+  """All services have discovery turned off"""
   DISABLED
 
-  """No services discovered yet, or all enabled services are pending"""
-  PENDING
+  """All active services have zero log volume"""
+  INACTIVE
 
-  """Some enabled services ready, others still in progress"""
-  IN_PROGRESS
+  """At least one service has discovery errors (5+ consecutive failures)"""
+  BROKEN
 
-  """All enabled services have completed discovery"""
+  """At least one service is still being discovered (no volume data yet)"""
+  DISCOVERING
+  ANALYZING
+
+  """All services have fresh data with 90%+ coverage"""
   READY
-
-  """One or more enabled services have discovery errors"""
-  ERROR
 }
 
 """
@@ -744,37 +792,6 @@ input DatadogLogIndexWhereInput {
   """datadog_account edge predicates"""
   hasDatadogAccount: Boolean
   hasDatadogAccountWith: [DatadogAccountWhereInput!]
-}
-
-"""Impact detection states for a distillation"""
-enum DistillationImpactState {
-  """Waiting to observe impact (not enough data or threshold not crossed)"""
-  PENDING
-
-  """
-  Impact detected - volume dropped to expected levels for sustained period
-  """
-  IMPACTED
-
-  """User dismissed this distillation - not expecting impact"""
-  DISMISSED
-}
-
-"""
-Impact status of a distillation.
-Tracks whether the expected volume reduction has been observed.
-"""
-type DistillationImpactStatus {
-  """
-  Current status: pending (waiting for data), impacted (reduction observed), dismissed (user dismissed)
-  """
-  status: DistillationImpactState!
-
-  """
-  When we first observed the expected volume reduction.
-  Null if status is pending or dismissed.
-  """
-  impactDetectedAt: Time
 }
 
 type EdgeApiKey implements Node {
@@ -1162,6 +1179,9 @@ type LogEvent implements Node {
   """Example logs with timestamp, message, and attributes"""
   examples: [LogRecord!]!
 
+  """When AI last analyzed this log event for quality issues"""
+  analyzedAt: Time
+
   """When the log event was created"""
   createdAt: Time!
 
@@ -1171,25 +1191,14 @@ type LogEvent implements Node {
   """Service that produces this event"""
   service: Service!
 
-  """Quality distillations across workspaces"""
-  distillations: [LogEventDistillation!]
+  """Category-specific policies across workspaces"""
+  policies: [LogEventPolicy!]
 
   """
   Status of this log event for a specific workspace and Datadog account.
   Shows where the log event is in the preparation pipeline.
   """
   status(workspaceID: ID!, datadogAccountID: ID!): LogEventStatus
-
-  """
-  Hourly volume time series with classification.
-  Returns data points for each hour in the specified range.
-  Past hours are zero-filled if no data exists.
-  Future hours are projected from 7-day average.
-  """
-  volumeSeries(start: Time!, end: Time!): [VolumeSeriesPoint!]!
-
-  """Aggregated volume statistics for this log event."""
-  volumeAggregate(start: Time!, end: Time!): LogEventVolumeSeriesAggregate!
 }
 
 """A connection to a list of items."""
@@ -1204,77 +1213,74 @@ type LogEventConnection {
   totalCount: Int!
 }
 
-type LogEventDistillation implements Node {
+"""An edge in a connection."""
+type LogEventEdge {
+  """The item at the end of the edge."""
+  node: LogEvent
+
+  """A cursor for use in pagination."""
+  cursor: Cursor!
+}
+
+"""Ordering options for LogEvent connections"""
+input LogEventOrder {
+  """The ordering direction."""
+  direction: OrderDirection! = ASC
+
+  """The field by which to order LogEvents."""
+  field: LogEventOrderField!
+}
+
+"""Properties by which LogEvent connections can be ordered."""
+enum LogEventOrderField {
+  NAME
+  ANALYZED_AT
+  CREATED_AT
+  UPDATED_AT
+}
+
+type LogEventPolicy implements Node {
   """Unique identifier"""
   id: ID!
 
-  """The log event this distillation applies to"""
+  """The log event this policy applies to"""
   logEventID: ID!
 
-  """The workspace that owns this distillation"""
+  """The workspace that owns this policy"""
   workspaceID: ID!
 
-  """What survives: 'all', 'none', 'N%', 'N/s', 'N/m'"""
-  keep: String!
+  """Policy category (e.g., 'health_checks', 'pii_leakage')"""
+  category: String!
 
-  """
-  Attribute to use as the sampling key for consistent sampling (e.g., 'request_id', 'trace_id')
-  """
-  sampleKey: String
-
-  """Confidence level of the distillation decision"""
-  confidence: LogEventDistillationConfidence!
-
-  """Explanation of why this distillation decision was made"""
-  rationale: String!
-
-  """Whether this distillation is active (user approved)"""
-  enabled: Boolean!
-
-  """When this distillation was approved by a user"""
+  """When this policy was approved by a user"""
   approvedAt: Time
 
-  """User ID who approved this distillation"""
+  """User ID who approved this policy"""
   approvedBy: String
 
-  """When this distillation was dismissed by a user"""
+  """When this policy was dismissed by a user"""
   dismissedAt: Time
 
-  """User ID who dismissed this distillation"""
+  """User ID who dismissed this policy"""
   dismissedBy: String
 
-  """When this distillation was created"""
+  """When this policy was created"""
   createdAt: Time!
 
-  """When this distillation was last updated"""
+  """When this policy was last updated"""
   updatedAt: Time!
 
-  """The log event this distillation applies to"""
+  """The log event this policy applies to"""
   logEvent: LogEvent!
 
-  """The workspace that owns this distillation"""
+  """The workspace that owns this policy"""
   workspace: Workspace!
-
-  """
-  Impact status of this distillation.
-  Shows whether the distillation has had the expected effect on volume.
-  """
-  impactStatus: DistillationImpactStatus
-}
-
-"""LogEventDistillationConfidence is enum for the field confidence"""
-enum LogEventDistillationConfidence {
-  very_high
-  high
-  medium
-  low
-  very_low
 }
 
 """A connection to a list of items."""
-type LogEventDistillationConnection {
+type LogEventPolicyConnection {
   """A list of edges."""
-  edges: [LogEventDistillationEdge]
+  edges: [LogEventPolicyEdge]
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -1284,42 +1290,83 @@ type LogEventDistillationConnection {
 }
 
 """An edge in a connection."""
-type LogEventDistillationEdge {
+type LogEventPolicyEdge {
   """The item at the end of the edge."""
-  node: LogEventDistillation
+  node: LogEventPolicy
 
   """A cursor for use in pagination."""
   cursor: Cursor!
 }
 
-"""Ordering options for LogEventDistillation connections"""
-input LogEventDistillationOrder {
+"""Ordering options for LogEventPolicy connections"""
+input LogEventPolicyOrder {
   """The ordering direction."""
   direction: OrderDirection! = ASC
 
-  """The field by which to order LogEventDistillations."""
-  field: LogEventDistillationOrderField!
+  """The field by which to order LogEventPolicies."""
+  field: LogEventPolicyOrderField!
 }
 
-"""Properties by which LogEventDistillation connections can be ordered."""
-enum LogEventDistillationOrderField {
-  KEEP
-  CONFIDENCE
-  ENABLED
+"""Properties by which LogEventPolicy connections can be ordered."""
+enum LogEventPolicyOrderField {
+  CATEGORY
   APPROVED_AT
   DISMISSED_AT
   CREATED_AT
   UPDATED_AT
 }
 
+"""View that shows policy status with estimated savings"""
+type LogEventPolicyStatus {
+  """The policy"""
+  policyId: ID!
+
+  """The log event this policy applies to"""
+  logEventId: ID!
+
+  """The workspace that owns this policy"""
+  workspaceId: ID!
+
+  """Policy category (e.g., 'health_checks', 'duplicate_fields')"""
+  category: String!
+
+  """
+  WASTE: found waste waiting for action, SAVED: user approved, DISMISSED: user rejected
+  """
+  status: LogEventPolicyStatusState!
+
+  """When the policy was approved (anchor for savings calculation)"""
+  approvedAt: Time
+
+  """When the policy was dismissed"""
+  dismissedAt: Time
+
+  """Estimated events saved per hour (non-zero for volume-based policies)"""
+  volumeSaved: Float
+
+  """
+  Estimated bytes saved per hour (from dropped events or trimmed attributes)
+  """
+  bytesSaved: Float
+}
+
 """
-LogEventDistillationWhereInput is used for filtering LogEventDistillation objects.
+WASTE: found waste waiting for action, SAVED: user approved, DISMISSED: user rejected
+"""
+enum LogEventPolicyStatusState {
+  WASTE
+  SAVED
+  DISMISSED
+}
+
+"""
+LogEventPolicyWhereInput is used for filtering LogEventPolicy objects.
 Input was generated by ent.
 """
-input LogEventDistillationWhereInput {
-  not: LogEventDistillationWhereInput
-  and: [LogEventDistillationWhereInput!]
-  or: [LogEventDistillationWhereInput!]
+input LogEventPolicyWhereInput {
+  not: LogEventPolicyWhereInput
+  and: [LogEventPolicyWhereInput!]
+  or: [LogEventPolicyWhereInput!]
 
   """id field predicates"""
   id: ID
@@ -1343,62 +1390,20 @@ input LogEventDistillationWhereInput {
   workspaceIDIn: [ID!]
   workspaceIDNotIn: [ID!]
 
-  """keep field predicates"""
-  keep: String
-  keepNEQ: String
-  keepIn: [String!]
-  keepNotIn: [String!]
-  keepGT: String
-  keepGTE: String
-  keepLT: String
-  keepLTE: String
-  keepContains: String
-  keepHasPrefix: String
-  keepHasSuffix: String
-  keepEqualFold: String
-  keepContainsFold: String
-
-  """sample_key field predicates"""
-  sampleKey: String
-  sampleKeyNEQ: String
-  sampleKeyIn: [String!]
-  sampleKeyNotIn: [String!]
-  sampleKeyGT: String
-  sampleKeyGTE: String
-  sampleKeyLT: String
-  sampleKeyLTE: String
-  sampleKeyContains: String
-  sampleKeyHasPrefix: String
-  sampleKeyHasSuffix: String
-  sampleKeyIsNil: Boolean
-  sampleKeyNotNil: Boolean
-  sampleKeyEqualFold: String
-  sampleKeyContainsFold: String
-
-  """confidence field predicates"""
-  confidence: LogEventDistillationConfidence
-  confidenceNEQ: LogEventDistillationConfidence
-  confidenceIn: [LogEventDistillationConfidence!]
-  confidenceNotIn: [LogEventDistillationConfidence!]
-
-  """rationale field predicates"""
-  rationale: String
-  rationaleNEQ: String
-  rationaleIn: [String!]
-  rationaleNotIn: [String!]
-  rationaleGT: String
-  rationaleGTE: String
-  rationaleLT: String
-  rationaleLTE: String
-  rationaleContains: String
-  rationaleHasPrefix: String
-  rationaleHasSuffix: String
-  rationaleEqualFold: String
-  rationaleContainsFold: String
-
-  """enabled field predicates"""
-  enabled: Boolean
-  enabledNEQ: Boolean
+  """category field predicates"""
+  category: String
+  categoryNEQ: String
+  categoryIn: [String!]
+  categoryNotIn: [String!]
+  categoryGT: String
+  categoryGTE: String
+  categoryLT: String
+  categoryLTE: String
+  categoryContains: String
+  categoryHasPrefix: String
+  categoryHasSuffix: String
+  categoryEqualFold: String
+  categoryContainsFold: String
 
   """approved_at field predicates"""
   approvedAt: Time
@@ -1502,110 +1507,61 @@ input LogEventDistillationWhereInput {
   hasWorkspaceWith: [WorkspaceWhereInput!]
 }
 
-"""An edge in a connection."""
-type LogEventEdge {
-  """The item at the end of the edge."""
-  node: LogEvent
-
-  """A cursor for use in pagination."""
-  cursor: Cursor!
-}
-
-"""Ordering options for LogEvent connections"""
-input LogEventOrder {
-  """The ordering direction."""
-  direction: OrderDirection! = ASC
-
-  """The field by which to order LogEvents."""
-  field: LogEventOrderField!
-}
-
-"""Properties by which LogEvent connections can be ordered."""
-enum LogEventOrderField {
-  NAME
-  CREATED_AT
-  UPDATED_AT
-}
-
 """
-Log event status for a specific workspace and integration account.
-Tracks preparation pipeline progress: volume -> distillation -> ready.
+View that provides status for each log event per workspace based on discovery and analysis state
 """
 type LogEventStatus {
-  """Current status in the preparation pipeline"""
+  """The log event this status belongs to"""
+  logEventId: ID!
+
+  """Service ID (denormalized from log_event)"""
+  serviceId: ID!
+
+  """The Datadog account performing discovery"""
+  datadogAccountId: ID!
+
+  """
+  Unified status: BROKEN > SAVED > VALUABLE > WASTE > ANALYZING > DISCOVERING
+  """
   status: LogEventStatusState!
 
-  """Whether volume data exists from this integration"""
+  """Whether log_event_volumes exist for this event from this integration"""
   hasVolumes: Boolean!
 
-  """Whether distillation exists for this workspace"""
-  hasDistillation: Boolean!
+  """Whether this log event has been analyzed for quality issues"""
+  hasBeenAnalyzed: Boolean!
 
-  """Error message from volume discovery (if ERROR_VOLUME)"""
-  volumeError: String
+  """Error message if status is BROKEN"""
+  error: String
 
-  """Error message from distillation analysis (if ERROR_DISTILLATION)"""
-  distillationError: String
+  """
+  Events/hour in 7-day window before first policy approval (only when SAVED)
+  """
+  volumeBefore: Float
+
+  """Events/hour in recent 7-day window (only when SAVED)"""
+  volumeAfter: Float
+
+  """
+  Bytes/hour in 7-day window before first policy approval (only when SAVED)
+  """
+  bytesBefore: Float
+
+  """Bytes/hour in recent 7-day window (only when SAVED)"""
+  bytesAfter: Float
 }
 
-"""Current status of a log event in the preparation pipeline."""
+"""
+Unified status: BROKEN > SAVED > VALUABLE > WASTE > ANALYZING > DISCOVERING
+"""
 enum LogEventStatusState {
-  """Waiting for volume discovery"""
-  PENDING_VOLUME
-
-  """Has volumes, waiting for distillation analysis"""
-  PENDING_DISTILLATION
-
-  """All automated preparation complete"""
-  READY
-
-  """Error during volume discovery"""
-  ERROR_VOLUME
-
-  """Error during distillation analysis"""
-  ERROR_DISTILLATION
-}
-
-"""
-Aggregated volume statistics over a time period.
-Pie chart breakdown: unknown + valuable + waste + saved = total.
-"""
-type LogEventVolumeSeriesAggregate {
-  """Total volume across all categories (log count)"""
-  totalVolume: Float!
-
-  """Volume not yet classified (no distillation)"""
-  unknownVolume: Float!
-
-  """Volume of valuable logs (keep=all distillation)"""
-  valuableVolume: Float!
-
-  """Volume identified as waste (drop distillation, not yet impacted)"""
-  wasteVolume: Float!
-
-  """Volume being saved (drop distillation with impact detected)"""
-  savedVolume: Float!
-
-  """Total bytes across all categories"""
-  totalBytes: Float!
-
-  """Bytes not yet classified"""
-  unknownBytes: Float!
-
-  """Bytes of valuable logs"""
-  valuableBytes: Float!
-
-  """Bytes identified as waste"""
-  wasteBytes: Float!
-
-  """Bytes being saved"""
-  savedBytes: Float!
-
-  """Start of the time period"""
-  periodStart: Time!
-
-  """End of the time period"""
-  periodEnd: Time!
+  """Discovery is failing repeatedly (5+ consecutive errors)"""
+  BROKEN
+  SAVED
+  VALUABLE
+  WASTE
+  ANALYZING
+  DISCOVERING
 }
 
 """
@@ -1663,6 +1619,18 @@ input LogEventWhereInput {
   descriptionEqualFold: String
   descriptionContainsFold: String
 
+  """analyzed_at field predicates"""
+  analyzedAt: Time
+  analyzedAtNEQ: Time
+  analyzedAtIn: [Time!]
+  analyzedAtNotIn: [Time!]
+  analyzedAtGT: Time
+  analyzedAtGTE: Time
+  analyzedAtLT: Time
+  analyzedAtLTE: Time
+  analyzedAtIsNil: Boolean
+  analyzedAtNotNil: Boolean
+
   """created_at field predicates"""
   createdAt: Time
   createdAtNEQ: Time
@@ -1687,9 +1655,9 @@ input LogEventWhereInput {
   hasService: Boolean
   hasServiceWith: [ServiceWhereInput!]
 
-  """distillations edge predicates"""
-  hasDistillations: Boolean
-  hasDistillationsWith: [LogEventDistillationWhereInput!]
+  """policies edge predicates"""
+  hasPolicies: Boolean
+  hasPoliciesWith: [LogEventPolicyWhereInput!]
 }
 
 """A normalized log record following OTEL conventions"""
@@ -2187,9 +2155,9 @@ type Query {
   ): LogEventConnection!
 
   """
-  Query log event distillations. Distillations determine what to keep, drop, or sample.
+  Query log event policies. Each policy is a category-specific recommendation.
   """
-  logEventDistillations(
+  logEventPolicies(
     """Returns the elements in the list that come after the specified cursor."""
     after: Cursor
 
@@ -2204,16 +2172,12 @@ type Query {
     """Returns the last _n_ elements from the list."""
     last: Int
 
-    """
-    Ordering options for LogEventDistillations returned from the connection.
-    """
-    orderBy: LogEventDistillationOrder
+    """Ordering options for LogEventPolicies returned from the connection."""
+    orderBy: LogEventPolicyOrder
 
-    """
-    Filtering options for LogEventDistillations returned from the connection.
-    """
-    where: LogEventDistillationWhereInput
-  ): LogEventDistillationConnection!
+    """Filtering options for LogEventPolicies returned from the connection."""
+    where: LogEventPolicyWhereInput
+  ): LogEventPolicyConnection!
 
   """Query messages in chat conversations."""
   messages(
@@ -2381,9 +2345,6 @@ type Service implements Node {
   Shows where the service is in the discovery pipeline.
   """
   status(datadogAccountID: ID!): ServiceStatus
-
-  """Aggregated volume statistics across all log events for this service."""
-  volumeAggregate(start: Time!, end: Time!): LogEventVolumeSeriesAggregate!
 }
 
 """A connection to a list of items."""
@@ -2425,54 +2386,95 @@ enum ServiceOrderField {
   UPDATED_AT
 }
 
-"""
-Service status for a specific integration account.
-Tracks discovery pipeline progress: volume -> log events -> ready.
-"""
+"""View that provides status for each service based on log event statuses"""
 type ServiceStatus {
-  """Current status in the discovery pipeline"""
-  status: ServiceStatusState!
+  """The service this status belongs to"""
+  serviceId: ID!
 
-  """Log event discovery progress (0-100), null if no volume data yet"""
-  percentComplete: Float
+  """Account ID (denormalized from service)"""
+  accountId: ID!
 
-  """Total service log volume in the rolling window, null if no fresh data"""
-  serviceVolume: Int
+  """The Datadog account performing discovery"""
+  datadogAccountId: ID!
 
-  """
-  Total discovered log event volume in the rolling window, null if no log events
-  """
-  discoveredVolume: Int
+  """Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+  logStatus: ServiceStatusLogStatus!
 
-  """Number of log events discovered for this service"""
+  """Total service log volume in the rolling window"""
+  logServiceVolume: Int
+
+  """Total discovered log event volume in the rolling window"""
+  logDiscoveredVolume: Int
+
+  """Coverage percentage (discovered_volume / service_volume * 100)"""
+  logPercentComplete: Float
+
+  """Total number of log events discovered for this service"""
   logEventCount: Int!
 
-  """Error message from service volume discovery (if ERROR_VOLUME)"""
-  volumeError: String
+  """Number of log events with SAVED status"""
+  logSavedCount: Int!
 
-  """Error message from log event discovery (if ERROR_LOG_EVENTS)"""
-  logEventsError: String
+  """Number of log events with VALUABLE status"""
+  logValuableCount: Int!
+
+  """Number of log events with WASTE status"""
+  logWasteCount: Int!
+
+  """Number of log events with ANALYZING status"""
+  logAnalyzingCount: Int!
+
+  """Number of log events with DISCOVERING status"""
+  logDiscoveringCount: Int!
+
+  """
+  Total events/hour before first policy approval (sum across SAVED log events)
+  """
+  logVolumeBefore: Float
+
+  """Total events/hour in recent window (sum across SAVED log events)"""
+  logVolumeAfter: Float
+
+  """
+  Total bytes/hour before first policy approval (sum across SAVED log events)
+  """
+  logBytesBefore: Float
+
+  """Total bytes/hour in recent window (sum across SAVED log events)"""
+  logBytesAfter: Float
+
+  """Error message if log_status is BROKEN"""
+  logError: String
+
+  """When the error occurred"""
+  logErrorAt: Time
+
+  """
+  Warning message (e.g., rate limit) - informational, does not affect status
+  """
+  logWarning: String
+
+  """When the warning occurred"""
+  logWarningAt: Time
 }
 
-"""Current status of a service in the discovery pipeline."""
-enum ServiceStatusState {
-  """Service is disabled - not participating in discovery"""
+"""Status: DISABLED > INACTIVE > BROKEN > DISCOVERING > ANALYZING > READY"""
+enum ServiceStatusLogStatus {
+  """Discovery is turned off for this service (enabled = false)"""
   DISABLED
 
-  """Waiting for service volume discovery"""
-  PENDING_VOLUME
+  """Service exists but has zero log volume in the time window"""
+  INACTIVE
 
-  """Has service volumes, waiting for log event discovery"""
-  PENDING_LOG_EVENTS
+  """Discovery is failing repeatedly (5+ consecutive errors)"""
+  BROKEN
 
-  """Discovery complete (90%+ of volume discovered)"""
+  """Discovery is enabled but no volume data exists yet"""
+  DISCOVERING
+  ANALYZING
+
+  """Fresh volume data with 90%+ coverage - fully discovered"""
   READY
-
-  """Error during service volume discovery"""
-  ERROR_VOLUME
-
-  """Error during log event discovery"""
-  ERROR_LOG_EVENTS
 }
 
 """
@@ -2697,6 +2699,7 @@ input TeamWhereInput {
   hasWorkspaceWith: [WorkspaceWhereInput!]
 }
 
+"""The builtin Time type"""
 scalar Time
 
 """
@@ -2816,41 +2819,6 @@ type Viewer {
   organizationId: UUID
 }
 
-"""Classification of log volume based on distillation recommendations"""
-enum VolumeClassification {
-  """No distillation exists - classification unknown"""
-  UNKNOWN
-
-  """Distillation says keep=all - logs are valuable"""
-  VALUABLE
-
-  """
-  Distillation says drop but impact not yet detected - waste not yet saved
-  """
-  WASTE
-
-  """Distillation says drop and impact detected - actively saving money"""
-  SAVED
-}
-
-"""A single hour in a volume time series."""
-type VolumeSeriesPoint {
-  """Start of the hour bucket"""
-  timestamp: Time!
-
-  """The Datadog log index this volume came from"""
-  datadogLogIndexID: ID!
-
-  """Log count for this hour (actual, zero-filled, or projected)"""
-  volume: Float!
-
-  """Estimated bytes for this hour (volume * avg_bytes)"""
-  bytes: Float!
-
-  """Volume classification based on distillation status"""
-  classification: VolumeClassification!
-}
-
 type Workspace implements Node {
   """Unique identifier of the workspace"""
   id: ID!
@@ -2879,13 +2847,8 @@ type Workspace implements Node {
   """Chat conversations in this workspace"""
   conversations: [Conversation!]
 
-  """Log event distillations for this workspace"""
-  logEventDistillations: [LogEventDistillation!]
-
-  """
-  Aggregated volume statistics for log events with distillations in this workspace.
-  """
-  volumeAggregate(start: Time!, end: Time!): LogEventVolumeSeriesAggregate!
+  """Log event policies for this workspace"""
+  logEventPolicies: [LogEventPolicy!]
 }
 
 """A connection to a list of items."""
@@ -3011,8 +2974,8 @@ input WorkspaceWhereInput {
   hasConversations: Boolean
   hasConversationsWith: [ConversationWhereInput!]
 
-  """log_event_distillations edge predicates"""
-  hasLogEventDistillations: Boolean
-  hasLogEventDistillationsWith: [LogEventDistillationWhereInput!]
+  """log_event_policies edge predicates"""
+  hasLogEventPolicies: Boolean
+  hasLogEventPoliciesWith: [LogEventPolicyWhereInput!]
 }
 

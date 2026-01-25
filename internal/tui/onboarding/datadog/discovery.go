@@ -23,6 +23,20 @@ const (
 	pollInterval = 2 * time.Second
 )
 
+// formatVolume formats a volume count into a human-readable string (e.g., "2.4M", "150K")
+func formatVolume(volume int) string {
+	switch {
+	case volume >= 1_000_000_000:
+		return fmt.Sprintf("%.1fB", float64(volume)/1_000_000_000)
+	case volume >= 1_000_000:
+		return fmt.Sprintf("%.1fM", float64(volume)/1_000_000)
+	case volume >= 1_000:
+		return fmt.Sprintf("%.1fK", float64(volume)/1_000)
+	default:
+		return fmt.Sprintf("%d", volume)
+	}
+}
+
 type tickMsg time.Time
 
 // StatusPoller polls for Datadog account discovery status
@@ -39,8 +53,8 @@ type statusFetchedMsg struct {
 type DiscoveryStep struct {
 	// Accumulated state from previous steps
 	role             string
-	orgID            string
-	accountID        string
+	org              api.Organization
+	account          api.Account
 	datadogAccountID *string
 
 	// Services
@@ -61,8 +75,8 @@ type DiscoveryStep struct {
 // NewDiscoveryStep creates a new unified discovery step
 func NewDiscoveryStep(
 	role string,
-	orgID string,
-	accountID string,
+	org api.Organization,
+	account api.Account,
 	datadogAccountID *string,
 	statusPoller StatusPoller,
 	logger log.Logger,
@@ -81,8 +95,8 @@ func NewDiscoveryStep(
 
 	return &DiscoveryStep{
 		role:             role,
-		orgID:            orgID,
-		accountID:        accountID,
+		org:              org,
+		account:          account,
 		datadogAccountID: datadogAccountID,
 		statusPoller:     statusPoller,
 		logger:           logger,
@@ -140,8 +154,8 @@ func (s *DiscoveryStep) fetchStatus() tea.Cmd {
 
 		s.logger.Debug("discovery status",
 			log.String("status", string(status.Status)),
-			log.Int("ready", status.Ready),
-			log.Int("total", status.Total))
+			log.Int("ready", status.ReadyServices),
+			log.Int("total", status.ServiceCount))
 
 		return statusFetchedMsg{status: status}
 	}
@@ -167,17 +181,17 @@ func (s *DiscoveryStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			}
 
 			// Log errors (but keep polling)
-			if s.status.ErrorMessage != "" {
-				s.logger.Warn("discovery has errors",
-					log.String("error", s.status.ErrorMessage))
+			if s.status.BrokenServices > 0 {
+				s.logger.Warn("discovery has broken services",
+					log.Int("broken", s.status.BrokenServices))
 			}
 
 			// Log when discovery is complete
 			if s.isComplete() {
 				s.logger.Info("discovery completed",
 					log.String("status", string(s.status.Status)),
-					log.Int("ready", s.status.Ready),
-					log.Int("total", s.status.Total))
+					log.Int("ready", s.status.ReadyServices),
+					log.Int("total", s.status.ServiceCount))
 			}
 		}
 
@@ -210,106 +224,158 @@ func (s *DiscoveryStep) isComplete() bool {
 	return s.status != nil && s.status.Status == api.DatadogAccountStatusReady
 }
 
+// isAllInactive returns true if all services are inactive (zero volume)
+func (s *DiscoveryStep) isAllInactive() bool {
+	return s.status != nil && s.status.Status == api.DatadogAccountStatusInactive
+}
+
 // View renders the discovery UI
 func (s *DiscoveryStep) View() string {
-	theme := styles.CurrentTheme()
+	common := styles.Common()
 
 	if s.loading {
-		return s.renderLoading(theme)
+		return s.renderLoading(common)
 	}
 
 	if s.err != nil {
-		return s.renderError(theme)
+		return s.renderError(common)
 	}
 
-	return s.renderInProgress(theme)
+	if s.status == nil {
+		return s.renderLoading(common)
+	}
+
+	// Render based on status
+	switch s.status.Status {
+	case api.DatadogAccountStatusDiscovering:
+		return s.renderDiscovering(common)
+	case api.DatadogAccountStatusAnalyzing:
+		return s.renderInProgress(common)
+	case api.DatadogAccountStatusInactive:
+		return s.renderInactive(common)
+	case api.DatadogAccountStatusDisabled:
+		return s.renderDisabled(common)
+	case api.DatadogAccountStatusBroken:
+		return s.renderError(common)
+	default:
+		return s.renderInProgress(common)
+	}
 }
 
 // renderLoading renders the initial loading state
-func (s *DiscoveryStep) renderLoading(theme *styles.Theme) string {
-	common := styles.Common()
-
+func (s *DiscoveryStep) renderLoading(common *styles.CommonStyles) string {
 	title := common.Title.Render("Setting up your account...")
-	subtitle := common.Subtitle.Render("Discovering services and analyzing log patterns.")
 	statusMsg := s.spinner.View() + " " + common.Body.Render("Connecting to Datadog...")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
 		"",
-		subtitle,
+		statusMsg,
+	)
+}
+
+// renderDiscovering renders the discovering state (no volume data yet)
+func (s *DiscoveryStep) renderDiscovering(common *styles.CommonStyles) string {
+	title := common.Title.Render("Setting up your account...")
+	statusMsg := s.spinner.View() + " " + common.Body.Render("Discovering services...")
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
 		"",
 		statusMsg,
 	)
 }
 
-// renderError renders the error state
-// Note: The actual error message is displayed by the footer via Error()
-func (s *DiscoveryStep) renderError(theme *styles.Theme) string {
-	common := styles.Common()
+// renderInProgress renders the discovery in progress state
+func (s *DiscoveryStep) renderInProgress(common *styles.CommonStyles) string {
+	title := common.Title.Render("Setting up your account...")
+
+	// Build status message with volume if available
+	var statusText string
+	if s.status.ServiceLogVolume > 0 && s.status.DiscoveredLogVolume > 0 {
+		statusText = fmt.Sprintf("Analyzed %s of %s logs across %d services...",
+			formatVolume(s.status.DiscoveredLogVolume),
+			formatVolume(s.status.ServiceLogVolume),
+			s.status.ServiceCount)
+	} else if s.status.ServiceLogVolume > 0 {
+		statusText = fmt.Sprintf("Analyzing %s logs across %d services...", formatVolume(s.status.ServiceLogVolume), s.status.ServiceCount)
+	} else {
+		statusText = fmt.Sprintf("Analyzing %d services...", s.status.ServiceCount)
+	}
+	statusMsg := s.spinner.View() + " " + common.Body.Render(statusText)
+
+	// Progress bar
+	prog := progress.New(60)
+	progressBar := prog.ViewAs(s.status.PercentComplete)
+
+	// Subtle hint about timing
+	hint := common.Help.Render("This initial analysis usually takes a few minutes.")
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		common.Title.Render("Setting up your account..."),
+		title,
 		"",
-		common.Body.Render("Something went wrong."),
+		statusMsg,
+		"",
+		progressBar,
+		"",
+		hint,
+	)
+}
+
+// renderInactive renders the state when all services have zero log volume
+func (s *DiscoveryStep) renderInactive(common *styles.CommonStyles) string {
+	theme := styles.CurrentTheme()
+	title := common.Title.Render("Setting up your account...")
+
+	statusText := fmt.Sprintf("Found %d services, but no recent log data", s.status.InactiveServices)
+	statusMsg := s.spinner.View() + " " + common.Body.Render(statusText)
+
+	// Yellow substatus for user action needed
+	warningStyle := lipgloss.NewStyle().Foreground(theme.Warning.Fg)
+	substatus := warningStyle.Render("⚠ Send logs to Datadog to continue. Looking for data from the last 7 days.")
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		"",
+		statusMsg,
+		"",
+		substatus,
+	)
+}
+
+// renderDisabled renders the error state when all services are disabled
+func (s *DiscoveryStep) renderDisabled(common *styles.CommonStyles) string {
+	title := common.Title.Render("Setting up your account...")
+	statusMsg := common.Body.Render("All services are disabled")
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		"",
+		statusMsg,
 		"",
 		common.Help.Render("Press enter to retry"),
 	)
 }
 
-// renderInProgress renders the discovery in progress state
-func (s *DiscoveryStep) renderInProgress(theme *styles.Theme) string {
-	common := styles.Common()
-
+// renderError renders the error state
+// Note: The actual error message is displayed by the footer via Error()
+func (s *DiscoveryStep) renderError(common *styles.CommonStyles) string {
 	title := common.Title.Render("Setting up your account...")
-	subtitle := common.Subtitle.Render("Discovering services and analyzing log patterns.")
+	statusMsg := common.Body.Render("Something went wrong.")
 
-	// Build status message
-	var statusText string
-	if s.status == nil {
-		statusText = "Starting..."
-	} else {
-		switch s.status.Status {
-		case api.DatadogAccountStatusPending:
-			statusText = "Starting discovery..."
-		case api.DatadogAccountStatusInProgress:
-			statusText = fmt.Sprintf("%d of %d services ready", s.status.Ready, s.status.Total)
-		case api.DatadogAccountStatusError:
-			statusText = "Discovery encountered an issue"
-		default:
-			statusText = fmt.Sprintf("%d services discovered", s.status.Total)
-		}
-	}
-	statusMsg := s.spinner.View() + " " + common.Body.Render(statusText)
-
-	// Progress bar
-	var progressBar string
-	if s.status != nil && s.status.PercentComplete > 0 {
-		prog := progress.New(60)
-		progressBar = prog.ViewAs(s.status.PercentComplete) // API returns 0-100, ViewAs expects 0-100
-	}
-
-	info := common.Help.Render(`
-What you'll see next: Waste patterns we found, what's safe to remove,
-and one-click actions to improve quality.`)
-
-	elements := []string{
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
 		title,
 		"",
-		subtitle,
-		"",
-		"",
 		statusMsg,
-	}
-
-	if progressBar != "" {
-		elements = append(elements, "", progressBar)
-	}
-
-	elements = append(elements, "", "", info)
-
-	return lipgloss.JoinVertical(lipgloss.Left, elements...)
+		"",
+		common.Help.Render("Press enter to retry"),
+	)
 }
 
 // SetSize sets the width and height available for rendering
@@ -317,19 +383,21 @@ func (s *DiscoveryStep) SetSize(width, height int) {
 	s.width = width
 }
 
-// IsComplete returns true when discovery has completed
-func (s *DiscoveryStep) IsComplete() bool {
-	return s.isComplete()
-}
-
 // IsBusy returns true while actively discovering
 func (s *DiscoveryStep) IsBusy() bool {
 	return !s.isComplete() && s.err == nil
 }
 
-// HasError returns true if there's an error
+// HasError returns true if there's an error (including DISABLED and BROKEN statuses)
 func (s *DiscoveryStep) HasError() bool {
-	return s.err != nil || (s.status != nil && s.status.ErrorMessage != "")
+	if s.err != nil {
+		return true
+	}
+	if s.status == nil {
+		return false
+	}
+	return s.status.Status == api.DatadogAccountStatusDisabled ||
+		s.status.Status == api.DatadogAccountStatusBroken
 }
 
 // Error returns the current error
@@ -337,15 +405,27 @@ func (s *DiscoveryStep) Error() error {
 	if s.err != nil {
 		return s.err
 	}
-	if s.status != nil && s.status.ErrorMessage != "" {
-		return fmt.Errorf("%s", s.status.ErrorMessage)
+	if s.status == nil {
+		return nil
+	}
+	if s.status.Status == api.DatadogAccountStatusDisabled {
+		return fmt.Errorf("All services are disabled. Enable services to continue.")
+	}
+	if s.status.Status == api.DatadogAccountStatusBroken {
+		return fmt.Errorf("Discovery failed")
 	}
 	return nil
 }
 
 // Next returns the next step after discovery
-func (s *DiscoveryStep) Next() step.Step {
-	return complete.NewCompleteStep(s.logger, s.globalBindings)
+func (s *DiscoveryStep) Next() (step.Step, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if !s.isComplete() {
+		return nil, step.ErrNotReady
+	}
+	return complete.NewCompleteStep(s.org, s.account, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

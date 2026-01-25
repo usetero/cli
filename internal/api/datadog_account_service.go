@@ -28,27 +28,32 @@ type DatadogAccount struct {
 	Site string // GraphQL enum value (US1, US5, EU1, etc.)
 }
 
-// DatadogAccountStatusState represents the discovery pipeline state.
+// DatadogAccountStatusState represents the log discovery pipeline state.
 type DatadogAccountStatusState string
 
 const (
-	DatadogAccountStatusDisabled   DatadogAccountStatusState = "DISABLED"
-	DatadogAccountStatusPending    DatadogAccountStatusState = "PENDING"
-	DatadogAccountStatusInProgress DatadogAccountStatusState = "IN_PROGRESS"
-	DatadogAccountStatusReady      DatadogAccountStatusState = "READY"
-	DatadogAccountStatusError      DatadogAccountStatusState = "ERROR"
+	DatadogAccountStatusDisabled    DatadogAccountStatusState = "DISABLED"
+	DatadogAccountStatusInactive    DatadogAccountStatusState = "INACTIVE"
+	DatadogAccountStatusBroken      DatadogAccountStatusState = "BROKEN"
+	DatadogAccountStatusDiscovering DatadogAccountStatusState = "DISCOVERING"
+	DatadogAccountStatusAnalyzing   DatadogAccountStatusState = "ANALYZING"
+	DatadogAccountStatusReady       DatadogAccountStatusState = "READY"
 )
 
-// DatadogAccountStatus tracks the discovery status for a Datadog account.
+// DatadogAccountStatus tracks the log discovery status for a Datadog account.
 type DatadogAccountStatus struct {
-	Status          DatadogAccountStatusState
-	PercentComplete float64
-	Total           int
-	Ready           int
-	Pending         int
-	Error           int
-	Disabled        int
-	ErrorMessage    string
+	Status              DatadogAccountStatusState
+	PercentComplete     float64
+	ServiceLogVolume    int // Total log volume across all active services
+	DiscoveredLogVolume int // Volume of logs we've analyzed
+	ServiceCount        int // Total number of services
+	ActiveServices      int // Services not DISABLED or INACTIVE
+	ReadyServices       int
+	AnalyzingServices   int
+	DiscoveringServices int
+	BrokenServices      int
+	DisabledServices    int
+	InactiveServices    int
 }
 
 // HasAccount checks if an account has a Datadog integration configured
@@ -181,20 +186,25 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 	statusNode := resp.DatadogAccounts.Edges[0].Node.Status
 
 	result := &DatadogAccountStatus{
-		Status:          DatadogAccountStatusState(statusNode.Status),
-		PercentComplete: statusNode.PercentComplete,
-		Total:           statusNode.Total,
-		Ready:           statusNode.Ready,
-		Pending:         statusNode.Pending,
-		Error:           statusNode.Error,
-		Disabled:        statusNode.Disabled,
-		ErrorMessage:    statusNode.ErrorMessage,
+		Status:              DatadogAccountStatusState(statusNode.LogStatus),
+		PercentComplete:     statusNode.LogPercentComplete,
+		ServiceLogVolume:    statusNode.LogServiceVolume,
+		DiscoveredLogVolume: statusNode.LogDiscoveredVolume,
+		ServiceCount:        statusNode.LogServiceCount,
+		ActiveServices:      statusNode.LogActiveServices,
+		ReadyServices:       statusNode.LogReadyServices,
+		AnalyzingServices:   statusNode.LogAnalyzingServices,
+		DiscoveringServices: statusNode.LogDiscoveringServices,
+		BrokenServices:      statusNode.LogBrokenServices,
+		DisabledServices:    statusNode.LogDisabledServices,
+		InactiveServices:    statusNode.LogInactiveServices,
 	}
 
 	s.logger.Debug("fetched datadog account status",
 		log.String("status", string(result.Status)),
-		log.Int("total", result.Total),
-		log.Int("ready", result.Ready))
+		log.Int("serviceCount", result.ServiceCount),
+		log.Int("ready", result.ReadyServices),
+		log.Int("inactive", result.InactiveServices))
 
 	return result, nil
 }

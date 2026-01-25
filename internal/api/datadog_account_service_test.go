@@ -276,12 +276,12 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 								Node: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
 									Id: "dd-123",
 									Status: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus{
-										Status:          client.DatadogAccountStatusStateInProgress,
-										PercentComplete: 75.5,
-										Total:           10,
-										Ready:           7,
-										Pending:         2,
-										Error:           1,
+										LogStatus:            client.DatadogAccountStatusLogStatusAnalyzing,
+										LogPercentComplete:   75.5,
+										LogServiceCount:      10,
+										LogReadyServices:     7,
+										LogAnalyzingServices: 2,
+										LogBrokenServices:    1,
 									},
 								},
 							},
@@ -300,17 +300,17 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		if status == nil {
 			t.Fatal("expected status, got nil")
 		}
-		if status.Status != api.DatadogAccountStatusInProgress {
-			t.Errorf("Status = %q, want %q", status.Status, api.DatadogAccountStatusInProgress)
+		if status.Status != api.DatadogAccountStatusAnalyzing {
+			t.Errorf("Status = %q, want %q", status.Status, api.DatadogAccountStatusAnalyzing)
 		}
 		if status.PercentComplete != 75.5 {
 			t.Errorf("PercentComplete = %v, want 75.5", status.PercentComplete)
 		}
-		if status.Total != 10 {
-			t.Errorf("Total = %d, want 10", status.Total)
+		if status.ServiceCount != 10 {
+			t.Errorf("ServiceCount = %d, want 10", status.ServiceCount)
 		}
-		if status.Ready != 7 {
-			t.Errorf("Ready = %d, want 7", status.Ready)
+		if status.ReadyServices != 7 {
+			t.Errorf("ReadyServices = %d, want 7", status.ReadyServices)
 		}
 	})
 

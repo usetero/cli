@@ -38,14 +38,18 @@ query GetDatadogAccountStatus($id: ID!) {
             node {
                 id
                 status {
-                    status
-                    percentComplete
-                    total
-                    ready
-                    pending
-                    error
-                    disabled
-                    errorMessage
+                    logStatus
+                    logPercentComplete
+                    logServiceVolume
+                    logDiscoveredVolume
+                    logServiceCount
+                    logActiveServices
+                    logReadyServices
+                    logAnalyzingServices
+                    logDiscoveringServices
+                    logBrokenServices
+                    logDisabledServices
+                    logInactiveServices
                 }
             }
         }
