@@ -7,7 +7,6 @@ Tero CLI - presentation layer for the Tero control plane. TUI, MCP server, tradi
 | Working on... | Read first |
 |--------------|-----------|
 | Anything | `docs/ARCHITECTURE.md` |
-| TUI | `docs/TUI.md` |
 | Tests | `docs/TESTING.md` |
 | Design decisions | `docs/DESIGN.md` |
 
@@ -16,7 +15,7 @@ The docs are short. Don't skip them.
 ## Hard Rules
 
 - **CLI is presentation only.** Intelligence lives in the control plane.
-- **Control plane is source of truth.** CLI caches for display, never owns data.
+- **Control plane is source of truth.** Local data is synced, never owned.
 - **Dependencies point inward.** Services depend on interfaces, not implementations.
 - **Composition happens in `cmd/`.** That's where you wire implementations to interfaces.
 - **Conventional commits.** `feat:`, `fix:`, `docs:`, `refactor:`, etc.

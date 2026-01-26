@@ -41,3 +41,4 @@ dist/
 # Private documentation
 docs/VISION.md
 .hermit/
+tmp/

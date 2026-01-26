@@ -1,77 +1,81 @@
-# CLI Architecture
+# Architecture
 
-- [1. Introduction](#1-introduction)
-- [2. What the CLI Does](#2-what-the-cli-does)
-- [3. How It Works (End to End)](#3-how-it-works-end-to-end)
-- [4. The App Layer](#4-the-app-layer)
-- [5. Commands and Modes](#5-commands-and-modes)
-- [6. The TUI](#6-the-tui)
-- [7. The MCP Server](#7-the-mcp-server)
+How the CLI is built, how the pieces fit together, and why.
+
+- [What This Is](#what-this-is)
+- [How Data Flows](#how-data-flows)
+- [The App Layer](#the-app-layer)
+- [The TUI](#the-tui)
+- [Patterns and Conventions](#patterns-and-conventions)
+- [The MCP Server](#the-mcp-server)
 
 ---
 
-## 1. Introduction
+## What This Is
 
-Tero is a control plane for observability. It sits on top of your existing tools (Datadog, Splunk, CloudWatch, etc.), understands what your telemetry means semantically, and helps you improve it—identify waste, take action, reduce cost.
+Tero is a control plane for observability. The CLI is how you interact with it.
 
-The CLI is a tool for interacting with Tero. It provides multiple interfaces depending on how you want to work:
-- An interactive TUI (Terminal User Interface) for conversational exploration
-- An MCP server that exposes Tero's knowledge to coding agents
-- Traditional commands for scripting and automation (future)
+The control plane does the hard work—analyzing telemetry, building the Master Catalog, generating policies, enforcing fixes. The CLI's job is to make that intelligence accessible through a beautiful, fast terminal interface. The CLI never implements intelligence. It doesn't analyze log patterns, calculate waste percentages, or make decisions about data quality. When you're working on the CLI and you're tempted to add logic that feels smart—stop. That logic belongs in the control plane.
 
-This document explains the CLI's architecture: how it's structured, how it communicates with the control plane, and how the pieces fit together. It complements [TUI.md](TUI.md), which dives deep into the Terminal User Interface, and [DESIGN.md](DESIGN.md), which explains the UX principles that guide our decisions.
+The CLI provides three interfaces: a TUI for interactive use, an MCP server for coding agents, and eventually traditional commands for scripting. All three share the same foundation—authentication, data access, and the app layer—but present information differently.
 
-## 2. What the CLI Does
+### Chat Is the Canvas
 
-The CLI is the **presentation layer** for Tero. The control plane does the hard work—analyzing telemetry, building semantic catalogs, classifying quality, identifying waste. The CLI's job is to make that intelligence accessible and actionable through beautiful, intuitive interfaces.
+The TUI is a conversational application. Chat is the foundation everything else builds on. You start in chat, navigate deeper into things—a services table, a visualization, a policy review—and you always come back to chat. It's home.
 
-Think of it this way: the control plane is the brain. The CLI is how you interact with it. The control plane holds all the knowledge, runs all the analysis, and stores all the data permanently. The CLI presents that knowledge, lets you explore it conversationally, and helps you take action based on what you learn.
+This isn't a dashboard with a chat widget bolted on. Chat is the primary navigation mechanism. You type natural language to explore, slash commands to jump to specific pages, @ references to pull entities into context. All in the same input. The interface adapts based on what you type.
 
-This separation runs deep. The CLI never implements intelligence. It doesn't analyze log patterns, calculate waste percentages, or make decisions about data quality. When you're working on the CLI and you're tempted to add logic that feels smart—stop. That logic belongs in the control plane, exposed via GraphQL, and consumed by the CLI for presentation.
+Pages and views still exist—services tables, policy lists, time series charts—and they're fully interactive. But you reach them through chat (or slash commands), and you always escape back. Navigating deeper never feels like you've lost your place. Mental friction kills flow, so we use modals and overlays instead of hard page transitions. You go deeper, do what you need, press escape, and you're back in chat where you left off.
 
-### Presentation vs Intelligence
+### The Catalog Is Local
 
-Here's the key principle: **the control plane sends data, the CLI decides how to present it.**
+The Master Catalog syncs to a local SQLite database on the client via PowerSync. Every service, log event, metric, trace span, policy, and their relationships—always up to date, always queryable locally.
 
-The control plane says: "Here's time series data showing waste over time."
+This is the foundation for speed. Filtering services, browsing log events, searching policies—you're querying local data. No network round trips, no loading spinners, no pagination limits. When exploration is free, people explore more.
 
-The CLI decides: "I'll render that as a line chart in the terminal."
+The actual telemetry—raw logs, metric data points, trace data—stays where it lives. Datadog, Splunk, ClickHouse, wherever. When you need real data, Tero proxies the request through its API. Two data layers: the catalog is local and instant, telemetry is on-demand and streamed.
 
-This separation means the CLI can evolve independently. Add new chart types? Improve layouts? Enhance interactions? No control plane changes required. The control plane sends structured data—what it means, what it represents. The CLI handles all presentation concerns—how it looks, how users interact with it, how it adapts to different contexts.
+## How Data Flows
 
-The CLI is stateful while running—it caches conversations, maintains UI state, remembers where you are. But when you close it, that state disappears. The control plane is the permanent source of truth. Everything that matters—conversation history, quality rules, your services and their data—lives in the control plane. The CLI is just a window into that truth.
+The CLI communicates with the control plane through three channels, each serving a different purpose.
 
-## 3. How It Works (End to End)
+### Chat Protocol
 
-At its core, the CLI is a client to the control plane's GraphQL API. Whether you're using the TUI, the MCP server, or traditional commands, the pattern is the same: authenticate, communicate via GraphQL, present results.
+Conversations go through a streaming chat protocol. The client sends messages and receives structured instructions back—run a local query, display a visualization, take an action. The client executes. Intelligence lives entirely in the control plane. The client is a runtime, not a decision-maker.
 
-### Authentication
+Chat instructions reference data the client already has locally. When the AI says "show a table of services sorted by waste," the client knows how to query its local SQLite database, build the table, and render it. The AI doesn't send the data—it sends the intent. This means visualizations are interactive from the moment they appear. The user can filter, sort, expand time ranges, adjust columns—because the data is right there.
 
-The CLI uses WorkOS for authentication. First-time users go through signup—email collection, organization creation or discovery, SSO or email/password flow. Returning users have stored credentials that the CLI validates or refreshes as needed.
+### Local Database
 
-Once authenticated, the CLI has a token it includes with every GraphQL request. The control plane uses this to identify the user, their organization, and their permissions.
+PowerSync keeps the local SQLite database in sync with the control plane. The sync is continuous and automatic—changes in the control plane propagate to every connected client. The client reads from SQLite for all catalog operations: listing services, browsing log events, querying policies.
 
-### Communication
+PowerSync also supports local writes. Some mutations go through PowerSync—the client writes locally, changes queue and sync to the control plane. Others go through GraphQL directly. The choice depends on what fits the operation. Chat doesn't care about the mechanism. It sends abstract action instructions, and the client decides how to execute.
 
-All communication happens through GraphQL. The CLI sends queries (read data) and mutations (write data) to the control plane. The control plane processes these requests with full context—who you are, what you've done before, what your organization looks like—and returns structured responses.
+### GraphQL API
 
-The CLI doesn't manage state beyond what's needed for presentation. Session history? The control plane stores it. Quality rules? Control plane. Your services and their data? Control plane. The CLI caches some of this locally while running for fast rendering, but the control plane is always the source of truth.
+GraphQL handles everything that isn't chat or synced data. Authentication, account management, actions that need immediate server-side processing. Mutations like approving a policy or configuring an integration go through GraphQL. The client sends queries and mutations with an auth token, the control plane processes them and returns structured responses.
 
-### Content Blocks
+### Three Data Shapes
 
-Responses from the control plane come as content blocks—structured pieces of data that the CLI knows how to render. Text blocks, chart data, table data, log samples, actions the user can take. The control plane decides what content is relevant based on the conversation. The CLI decides how to present it based on the interface (TUI renders charts visually, MCP returns structured data to coding agents).
+Everything the client displays from local queries falls into three shapes:
 
-This separation means new content types can be added over time. The control plane starts sending a new block type, old CLI versions ignore what they don't understand, new CLI versions render it beautifully.
+**Tables.** Rows and columns. The most common shape for catalog pages—services with their metadata, log events with their properties, policies with their status. Tables are filterable, sortable, and pageable locally.
 
-## 4. The App Layer
+**Categorical data.** Numbers with labels—for pie charts, bar charts, breakdowns. "45% debug logs, 30% health checks, 25% other." Same underlying data as a table, just rendered differently.
 
-Between the interfaces (TUI, MCP server) and the control plane sits the app layer—the business logic that orchestrates authentication, manages user preferences, and translates control plane responses into domain models the interfaces can work with.
+**Time series.** Values over time—for line charts, area charts, trends. Error rates over the last week, waste reduction over a quarter. The time axis makes these distinct from categorical data.
 
-The app layer is structured in three tiers: services define domain operations, interfaces abstract dependencies, and implementations provide the concrete machinery. This separation makes the code testable, maintainable, and adaptable as requirements evolve.
+These are the rendering primitives. Every visualization the client displays is one of these three shapes, derived from a query the client runs locally. The AI creates visualizations as shortcuts while you work through a problem, but the user has the same data and controls. The AI just gets you there faster.
+
+## The App Layer
+
+Between the interfaces (TUI, MCP server) and the data sources sits the app layer—services that orchestrate authentication, manage preferences, and provide domain operations the interfaces can work with.
+
+The app layer has three tiers: services define domain operations, interfaces abstract dependencies, and implementations provide the concrete machinery.
 
 ### Services
 
-Services own domain concepts and orchestrate operations. `PreferencesService` knows about email addresses and organization IDs. `AuthService` knows about device authorization flows and token refresh. `ServiceService` knows how to list services discovered from Datadog, check discovery status, and retrieve counts.
+Services own domain concepts and orchestrate operations. `PreferencesService` knows about email addresses and organization IDs. `AuthService` knows about device authorization flows and token refresh. `ServiceService` knows how to list services, check discovery status, and retrieve counts.
 
 Services don't know about YAML files, OS keychains, or GraphQL queries. They work with interfaces—`Store` for preferences, `SecureStorage` for tokens, `OAuthProvider` for authentication, `APIClient` for the control plane. This keeps them focused on domain logic without coupling to implementation details.
 
@@ -79,9 +83,9 @@ Method names follow consistent patterns: `ListByX` for collections, `GetByX` for
 
 ### Interfaces
 
-Interfaces are defined by their consumers, not their providers. `PreferencesService` needs generic key-value storage, so it depends on `Store`—a simple interface with `Get`, `Set`, `GetBool`, `GetList`, and `Save`. It doesn't care whether the implementation uses YAML, JSON, or a database. It just needs somewhere to put key-value pairs.
+Interfaces are defined by their consumers, not their providers. `PreferencesService` needs generic key-value storage, so it depends on `Store`—a simple interface with `Get`, `Set`, `GetBool`, `GetList`, and `Save`. It doesn't care whether the implementation uses YAML, JSON, or a database.
 
-This consumer-driven approach keeps interfaces small and focused. `SecureStorage` is just `Get`, `Set`, and `Delete`—generic operations that work for any secure storage mechanism. `OAuthProvider` defines the device authorization flow without mentioning WorkOS specifically. New implementations can plug in without changing the services that depend on them.
+This consumer-driven approach keeps interfaces small and focused. `SecureStorage` is just `Get`, `Set`, and `Delete`. `OAuthProvider` defines the device authorization flow without mentioning WorkOS specifically. New implementations can plug in without changing the services that depend on them.
 
 Interfaces live in the app package alongside services. This makes dependencies explicit and keeps the architecture navigable. When you read a service, you see exactly what it needs. When you implement an interface, you know exactly what contract you're fulfilling.
 
@@ -89,56 +93,124 @@ Interfaces live in the app package alongside services. This makes dependencies e
 
 Concrete implementations handle the messy details. `config.Config` implements `Store` with YAML files. `keyring.Keyring` implements `SecureStorage` with OS keychains—Keychain on macOS, Credential Manager on Windows, Secret Service on Linux. `workos.Client` implements `OAuthProvider` with WorkOS API calls. The generated GraphQL client implements `APIClient`.
 
-Implementations can be swapped without touching services. Want to use JSON instead of YAML for config? Implement `Store` differently. Need to support a different OAuth provider? Implement `OAuthProvider`. The services don't change—they depend on interfaces, not concrete types.
-
-This tier handles all platform-specific concerns, external API integration, file formats, and persistence strategies. Services stay clean, focused on domain logic. Interfaces stay simple, defining only what's needed. Implementations deal with reality.
+Implementations can be swapped without touching services. This tier handles all platform-specific concerns, external API integration, file formats, and persistence strategies. Services stay clean. Interfaces stay simple. Implementations deal with reality.
 
 ### Testing
 
 The app layer includes `apptest`—a package of mock implementations for every interface. These mocks use function fields, making them trivial to configure in tests. Need to test what happens when authentication fails? Set `MockOAuthProvider.PollAuthenticationFunc` to return an error. Want to verify a service saves preferences correctly? Check what `MockStore.SetFunc` was called with.
 
-This pattern makes tests fast, focused, and deterministic. No file I/O, no network calls, no OS dependencies. Just pure logic tests with complete control over dependencies.
+This makes tests fast, focused, and deterministic. No file I/O, no network calls, no OS dependencies. Just pure logic tests with complete control over dependencies. See [TESTING.md](TESTING.md) for the full testing philosophy.
 
-## 5. Commands and Modes
+## The TUI
 
-The CLI provides different ways to interact with Tero depending on what you're trying to do. The architecture supports multiple modes through a single codebase, all sharing the same foundation: GraphQL communication, authentication, and content rendering.
+The TUI is where most of the CLI's complexity lives. It's built on [Bubbletea](https://github.com/charmbracelet/bubbletea), a Go framework based on The Elm Architecture.
 
-### Interactive Chat
+### The Elm Architecture
 
-Run `tero` and you get the TUI—an interactive, conversational interface built on Bubbletea. This is the primary way most users interact with Tero. You ask questions, explore your data, and take action through natural conversation. The TUI maintains UI state (which page you're on, cursor position, what's focused) but all the data comes from and lives in the control plane.
+The pattern is simple: your application is a model (all your state), an update function (how state changes), and a view function (how to render state). Messages flow in—keypresses, API responses, timer ticks—and trigger updates. The model changes, the view re-renders, the cycle continues.
 
-The TUI architecture is substantial enough that it has its own documentation. See [TUI.md](TUI.md) for the deep dive on how it works—the Elm Architecture pattern, component design, layout management, and rendering strategies.
+This matters because the TUI has a lot of state to manage. Which page are you on? What's the conversation history? Where's the cursor? What's focused? The Elm Architecture keeps it organized—all state lives in the model, all changes happen in update functions, and views are always pure functions of state.
 
-### MCP Server
+The pattern is also composable. Pages are models with update and view functions. Components are models with update and view functions. The same pattern repeats at every level. Once you understand it in one place, you understand it everywhere.
 
-Run `tero mcp` and the CLI becomes an MCP server, exposing Tero's knowledge to coding agents like Claude Desktop and Cursor. Instead of rendering content visually, the MCP server returns structured data that agents can reason about. The same GraphQL queries power both modes—the MCP server just presents results differently.
+One detail worth understanding: Elm enforces immutability—every update returns a new value. Bubbletea follows this with value receivers, where `Update()` returns the new state. This works well for top-level models (pages, modes) where you want state transitions to be explicit.
 
-The MCP server is a thin layer. It translates MCP tool calls into GraphQL queries, sends them to the control plane, and returns the results. No intelligence, no caching, no state management. Just protocol translation.
+But Go isn't Elm. For leaf components (footer, header, text input), the value receiver pattern creates a footgun: forgetting to capture the return value silently loses state changes. So our components use pointer receivers instead—standard Go for methods that mutate. This is what Crush (Charm's production app) does. They learned this building a real application.
 
-### Traditional Commands (Future)
+The mental model: pages and modes are Elm-style (explicit state transitions via value receivers), components are Go-style (direct mutation via pointer receivers).
 
-Eventually the CLI will support traditional command patterns for scripting and automation—`tero status`, `tero export`, `tero config`. These will use the same GraphQL client, the same authentication, but return plain text output suitable for piping and parsing. Different interface, same foundation.
+### Two Modes
 
-## 6. The TUI
+The TUI has two modes: onboarding and app. They're fundamentally different experiences with different structures.
 
-The TUI is where most of the CLI's complexity lives. It's built on Bubbletea, a Go framework based on The Elm Architecture. This architecture pattern—Model-Update-View—makes building complex, stateful terminal interfaces manageable.
+**Onboarding** is a linear flow. Steps chain together—auth, role selection, organization setup, account creation, integration configuration. Each step knows what comes next via `Next()`. A Flow orchestrator manages transitions: forward messages to the current step, check if it's complete, advance to the next. When the final step completes, the TUI transitions to app mode.
 
-The model holds all state: which page you're on, conversation history, cursor position, what's focused. Updates are the only way to change state—a keypress arrives as a message, the update function processes it, returns a new model. The view function takes the current model and renders it to the terminal. This cycle repeats continuously, making state changes predictable and debuggable.
+Onboarding uses FlowContext—a mutable bag that accumulates data as steps complete. The email you enter in auth reaches the organization step. The organization you select reaches account creation. Each step adds its result and passes the context forward. When onboarding finishes, the accumulated data gets sent to the control plane and the context is discarded.
 
-The TUI is structured hierarchically. At the root is the main TUI model that manages global concerns—authentication state, current page, session ID. Pages manage their own UI—the onboarding page handles email collection, the chat page handles conversation display and input. Components are reusable pieces—headers, footers, input fields—that pages compose together.
+**App mode** is the main experience. Chat is the base layer, always present. The app shell composes chat with chrome—a sidebar (on wide terminals) or a compact header (on narrow ones), plus a command bar at the bottom for input.
 
-This architecture has evolved specific patterns for challenges unique to terminal UIs: layout and padding (parents calculate, children accept), cursor positioning (offsets propagate down the tree), content rendering (different block types for text, charts, tables, logs). These patterns keep the code maintainable as complexity grows.
+Pages in app mode don't chain linearly. They layer. Chat is always the base. Other pages—services table, policy review, visualization detail—appear as modals or overlays on top of chat. You navigate deeper by opening pages, and you escape back to chat. The navigation is a stack: push a page on, interact with it, pop it off. Chat is always at the bottom.
 
-The details are substantial. For the deep dive on TUI architecture, component patterns, and development workflows, see [TUI.md](TUI.md).
+This is different from onboarding's chain pattern, and intentionally so. Onboarding is a one-time, step-by-step process. The app is an open-ended workspace where you move fluidly between chat and focused views.
 
-## 7. The MCP Server
+### The App Shell
 
-The MCP server is architecturally much simpler than the TUI. It's a thin translation layer between the Model Context Protocol and Tero's GraphQL API.
+The app shell (`internal/tui/app/`) orchestrates everything in app mode. It manages:
 
-Run `tero mcp` and the CLI becomes an MCP server for coding agents—Claude Desktop, Cursor, and other tools that support MCP. This brings Tero's telemetry intelligence directly into developers' coding workflows. A developer working on code can ask their agent about log events, quality scores, waste patterns—and the agent has access to Tero's knowledge to answer.
+**Layout.** Two modes depending on terminal width. Wide terminals (120+ characters) get a sidebar showing context—active entities, session info, metadata. Narrow terminals get a compact header instead. The command bar sits at the bottom in both layouts, always visible.
 
-The agent makes tool calls—"get services for this organization," "analyze this log statement," "what's the quality score for checkout-api." The MCP server translates these into GraphQL queries, sends them to the control plane, and returns structured responses the agent can work with.
+**Pages.** The chat page is always the base. Other pages stack on top as modals. The app shell routes keyboard input to the right place—the topmost page gets input, escape pops it off.
 
-There's no UI state, no rendering complexity, no layout management. Just protocol translation. A tool call comes in, a GraphQL query goes out, a response comes back, the tool returns it. The MCP server doesn't cache data, doesn't manage sessions beyond what's needed for authentication, and doesn't make decisions. It's a pure proxy.
+**Command bar.** The unified input at the bottom. Natural language starts or continues a chat. Slash commands (`/services`, `/policies`) navigate to pages. @ references (`@checkout-service`) pull entities into context. The command bar detects what you're typing and adapts.
 
-This simplicity is intentional. The control plane has all the intelligence. The MCP server just makes that intelligence accessible to coding agents through their protocol.
+**Context sidebar.** As you reference entities in chat—services, log events, policies—they accumulate in the sidebar as active context. The AI sees this context. You can add or remove items, but mostly it builds organically through conversation. On narrow terminals, this context is accessible through a details overlay instead of a persistent sidebar.
+
+### Chat
+
+The chat page is the heart of the application. It displays the conversation—user messages and AI responses—with support for inline visualizations, action prompts, and rich content.
+
+Messages arrive from the chat protocol as a stream. User messages appear immediately (optimistic). AI responses stream in as structured instructions—text to display, queries to run, views to render, actions to offer. The chat page interprets these instructions and builds the conversation display.
+
+Inline visualizations appear directly in the chat flow. A small table, a summary chart—things that make sense at chat scale. Any visualization can be expanded into a full-size modal with all interactive controls. The full-size view has the same data and the same interactivity, just more room to work with.
+
+Sessions are focused—each chat is a session on a specific problem. When you open Tero, you start a new session by default. You can resume previous sessions or branch from them by @-referencing them.
+
+### Pages
+
+Pages beyond chat follow a common interface. Each page declares its title, metadata (for the sidebar), keyboard shortcuts, and whether it accepts natural language input. The app shell uses these declarations to compose the chrome correctly—different pages surface different metadata in the sidebar, different shortcuts in the command bar footer.
+
+Pages receive dimensions from the app shell and render within those bounds. They don't know about the sidebar, the command bar, or other pages. They render their content, report their state, and let the app shell handle composition.
+
+Some pages are catalog views—services, log events, policies. These query local SQLite data and render as interactive tables. Users can filter, sort, adjust columns, and drill into individual entities. These are the same views the AI creates during chat, just accessed directly via slash commands.
+
+Other pages are detail views—a single service, a specific policy, a visualization at full size. These typically appear as modals over chat, though they could also be navigated to directly.
+
+## Patterns and Conventions
+
+These are the practical patterns you'll encounter throughout the codebase. They're not arbitrary—each solves a specific problem we hit building terminal UIs.
+
+### Pages Decide, Components Render
+
+Components don't make decisions about layout, positioning, or what to show. They accept parameters and render. A header component doesn't decide where to position itself. A footer doesn't figure out what shortcuts to show. Pages pass that information and components render it.
+
+This keeps components reusable. The same header works on multiple pages because it doesn't assume anything about its context. If a component needs data, its parent provides it. Data flows down, always.
+
+### Stateless by Default
+
+Prefer stateless components. A component that just takes parameters and returns rendered output is easier to understand, test, and reuse than one that manages internal state.
+
+Some components need state—text inputs manage cursor position and content. Those are stateful by necessity. But even stateful components keep their state minimal. They don't sprawl into managing concerns that belong to their parent.
+
+### Dimensions Flow Down
+
+Pages receive width and height from their parent via `SetSize()`. They do their layout math—subtract header height, account for padding—then pass constrained dimensions to children. No component reaches up to ask "how big am I?" Dimensions propagate explicitly down the tree.
+
+When the terminal resizes, the root TUI gets a `WindowSizeMsg`, calculates content dimensions, calls `SetSize` on the current mode, which propagates down to pages and components.
+
+### Cursor Positioning with Markers
+
+Manually calculating cursor X/Y coordinates is fragile—change your layout and the cursor drifts. We use markers instead. A page embeds a special marker (`CursorMarker`) in its view string where the cursor should appear. The TUI extracts this marker from the final rendered output—after all composition and padding—and calculates the position from where the marker appeared.
+
+The marker is invisible (a null byte sequence) and gets stripped before rendering. Pages don't calculate offsets or count lines. They put a marker where they want the cursor. The TUI handles the rest.
+
+### State Management
+
+State lives in three places with different lifetimes:
+
+**Control plane state** is permanent. Conversation history, quality rules, services, policies—everything that matters lives in the control plane. The CLI treats it as the source of truth. The local SQLite database is a synced replica of this state, kept current by PowerSync.
+
+**TUI state** is ephemeral. Current page, cursor position, what's focused, loading indicators. This is UI state needed for presentation. It disappears when you close the CLI. When you restart, the local database already has current data from PowerSync, and the TUI rebuilds its UI state from scratch.
+
+**Flow state** is accumulated during multi-step processes. FlowContext collects data as onboarding steps complete. When the flow finishes, the data gets sent to the control plane and the context is discarded. This is working memory, not persistent state.
+
+### Wiring
+
+Composition happens in `cmd/`. That's where implementations get wired to interfaces—config store created, keyring initialized, WorkOS client configured, GraphQL client built, PowerSync started, TUI launched with all its dependencies. Services depend on interfaces, `cmd/` provides the implementations. Nowhere else does this wiring happen.
+
+## The MCP Server
+
+Run `tero mcp` and the CLI becomes an MCP server, exposing Tero's knowledge to coding agents like Claude Desktop and Cursor.
+
+The MCP server is architecturally simple. It translates MCP tool calls into queries—GraphQL for the control plane, local SQLite for catalog data—and returns structured responses the agent can reason about. No UI state, no rendering, no layout. Just protocol translation.
+
+A tool call comes in ("get services for this organization"), a query goes out (local SQLite or GraphQL), a response comes back, the tool returns it. The MCP server doesn't cache data, doesn't manage sessions beyond authentication, and doesn't make decisions. The control plane has the intelligence. The MCP server makes it accessible through the agent's protocol.

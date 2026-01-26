@@ -1,272 +1,101 @@
 # Design
 
-## Introduction
+Who we're building for, the principles that guide decisions, and the patterns you'll see throughout the CLI.
 
-The Tero CLI is the presentation layer for Tero. While the control plane does the hard work of analyzing your observability data, discovering waste, and understanding quality—the CLI's job is to make that intelligence accessible, understandable, and actionable.
-
-This document explains who we're building for, the principles that guide our design decisions, and the patterns you'll see throughout the codebase. If you're contributing features or improvements, this is your guide to making decisions that feel consistent with the rest of the CLI.
+If you're contributing features or improvements, this is your guide to making decisions that feel consistent with the rest of the product. For how the CLI is structured and built, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
 ## Who We're Building For
 
-The CLI serves two distinct personas with different goals and workflows. Understanding both helps you design features that work for the right audience.
+The CLI serves two personas with different goals and workflows. Understanding both helps you design features that work for the right audience.
 
 ### Engineering Leadership
 
-These are VPs of Engineering, SRE leads, and platform team managers. They're responsible for observability budgets, data quality across teams, and organizational efficiency.
+VPs of Engineering, SRE leads, platform team managers. They're responsible for observability budgets, data quality across teams, and organizational efficiency.
 
-**What they care about:**
-- Org-wide visibility: which services are producing quality telemetry, which aren't
-- Cost and waste metrics: where money is being spent, where it's being wasted
-- Team accountability: which teams need to improve, how to help them
-- Progress toward goals: waste reduction targets, cost objectives, quality SLOs
+They care about org-wide visibility—which services produce quality telemetry, which don't. Cost and waste metrics. Team accountability. Progress toward goals. They need high-level overviews that show patterns across the organization, with the ability to drill into problem areas without getting lost in details.
 
-**What they need from the CLI:**
-- High-level overview that shows patterns across the organization
-- Ability to drill into problem areas without getting lost in details
-- Tools to communicate with teams about improvements (without micromanaging)
-- Proof that observability spend is justified and improving
-
-**What they don't want:**
-- To manually chase down every team about their telemetry
-- To be seen as "cost police" cutting corners at engineering's expense
-- Surprises when quality rules get enforced
+They don't want to manually chase down every team about their telemetry, be seen as "cost police" cutting corners, or get surprised when quality rules take effect.
 
 ### Engineers
 
-These are the people building and maintaining services. They own the code, the instrumentation, and the day-to-day operations.
+The people building and maintaining services. They own the code, the instrumentation, and the day-to-day operations.
 
-**What they care about:**
-- Their specific services: understanding what telemetry they're producing
-- Actionable guidance: not "your logs are expensive" but "here's exactly what to fix"
-- Learning: what makes observability data good vs wasteful
-- Meeting expectations: hitting the quality goals their leadership set
+They care about their specific services and what telemetry they're producing. They want actionable guidance—not "your logs are expensive" but "here's exactly what to fix." They want to learn what makes observability data good versus wasteful, and they want to meet the quality expectations their leadership set.
 
-**What they need from the CLI:**
-- Service-specific insights focused on what they own
-- Concrete actions they can take to improve quality
-- Examples and explanations that teach observability best practices
-- Control over changes (no surprises, no automatic drops without permission)
-
-**What they don't want:**
-- Vague complaints about cost or quality
-- Their valuable debugging data dropped without warning
-- Another dashboard to check or tool to learn
+They don't want vague complaints about cost, their valuable debugging data dropped without warning, or another dashboard to check.
 
 ---
 
 ## Design Principles
 
-These principles guide every interaction, every feature, and every UX decision in the CLI.
+### Chat First
 
-### Conversational Over Transactional
+Chat is the canvas. Everything happens through or from chat. Users start there, navigate deeper into focused views, and always escape back. This isn't a dashboard with a chat widget—it's a conversational application where chat is the primary navigation mechanism.
 
-Traditional CLIs work in transactions: you run a command with flags, you get output, done. Tero is conversational—you have an ongoing dialogue that builds context and understanding.
-
-**Not this:**
-```
-$ tero service list --filter waste --sort cost --threshold 1000
-$ tero service show checkout-api --metrics waste --breakdown events
-$ tero logs block --service checkout-api --event debug_log
-```
-
-**Instead this:**
-```
-> show me services with high waste
-
-checkout-api: 45% waste ($15K/month)
-payment-api: 32% waste ($8K/month)
-...
-
-> tell me about checkout-api
-
-checkout-api has 3 major waste patterns:
-• debug_log: 2M/hr, $8K/month
-• health_check: 1M/hr, $3K/month
-...
-
-> block the debug logs
-
-Done! Created Datadog exclusion rule.
-Savings: $8K/month
-```
-
-**Why:** People think in questions, not command-line flags. Natural language lets us understand intent and maintain context across multiple interactions. The CLI remembers what you're talking about—you don't have to repeat yourself.
+This means every feature you build should work naturally from chat. If a user can't discover it or reach it through conversation, it's not well integrated. Pages, views, and visualizations all exist as things chat can surface. Slash commands and @ references are shortcuts, not separate modes.
 
 ### Progressive Disclosure
 
-Don't overwhelm users with everything at once. Start with high-level insights and let them drill down into details on request.
+Don't overwhelm users with everything at once. Start with high-level insights and let them drill down on request.
 
-**The pattern:**
-- **Level 1:** Summary (the headline)
-- **Level 2:** Breakdown (what's driving this?)
-- **Level 3:** Examples (show me actual data)
+The pattern: summary first (the headline), breakdown on request (what's driving this?), examples on demand (show me actual data). Most users just need the summary. Power users can dive deep. Cognitive load matters—show people the signal first, let them choose to see the noise.
 
-**Example flow:**
-```
-> how's checkout-api doing?
-
-checkout-api: 45% waste ($15K/month)
-
-> what's causing the waste?
-
-Top 3 patterns:
-• debug_log: 2M/hr, $8K/month
-• health_check: 1M/hr, $3K/month
-• stack_trace: 500K/hr, $4K/month
-
-> show me examples of debug_log
-
-[Syntax-highlighted log samples with context]
-```
-
-**Why:** Cognitive load matters. Show people the signal first, let them choose to see the noise. Most users just need the summary—power users can dive deep.
+This extends to visualizations. Inline in chat, a visualization is compact—enough to understand the shape of the answer. Expanded to full size, it has all the controls and interactivity. Two levels of detail, same data.
 
 ### Action-Oriented
 
-Analysis without action is frustrating. Every insight should lead to "What can I do about this?"
+Analysis without action is frustrating. Every insight should lead to "what can I do about this?"
 
-**Not enough:**
-```
-checkout-api has 2M debug logs per hour costing $8K/month.
-```
+When the AI surfaces a problem—waste in a service, a policy violation, a quality issue—the next step should be obvious. Offer options. Block the logs in Datadog for immediate savings, or fix the instrumentation in code for a permanent solution, or just show examples first. Never dead-end with information. The AI has the same action surface as the user—it can do anything the user can do through the same interfaces.
 
-**Better:**
-```
-checkout-api has 2M debug logs per hour costing $8K/month.
+### Role-Adapted
 
-What would you like to do?
-[a] Block these logs in Datadog (immediate savings)
-[b] Help me remove from code (permanent fix)
-[c] Show me examples first
-```
+The same CLI adapts to who you are. During onboarding, we ask about role. Leadership users get org-wide views by default. Engineers see their specific services. Both can switch contexts when needed, but the defaults respect their workflow.
 
-**Why:** People use this CLI to improve their observability, not just understand it. Make the path from insight to action as short as possible. Always offer options—never dead-end with information.
+Leadership thinks top-down: organization, team, service, problem. Engineers think bottom-up: my service, specific issue, fix it, learn from it. Design features that support these natural directions instead of forcing one pattern on everyone.
 
-### Role-Based Experience
+### Context Builds
 
-The same CLI adapts to who you are. Leadership and engineers use the same tool but get experiences tailored to their needs.
+The CLI maintains context as you work. Reference a service and it becomes active context. Pull in a log event, create a visualization—they accumulate. The AI sees all of it. You don't repeat yourself.
 
-**Leadership sees:**
-- Org-wide metrics and trends
-- Team/service breakdowns
-- Progress toward organizational goals
-- Tools for communicating with teams
-
-**Engineers see:**
-- Their specific services and ownership
-- Detailed technical recommendations
-- Hands-on actions (fix code, configure tools)
-- Learning resources (why is this waste?)
-
-**How we adapt:**
-- During onboarding, we ask about role and responsibilities
-- Leadership users automatically get org-wide views
-- Engineer users see only their services by default
-- Both can switch contexts when needed
-
-**Why:** Different roles have different jobs. Don't make engineers wade through org charts, don't make leaders debug individual log lines. Respect their time and focus.
-
-### Contextual and Continuous
-
-The CLI maintains context as you work. Whether you're in an interactive conversation or making tool calls through the MCP server, the system understands what you're doing and builds on it.
-
-**Not this:** Every interaction starts from scratch, no memory
-```
-$ tero service show checkout-api
-$ tero service show checkout-api --metrics waste
-$ tero logs block --service checkout-api --event debug_log
-```
-
-**Instead this:** Context flows naturally
-```
-> show me checkout-api
-
-[Details about checkout-api]
-
-> what's the waste breakdown?
-
-[Already knows we're talking about checkout-api]
-
-> block the debug logs
-
-[Still in checkout-api context, knows which service]
-```
-
-**Why:** Complex problems need exploration, not one-shot queries. Maintaining context makes the experience natural and efficient. The control plane manages conversation history—the CLI just presents the current state beautifully.
+This extends across sessions. When you @ a previous session, its context comes with it—a summary and the key entities, not the full transcript. Context compounds. The more you use Tero, the richer the connections between entities become.
 
 ---
 
 ## Interaction Patterns
 
-These are the common flows and patterns you'll see throughout the CLI. Understanding them helps you design features that feel consistent.
+### First Run
 
-### First Run (Onboarding)
+The first impression matters. Onboarding should be quick, personalized, and lead to value fast.
 
-The first impression matters. Onboarding should be quick, personalized, and immediately useful.
-
-**Principles for onboarding:**
-- **Low friction:** Don't ask 20 questions before showing value
-- **Personalized:** Adapt to role (leadership vs engineer)
-- **Immediate value:** Show insights, not tutorials or empty states
-
-**The flow:**
-1. Collect email (used to find or create organization)
-2. Authenticate (WorkOS handles SSO if configured)
-3. Ask about role (leadership or engineer)
-4. If engineer: which services do you work on?
-5. Show initial insights based on their role
-
-**Why start with insights:** People stay engaged when they see value. Don't make them configure everything before showing them anything useful.
+The flow: collect email, authenticate, ask about role, set up the organization and integrations. Then drop the user into chat with enough context to be immediately useful. Don't make them configure everything before showing them anything. People stay engaged when they see value.
 
 ### Typical Sessions
 
-Different personas follow different patterns. Design features that support their natural workflows.
+Different personas follow different patterns.
 
-**Leadership flow:**
-```
-1. Overview → How's the org doing?
-2. Identify problems → Which services/teams need attention?
-3. Drill into specifics → What exactly is wrong?
-4. Understand ownership → Which team owns this?
-5. Track progress → Is it getting better?
-```
+Leadership starts broad: how's the org doing? Which services need attention? What's causing the problem? Who owns it? Is it getting better? They navigate from organization down to specifics.
 
-Leadership users think top-down: organization → team → service → problem.
+Engineers start narrow: how are my services doing? What specific patterns are wasteful? Show me examples. Let me fix it. Why is this considered waste? They navigate from their service outward to understanding.
 
-**Engineer flow:**
-```
-1. Service status → How are my services doing?
-2. Identify issues → What specific patterns are wasteful?
-3. Understand why → Show me examples, explain the problem
-4. Take action → Block logs, fix code, configure rules
-5. Learn → Why is this considered waste?
-```
+Both patterns work naturally in chat. The AI adapts its responses to the user's role and the direction of their exploration.
 
-Engineer users think bottom-up: my service → specific problem → fix it → learn from it.
+### Navigation
+
+Chat is home. Slash commands jump to specific pages (`/services`, `/policies`). @ references bring entities into context. Expanding a visualization opens a full-size modal. Escape goes back. You can navigate as deep as you want and always return to where you were.
+
+The key constraint: navigating deeper should never feel like you've lost your chat. Modals and overlays preserve the sense of place. Hard page transitions create mental friction—the user wonders "where am I? how do I get back?" We avoid that.
 
 ### Taking Action
 
-Actions come in three flavors with increasing permanence. Always offer options and let users choose.
+Actions come in three flavors with increasing permanence.
 
-**1. Block in vendor tool** (Quick win)
-- Creates exclusion rule in Datadog/Splunk/etc.
-- Immediate savings, code unchanged
-- Reversible if needed
+Block in the vendor tool—quick win, immediate savings, reversible. Fix in code—permanent solution, requires review and merge. Automate—for high-confidence patterns only, always reviewable after the fact.
 
-**2. Fix in code** (Permanent solution)
-- Scans codebase, finds log statements
-- Generates PR to remove/improve instrumentation
-- Requires review and merge
-
-**3. Automate** (High-confidence only)
-- User enables automation for certain patterns
-- CLI only acts on 100% certainty (debug logs in production, health check spam)
-- Always reviewable after the fact
-
-**Key principle:** Never surprise users. Make it clear what will happen, get confirmation for destructive actions, allow review and rollback.
+Never surprise users. Make it clear what will happen, get confirmation for destructive actions, allow review and rollback.
 
 ---
 
-These principles apply across all CLI interfaces—whether you're using the interactive TUI, integrating through MCP, or running traditional commands. The presentation changes, but the design philosophy stays the same: make Tero's intelligence accessible, understandable, and actionable.
+These principles apply across all CLI interfaces—the TUI, the MCP server, and future traditional commands. The presentation changes, but the design philosophy stays the same.
