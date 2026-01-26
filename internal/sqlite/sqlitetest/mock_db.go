@@ -23,7 +23,7 @@ type MockDB struct {
 	ExecFunc func(query string, args ...any) (sql.Result, error)
 
 	// LoadExtensionFunc is called when LoadExtension is invoked.
-	LoadExtensionFunc func(path string) error
+	LoadExtensionFunc func(path, entryPoint string) error
 
 	// Closed is set to true when Close is called.
 	Closed bool
@@ -72,9 +72,9 @@ func (m *MockDB) Count(table string) (int64, error) {
 }
 
 // LoadExtension implements sqlite.Database.
-func (m *MockDB) LoadExtension(path string) error {
+func (m *MockDB) LoadExtension(path, entryPoint string) error {
 	if m.LoadExtensionFunc != nil {
-		return m.LoadExtensionFunc(path)
+		return m.LoadExtensionFunc(path, entryPoint)
 	}
 	return nil
 }

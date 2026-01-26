@@ -11,14 +11,21 @@ const baseURL = "https://api.workos.com"
 type Client struct {
 	baseURL    string
 	clientID   string
+	audiences  []string
 	httpClient *http.Client
 }
 
 // NewClient creates a new WorkOS client.
-func NewClient(clientID string) *Client {
+// Audiences are included in token requests so JWTs contain the aud claim.
+// Both the Tero API and PowerSync validate audience.
+func NewClient(clientID string, audiences ...string) *Client {
+	if len(audiences) == 0 {
+		panic("workos: at least one audience is required")
+	}
 	return &Client{
 		baseURL:    baseURL,
 		clientID:   clientID,
+		audiences:  audiences,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }

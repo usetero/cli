@@ -73,6 +73,9 @@ func (c *Client) PollAuthentication(ctx context.Context, deviceCode string) (*au
 	data.Set("client_id", c.clientID)
 	data.Set("device_code", deviceCode)
 	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+	for _, aud := range c.audiences {
+		data.Add("audience", aud)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {

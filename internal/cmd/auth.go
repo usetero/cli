@@ -57,7 +57,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, logger)
 
 			ctx := cmd.Context()
@@ -161,7 +161,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, logger)
 
 			ctx := cmd.Context()
@@ -229,7 +229,7 @@ func newTokenCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, logger)
 
 			token, err := authService.GetAccessToken(cmd.Context())
@@ -253,7 +253,7 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			s := theme.Styles
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, logger)
 
 			if err := authService.ClearTokens(); err != nil {
@@ -317,7 +317,7 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			// Try to get org name from API
 			if workosOrgID != "" {
 				orgName := workosOrgID // fallback to ID
-				workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 				authService := auth.NewService(workosClient, tokenStore, logger)
 				if currentToken, err := authService.GetAccessToken(cmd.Context()); err == nil {
 					refreshFunc := func() (string, error) {

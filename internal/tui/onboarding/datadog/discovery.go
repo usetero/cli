@@ -51,6 +51,9 @@ type statusFetchedMsg struct {
 
 // DiscoveryStep shows discovery progress focused on what users care about
 type DiscoveryStep struct {
+	// Context for API calls
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -78,6 +81,7 @@ type DiscoveryStep struct {
 
 // NewDiscoveryStep creates a new discovery step
 func NewDiscoveryStep(
+	ctx context.Context,
 	theme *styles.Theme,
 	role string,
 	org api.Organization,
@@ -99,6 +103,7 @@ func NewDiscoveryStep(
 	s.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)
 
 	return &DiscoveryStep{
+		ctx:              ctx,
 		theme:            theme,
 		role:             role,
 		org:              org,
@@ -148,9 +153,7 @@ func (s *DiscoveryStep) fetchStatus() tea.Cmd {
 		s.logger.Debug("fetching discovery status",
 			log.String("datadogAccountID", *s.datadogAccountID))
 
-		ctx := context.Background()
-
-		status, err := s.statusPoller.GetStatus(ctx, *s.datadogAccountID)
+		status, err := s.statusPoller.GetStatus(s.ctx, *s.datadogAccountID)
 		if err != nil {
 			s.logger.Error("failed to fetch discovery status", "error", err)
 			return statusFetchedMsg{err: err}
@@ -490,7 +493,7 @@ func (s *DiscoveryStep) Next() (step.Step, error) {
 	if !s.isComplete() {
 		return nil, step.ErrNotReady
 	}
-	return complete.NewCompleteStep(s.theme, s.org, s.account, s.logger, s.globalBindings), nil
+	return complete.NewCompleteStep(s.ctx, s.theme, s.org, s.account, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

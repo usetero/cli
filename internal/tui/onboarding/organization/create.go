@@ -37,6 +37,9 @@ type TokenRefresher interface {
 
 // CreateStep handles creating a new organization
 type CreateStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -66,7 +69,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new organization creation step
-func NewCreateStep(theme *styles.Theme, role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationCreator == nil {
 		panic("organizationCreator cannot be nil")
 	}
@@ -91,6 +94,7 @@ func NewCreateStep(theme *styles.Theme, role string, organizationCreator Organiz
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
+		ctx:                 ctx,
 		theme:               theme,
 		role:                role,
 		organizationCreator: organizationCreator,
@@ -207,8 +211,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // refreshToken returns a command that refreshes the token with org scope
 func (s *CreateStep) refreshToken(workosOrgID string) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
-		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, workosOrgID)
+		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(s.ctx, workosOrgID)
 		return createTokenRefreshMsg{accessToken: accessToken, err: err}
 	}
 }
@@ -216,10 +219,9 @@ func (s *CreateStep) refreshToken(workosOrgID string) tea.Cmd {
 // createOrganization creates a new organization via the API
 func (s *CreateStep) createOrganization(name string) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		s.logger.Info("creating organization", log.String("name", name))
 
-		result, err := s.organizationCreator.Create(ctx, name)
+		result, err := s.organizationCreator.Create(s.ctx, name)
 		if err != nil {
 			return createOrgMsg{err: err}
 		}
@@ -291,7 +293,7 @@ func (s *CreateStep) Next() (step.Step, error) {
 
 	// Skip account selection since bootstrap creates it automatically
 	// Go to Datadog region selection
-	return datadog.NewSelectRegionStep(s.theme, s.role, *s.createdResult.Organization, *s.createdResult.Account, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewSelectRegionStep(s.ctx, s.theme, s.role, *s.createdResult.Organization, *s.createdResult.Account, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

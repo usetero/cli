@@ -1,6 +1,8 @@
 package onboarding
 
 import (
+	"context"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -20,6 +22,9 @@ import (
 // role selection, organization setup, account setup, and datadog integration.
 // When complete, it exposes the final state (org, account) for app creation.
 type Onboarding struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Flow and layout management
 	flow   *step.Flow
 	layout layouts.Layout
@@ -35,6 +40,7 @@ type Onboarding struct {
 
 // New creates a new onboarding model starting with auth
 func New(
+	ctx context.Context,
 	theme *styles.Theme,
 	logger log.Logger,
 	authService *auth.Service,
@@ -45,10 +51,11 @@ func New(
 	// Start onboarding flow with auth check step
 	// Check step validates existing auth, or proceeds to auth step if needed
 	flow := step.NewFlow(
-		authcheck.NewCheckAuthStep(theme, authService, authService, preferencesService, apiEndpoint, logger, globalBindings),
+		authcheck.NewCheckAuthStep(ctx, theme, authService, authService, preferencesService, apiEndpoint, logger, globalBindings),
 	)
 
 	return &Onboarding{
+		ctx:            ctx,
 		flow:           flow,
 		layout:         layouts.NewHeader(theme, logger),
 		theme:          theme,

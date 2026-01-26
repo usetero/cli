@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"math/rand/v2"
 	"slices"
@@ -19,6 +20,11 @@ import (
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
 )
+
+// Updater handles messages. Components that don't render implement this.
+type Updater interface {
+	Update(msg tea.Msg) tea.Cmd
+}
 
 const (
 	// Minimum window dimensions
@@ -66,6 +72,13 @@ type TUI struct {
 	powersyncConfig    *powersync.Config
 	theme              *styles.Theme
 
+	// Lifecycle context - cancelled on quit for clean shutdown
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	// PowerSync - handles sync lifecycle, started when account is selected
+	syncManager *SyncManager
+
 	// Current mode (onboarding or app)
 	currentMode mode.Mode
 
@@ -83,6 +96,9 @@ type TUI struct {
 
 // New creates a new TUI model
 func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint string, powersyncConfig *powersync.Config, logger log.Logger) tea.Model {
+	// Create lifecycle context - cancelled on quit
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Create theme first - it's used by everything
 	theme := styles.NewTheme(true) // dark mode
 
@@ -90,8 +106,11 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 	authService := auth.NewService(oauthProvider, tokenStore, logger)
 	preferencesService := preferences.NewService(cfg, logger)
 
+	// Create sync manager (not started until account is selected)
+	syncManager := NewSyncManager(ctx, powersyncConfig, authService, logger)
+
 	// Start with onboarding mode
-	onboardingMode := onboarding.New(theme, logger, authService, preferencesService, apiEndpoint, globalBindings)
+	onboardingMode := onboarding.New(ctx, theme, logger, authService, preferencesService, apiEndpoint, globalBindings)
 
 	return &TUI{
 		config:             cfg,
@@ -100,6 +119,9 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 		preferencesService: preferencesService,
 		powersyncConfig:    powersyncConfig,
 		theme:              theme,
+		ctx:                ctx,
+		cancel:             cancel,
+		syncManager:        syncManager,
 		currentMode:        onboardingMode,
 		keyMap:             DefaultKeyMap(),
 	}
@@ -124,23 +146,62 @@ func setWindowTitle(title string) tea.Cmd {
 
 // Update handles messages
 func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	// 1. Handle global concerns (quit, window size, terminal detection)
+	if cmd, handled := m.handleGlobal(msg); handled {
+		return m, cmd
+	}
+
+	// 2. Delegate to all updaters (they ignore messages they don't care about)
+	if cmd := m.syncManager.Update(msg); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+
+	// 3. Delegate to current mode
+	if cmd := m.currentMode.Update(msg); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+
+	// 4. Check for mode transitions
+	if cmd := m.checkModeTransition(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+// handleGlobal handles global concerns like quit, window size, and terminal detection.
+// Returns (cmd, true) if the message was fully handled and should not be delegated further.
+func (m *TUI) handleGlobal(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		// Global key bindings (checked first)
 		if key.Matches(msg, m.keyMap.Quit) || key.Matches(msg, m.keyMap.Exit) {
 			m.logger.Info("user quit", "key", msg.String())
-			return m, tea.Quit
+			m.shutdown()
+			return tea.Quit, true
 		}
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.logger.Info("window resized",
+			"terminalWidth", msg.Width,
+			"terminalHeight", msg.Height,
+			"mode", fmt.Sprintf("%T", m.currentMode))
+		m.currentMode.SetSize(msg.Width, msg.Height)
+		return nil, true
+
 	case tea.EnvMsg:
-		// Detect Windows Terminal
 		if !m.sendProgressBar {
 			m.sendProgressBar = slices.Contains(msg, "WT_SESSION")
 			if m.sendProgressBar {
 				m.logger.Info("enabled progress bar", "terminal", "Windows Terminal")
 			}
 		}
+		// Don't return handled - let it propagate
+
 	case tea.TerminalVersionMsg:
-		// Detect Ghostty
 		termVersion := strings.ToLower(msg.Name)
 		m.logger.Debug("received terminal version", "version", termVersion)
 		if !m.sendProgressBar {
@@ -149,54 +210,50 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.logger.Info("enabled progress bar", "terminal", "Ghostty")
 			}
 		}
-		return m, nil
+		// Don't return handled - let it propagate
 	}
 
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+	return nil, false
+}
 
-		modeType := fmt.Sprintf("%T", m.currentMode)
-		m.logger.Info("window resized",
-			"terminalWidth", msg.Width,
-			"terminalHeight", msg.Height,
-			"mode", modeType)
-
-		// Modes get full terminal dimensions (layouts handle padding)
-		m.currentMode.SetSize(msg.Width, msg.Height)
-
-		return m, nil
+// checkModeTransition checks if the current mode completed and transitions to the next.
+func (m *TUI) checkModeTransition() tea.Cmd {
+	if !m.currentMode.IsComplete() {
+		return nil
 	}
 
-	// Route message to current mode
-	cmd := m.currentMode.Update(msg)
+	switch mode := m.currentMode.(type) {
+	case *onboarding.Onboarding:
+		org := mode.Organization()
+		account := mode.Account()
 
-	// Check if mode completed and transition to next mode
-	if m.currentMode.IsComplete() {
-		switch mode := m.currentMode.(type) {
-		case *onboarding.Onboarding:
-			// Onboarding complete - extract final state
-			org := mode.Organization()
-			account := mode.Account()
+		m.logger.Info("onboarding completed, transitioning to app",
+			"orgID", org.ID,
+			"accountID", account.ID)
 
-			m.logger.Info("onboarding completed, transitioning to app",
-				"orgID", org.ID,
-				"accountID", account.ID)
+		m.currentMode = tuiapp.New(m.ctx, m.theme, org, account, m.syncManager.DB(), m.logger, globalBindings)
 
-			// Create app mode with PowerSync for local-first data
-			m.currentMode = tuiapp.New(m.theme, org, account, m.authService, m.powersyncConfig, m.logger, globalBindings)
-
-			// Set size on new mode before initializing
-			if m.width > 0 && m.height > 0 {
-				m.currentMode.SetSize(m.width, m.height)
-			}
-
-			return m, m.currentMode.Init()
+		if m.width > 0 && m.height > 0 {
+			m.currentMode.SetSize(m.width, m.height)
 		}
+
+		return m.currentMode.Init()
 	}
 
-	return m, cmd
+	return nil
+}
+
+// shutdown cleans up resources on quit
+func (m *TUI) shutdown() {
+	// Cancel context to stop all background operations
+	if m.cancel != nil {
+		m.cancel()
+	}
+
+	// Stop sync and close database
+	if m.syncManager != nil {
+		m.syncManager.Shutdown()
+	}
 }
 
 // isBusy returns true if the TUI is currently performing a background operation

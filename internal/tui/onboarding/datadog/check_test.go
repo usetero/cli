@@ -50,7 +50,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -84,7 +84,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -118,7 +118,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -160,7 +160,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()

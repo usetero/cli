@@ -45,7 +45,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -84,7 +84,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -125,7 +125,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -164,7 +164,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})

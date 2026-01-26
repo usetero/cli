@@ -1,43 +1,100 @@
 version: "3"
 
 vars:
-  CONTROL_PLANE_DIR: ../control-plane
   CPU_COUNT:
     sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"
   PARALLEL_COUNT:
     sh: echo $(({{.CPU_COUNT}} * 2))
 
 tasks:
-  # Client generation
-  client:generate:
-    desc: Generate GraphQL client from running control-plane API (requires control plane at localhost:8081)
+  # ===========================================================================
+  # Primary workflows (what you'll use most)
+  # ===========================================================================
+
+  do:
+    desc: Format, lint, and test (pre-commit check)
+    cmds:
+      - task: fmt
+      - task: lint
+      - task: test
+
+  signoff:
+    desc: Full validation before push
+    aliases: [sign, s]
+    deps: [do, check, build]
+    cmds:
+      - gh signoff
+
+  dev:
+    desc: Generate code and build
+    deps: [generate]
+    cmds:
+      - task: build
+
+  # ===========================================================================
+  # Code generation
+  # ===========================================================================
+
+  generate:
+    desc: Generate all code (GraphQL client + SQLite schema)
+    cmds:
+      - task: generate:client
+      - task: generate:schema
+
+  generate:client:
+    desc: Generate GraphQL client (requires control plane at localhost:8081)
     dir: pkg/client
     cmds:
       - npx get-graphql-schema http://localhost:8081/graphql > schema.graphql
       - go run github.com/Khan/genqlient
 
-  # Build tasks
+  generate:schema:
+    desc: Generate PowerSync and SQLite schema (requires doppler)
+    cmds:
+      - doppler run -- go generate ./internal/powersync
+      - doppler run -- go generate ./internal/sqlite
+
+  # ===========================================================================
+  # Build
+  # ===========================================================================
+
   build:
-    desc: Build the tero CLI binary
+    desc: Build the tero binary
     cmds:
       - go build -o tero cmd/tero/main.go
     sources:
       - "**/*.go"
     generates:
-      - "tero"
+      - tero
 
-  # Development tasks
-  run:
-    desc: Run tero without building (fast iteration)
+  build:version:
+    desc: Build with version info (same as CI)
     cmds:
-      - go run ./cmd/tero {{.CLI_ARGS}}
+      - |
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        go build -ldflags "-X main.version=${VERSION}" -o tero cmd/tero/main.go
+        echo "Built tero ${VERSION}"
 
-  test:
-    desc: Run tests (parallel, with race detection)
+  install:
+    desc: Install tero to GOPATH
+    deps: [build]
     cmds:
-      - gotestsum --format short-verbose -- -race -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} ./...
+      - go install cmd/tero/main.go
+
+  # ===========================================================================
+  # Quality checks
+  # ===========================================================================
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
 
   lint:
+    desc: Run all linters
+    deps: [lint:go, lint:scripts]
+
+  lint:go:
     desc: Run golangci-lint
     cmds:
       - |
@@ -53,113 +110,115 @@ tasks:
       - shellcheck scripts/*.sh
 
   check:
-    desc: Validate configuration files
+    desc: Validate release configuration
     cmds:
       - goreleaser check
 
-  do:
-    desc: Format, lint, and test
+  # ===========================================================================
+  # Testing
+  # ===========================================================================
+
+  test:
+    desc: Run unit tests
     cmds:
-      - go fmt ./...
-      - golangci-lint run ./...
-      - task: lint:scripts
+      - gotestsum --format short-verbose -- -race -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} -skip "^TestIntegration_|^TestCorrectness_" ./...
+
+  test:integration:
+    desc: Run integration tests (requires doppler)
+    cmds:
+      - doppler run -- gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...
+
+  test:correctness:
+    desc: Run correctness tests (requires doppler)
+    cmds:
+      - doppler run -- gotestsum --format short-verbose -- -v -tags=correctness -run "^TestCorrectness_" ./...
+
+  test:all:
+    desc: Run all tests (unit + integration)
+    cmds:
       - task: test
+      - task: test:integration
 
-  signoff:
-    desc: Full validation before push (format, lint, test, build)
-    aliases: ["sign", "s"]
+  # ===========================================================================
+  # Development helpers
+  # ===========================================================================
+
+  run:
+    desc: Run tero without building
     cmds:
-      - task: do
-      - task: check
-      - task: build
-      - gh signoff
+      - go run ./cmd/tero {{.CLI_ARGS}}
 
-  dev:
-    desc: Generate client and build
+  auth:login:
+    desc: Login to Tero (dev)
     cmds:
-      - task: client:generate
-      - task: build
+      - doppler run -- go run ./cmd/tero auth login
 
-  # Installation
-  install:
-    desc: Install tero CLI to GOPATH
-    deps: [build]
+  auth:token:
+    desc: Print current access token
     cmds:
-      - go install cmd/tero/main.go
+      - doppler run -- go run ./cmd/tero auth token
 
-  # Clean
+  auth:status:
+    desc: Show auth status
+    cmds:
+      - doppler run -- go run ./cmd/tero auth status
+
+  # ===========================================================================
+  # Cleanup
+  # ===========================================================================
+
   clean:
-    desc: Clean build artifacts and Go caches
+    desc: Clean build artifacts and caches
     cmds:
       - rm -f tero
       - rm -rf dist/
       - go clean -cache -testcache -modcache
-      - 'echo "Cleaned: binary and Go caches"'
+      - echo "Cleaned build artifacts and Go caches"
 
   reset:
-    desc: Reset development environment (auth, config, logs)
+    desc: Reset dev environment (auth, config, logs)
     cmds:
       - go run ./cmd/tero reset
-      - task: reset:logs
-
-  reset:logs:
-    desc: Clear log files
-    cmds:
       - rm -f /tmp/tero.log
-      - 'echo "Cleared: log files"'
+      - echo "Reset complete"
 
-  # Release tasks
-  build:version:
-    desc: Build with version information injected (same as CI)
-    cmds:
-      - |
-        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-        go build -ldflags "-X main.version=${VERSION}" -o tero cmd/tero/main.go
-        echo "Built tero ${VERSION}"
+  # ===========================================================================
+  # Release
+  # ===========================================================================
 
   release:check:
-    desc: Check recent commits follow conventional commit format
+    desc: Check commits follow conventional format
     cmds:
       - |
         echo "Recent commits (should follow conventional commit format):"
         git log --oneline -10
         echo ""
         echo "Valid prefixes: feat, fix, chore, docs, refactor, test, ci, perf, revert"
-        echo "Example: feat: add new feature"
 
   release:snapshot:
-    desc: Test GoReleaser build locally without publishing
+    desc: Test release build locally
     cmds:
       - goreleaser release --snapshot --clean --skip=publish
       - echo ""
-      - echo "Build artifacts in dist/ directory"
       - ls -lh dist/*.tar.gz dist/*.zip 2>/dev/null || true
 
-  install:test:
-    desc: Test install.sh script with released version
+  release:test-install:
+    desc: Test install.sh script against latest release
     cmds:
       - |
         echo "Testing install script..."
         export TERO_INSTALL_DIR="/tmp/tero-install-test"
         rm -rf "$TERO_INSTALL_DIR"
-
-        # Test help
         sh scripts/install.sh --help
-
-        # Test actual installation with latest release
         echo ""
         echo "Installing latest release to $TERO_INSTALL_DIR..."
         sh scripts/install.sh -y
-
-        # Verify installation
         if [ -x "$TERO_INSTALL_DIR/tero" ]; then
           echo ""
-          echo "✓ Installation successful!"
+          echo "Installation successful!"
           "$TERO_INSTALL_DIR/tero" --version
         else
-          echo "✗ Installation failed"
+          echo "Installation failed"
           exit 1
         fi
-
-        # Cleanup
         rm -rf "$TERO_INSTALL_DIR"

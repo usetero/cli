@@ -60,6 +60,9 @@ func DefaultKeyMap() KeyMap {
 
 // SelectStep handles selecting the user's role in the organization.
 type SelectStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme
 	theme *styles.Theme
 
@@ -81,7 +84,7 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new role selection step.
-func NewSelectStep(theme *styles.Theme, apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -115,6 +118,7 @@ func NewSelectStep(theme *styles.Theme, apiClient api.Client, preferencesService
 	}
 
 	return &SelectStep{
+		ctx:                ctx,
 		theme:              theme,
 		roleSaver:          preferencesService,
 		tokenRefresher:     tokenRefresher,
@@ -280,7 +284,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
 	// Pass accumulated context (role), organization service, client, preferences service, and logger to next step
-	return organization.NewSelectStep(s.theme, role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings), nil
+	return organization.NewSelectStep(s.ctx, s.theme, role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

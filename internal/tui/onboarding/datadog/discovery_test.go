@@ -47,7 +47,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -82,7 +82,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -111,7 +111,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -150,7 +150,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()
@@ -200,7 +200,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -234,7 +234,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -287,7 +287,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -318,7 +318,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -354,7 +354,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -399,7 +399,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -438,7 +438,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -471,7 +471,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
 
 		// Act
 		cmd := s.Init()

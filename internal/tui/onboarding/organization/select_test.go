@@ -49,7 +49,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Act: simulate load completing with one org
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}
@@ -84,7 +84,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Act: simulate load completing with multiple orgs
 		items := []list.Item{
@@ -114,7 +114,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Act: simulate load completing with no orgs
 		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
@@ -148,7 +148,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Act: simulate load completing with multiple orgs
 		items := []list.Item{
@@ -182,7 +182,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Simulate load completing with one org (triggers auto-select)
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-123"}}
@@ -225,7 +225,7 @@ func TestSelectStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Simulate load completing with one org (triggers auto-select)
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}
@@ -259,7 +259,7 @@ func TestSelectStep_Next(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
 
 		// Simulate load completing with one org
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}

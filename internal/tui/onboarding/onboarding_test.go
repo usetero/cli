@@ -1,6 +1,7 @@
 package onboarding
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestOnboarding_Update(t *testing.T) {
 		// Create a complete step that holds the accumulated state
 		// This step will return (nil, nil) immediately to complete the flow
 		// because TERO_SKIP_TO_APP is set in the test environment
-		completeStep := complete.NewCompleteStep(onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
+		completeStep := complete.NewCompleteStep(context.Background(), onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
 
 		// Create a step that will transition to complete step
 		testStep := steptest.NewMockStep()

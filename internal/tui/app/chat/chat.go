@@ -12,9 +12,11 @@ import (
 	"github.com/usetero/cli/internal/tui/app/page"
 )
 
-// DatabaseReadyMsg is sent when the database is ready for queries.
+// DatabaseReadyMsg is sent when sync completes (successfully or with error).
+// If Err is set, DB will be nil and sync failed.
 type DatabaseReadyMsg struct {
-	DB sqlite.Database
+	DB  sqlite.Database
+	Err error
 }
 
 // model represents the chat page state
@@ -61,6 +63,11 @@ func (m *model) Init() tea.Cmd {
 func (m *model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case DatabaseReadyMsg:
+		if msg.Err != nil {
+			m.syncError = msg.Err
+			m.logger.Error("sync failed", "error", msg.Err)
+			return nil
+		}
 		m.db = msg.DB
 		m.logger.Info("chat received database")
 		return m.queryServiceCount()
@@ -104,10 +111,10 @@ func (m *model) View() string {
 	colors := m.theme.Colors
 
 	var status string
-	if m.db == nil {
-		status = "Connecting to PowerSync..."
-	} else if m.syncError != nil {
+	if m.syncError != nil {
 		status = fmt.Sprintf("Sync error: %v", m.syncError)
+	} else if m.db == nil {
+		status = "Connecting to PowerSync..."
 	} else {
 		status = fmt.Sprintf("Connected to PowerSync. Synced %d services.", m.serviceCount)
 	}

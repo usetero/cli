@@ -39,7 +39,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -80,7 +80,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Act: press enter without typing anything
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -113,7 +113,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -162,7 +162,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type and submit
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
@@ -196,7 +196,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, creator, saver, apiClient, logger, nil)
 
 		// Type and submit (first attempt - fails)
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})

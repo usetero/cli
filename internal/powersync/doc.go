@@ -4,4 +4,6 @@
 // database in sync with the server via HTTP streaming.
 //
 // You don't query through powersync - just use sqlite directly.
+//
+//go:generate go run ./generate
 package powersync

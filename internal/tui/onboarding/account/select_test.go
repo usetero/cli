@@ -46,7 +46,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with one account
 		items := []list.Item{account.AccountItem{ID: "acc-1", Name: "Production"}}
@@ -75,7 +75,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
@@ -103,7 +103,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with no accounts
 		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
@@ -135,7 +135,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Act: simulate load completing with multiple accounts
 		items := []list.Item{
@@ -164,7 +164,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -193,7 +193,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -232,7 +232,7 @@ func TestSelectStep_Next(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, lister, saver, apiClient, logger, nil)
 
 		// Assert
 		_, err := s.Next()

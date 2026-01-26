@@ -44,7 +44,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
 
 		// Transition to input screen (press enter on interstitial)
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -83,7 +83,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -124,7 +124,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -154,7 +154,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
 
 		// Assert: not complete initially
 		if isAPIKeyComplete(s) {

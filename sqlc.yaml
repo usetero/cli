@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "internal/sqlite/queries/"
+    schema: "internal/sqlite/schema.sql"
+    gen:
+      go:
+        package: "sqlite"
+        out: "internal/sqlite"
+        emit_pointers_for_null_types: true
+        output_db_file_name: "querier.go"
+        output_models_file_name: "models.go"

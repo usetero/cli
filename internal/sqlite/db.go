@@ -4,10 +4,13 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/mattn/go-sqlite3"
 )
 
 // Database is the interface for the local SQLite database.
@@ -16,7 +19,7 @@ type Database interface {
 	QueryRow(query string, args ...any) *sql.Row
 	Exec(query string, args ...any) (sql.Result, error)
 	Count(table string) (int64, error)
-	LoadExtension(path string) error
+	LoadExtension(path, entryPoint string) error
 	Close() error
 }
 
@@ -31,10 +34,15 @@ type DB struct {
 var _ Database = (*DB)(nil)
 
 // Open opens a SQLite database at the given path.
-// The database file is created if it doesn't exist.
+// The database file and parent directories are created if they don't exist.
 func Open(path string) (*DB, error) {
-	// Open with extension loading enabled (needed for PowerSync)
-	db, err := sql.Open("sqlite3", path+"?_load_extension=1")
+	// Ensure parent directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, fmt.Errorf("create database directory: %w", err)
+	}
+
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
@@ -93,10 +101,21 @@ func (d *DB) Count(table string) (int64, error) {
 }
 
 // LoadExtension loads a SQLite extension from the given path.
-func (d *DB) LoadExtension(path string) error {
-	_, err := d.db.Exec("SELECT load_extension(?)", path)
+// This uses the go-sqlite3 driver's C API to properly enable and load extensions.
+// The entryPoint can be empty to use the default, or specify a custom entry point
+// like "sqlite3_powersync_init" for the PowerSync extension.
+func (d *DB) LoadExtension(path, entryPoint string) error {
+	conn, err := d.db.Conn(context.Background())
 	if err != nil {
-		return fmt.Errorf("load extension: %w", err)
+		return fmt.Errorf("get connection: %w", err)
 	}
-	return nil
+	defer conn.Close()
+
+	return conn.Raw(func(driverConn any) error {
+		sqliteConn, ok := driverConn.(*sqlite3.SQLiteConn)
+		if !ok {
+			return fmt.Errorf("unexpected driver connection type: %T", driverConn)
+		}
+		return sqliteConn.LoadExtension(path, entryPoint)
+	})
 }

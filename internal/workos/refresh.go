@@ -33,6 +33,9 @@ func (c *Client) refreshToken(ctx context.Context, refreshToken, organizationID 
 	if organizationID != "" {
 		data.Set("organization_id", organizationID)
 	}
+	for _, aud := range c.audiences {
+		data.Add("audience", aud)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {

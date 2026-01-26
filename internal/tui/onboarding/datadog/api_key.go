@@ -34,6 +34,9 @@ type DatadogAPIKeyValidator interface {
 
 // APIKeyStep handles collecting the user's Datadog API key.
 type APIKeyStep struct {
+	// Context for API calls
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -64,7 +67,7 @@ type APIKeyStep struct {
 }
 
 // NewAPIKeyStep creates a new Datadog API key collection step
-func NewAPIKeyStep(theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKeyValidator DatadogAPIKeyValidator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewAPIKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKeyValidator DatadogAPIKeyValidator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiKeyValidator == nil {
 		panic("apiKeyValidator cannot be nil")
 	}
@@ -88,6 +91,7 @@ func NewAPIKeyStep(theme *styles.Theme, role string, org api.Organization, accou
 	sp.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &APIKeyStep{
+		ctx:             ctx,
 		theme:           theme,
 		role:            role,
 		org:             org,
@@ -210,10 +214,9 @@ func (s *APIKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // validateAPIKey validates the API key via the control plane
 func (s *APIKeyStep) validateAPIKey(apiKey string) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		s.logger.Debug("validating datadog api key", log.String("site", s.site))
 
-		valid, errorMsg, err := s.apiKeyValidator.ValidateAPIKey(ctx, apiKey, s.site)
+		valid, errorMsg, err := s.apiKeyValidator.ValidateAPIKey(s.ctx, apiKey, s.site)
 		if err != nil {
 			s.logger.Error("failed to validate api key", "error", err)
 			return validateAPIKeyMsg{
@@ -338,7 +341,7 @@ func (s *APIKeyStep) Next() (step.Step, error) {
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
-	return NewAppKeyStep(s.theme, s.role, s.org, s.account, s.site, s.validatedKey, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return NewAppKeyStep(s.ctx, s.theme, s.role, s.org, s.account, s.site, s.validatedKey, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

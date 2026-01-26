@@ -49,7 +49,8 @@ Just run 'tero' to start an interactive chat session.`,
 			endpoint, _ := cmd.Flags().GetString("endpoint")
 
 			// Create WorkOS client for authentication
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID)
+			// JWT will include audiences for both Tero API and PowerSync
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 
 			// Create PowerSync config
 			powersyncConfig := &powersync.Config{

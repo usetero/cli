@@ -31,6 +31,9 @@ type createAccountMsg struct {
 
 // AppKeyStep handles collecting the user's Datadog application key.
 type AppKeyStep struct {
+	// Context for API calls
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -61,7 +64,7 @@ type AppKeyStep struct {
 }
 
 // NewAppKeyStep creates a new Datadog app key collection step
-func NewAppKeyStep(theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, accountCreator DatadogAccountCreator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, accountCreator DatadogAccountCreator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountCreator == nil {
 		panic("accountCreator cannot be nil")
 	}
@@ -79,6 +82,7 @@ func NewAppKeyStep(theme *styles.Theme, role string, org api.Organization, accou
 	inp.SetEchoCharacter('•')
 
 	return &AppKeyStep{
+		ctx:            ctx,
 		theme:          theme,
 		role:           role,
 		org:            org,
@@ -203,11 +207,10 @@ func (s *AppKeyStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // createAccount creates a Datadog account with both API and App keys
 func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		s.logger.Debug("creating datadog account", log.String("accountID", s.account.ID), log.String("site", s.site))
 
 		datadogAccount, err := s.accountCreator.CreateAccount(
-			ctx,
+			s.ctx,
 			s.account.ID,
 			"Datadog", // Default name
 			s.site,
@@ -314,7 +317,7 @@ func (s *AppKeyStep) Next() (step.Step, error) {
 
 	// Datadog account created - move to unified discovery step
 	datadogAccountID := s.createdAccount.ID
-	return NewDiscoveryStep(s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
+	return NewDiscoveryStep(s.ctx, s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

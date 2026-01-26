@@ -9,7 +9,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/app/chat"
@@ -18,11 +17,6 @@ import (
 	"github.com/usetero/cli/internal/tui/components/header"
 	"github.com/usetero/cli/internal/tui/components/sidebar"
 )
-
-// tokenProvider provides access tokens for API authentication.
-type tokenProvider interface {
-	GetAccessToken(ctx context.Context) (string, error)
-}
 
 const (
 	// Width threshold for switching between sidebar and header mode
@@ -36,6 +30,9 @@ const (
 // It renders pages with appropriate chrome (sidebar or header) based on
 // window size, and manages the command bar and popover stack.
 type App struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -51,13 +48,10 @@ type App struct {
 	commandbar *commandbar.CommandBar
 
 	// Dependencies
-	logger        log.Logger
-	tokenProvider tokenProvider
+	logger log.Logger
 
-	// Data layer
-	powersyncConfig *powersync.Config
-	db              sqlite.Database
-	sync            *powersync.Sync
+	// Data layer - provided by TUI (sync started during onboarding)
+	db sqlite.Database
 
 	// Identity
 	org     api.Organization
@@ -74,70 +68,39 @@ type App struct {
 	compact bool // true when width < CompactModeWidth
 }
 
-// New creates a new app starting with the chat page
-func New(theme *styles.Theme, org api.Organization, account api.Account, tokenProvider tokenProvider, powersyncConfig *powersync.Config, logger log.Logger, globalBindings []key.Binding) *App {
+// New creates a new app starting with the chat page.
+// The db is provided by TUI - sync was started when account was selected during onboarding.
+func New(ctx context.Context, theme *styles.Theme, org api.Organization, account api.Account, db sqlite.Database, logger log.Logger, globalBindings []key.Binding) *App {
 	return &App{
-		theme:           theme,
-		chat:            chat.New(theme, org.ID, account.ID, logger),
-		sidebar:         sidebar.New(theme, logger),
-		header:          header.New(theme, logger),
-		commandbar:      commandbar.New(theme, logger),
-		logger:          logger,
-		tokenProvider:   tokenProvider,
-		powersyncConfig: powersyncConfig,
-		sync:            powersync.NewSync(powersyncConfig),
-		org:             org,
-		account:         account,
-		globalBindings:  globalBindings,
+		ctx:            ctx,
+		theme:          theme,
+		chat:           chat.New(theme, org.ID, account.ID, logger),
+		sidebar:        sidebar.New(theme, logger),
+		header:         header.New(theme, logger),
+		commandbar:     commandbar.New(theme, logger),
+		logger:         logger,
+		db:             db,
+		org:            org,
+		account:        account,
+		globalBindings: globalBindings,
 	}
-}
-
-// syncStartedMsg is sent when PowerSync has started.
-type syncStartedMsg struct {
-	db  sqlite.Database
-	err error
 }
 
 // Init initializes the app
 func (a *App) Init() tea.Cmd {
+	// If we have a database, notify chat it's ready
+	var dbCmd tea.Cmd
+	if a.db != nil {
+		dbCmd = func() tea.Msg {
+			return chat.DatabaseReadyMsg{DB: a.db}
+		}
+	}
+
 	return tea.Batch(
 		a.chat.Init(),
 		a.commandbar.Init(),
-		a.startSync(),
+		dbCmd,
 	)
-}
-
-// startSync opens the database and starts PowerSync in the background.
-func (a *App) startSync() tea.Cmd {
-	return func() tea.Msg {
-		// Get database path
-		dbPath, err := a.powersyncConfig.DatabasePath(a.account.ID)
-		if err != nil {
-			return syncStartedMsg{err: err}
-		}
-
-		// Open database
-		db, err := sqlite.Open(dbPath)
-		if err != nil {
-			return syncStartedMsg{err: err}
-		}
-
-		// Get auth token
-		ctx := context.Background()
-		token, err := a.tokenProvider.GetAccessToken(ctx)
-		if err != nil {
-			db.Close()
-			return syncStartedMsg{err: err}
-		}
-
-		// Start PowerSync
-		if err := a.sync.Start(ctx, db, a.account.ID, token); err != nil {
-			db.Close()
-			return syncStartedMsg{err: err}
-		}
-
-		return syncStartedMsg{db: db}
-	}
 }
 
 // activePage returns the topmost active page (popover or chat)
@@ -153,19 +116,6 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case syncStartedMsg:
-		if msg.err != nil {
-			a.logger.Error("failed to start sync", "error", msg.err)
-			// TODO: Show error in UI
-			return nil
-		}
-		a.db = msg.db
-		a.logger.Info("sync started", "status", a.sync.Status())
-		// Notify chat that database is ready
-		return func() tea.Msg {
-			return chat.DatabaseReadyMsg{DB: msg.db}
-		}
-
 	case tea.KeyPressMsg:
 		// Check for popover dismiss (Esc)
 		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) && len(a.popoverStack) > 0 {

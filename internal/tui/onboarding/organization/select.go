@@ -70,6 +70,9 @@ func (d orgDelegate) Render(w io.Writer, m list.Model, index int, item list.Item
 
 // SelectStep handles selecting an organization or choosing to create one.
 type SelectStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme
 	theme *styles.Theme
 
@@ -105,7 +108,7 @@ type tokenRefreshMsg struct {
 }
 
 // NewSelectStep creates a new organization selection step
-func NewSelectStep(theme *styles.Theme, role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, organizationLister OrganizationLister, apiClient api.Client, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizationLister == nil {
 		panic("organizationLister cannot be nil")
 	}
@@ -129,6 +132,7 @@ func NewSelectStep(theme *styles.Theme, role string, organizationLister Organiza
 	remoteList := remotelist.New(theme, delegate, "Loading organizations", logger)
 
 	return &SelectStep{
+		ctx:                 ctx,
 		theme:               theme,
 		role:                role,
 		organizationLister:  organizationLister,
@@ -147,9 +151,8 @@ func NewSelectStep(theme *styles.Theme, role string, organizationLister Organiza
 func (s *SelectStep) Init() tea.Cmd {
 	return s.remoteList.InitWithLoader(func() tea.Msg {
 		s.logger.Info("loading organizations")
-		ctx := context.Background()
 
-		orgs, err := s.organizationLister.List(ctx)
+		orgs, err := s.organizationLister.List(s.ctx)
 		if err != nil {
 			s.logger.Error("failed to load organizations", "error", err)
 			return remotelist.LoadResultMsg{Items: nil, Err: err}
@@ -170,8 +173,7 @@ func (s *SelectStep) Init() tea.Cmd {
 // refreshToken returns a command that refreshes the token with org scope
 func (s *SelectStep) refreshToken() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
-		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(ctx, s.selectedWorkosOrgID)
+		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(s.ctx, s.selectedWorkosOrgID)
 		return tokenRefreshMsg{accessToken: accessToken, err: err}
 	}
 }
@@ -382,7 +384,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new org
 	if s.selectedOrgID == createNewOrgID {
 		organizationService := api.NewOrganizationService(s.apiClient, s.logger)
-		return NewCreateStep(s.theme, s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings), nil
+		return NewCreateStep(s.ctx, s.theme, s.role, organizationService, s.defaultOrgSaver, s.defaultAccountSaver, s.tokenRefresher, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Find the selected org
@@ -398,7 +400,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	accountService := api.NewAccountService(s.apiClient, s.logger)
 
 	// User selected existing org - pass role, org, and services forward
-	return account.NewSelectStep(s.theme, s.role, selectedOrg, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
+	return account.NewSelectStep(s.ctx, s.theme, s.role, selectedOrg, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

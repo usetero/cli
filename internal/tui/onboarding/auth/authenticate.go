@@ -32,6 +32,9 @@ const (
 
 // AuthenticateStep handles device code flow authentication.
 type AuthenticateStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme
 	theme *styles.Theme
 
@@ -67,7 +70,7 @@ type authCompleteMsg struct {
 }
 
 // NewAuthenticateStep creates a new authentication step
-func NewAuthenticateStep(theme *styles.Theme, logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
+func NewAuthenticateStep(ctx context.Context, theme *styles.Theme, logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
@@ -85,6 +88,7 @@ func NewAuthenticateStep(theme *styles.Theme, logger log.Logger, authService *au
 	sp.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &AuthenticateStep{
+		ctx:                ctx,
 		theme:              theme,
 		authService:        authService,
 		preferencesService: preferencesService,
@@ -109,7 +113,7 @@ func (s *AuthenticateStep) Init() tea.Cmd {
 	return tea.Batch(
 		s.spinner.Tick,
 		func() tea.Msg {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 			defer cancel()
 
 			deviceAuth, err := s.authService.StartDeviceAuth(ctx)
@@ -227,10 +231,9 @@ func (s *AuthenticateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // pollForAuth starts the background polling process
 func (s *AuthenticateStep) pollForAuth() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		interval := time.Duration(s.deviceAuth.Interval) * time.Second
 
-		result, err := s.authService.WaitForAuth(ctx, s.deviceAuth.DeviceCode, interval)
+		result, err := s.authService.WaitForAuth(s.ctx, s.deviceAuth.DeviceCode, interval)
 		return authCompleteMsg{result: result, err: err}
 	}
 }
@@ -365,10 +368,10 @@ func (s *AuthenticateStep) Next() (step.Step, error) {
 
 	// Create authenticated API client with the access token from auth result
 	refreshFunc := func() (string, error) {
-		return s.authService.GetAccessToken(context.Background())
+		return s.authService.GetAccessToken(s.ctx)
 	}
 	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken, refreshFunc)
 
 	// Pass authenticated client, preferences service, and other dependencies to next step
-	return role.NewSelectStep(s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
+	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
 }

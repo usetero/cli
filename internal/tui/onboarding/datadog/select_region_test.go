@@ -1,6 +1,7 @@
 package datadog_test
 
 import (
+	"context"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -34,7 +35,7 @@ func TestSelectRegionStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewSelectRegionStep(selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
+		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
 
 		// Act: press enter to select first region
 		updated, _ := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -59,7 +60,7 @@ func TestSelectRegionStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewSelectRegionStep(selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
+		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
 
 		// Assert
 		if isRegionComplete(s) {

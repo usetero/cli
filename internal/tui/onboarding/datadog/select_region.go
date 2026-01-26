@@ -1,6 +1,7 @@
 package datadog
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -60,6 +61,9 @@ func (d regionDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 
 // SelectRegionStep handles greeting and Datadog region selection
 type SelectRegionStep struct {
+	// Context for API calls
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -80,7 +84,7 @@ type SelectRegionStep struct {
 }
 
 // NewSelectRegionStep creates a new Datadog region selection step
-func NewSelectRegionStep(theme *styles.Theme, role string, org api.Organization, account api.Account, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectRegionStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -104,6 +108,7 @@ func NewSelectRegionStep(theme *styles.Theme, role string, org api.Organization,
 	l := list.New(theme, items, delegate)
 
 	return &SelectRegionStep{
+		ctx:            ctx,
 		theme:          theme,
 		role:           role,
 		org:            org,
@@ -208,7 +213,7 @@ func (s *SelectRegionStep) Next() (step.Step, error) {
 	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Region selected, continue to API key entry with the selected site
-	return NewAPIKeyStep(s.theme, s.role, s.org, s.account, s.selectedRegion, datadogAccountService, s.apiClient, s.logger, s.globalBindings), nil
+	return NewAPIKeyStep(s.ctx, s.theme, s.role, s.org, s.account, s.selectedRegion, datadogAccountService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

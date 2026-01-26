@@ -49,6 +49,28 @@ func (s *AccountService) List(ctx context.Context, organizationID string) ([]Acc
 	return accounts, nil
 }
 
+// Get fetches a single account by ID. Returns nil if not found.
+func (s *AccountService) Get(ctx context.Context, accountID string) (*Account, error) {
+	s.logger.Debug("fetching account from API", "accountID", accountID)
+	resp, err := s.client.GetAccount(ctx, accountID)
+	if err != nil {
+		s.logger.Error("failed to fetch account", "error", err, "accountID", accountID)
+		return nil, err
+	}
+
+	s.logger.Debug("GetAccount response", "edges", len(resp.Accounts.Edges))
+	if len(resp.Accounts.Edges) == 0 {
+		s.logger.Debug("account not found", "accountID", accountID)
+		return nil, nil
+	}
+
+	node := resp.Accounts.Edges[0].Node
+	return &Account{
+		ID:   node.Id,
+		Name: node.DatadogAccount.Name,
+	}, nil
+}
+
 // Create creates a new account.
 func (s *AccountService) Create(ctx context.Context, organizationID, name string) (*Account, error) {
 	s.logger.Debug("creating account via API", "organizationID", organizationID, "name", name)

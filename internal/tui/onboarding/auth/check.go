@@ -25,6 +25,9 @@ type TokenValidator interface {
 
 // CheckAuthStep checks if the user has a valid auth token
 type CheckAuthStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme
 	theme *styles.Theme
 
@@ -48,7 +51,7 @@ type CheckAuthStep struct {
 }
 
 // NewCheckAuthStep creates a new auth check step
-func NewCheckAuthStep(theme *styles.Theme, tokenValidator TokenValidator, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCheckAuthStep(ctx context.Context, theme *styles.Theme, tokenValidator TokenValidator, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if tokenValidator == nil {
 		panic("tokenValidator cannot be nil")
 	}
@@ -63,6 +66,7 @@ func NewCheckAuthStep(theme *styles.Theme, tokenValidator TokenValidator, authSe
 	}
 
 	return &CheckAuthStep{
+		ctx:                ctx,
 		theme:              theme,
 		tokenValidator:     tokenValidator,
 		authService:        authService,
@@ -90,7 +94,6 @@ func (s *CheckAuthStep) Init() tea.Cmd {
 // checkAuth checks if there's a valid access token
 func (s *CheckAuthStep) checkAuth() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		s.logger.Info("checking authentication")
 
 		if !s.tokenValidator.IsAuthenticated() {
@@ -98,7 +101,7 @@ func (s *CheckAuthStep) checkAuth() tea.Cmd {
 		}
 
 		// Get the access token
-		accessToken, err := s.tokenValidator.GetAccessToken(ctx)
+		accessToken, err := s.tokenValidator.GetAccessToken(s.ctx)
 		if err != nil {
 			s.logger.Warn("failed to get access token, clearing tokens", "error", err)
 			// Clear invalid tokens
@@ -198,15 +201,15 @@ func (s *CheckAuthStep) Next() (step.Step, error) {
 
 	if !s.hasValidAuth {
 		// No valid auth - go to auth step
-		return NewAuthenticateStep(s.theme, s.logger, s.authService, s.preferencesService, s.apiEndpoint, s.globalBindings), nil
+		return NewAuthenticateStep(s.ctx, s.theme, s.logger, s.authService, s.preferencesService, s.apiEndpoint, s.globalBindings), nil
 	}
 
 	// Has valid auth - create authenticated client and go to role selection
 	refreshFunc := func() (string, error) {
-		return s.authService.GetAccessToken(context.Background())
+		return s.authService.GetAccessToken(s.ctx)
 	}
 	apiClient := client.New(s.apiEndpoint, s.accessToken, refreshFunc)
-	return role.NewSelectStep(s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
+	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

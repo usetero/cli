@@ -60,7 +60,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type organization name
 		for _, r := range "Acme Inc" {
@@ -108,7 +108,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Press enter without typing anything
 		updated, _ := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -136,7 +136,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Existing Org" {
@@ -196,7 +196,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "New Org" {
@@ -254,7 +254,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test Org" {
@@ -303,7 +303,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit (first attempt fails)
 		for _, r := range "Retry Org" {
@@ -352,7 +352,7 @@ func TestCreateStep_Next(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test" {

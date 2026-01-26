@@ -1,6 +1,7 @@
 package complete
 
 import (
+	"context"
 	"os"
 
 	"charm.land/bubbles/v2/help"
@@ -22,6 +23,9 @@ func shouldSkipToApp() bool {
 
 // CompleteStep shows the onboarding completion message
 type CompleteStep struct {
+	// Context for API calls
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -35,12 +39,13 @@ type CompleteStep struct {
 }
 
 // NewCompleteStep creates a new completion step
-func NewCompleteStep(theme *styles.Theme, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCompleteStep(ctx context.Context, theme *styles.Theme, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 
 	return &CompleteStep{
+		ctx:            ctx,
 		theme:          theme,
 		org:            org,
 		account:        account,

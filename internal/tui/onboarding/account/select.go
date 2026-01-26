@@ -19,6 +19,12 @@ import (
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
 
+// AccountSelectedMsg is sent when an account is selected during onboarding.
+// This triggers PowerSync to start syncing in the background.
+type AccountSelectedMsg struct {
+	Account api.Account
+}
+
 const createNewAccountID = "__CREATE_NEW__"
 
 // AccountLister lists accounts
@@ -68,6 +74,9 @@ func (d accountDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 // SelectStep handles selecting an account or choosing to create one.
 type SelectStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -87,12 +96,13 @@ type SelectStep struct {
 	remoteList        *remotelist.Component
 	accountsList      []api.Account
 	selectedAccountID string
+	selectedAccount   api.Account
 	width             int
 	globalBindings    []key.Binding
 }
 
 // NewSelectStep creates a new account selection step for the given organization
-func NewSelectStep(theme *styles.Theme, role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountLister == nil {
 		panic("accountLister cannot be nil")
 	}
@@ -110,6 +120,7 @@ func NewSelectStep(theme *styles.Theme, role string, org api.Organization, accou
 	remoteList := remotelist.New(theme, delegate, "Loading accounts", logger)
 
 	return &SelectStep{
+		ctx:                 ctx,
 		theme:               theme,
 		role:                role,
 		org:                 org,
@@ -126,10 +137,8 @@ func NewSelectStep(theme *styles.Theme, role string, org api.Organization, accou
 // Init starts loading accounts for the specified organization
 func (s *SelectStep) Init() tea.Cmd {
 	return s.remoteList.InitWithLoader(func() tea.Msg {
-		ctx := context.Background()
-
 		s.logger.Info("loading accounts", "organizationID", s.org.ID)
-		accounts, err := s.accountLister.List(ctx, s.org.ID)
+		accounts, err := s.accountLister.List(s.ctx, s.org.ID)
 		if err != nil {
 			s.logger.Error("failed to load accounts", "error", err, "organizationID", s.org.ID)
 			return remotelist.LoadResultMsg{Items: nil, Err: err}
@@ -177,21 +186,32 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				for _, account := range s.accountsList {
 					if account.ID == userPref {
 						s.selectedAccountID = userPref
+						s.selectedAccount = account
 						s.apiClient.SetAccountID(userPref)
 						s.logger.Debug("auto-selected account from preference", "id", userPref, "name", account.Name)
+						// Emit AccountSelectedMsg to trigger sync
+						cmds = append(cmds, func() tea.Msg {
+							return AccountSelectedMsg{Account: account}
+						})
 					}
 				}
 			}
 
 			// Case 3: No preference AND only 1 account → auto-select and save
 			if userPref == "" && len(s.accountsList) == 1 {
-				s.selectedAccountID = s.accountsList[0].ID
-				s.apiClient.SetAccountID(s.accountsList[0].ID)
-				if err := s.defaultAccountSaver.SetDefaultAccountID(s.accountsList[0].ID); err != nil {
+				account := s.accountsList[0]
+				s.selectedAccountID = account.ID
+				s.selectedAccount = account
+				s.apiClient.SetAccountID(account.ID)
+				if err := s.defaultAccountSaver.SetDefaultAccountID(account.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				} else {
-					s.logger.Debug("auto-selected account", "id", s.accountsList[0].ID, "name", s.accountsList[0].Name, "reason", "only one available")
+					s.logger.Debug("auto-selected account", "id", account.ID, "name", account.Name, "reason", "only one available")
 				}
+				// Emit AccountSelectedMsg to trigger sync
+				cmds = append(cmds, func() tea.Msg {
+					return AccountSelectedMsg{Account: account}
+				})
 			}
 
 			// Case 4: User must select from list (selectedAccountID remains empty)
@@ -211,12 +231,18 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			}
 			selected := s.remoteList.SelectedItem()
 			if ai, ok := selected.(AccountItem); ok {
+				account := api.Account{ID: ai.ID, Name: ai.Name}
 				s.selectedAccountID = ai.ID
+				s.selectedAccount = account
 				s.apiClient.SetAccountID(ai.ID)
 				s.logger.Info("account selected", "id", ai.ID, "name", ai.Name)
 				if err := s.defaultAccountSaver.SetDefaultAccountID(ai.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				}
+				// Emit AccountSelectedMsg to trigger sync
+				cmds = append(cmds, func() tea.Msg {
+					return AccountSelectedMsg{Account: account}
+				})
 			}
 		case "n":
 			if !s.remoteList.IsLoaded() {
@@ -286,23 +312,14 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new account
 	if s.selectedAccountID == createNewAccountID {
 		accountService := api.NewAccountService(s.apiClient, s.logger)
-		return NewCreateStep(s.theme, s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
-	}
-
-	// Find the selected account
-	var selectedAccount api.Account
-	for _, account := range s.accountsList {
-		if account.ID == s.selectedAccountID {
-			selectedAccount = account
-			break
-		}
+		return NewCreateStep(s.ctx, s.theme, s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// User selected existing account, check for Datadog
-	return datadog.NewCheckDatadogStep(s.theme, s.role, s.org, selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, s.selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

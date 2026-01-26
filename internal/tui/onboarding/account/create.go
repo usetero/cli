@@ -25,6 +25,9 @@ type AccountCreator interface {
 
 // CreateStep handles creating a new account
 type CreateStep struct {
+	// Lifecycle context for cancellation
+	ctx context.Context
+
 	// Theme for styling
 	theme *styles.Theme
 
@@ -51,7 +54,7 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new account creation step for the given organization
-func NewCreateStep(theme *styles.Theme, role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accountCreator == nil {
 		panic("accountCreator cannot be nil")
 	}
@@ -70,6 +73,7 @@ func NewCreateStep(theme *styles.Theme, role string, org api.Organization, accou
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
+		ctx:                 ctx,
 		theme:               theme,
 		role:                role,
 		org:                 org,
@@ -145,7 +149,12 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		s.err = nil
 		s.created = true
 		s.createdAccount = msg.account
-		return s, nil
+
+		// Emit AccountSelectedMsg to trigger sync
+		account := *msg.account
+		return s, func() tea.Msg {
+			return AccountSelectedMsg{Account: account}
+		}
 	}
 
 	return s, cmd
@@ -154,10 +163,9 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // createAccount creates a new account via the API
 func (s *CreateStep) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
 		s.logger.Info("creating account", "name", name, "organizationID", s.org.ID)
 
-		account, err := s.accountCreator.Create(ctx, s.org.ID, name)
+		account, err := s.accountCreator.Create(s.ctx, s.org.ID, name)
 		if err != nil {
 			return createAccountMsg{err: err}
 		}
@@ -246,7 +254,7 @@ func (s *CreateStep) Next() (step.Step, error) {
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Check for Datadog with accumulated data
-	return datadog.NewCheckDatadogStep(s.theme, s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step
