@@ -1,4 +1,4 @@
-package tui_test
+package sync_test
 
 import (
 	"context"
@@ -11,11 +11,11 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
-	"github.com/usetero/cli/internal/tui"
+	"github.com/usetero/cli/internal/tui/sync"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
-// mockSyncer implements tui.Syncer for testing.
+// mockSyncer implements sync.Syncer for testing.
 type mockSyncer struct {
 	startFunc            func(ctx context.Context, db sqlite.Database, accountID, token string) error
 	stopFunc             func()
@@ -75,14 +75,14 @@ func (m *mockTokenRefresher) GetAccessToken(ctx context.Context) (string, error)
 	return m.token, nil
 }
 
-func TestSyncManager_Update(t *testing.T) {
+func TestManager_Update(t *testing.T) {
 	t.Parallel()
 
 	t.Run("returns nil for unhandled messages", func(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		sm := tui.NewSyncManagerForTest(
+		sm := sync.NewManagerForTest(
 			context.Background(),
 			&powersync.Config{},
 			&mockSyncer{},
@@ -106,7 +106,7 @@ func TestSyncManager_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		sm := tui.NewSyncManagerForTest(
+		sm := sync.NewManagerForTest(
 			context.Background(),
 			&powersync.Config{},
 			syncer,
@@ -115,7 +115,7 @@ func TestSyncManager_Update(t *testing.T) {
 		)
 
 		// Send AccountSelectedMsg - should return a command
-		msg := tui.AccountSelectedMsg{
+		msg := sync.AccountSelectedMsg{
 			Account: api.Account{ID: "acc-123", Name: "Test Account"},
 		}
 		cmd := sm.Update(msg)
@@ -125,7 +125,7 @@ func TestSyncManager_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("emits InitialSyncCompletedMsg after successful sync chain", func(t *testing.T) {
+	t.Run("emits CompletedMsg after successful sync chain", func(t *testing.T) {
 		t.Parallel()
 
 		syncer := &mockSyncer{
@@ -135,7 +135,7 @@ func TestSyncManager_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		sm := tui.NewSyncManagerForTest(
+		sm := sync.NewManagerForTest(
 			context.Background(),
 			&powersync.Config{},
 			syncer,
@@ -146,30 +146,30 @@ func TestSyncManager_Update(t *testing.T) {
 		// Simulate the message chain that happens after sync starts successfully
 		// 1. syncStartedMsg with a mock database
 		db := sqlitetest.NewMockDB()
-		msgs := tuitest.DrainCmds(sm.Update(tui.SyncStartedMsgForTest(db, nil)))
+		msgs := tuitest.DrainCmds(sm.Update(sync.StartedMsgForTest(db, nil)))
 
 		// Should get a command to wait for initial sync
 		if len(msgs) == 0 {
 			t.Fatal("expected command after syncStartedMsg")
 		}
 
-		// 2. Execute those commands and look for InitialSyncCompletedMsg
-		foundInitialSyncCompleted := false
+		// 2. Execute those commands and look for CompletedMsg
+		foundCompleted := false
 		for _, m := range msgs {
 			cmd := sm.Update(m)
 			for _, m2 := range tuitest.DrainCmds(cmd) {
-				if _, ok := m2.(tui.InitialSyncCompletedMsg); ok {
-					foundInitialSyncCompleted = true
+				if _, ok := m2.(sync.CompletedMsg); ok {
+					foundCompleted = true
 				}
 			}
 		}
 
-		if !foundInitialSyncCompleted {
-			t.Error("expected InitialSyncCompletedMsg to be emitted")
+		if !foundCompleted {
+			t.Error("expected CompletedMsg to be emitted")
 		}
 	})
 
-	t.Run("does not emit InitialSyncCompletedMsg on sync error", func(t *testing.T) {
+	t.Run("does not emit CompletedMsg on sync error", func(t *testing.T) {
 		t.Parallel()
 
 		syncer := &mockSyncer{
@@ -179,7 +179,7 @@ func TestSyncManager_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		sm := tui.NewSyncManagerForTest(
+		sm := sync.NewManagerForTest(
 			context.Background(),
 			&powersync.Config{},
 			syncer,
@@ -189,21 +189,21 @@ func TestSyncManager_Update(t *testing.T) {
 
 		// Simulate syncStartedMsg
 		db := sqlitetest.NewMockDB()
-		msgs := tuitest.DrainCmds(sm.Update(tui.SyncStartedMsgForTest(db, nil)))
+		msgs := tuitest.DrainCmds(sm.Update(sync.StartedMsgForTest(db, nil)))
 
-		// Execute commands - should NOT emit InitialSyncCompletedMsg
+		// Execute commands - should NOT emit CompletedMsg
 		for _, m := range msgs {
 			cmd := sm.Update(m)
 			for _, m2 := range tuitest.DrainCmds(cmd) {
-				if _, ok := m2.(tui.InitialSyncCompletedMsg); ok {
-					t.Error("should not emit InitialSyncCompletedMsg on error")
+				if _, ok := m2.(sync.CompletedMsg); ok {
+					t.Error("should not emit CompletedMsg on error")
 				}
 			}
 		}
 	})
 }
 
-func TestSyncManager_Shutdown(t *testing.T) {
+func TestManager_Shutdown(t *testing.T) {
 	t.Parallel()
 
 	t.Run("stops sync and closes database", func(t *testing.T) {
@@ -212,7 +212,7 @@ func TestSyncManager_Shutdown(t *testing.T) {
 		syncer := &mockSyncer{}
 		logger := logtest.New(t)
 
-		sm := tui.NewSyncManagerForTest(
+		sm := sync.NewManagerForTest(
 			context.Background(),
 			&powersync.Config{},
 			syncer,
@@ -222,7 +222,7 @@ func TestSyncManager_Shutdown(t *testing.T) {
 
 		// Simulate sync started with a database
 		db := sqlitetest.NewMockDB()
-		sm.Update(tui.SyncStartedMsgForTest(db, nil))
+		sm.Update(sync.StartedMsgForTest(db, nil))
 
 		// Shutdown
 		sm.Shutdown()

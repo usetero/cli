@@ -18,6 +18,11 @@ const (
 	InputHeight = 3
 )
 
+// SubmitMsg is sent when the user submits input.
+type SubmitMsg struct {
+	Text string
+}
+
 // CommandBar is the input area and footer shown at the bottom of the app.
 // It adapts based on page capabilities - showing natural language input
 // for chat, or command-only input for other pages.
@@ -66,6 +71,19 @@ func (c *CommandBar) Init() tea.Cmd {
 // Update handles messages
 func (c *CommandBar) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		// Handle Enter to submit
+		if msg.String() == "enter" {
+			text := strings.TrimSpace(c.textarea.Value())
+			if text != "" {
+				c.textarea.Reset()
+				return func() tea.Msg { return SubmitMsg{Text: text} }
+			}
+			return nil
+		}
+	}
 
 	// Update textarea
 	var cmd tea.Cmd

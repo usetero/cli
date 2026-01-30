@@ -20,14 +20,18 @@ type Database interface {
 	Exec(query string, args ...any) (sql.Result, error)
 	Count(table string) (int64, error)
 	LoadExtension(path, entryPoint string) error
+	Queries() *Queries
+	InstallUpdateHooks() error
+	Subscribe() *Subscription
 	Close() error
 }
 
 // DB wraps a SQLite database connection.
 // It implements the Database interface.
 type DB struct {
-	db   *sql.DB
-	path string
+	db    *sql.DB
+	path  string
+	watch watchState
 }
 
 // Ensure DB implements Database.
@@ -74,6 +78,11 @@ func (d *DB) Raw() *sql.DB {
 	return d.db
 }
 
+// Queries returns a Queries instance for running typed queries.
+func (d *DB) Queries() *Queries {
+	return New(d.db)
+}
+
 // Query executes a query and returns the results.
 func (d *DB) Query(query string, args ...any) (*sql.Rows, error) {
 	return d.db.Query(query, args...)
@@ -85,8 +94,13 @@ func (d *DB) QueryRow(query string, args ...any) *sql.Row {
 }
 
 // Exec executes a query that doesn't return rows.
+// If update hooks are installed, subscribers are notified of any table changes.
 func (d *DB) Exec(query string, args ...any) (sql.Result, error) {
-	return d.db.Exec(query, args...)
+	result, err := d.db.Exec(query, args...)
+	if err == nil {
+		d.checkForChanges()
+	}
+	return result, err
 }
 
 // Count returns the number of rows in the given table.

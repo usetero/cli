@@ -469,10 +469,10 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	LogStatus DatadogAccountStatusLogStatus `json:"logStatus"`
 	// Overall coverage percentage
 	LogPercentComplete float64 `json:"logPercentComplete"`
-	// Total service log volume across all active services
-	LogServiceVolume int `json:"logServiceVolume"`
-	// Total discovered log event volume across all active services
-	LogDiscoveredVolume int `json:"logDiscoveredVolume"`
+	// Total service log volume in the rolling 7-day window across all active services
+	LogServiceVolumeInWindow int `json:"logServiceVolumeInWindow"`
+	// Total discovered log event volume in the rolling 7-day window across all active services
+	LogDiscoveredVolumeInWindow int `json:"logDiscoveredVolumeInWindow"`
 	// Total number of services
 	LogServiceCount int `json:"logServiceCount"`
 	// Services not DISABLED or INACTIVE
@@ -503,14 +503,14 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 	return v.LogPercentComplete
 }
 
-// GetLogServiceVolume returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogServiceVolume, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogServiceVolume() int {
-	return v.LogServiceVolume
+// GetLogServiceVolumeInWindow returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogServiceVolumeInWindow, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogServiceVolumeInWindow() int {
+	return v.LogServiceVolumeInWindow
 }
 
-// GetLogDiscoveredVolume returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDiscoveredVolume, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDiscoveredVolume() int {
-	return v.LogDiscoveredVolume
+// GetLogDiscoveredVolumeInWindow returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogDiscoveredVolumeInWindow, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogDiscoveredVolumeInWindow() int {
+	return v.LogDiscoveredVolumeInWindow
 }
 
 // GetLogServiceCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogServiceCount, and is useful for accessing the field via an interface.
@@ -659,6 +659,7 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNode is implemented by the following types:
 // GetServiceNodeAccount
 // GetServiceNodeConversation
+// GetServiceNodeConversationContext
 // GetServiceNodeDatadogAccount
 // GetServiceNodeDatadogLogIndex
 // GetServiceNodeEdgeApiKey
@@ -680,19 +681,20 @@ type GetServiceNode interface {
 	GetTypename() string
 }
 
-func (v *GetServiceNodeAccount) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeConversation) implementsGraphQLInterfaceGetServiceNode()    {}
-func (v *GetServiceNodeDatadogAccount) implementsGraphQLInterfaceGetServiceNode()  {}
-func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()      {}
-func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()    {}
-func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()        {}
-func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()  {}
-func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()    {}
-func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()         {}
-func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()            {}
-func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()       {}
+func (v *GetServiceNodeAccount) implementsGraphQLInterfaceGetServiceNode()             {}
+func (v *GetServiceNodeConversation) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeConversationContext) implementsGraphQLInterfaceGetServiceNode() {}
+func (v *GetServiceNodeDatadogAccount) implementsGraphQLInterfaceGetServiceNode()      {}
+func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode()     {}
+func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()          {}
+func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()            {}
+func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()      {}
+func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()             {}
+func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()             {}
+func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                {}
+func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()           {}
 
 func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	if string(b) == "null" {
@@ -713,6 +715,9 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "Conversation":
 		*v = new(GetServiceNodeConversation)
+		return json.Unmarshal(b, *v)
+	case "ConversationContext":
+		*v = new(GetServiceNodeConversationContext)
 		return json.Unmarshal(b, *v)
 	case "DatadogAccount":
 		*v = new(GetServiceNodeDatadogAccount)
@@ -774,6 +779,14 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeConversation
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeConversationContext:
+		typename = "ConversationContext"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeConversationContext
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeDatadogAccount:
@@ -887,6 +900,14 @@ type GetServiceNodeConversation struct {
 
 // GetTypename returns GetServiceNodeConversation.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeConversation) GetTypename() string { return v.Typename }
+
+// GetServiceNodeConversationContext includes the requested fields of the GraphQL type ConversationContext.
+type GetServiceNodeConversationContext struct {
+	Typename string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeConversationContext.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeConversationContext) GetTypename() string { return v.Typename }
 
 // GetServiceNodeDatadogAccount includes the requested fields of the GraphQL type DatadogAccount.
 type GetServiceNodeDatadogAccount struct {
@@ -1691,8 +1712,8 @@ query GetDatadogAccountStatus ($id: ID!) {
 				status {
 					logStatus
 					logPercentComplete
-					logServiceVolume
-					logDiscoveredVolume
+					logServiceVolumeInWindow
+					logDiscoveredVolumeInWindow
 					logServiceCount
 					logActiveServices
 					logReadyServices

@@ -112,3 +112,68 @@ func TestLoadExtension(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateHooks(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tracks table changes", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange: open database and load extension
+		extPath, err := ExtensionPath()
+		if err != nil {
+			t.Fatalf("ExtensionPath() error = %v", err)
+		}
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
+		db, err := sqlite.Open(dbPath)
+		if err != nil {
+			t.Fatalf("sqlite.Open() error = %v", err)
+		}
+		defer db.Close()
+
+		if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+			t.Fatalf("LoadExtension() error = %v", err)
+		}
+
+		// Install update hooks
+		_, err = db.Exec("SELECT powersync_update_hooks('install')")
+		if err != nil {
+			t.Fatalf("install hooks error = %v", err)
+		}
+
+		// Create table and insert data
+		_, err = db.Exec("CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
+		if err != nil {
+			t.Fatalf("create table error = %v", err)
+		}
+
+		_, err = db.Exec("INSERT INTO messages (content) VALUES ('hello')")
+		if err != nil {
+			t.Fatalf("insert error = %v", err)
+		}
+
+		// Get changed tables
+		var result string
+		row := db.QueryRow("SELECT powersync_update_hooks('get')")
+		if err := row.Scan(&result); err != nil {
+			t.Fatalf("get hooks error = %v", err)
+		}
+
+		// Should contain "messages"
+		if result != `["messages"]` {
+			t.Errorf("expected [\"messages\"], got %s", result)
+		}
+
+		// Second call should return empty (changes cleared)
+		row = db.QueryRow("SELECT powersync_update_hooks('get')")
+		if err := row.Scan(&result); err != nil {
+			t.Fatalf("second get hooks error = %v", err)
+		}
+
+		if result != `[]` {
+			t.Errorf("expected [], got %s", result)
+		}
+	})
+}

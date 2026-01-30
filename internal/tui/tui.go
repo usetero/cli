@@ -17,14 +17,12 @@ import (
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
+	"github.com/usetero/cli/internal/tui/keymap"
+	"github.com/usetero/cli/internal/tui/loading"
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
+	"github.com/usetero/cli/internal/tui/sync"
 )
-
-// Updater handles messages. Components that don't render implement this.
-type Updater interface {
-	Update(msg tea.Msg) tea.Cmd
-}
 
 const (
 	// Minimum window dimensions
@@ -35,55 +33,22 @@ const (
 var (
 	// DisableMinSizeCheck disables the minimum window size check for testing
 	DisableMinSizeCheck = false
-
-	// Global key bindings (immutable after initialization)
-	globalQuitBinding = key.NewBinding(
-		key.WithKeys("ctrl+c"),
-		key.WithHelp("ctrl+c", "quit"),
-	)
-	globalExitBinding = key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("", ""), // Works but not shown in help (avoid redundancy)
-	)
-	// Only show ctrl+c in help to avoid cluttering the footer
-	globalBindings = []key.Binding{globalQuitBinding}
 )
-
-// KeyMap defines the global key bindings for the TUI
-type KeyMap struct {
-	Quit key.Binding
-	Exit key.Binding
-}
-
-// DefaultKeyMap returns the default global key bindings
-func DefaultKeyMap() KeyMap {
-	return KeyMap{
-		Quit: globalQuitBinding,
-		Exit: globalExitBinding,
-	}
-}
 
 // TUI is the top-level model that routes between modes (onboarding, app).
 type TUI struct {
-	config             *config.Config
-	logger             log.Logger
-	authService        *auth.Service
-	preferencesService *preferences.Service
-	powersyncConfig    *powersync.Config
-	theme              *styles.Theme
+	logger log.Logger
+	theme  *styles.Theme
 
 	// Lifecycle context - cancelled on quit for clean shutdown
 	ctx    context.Context
 	cancel context.CancelFunc
 
 	// PowerSync - handles sync lifecycle, started when account is selected
-	syncManager *SyncManager
+	syncManager *sync.Manager
 
 	// Current mode (onboarding or app)
 	currentMode mode.Mode
-
-	// Global key bindings
-	keyMap KeyMap
 
 	// Window dimensions
 	width  int
@@ -107,23 +72,18 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 	preferencesService := preferences.NewService(cfg, logger)
 
 	// Create sync manager (not started until account is selected)
-	syncManager := NewSyncManager(ctx, powersyncConfig, authService, logger)
+	syncManager := sync.NewManager(ctx, powersyncConfig, authService, logger)
 
 	// Start with onboarding mode
-	onboardingMode := onboarding.New(ctx, theme, logger, authService, preferencesService, apiEndpoint, globalBindings)
+	onboardingMode := onboarding.New(ctx, theme, logger, authService, preferencesService, apiEndpoint, keymap.Global)
 
 	return &TUI{
-		config:             cfg,
-		logger:             logger,
-		authService:        authService,
-		preferencesService: preferencesService,
-		powersyncConfig:    powersyncConfig,
-		theme:              theme,
-		ctx:                ctx,
-		cancel:             cancel,
-		syncManager:        syncManager,
-		currentMode:        onboardingMode,
-		keyMap:             DefaultKeyMap(),
+		logger:      logger,
+		theme:       theme,
+		ctx:         ctx,
+		cancel:      cancel,
+		syncManager: syncManager,
+		currentMode: onboardingMode,
 	}
 }
 
@@ -153,7 +113,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	// 2. Delegate to all updaters (they ignore messages they don't care about)
+	// 2. Delegate to sync manager
 	if cmd := m.syncManager.Update(msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -176,7 +136,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *TUI) handleGlobal(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if key.Matches(msg, m.keyMap.Quit) || key.Matches(msg, m.keyMap.Exit) {
+		if key.Matches(msg, keymap.Quit) || key.Matches(msg, keymap.Exit) {
 			m.logger.Info("user quit", "key", msg.String())
 			m.shutdown()
 			return tea.Quit, true
@@ -227,11 +187,30 @@ func (m *TUI) checkModeTransition() tea.Cmd {
 		org := mode.Organization()
 		account := mode.Account()
 
-		m.logger.Info("onboarding completed, transitioning to app",
+		m.logger.Info("onboarding completed, transitioning to loading",
 			"orgID", org.ID,
 			"accountID", account.ID)
 
-		m.currentMode = tuiapp.New(m.ctx, m.theme, org, account, m.syncManager.DB(), m.logger, globalBindings)
+		// Transition to Loading mode - it will receive sync.CompletedMsg when ready
+		m.currentMode = loading.New(m.theme, org, account)
+
+		if m.width > 0 && m.height > 0 {
+			m.currentMode.SetSize(m.width, m.height)
+		}
+
+		return m.currentMode.Init()
+
+	case *loading.Loading:
+		db := mode.DB()
+		org := mode.Organization()
+		account := mode.Account()
+
+		m.logger.Info("loading completed, transitioning to app",
+			"orgID", org.ID,
+			"accountID", account.ID)
+
+		// Transition to App with database
+		m.currentMode = tuiapp.New(m.ctx, m.theme, db, org, account, m.logger, keymap.Global)
 
 		if m.width > 0 && m.height > 0 {
 			m.currentMode.SetSize(m.width, m.height)

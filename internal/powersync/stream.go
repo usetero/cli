@@ -102,6 +102,16 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// Streamer is the interface for connecting to the PowerSync sync service.
+// This allows mocking the stream in tests.
+type Streamer interface {
+	Connect(ctx context.Context, req *StreamingSyncRequest, handler LineHandler) error
+	SetToken(token string)
+}
+
+// Ensure Stream implements Streamer.
+var _ Streamer = (*Stream)(nil)
+
 // Stream handles the HTTP connection to the PowerSync sync service.
 type Stream struct {
 	endpoint string

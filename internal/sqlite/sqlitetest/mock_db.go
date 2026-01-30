@@ -84,3 +84,19 @@ func (m *MockDB) Close() error {
 	m.Closed = true
 	return nil
 }
+
+// Queries implements sqlite.Database.
+// Returns nil - tests using MockDB should use a real in-memory SQLite for query testing.
+func (m *MockDB) Queries() *sqlite.Queries {
+	return nil
+}
+
+// InstallUpdateHooks implements sqlite.Database.
+func (m *MockDB) InstallUpdateHooks() error {
+	return nil
+}
+
+// Subscribe implements sqlite.Database.
+func (m *MockDB) Subscribe() *sqlite.Subscription {
+	return nil
+}

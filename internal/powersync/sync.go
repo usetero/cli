@@ -30,6 +30,9 @@ type Sync struct {
 	config         *Config
 	tokenRefresher TokenRefresher
 
+	// streamFactory creates Streamer instances. Allows injection for testing.
+	streamFactory func(endpoint, token string) Streamer
+
 	// status and lastError are accessed atomically from multiple goroutines
 	status    atomic.Value // stores Status
 	lastError atomic.Value // stores error
@@ -39,7 +42,7 @@ type Sync struct {
 	db         sqlite.Database
 	accountID  string
 	controller *Controller
-	stream     *Stream
+	stream     Streamer
 	cancel     context.CancelFunc
 	done       chan struct{}
 }
@@ -49,9 +52,26 @@ func NewSync(config *Config, tokenRefresher TokenRefresher) *Sync {
 	s := &Sync{
 		config:         config,
 		tokenRefresher: tokenRefresher,
+		streamFactory:  defaultStreamFactory,
 	}
 	s.status.Store(StatusDisconnected)
 	return s
+}
+
+// NewSyncForTest creates a Sync with an injected stream factory for testing.
+func NewSyncForTest(config *Config, tokenRefresher TokenRefresher, streamFactory func(endpoint, token string) Streamer) *Sync {
+	s := &Sync{
+		config:         config,
+		tokenRefresher: tokenRefresher,
+		streamFactory:  streamFactory,
+	}
+	s.status.Store(StatusDisconnected)
+	return s
+}
+
+// defaultStreamFactory creates real Stream instances for production use.
+func defaultStreamFactory(endpoint, token string) Streamer {
+	return NewStream(endpoint, token)
 }
 
 // Start loads the PowerSync extension, initializes the schema, and starts syncing.
@@ -88,7 +108,7 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID, token s
 
 	// Create controller and stream
 	s.controller = NewController(db)
-	s.stream = NewStream(s.config.Endpoint, token)
+	s.stream = s.streamFactory(s.config.Endpoint, token)
 	s.done = make(chan struct{})
 
 	syncCtx, cancel := context.WithCancel(ctx)

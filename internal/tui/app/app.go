@@ -8,10 +8,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tui/app/chat"
+	tuichat "github.com/usetero/cli/internal/tui/app/chat"
 	"github.com/usetero/cli/internal/tui/app/page"
 	"github.com/usetero/cli/internal/tui/components/commandbar"
 	"github.com/usetero/cli/internal/tui/components/header"
@@ -36,8 +37,8 @@ type App struct {
 	// Theme for styling
 	theme *styles.Theme
 
-	// Base layer - always chat
-	chat page.Page
+	// Base layer - chat
+	chat *tuichat.Chat
 
 	// Popover stack - pages layered on top of chat
 	popoverStack []page.Page
@@ -49,9 +50,7 @@ type App struct {
 
 	// Dependencies
 	logger log.Logger
-
-	// Data layer - provided by TUI (sync started during onboarding)
-	db sqlite.Database
+	db     sqlite.Database
 
 	// Identity
 	org     api.Organization
@@ -68,18 +67,18 @@ type App struct {
 	compact bool // true when width < CompactModeWidth
 }
 
-// New creates a new app starting with the chat page.
-// The db is provided by TUI - sync was started when account was selected during onboarding.
-func New(ctx context.Context, theme *styles.Theme, org api.Organization, account api.Account, db sqlite.Database, logger log.Logger, globalBindings []key.Binding) *App {
+// New creates a new app. Requires db for database access.
+func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) *App {
+	chatService := chat.NewService(db, logger)
 	return &App{
 		ctx:            ctx,
 		theme:          theme,
-		chat:           chat.New(theme, org.ID, account.ID, logger),
+		db:             db,
+		chat:           tuichat.New(theme, db, chatService, org.ID, account.ID, logger),
 		sidebar:        sidebar.New(theme, logger),
 		header:         header.New(theme, logger),
 		commandbar:     commandbar.New(theme, logger),
 		logger:         logger,
-		db:             db,
 		org:            org,
 		account:        account,
 		globalBindings: globalBindings,
@@ -88,22 +87,13 @@ func New(ctx context.Context, theme *styles.Theme, org api.Organization, account
 
 // Init initializes the app
 func (a *App) Init() tea.Cmd {
-	// If we have a database, notify chat it's ready
-	var dbCmd tea.Cmd
-	if a.db != nil {
-		dbCmd = func() tea.Msg {
-			return chat.DatabaseReadyMsg{DB: a.db}
-		}
-	}
-
 	return tea.Batch(
-		a.chat.Init(),
 		a.commandbar.Init(),
-		dbCmd,
+		a.chat.Init(),
 	)
 }
 
-// activePage returns the topmost active page (popover or chat)
+// activePage returns the topmost active page (popover or chat).
 func (a *App) activePage() page.Page {
 	if len(a.popoverStack) > 0 {
 		return a.popoverStack[len(a.popoverStack)-1]
@@ -139,6 +129,17 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 // updateChrome updates sidebar/header with current page's metadata
 func (a *App) updateChrome() {
 	p := a.activePage()
+	if p == nil {
+		// No page yet, set defaults
+		a.sidebar.SetTitle("Tero")
+		a.sidebar.SetOrgName(a.org.Name)
+		a.header.SetTitle("Tero")
+		a.header.SetOrgName(a.org.Name)
+		a.commandbar.SetAcceptsNaturalLanguage(false)
+		a.commandbar.SetCommands(nil)
+		a.commandbar.SetKeyBindings(a.globalBindings)
+		return
+	}
 
 	// Sort metadata by priority
 	meta := p.Metadata()
@@ -233,6 +234,19 @@ func (a *App) View() string {
 		Render(view)
 }
 
+// setChatSize sets the chat page size based on current dimensions
+func (a *App) setChatSize() {
+	commandbarHeight := lipgloss.Height(a.commandbar.View())
+	contentHeight := a.height - commandbarHeight
+
+	if a.compact {
+		headerHeight := lipgloss.Height(a.header.View())
+		a.chat.SetSize(a.width, contentHeight-headerHeight)
+	} else {
+		a.chat.SetSize(a.width-SidebarWidth, contentHeight)
+	}
+}
+
 // SetSize sets dimensions and updates compact mode
 func (a *App) SetSize(width, height int) {
 	a.width = width
@@ -243,7 +257,8 @@ func (a *App) SetSize(width, height int) {
 	a.header.SetSize(width)
 	a.commandbar.SetSize(width)
 
-	// Page size is set in View() after calculating available space
+	// Update chat size if ready
+	a.setChatSize()
 }
 
 // PushPopover adds a page to the popover stack
@@ -279,12 +294,12 @@ func (a *App) IsBusy() bool {
 	return false
 }
 
-// HasError returns true if the active layer has an error
+// HasError returns true if active layer has an error
 func (a *App) HasError() bool {
 	return a.activePage().HasError()
 }
 
-// Error returns the active layer's error
+// Error returns the current error
 func (a *App) Error() error {
 	return a.activePage().Error()
 }

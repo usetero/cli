@@ -190,8 +190,8 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 	result := &DatadogAccountStatus{
 		Status:              DatadogAccountStatusState(statusNode.LogStatus),
 		PercentComplete:     statusNode.LogPercentComplete,
-		ServiceLogVolume:    statusNode.LogServiceVolume,
-		DiscoveredLogVolume: statusNode.LogDiscoveredVolume,
+		ServiceLogVolume:    statusNode.LogServiceVolumeInWindow,
+		DiscoveredLogVolume: statusNode.LogDiscoveredVolumeInWindow,
 		ServiceCount:        statusNode.LogServiceCount,
 		ActiveServices:      statusNode.LogActiveServices,
 		ReadyServices:       statusNode.LogReadyServices,

@@ -8,5 +8,6 @@ sql:
         package: "sqlite"
         out: "internal/sqlite"
         emit_pointers_for_null_types: true
+        emit_interface: false
         output_db_file_name: "querier.go"
         output_models_file_name: "models.go"

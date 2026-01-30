@@ -40,8 +40,8 @@ query GetDatadogAccountStatus($id: ID!) {
                 status {
                     logStatus
                     logPercentComplete
-                    logServiceVolume
-                    logDiscoveredVolume
+                    logServiceVolumeInWindow
+                    logDiscoveredVolumeInWindow
                     logServiceCount
                     logActiveServices
                     logReadyServices
