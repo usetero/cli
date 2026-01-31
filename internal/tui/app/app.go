@@ -14,9 +14,9 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	tuichat "github.com/usetero/cli/internal/tui/app/chat"
 	"github.com/usetero/cli/internal/tui/app/page"
-	"github.com/usetero/cli/internal/tui/components/commandbar"
 	"github.com/usetero/cli/internal/tui/components/header"
 	"github.com/usetero/cli/internal/tui/components/sidebar"
+	"github.com/usetero/cli/internal/tui/layouts"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 
 // App is the main application orchestrator.
 // It renders pages with appropriate chrome (sidebar or header) based on
-// window size, and manages the command bar and popover stack.
+// window size, uses Base layout for consistent padding and footer.
 type App struct {
 	// Lifecycle context for cancellation
 	ctx context.Context
@@ -37,16 +37,18 @@ type App struct {
 	// Theme for styling
 	theme *styles.Theme
 
+	// Layout - provides padding and footer
+	layout *layouts.Base
+
 	// Base layer - chat
 	chat *tuichat.Chat
 
 	// Popover stack - pages layered on top of chat
 	popoverStack []page.Page
 
-	// Chrome components
-	sidebar    *sidebar.Sidebar
-	header     *header.Header
-	commandbar *commandbar.CommandBar
+	// Chrome components (rendered inside layout)
+	sidebar *sidebar.Sidebar
+	header  *header.Header
 
 	// Dependencies
 	logger log.Logger
@@ -56,7 +58,7 @@ type App struct {
 	org     api.Organization
 	account api.Account
 
-	// Global key bindings (for footer display, intercepted by tui)
+	// Global key bindings (for footer display)
 	globalBindings []key.Binding
 
 	// Dimensions
@@ -74,10 +76,10 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.O
 		ctx:            ctx,
 		theme:          theme,
 		db:             db,
+		layout:         layouts.NewBase(theme, logger),
 		chat:           tuichat.New(theme, db, chatService, org.ID, account.ID, logger),
 		sidebar:        sidebar.New(theme, logger),
 		header:         header.New(theme, logger),
-		commandbar:     commandbar.New(theme, logger),
 		logger:         logger,
 		org:            org,
 		account:        account,
@@ -87,10 +89,7 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.O
 
 // Init initializes the app
 func (a *App) Init() tea.Cmd {
-	return tea.Batch(
-		a.commandbar.Init(),
-		a.chat.Init(),
-	)
+	return a.chat.Init()
 }
 
 // activePage returns the topmost active page (popover or chat).
@@ -115,8 +114,8 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 
-	// Update command bar
-	cmd := a.commandbar.Update(msg)
+	// Update layout (handles footer)
+	cmd := a.layout.Update(msg)
 	cmds = append(cmds, cmd)
 
 	// Route to active page
@@ -126,7 +125,7 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// updateChrome updates sidebar/header with current page's metadata
+// updateChrome updates sidebar/header/footer with current page's metadata
 func (a *App) updateChrome() {
 	p := a.activePage()
 	if p == nil {
@@ -135,9 +134,7 @@ func (a *App) updateChrome() {
 		a.sidebar.SetOrgName(a.org.Name)
 		a.header.SetTitle("Tero")
 		a.header.SetOrgName(a.org.Name)
-		a.commandbar.SetAcceptsNaturalLanguage(false)
-		a.commandbar.SetCommands(nil)
-		a.commandbar.SetKeyBindings(a.globalBindings)
+		a.layout.SetKeyBindings(a.globalBindings)
 		return
 	}
 
@@ -157,13 +154,9 @@ func (a *App) updateChrome() {
 	a.header.SetMetadata(meta)
 	a.header.SetOrgName(a.org.Name)
 
-	// Update command bar with page capabilities
-	a.commandbar.SetAcceptsNaturalLanguage(p.AcceptsNaturalLanguage())
-	a.commandbar.SetCommands(p.Commands())
-
-	// Combine page keybindings with global bindings for footer display
+	// Update footer with keybindings
 	allBindings := append(p.KeyBindings(), a.globalBindings...)
-	a.commandbar.SetKeyBindings(allBindings)
+	a.layout.SetKeyBindings(allBindings)
 }
 
 // View renders the app
@@ -172,15 +165,10 @@ func (a *App) View() string {
 		return ""
 	}
 
-	colors := a.theme.Colors
 	a.updateChrome()
 
-	// Get command bar view and height
-	commandbarView := a.commandbar.View()
-	commandbarHeight := lipgloss.Height(commandbarView)
-
-	// Calculate content area height
-	contentHeight := a.height - commandbarHeight
+	// Get content dimensions from layout
+	contentWidth, contentHeight := a.layout.ContentSize()
 
 	var contentView string
 
@@ -190,7 +178,7 @@ func (a *App) View() string {
 		headerHeight := lipgloss.Height(headerView)
 
 		pageHeight := contentHeight - headerHeight
-		a.activePage().SetSize(a.width, pageHeight)
+		a.activePage().SetSize(contentWidth, pageHeight)
 		pageView := a.activePage().View()
 
 		contentView = lipgloss.JoinVertical(
@@ -200,7 +188,7 @@ func (a *App) View() string {
 		)
 	} else {
 		// Wide mode: page content + sidebar
-		pageWidth := a.width - SidebarWidth
+		pageWidth := contentWidth - SidebarWidth
 		a.activePage().SetSize(pageWidth, contentHeight)
 		a.sidebar.SetSize(SidebarWidth, contentHeight)
 
@@ -214,37 +202,8 @@ func (a *App) View() string {
 		)
 	}
 
-	// Compose content + command bar
-	view := lipgloss.JoinVertical(
-		lipgloss.Left,
-		contentView,
-		commandbarView,
-	)
-
-	// If we have popovers, layer them
-	if len(a.popoverStack) > 0 {
-		// TODO: Implement proper popover rendering
-		// For now, just return the composed view
-	}
-
-	return lipgloss.NewStyle().
-		Width(a.width).
-		Height(a.height).
-		Background(colors.Page.Bg).
-		Render(view)
-}
-
-// setChatSize sets the chat page size based on current dimensions
-func (a *App) setChatSize() {
-	commandbarHeight := lipgloss.Height(a.commandbar.View())
-	contentHeight := a.height - commandbarHeight
-
-	if a.compact {
-		headerHeight := lipgloss.Height(a.header.View())
-		a.chat.SetSize(a.width, contentHeight-headerHeight)
-	} else {
-		a.chat.SetSize(a.width-SidebarWidth, contentHeight)
-	}
+	// Wrap in layout (adds padding + footer)
+	return a.layout.Render(contentView)
 }
 
 // SetSize sets dimensions and updates compact mode
@@ -253,12 +212,12 @@ func (a *App) SetSize(width, height int) {
 	a.height = height
 	a.compact = width < CompactModeWidth
 
-	// Update component sizes
-	a.header.SetSize(width)
-	a.commandbar.SetSize(width)
+	// Update layout size
+	a.layout.SetSize(width, height)
 
-	// Update chat size if ready
-	a.setChatSize()
+	// Update header width (after layout padding)
+	contentWidth, _ := a.layout.ContentSize()
+	a.header.SetSize(contentWidth)
 }
 
 // PushPopover adds a page to the popover stack

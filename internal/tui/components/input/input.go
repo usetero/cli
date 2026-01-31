@@ -9,6 +9,7 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components"
+	"github.com/usetero/cli/internal/tui/cursor"
 )
 
 // Component wraps textinput.Model with sensible defaults
@@ -107,11 +108,11 @@ func (c *Component) Cursor() *tea.Cursor {
 // View renders the input with cursor marker inserted
 func (c *Component) View() string {
 	view := c.model.View()
-	cursor := c.model.Cursor()
+	cur := c.model.Cursor()
 
 	// Insert cursor marker at cursor position
-	if cursor != nil && cursor.X >= 0 && cursor.X <= len(view) {
-		view = view[:cursor.X] + "\x00CURSOR\x00" + view[cursor.X:]
+	if cur != nil && cur.X >= 0 && cur.X <= len(view) {
+		view = view[:cur.X] + cursor.Marker + view[cur.X:]
 	}
 
 	return view

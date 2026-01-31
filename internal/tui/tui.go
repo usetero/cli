@@ -17,6 +17,7 @@ import (
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
+	"github.com/usetero/cli/internal/tui/cursor"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/loading"
 	"github.com/usetero/cli/internal/tui/mode"
@@ -272,12 +273,40 @@ func (m *TUI) View() tea.View {
 	// Get mode view (modes handle all layout via their chosen layout)
 	modeView := m.currentMode.View()
 
-	// Extract cursor before creating layers
-	finalView, cursor := ExtractCursor(modeView)
+	// Extract cursor marker from the view and get cursor position
+	markerIdx := strings.Index(modeView, cursor.Marker)
+	m.logger.Debug("extracting cursor",
+		"hasMarker", markerIdx >= 0,
+		"markerCount", strings.Count(modeView, cursor.Marker),
+		"markerIndex", markerIdx,
+		"surroundingText", func() string {
+			if markerIdx >= 0 {
+				start := markerIdx - 20
+				if start < 0 {
+					start = 0
+				}
+				end := markerIdx + len(cursor.Marker) + 20
+				if end > len(modeView) {
+					end = len(modeView)
+				}
+				return fmt.Sprintf("%q", modeView[start:end])
+			}
+			return "NO_MARKER"
+		}())
+	cleanView, cur := cursor.Extract(modeView)
+	m.logger.Debug("extracted cursor",
+		"found", cur != nil,
+		"stillHasMarker", strings.Contains(cleanView, cursor.Marker),
+		"cursorPos", func() string {
+			if cur != nil {
+				return fmt.Sprintf("(%d,%d)", cur.X, cur.Y)
+			}
+			return "nil"
+		}())
 
 	// Create layers (base layer with page content)
 	layers := []*lipgloss.Layer{
-		lipgloss.NewLayer(finalView),
+		lipgloss.NewLayer(cleanView),
 	}
 
 	// Future: Add dialog/overlay layers here like Crush does
@@ -294,7 +323,12 @@ func (m *TUI) View() tea.View {
 		AltScreen:       true,
 	}
 	view.Content = comp.Render()
-	view.Cursor = cursor
+	view.Cursor = cur
+
+	m.logger.Debug("final view",
+		"hasMarker", strings.Contains(view.Content, cursor.Marker),
+		"cursorX", func() int { if cur != nil { return cur.X }; return -1 }(),
+		"cursorY", func() int { if cur != nil { return cur.Y }; return -1 }())
 	view.MouseMode = tea.MouseModeCellMotion
 
 	// Show progress bar if supported terminal and we're busy

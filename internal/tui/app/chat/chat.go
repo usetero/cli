@@ -27,7 +27,7 @@ type messageSentMsg struct {
 }
 
 // Chat is the main chat page - the "canvas" everything builds on.
-// It displays the message list and receives input via the command bar.
+// It displays the message list and owns its input.
 type Chat struct {
 	theme   *styles.Theme
 	logger  log.Logger
@@ -42,6 +42,7 @@ type Chat struct {
 
 	// Components
 	messages *MessageList
+	input    *commandbar.CommandBar
 
 	// State
 	width  int
@@ -58,15 +59,17 @@ func New(theme *styles.Theme, db sqlite.Database, service *chat.Service, orgID s
 		accountID: accountID,
 		logger:    logger,
 		messages:  NewMessageList(theme, db),
+		input:     commandbar.New(theme, logger),
 	}
 	return c
 }
 
 // Init initializes the chat page.
 func (c *Chat) Init() tea.Cmd {
-	cmd := c.messages.Init()
-	c.messages.Focus()
-	return cmd
+	return tea.Batch(
+		c.messages.Init(),
+		c.input.Init(),
+	)
 }
 
 // Update handles messages.
@@ -96,26 +99,40 @@ func (c *Chat) Update(msg tea.Msg) tea.Cmd {
 		return nil
 
 	case tea.KeyPressMsg:
-		// Route to message list
-		cmd := c.messages.Update(msg)
+		// Route to input
+		cmd := c.input.Update(msg)
 		cmds = append(cmds, cmd)
 		return tea.Batch(cmds...)
 	}
 
-	// Forward other messages to message list
-	cmd := c.messages.Update(msg)
+	// Forward other messages to input and message list
+	cmd := c.input.Update(msg)
+	cmds = append(cmds, cmd)
+
+	cmd = c.messages.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return tea.Batch(cmds...)
 }
 
-// View renders the chat page.
+// View renders the chat page (messages + input).
 func (c *Chat) View() string {
 	if !c.ready {
 		return ""
 	}
 
-	return c.messages.View()
+	// Render messages
+	messagesView := c.messages.View()
+
+	// Render input
+	inputView := c.input.View()
+
+	// Compose vertically
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		messagesView,
+		inputView,
+	)
 }
 
 // renderCentered renders centered text.
@@ -133,7 +150,16 @@ func (c *Chat) SetSize(width, height int) {
 	c.width = width
 	c.height = height
 	c.ready = true
-	c.messages.SetSize(width, height)
+
+	// Input takes fixed height, messages get the rest
+	inputHeight := c.input.Height()
+	messagesHeight := height - inputHeight
+	if messagesHeight < 1 {
+		messagesHeight = 1
+	}
+
+	c.messages.SetSize(width, messagesHeight)
+	c.input.SetSize(width)
 }
 
 // Title returns the page title.
@@ -195,3 +221,4 @@ func (c *Chat) HasError() bool {
 func (c *Chat) Error() error {
 	return c.messages.Error()
 }
+
