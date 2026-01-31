@@ -162,7 +162,7 @@ func (s *Stream) Connect(ctx context.Context, req *StreamingSyncRequest, handler
 	}
 
 	// Create POST request
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", syncURL.String(), nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, syncURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}

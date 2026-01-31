@@ -15,25 +15,25 @@ import (
 //
 // We use marker extraction rather than manual coordinate calculation because:
 //
-// 1. **Self-correcting**: Padding, prompts, and layout changes are automatically
-//    accounted for since the marker is placed in the final rendered string.
+//  1. **Self-correcting**: Padding, prompts, and layout changes are automatically
+//     accounted for since the marker is placed in the final rendered string.
 //
-// 2. **No magic numbers**: Components don't need hardcoded offsets like +1, +2
-//    that must be manually synchronized with padding values.
+//  2. **No magic numbers**: Components don't need hardcoded offsets like +1, +2
+//     that must be manually synchronized with padding values.
 //
-// 3. **Simpler**: One extraction function vs. offset calculations in every
-//    component that positions children.
+//  3. **Simpler**: One extraction function vs. offset calculations in every
+//     component that positions children.
 //
 // # How It Works
 //
-// 1. Components with input (textarea, textinput) get cursor position from their
-//    underlying Bubbles component via .Cursor()
+//  1. Components with input (textarea, textinput) get cursor position from their
+//     underlying Bubbles component via .Cursor()
 //
-// 2. Components insert Marker at that position in their View() string before
-//    applying any wrapping (padding, borders, etc.)
+//  2. Components insert Marker at that position in their View() string before
+//     applying any wrapping (padding, borders, etc.)
 //
-// 3. TUI calls Extract() on the final composed view to find the marker and
-//    calculate screen coordinates by counting lines/characters.
+//  3. TUI calls Extract() on the final composed view to find the marker and
+//     calculate screen coordinates by counting lines/characters.
 //
 // 4. Marker is stripped before rendering to terminal.
 //

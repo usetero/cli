@@ -61,7 +61,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		// Check if step is complete by checking Next() doesn't return ErrNotReady
 		_, err := updated.Next()
-		if err == step.ErrNotReady {
+		if errors.Is(err, step.ErrNotReady) {
 			t.Error("expected step to complete after creation")
 		}
 	})
@@ -96,7 +96,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		// Check if step is NOT complete by checking Next() returns ErrNotReady
 		_, err := updated.Next()
-		if err != step.ErrNotReady {
+		if !errors.Is(err, step.ErrNotReady) {
 			t.Error("expected step NOT to complete with empty input")
 		}
 	})
@@ -135,10 +135,10 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		// Check if step is NOT complete
 		_, err := updated.Next()
-		if err == nil || err == step.ErrNotReady {
+		if err == nil || errors.Is(err, step.ErrNotReady) {
 			// If no error or just not ready, it means it didn't fail properly
 			// Actually, when there's an error, Next() should return the error
-			if err == step.ErrNotReady {
+			if errors.Is(err, step.ErrNotReady) {
 				t.Error("expected step NOT to complete on error")
 			}
 		}

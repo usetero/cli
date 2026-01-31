@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"image/color"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -135,16 +134,6 @@ func (c *Chat) View() string {
 	)
 }
 
-// renderCentered renders centered text.
-func (c *Chat) renderCentered(msg string, fg color.Color) string {
-	return lipgloss.NewStyle().
-		Width(c.width).
-		Height(c.height).
-		Foreground(fg).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(msg)
-}
-
 // SetSize sets the dimensions available for content.
 func (c *Chat) SetSize(width, height int) {
 	c.width = width
@@ -221,4 +210,3 @@ func (c *Chat) HasError() bool {
 func (c *Chat) Error() error {
 	return c.messages.Error()
 }
-

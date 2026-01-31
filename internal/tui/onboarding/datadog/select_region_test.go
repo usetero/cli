@@ -2,6 +2,7 @@ package datadog_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -21,7 +22,7 @@ func selectRegionTestTheme() *styles.Theme {
 // isRegionComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
 func isRegionComplete(s step.Step) bool {
 	_, err := s.Next()
-	return err != step.ErrNotReady
+	return !errors.Is(err, step.ErrNotReady)
 }
 
 func TestSelectRegionStep_Update(t *testing.T) {

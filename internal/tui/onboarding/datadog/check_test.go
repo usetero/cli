@@ -28,7 +28,7 @@ func keyMsg(r rune) tea.KeyPressMsg {
 // isCheckComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
 func isCheckComplete(s step.Step) bool {
 	_, err := s.Next()
-	return err != step.ErrNotReady
+	return !errors.Is(err, step.ErrNotReady)
 }
 
 func TestCheckDatadogStep_Update(t *testing.T) {
@@ -136,7 +136,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		if err == nil {
 			t.Error("expected Next() to return an error")
 		}
-		if err == step.ErrNotReady {
+		if errors.Is(err, step.ErrNotReady) {
 			t.Error("expected Next() to return actual error, not ErrNotReady")
 		}
 	})

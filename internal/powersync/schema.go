@@ -103,7 +103,7 @@ func FetchSchemaJSON(ctx context.Context, endpoint, token string) (string, error
 
 // fetchColumnTypes fetches column type information from the schema API.
 func fetchColumnTypes(ctx context.Context, endpoint, token string) (map[string]map[string]columnType, error) {
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint+"/api/admin/v1/schema", strings.NewReader("{}"))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/api/admin/v1/schema", strings.NewReader("{}"))
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func fetchColumnTypes(ctx context.Context, endpoint, token string) (map[string]m
 
 // fetchSyncedTables fetches the synced tables from the sync rules API.
 func fetchSyncedTables(ctx context.Context, endpoint, token string, columnTypes map[string]map[string]columnType) ([]SchemaTable, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint+"/api/sync-rules/v1/current", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/api/sync-rules/v1/current", nil)
 	if err != nil {
 		return nil, err
 	}

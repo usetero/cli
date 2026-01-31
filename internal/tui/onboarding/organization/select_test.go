@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/usetero/cli/internal/api"
@@ -24,7 +25,7 @@ func selectTestTheme() *styles.Theme {
 // isSelectComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
 func isSelectComplete(s step.Step) bool {
 	_, err := s.Next()
-	return err != step.ErrNotReady
+	return !errors.Is(err, step.ErrNotReady)
 }
 
 func TestSelectStep_Update(t *testing.T) {

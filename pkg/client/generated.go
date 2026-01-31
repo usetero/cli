@@ -493,7 +493,7 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	LogInactiveServices int `json:"logInactiveServices"`
 	// Log events with SAVED status
 	LogSavedCount int `json:"logSavedCount"`
-	// True when account has enough analyzed data for a good user experience (>= 50 saved log events)
+	// True when account has enough analyzed data for a good user experience (>= 50 analyzed log events)
 	ReadyForUse bool `json:"readyForUse"`
 }
 

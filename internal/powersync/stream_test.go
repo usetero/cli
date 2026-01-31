@@ -59,8 +59,8 @@ func TestStream_Connect(t *testing.T) {
 		if !errors.As(err, &streamErr) {
 			t.Fatalf("expected StreamError, got %T", err)
 		}
-		if streamErr.StatusCode != 401 {
-			t.Errorf("StatusCode = %d, want 401", streamErr.StatusCode)
+		if streamErr.StatusCode != http.StatusUnauthorized {
+			t.Errorf("StatusCode = %d, want %d", streamErr.StatusCode, http.StatusUnauthorized)
 		}
 		if streamErr.Kind != powersync.ErrorKindAuth {
 			t.Errorf("Kind = %v, want ErrorKindAuth", streamErr.Kind)
@@ -380,8 +380,9 @@ func TestStreamError(t *testing.T) {
 		innerErr := errors.New("inner")
 		err := &powersync.StreamError{Err: innerErr}
 
-		if err.Unwrap() != innerErr {
-			t.Error("Unwrap() should return inner error")
+		unwrapped := err.Unwrap()
+		if !errors.Is(unwrapped, innerErr) {
+			t.Errorf("Unwrap() = %v, want %v", unwrapped, innerErr)
 		}
 	})
 }

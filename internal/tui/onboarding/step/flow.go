@@ -1,6 +1,8 @@
 package step
 
 import (
+	"errors"
+
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -46,7 +48,7 @@ func (f *Flow) Update(msg tea.Msg) tea.Cmd {
 	// Loop handles chains of pre-satisfied steps (e.g., from saved preferences)
 	for {
 		nextStep, err := f.current.Next()
-		if err == ErrNotReady {
+		if errors.Is(err, ErrNotReady) {
 			// Step not complete yet, stay on current step
 			break
 		}

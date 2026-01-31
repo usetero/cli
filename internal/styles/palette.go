@@ -15,8 +15,8 @@ type Palette struct {
 // To rebrand, change the color families here.
 func DefaultPalette() Palette {
 	return Palette{
-		Brand:   EmeraldFamily,
-		Accent:  TealFamily, // Gradient: Teal → Emerald
+		Brand:   EmeraldFamily, // Primary brand color
+		Accent:  CyanFamily,    // Gradient: Emerald → Cyan
 		Neutral: ZincFamily,
 		Error:   RedFamily,
 		Success: GreenFamily,

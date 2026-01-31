@@ -97,12 +97,7 @@ tasks:
   lint:go:
     desc: Run golangci-lint
     cmds:
-      - |
-        if ! command -v golangci-lint &> /dev/null; then
-          echo "golangci-lint not found. Installing..."
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-        fi
-      - $(go env GOPATH)/bin/golangci-lint run ./...
+      - golangci-lint run ./...
 
   lint:scripts:
     desc: Lint shell scripts with shellcheck

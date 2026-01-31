@@ -109,10 +109,10 @@ func buildColors(p Palette, isDark bool) *Colors {
 			},
 
 			Brand: BrandColors{
-				GradientStart: MustHex(p.Accent[S300]),
-				GradientEnd:   MustHex(p.Brand[S300]),
+				GradientStart: MustHex(p.Brand[S300]),  // Emerald-300 (bright)
+				GradientEnd:   MustHex(p.Accent[S600]), // Cyan-600 (darker)
 			},
-			Accent: MustHex(p.Brand[S300]),
+			Accent: MustHex(p.Brand[S300]), // Emerald-300
 
 			BorderDefault: MustHex(p.Neutral[S600]),
 
@@ -154,10 +154,10 @@ func buildColors(p Palette, isDark bool) *Colors {
 		},
 
 		Brand: BrandColors{
-			GradientStart: MustHex(p.Accent[S600]),
-			GradientEnd:   MustHex(p.Brand[S600]),
+			GradientStart: MustHex(p.Brand[S600]),  // Emerald-600
+			GradientEnd:   MustHex(p.Accent[S800]), // Cyan-800 (darker for light bg)
 		},
-		Accent: MustHex(p.Brand[S600]),
+		Accent: MustHex(p.Brand[S600]), // Emerald-600
 
 		BorderDefault: MustHex(p.Neutral[S300]),
 

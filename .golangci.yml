@@ -1,6 +1,6 @@
 ---
-# GolangCI-Lint configuration for Tero CLI
-# Focuses on catching real issues while avoiding noise
+# GolangCI-Lint v2 configuration for Tero CLI
+# Strict but pragmatic - catches real bugs, ignores noise
 
 version: "2"
 
@@ -9,6 +9,7 @@ run:
   tests: true
 
 linters:
+  default: none
   enable:
     # Core static analysis (essential)
     - errcheck # Unchecked errors
@@ -17,7 +18,7 @@ linters:
     - unused # Unused code
     - ineffassign # Ineffectual assignments
 
-    # Code quality and style
+    # Code quality
     - misspell # Common misspellings
     - unconvert # Unnecessary type conversions
     - wastedassign # Wasted assignments
@@ -26,62 +27,63 @@ linters:
     - bodyclose # HTTP response body not closed
     - noctx # HTTP requests without context
     - rowserrcheck # SQL rows.Err() not checked
-    - copyloopvar # Loop variable copying (Go 1.22+)
+    - copyloopvar # Loop variable copying
 
     # Error handling
-    - errorlint # Error wrapping issues
+    - errorlint # Error wrapping issues (use errors.Is)
     - errname # Error naming conventions
 
-    # Interface and type safety
-    - forcetypeassert # Type assertion checking
+    # Type safety
+    - forcetypeassert # Unchecked type assertions can panic
 
-    # Additional valuable checks
-    - nilerr # Finds code that returns nil even if it checks that error is not nil
-    - nolintlint # Reports ill-formed or insufficient nolint directives
-    - usestdlibvars # Detects possibility to use variables/constants from stdlib
+    # Additional checks
+    - nilerr # Returns nil even when error is not nil
+    - nolintlint # Validates nolint directives
+    - usestdlibvars # Use stdlib constants
 
-linters-settings:
-  errcheck:
-    # Don't require error checks for these functions where it's reasonable to ignore
-    exclude-functions:
-      - (io.Closer).Close
-      - (*os.File).Close
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Noisy, minimal impact
+        - shadow # Overly strict
 
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment # Can be noisy and performance impact is usually minimal
-      - shadow # Can be overly strict
+    staticcheck:
+      checks: ["all"]
 
-  staticcheck:
-    checks: ["all"]
+    nolintlint:
+      require-explanation: true
+      require-specific: true
 
-  nolintlint:
-    # Require explanation for nolint directives
-    require-explanation: true
-    # Require specific linter names in nolint directives
-    require-specific: true
+  exclusions:
+    # Presets for common false positives
+    presets:
+      - comments
+      - std-error-handling
 
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    rules:
+      # Skip generated files
+      - path: 'pkg/client/generated\.go$'
+        linters: [all]
 
-  exclude-rules:
-    # Allow security issues in test files
-    - path: '.*_test\.go$'
-      linters: [gosec]
+      # Client wrappers match API naming (ApiKey not APIKey)
+      - path: "pkg/client/"
+        text: "ST1003"
+        linters: [staticcheck]
 
-    # Allow unchecked type assertions in test files
-    - path: '.*_test\.go$'
-      linters: [forcetypeassert]
+      # API test mocks match the client interface naming
+      - path: "internal/api/apitest/"
+        text: "ST1003"
+        linters: [staticcheck]
 
-    # Skip generated files entirely
-    - path: 'pkg/client/generated\.go$'
-      linters: [all]
+      # sqlite package: local DB, context cancellation not critical
+      # The interface intentionally omits context for simplicity
+      - path: "internal/sqlite/"
+        linters: [noctx]
 
-    # Allow unused parameters in interfaces
-    - text: "`(ctx|logger)` is unused"
-      linters: [unused]
+      # Allow unused ctx/logger parameters in interface implementations
+      - text: "`(ctx|logger)` is unused"
+        linters: [unused]
 
 severity:
   default: error

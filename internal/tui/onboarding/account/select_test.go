@@ -2,6 +2,7 @@ package account_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -25,7 +26,7 @@ func selectTestTheme() *styles.Theme {
 // isComplete checks if a step is complete by checking Next() doesn't return ErrNotReady
 func isComplete(s step.Step) bool {
 	_, err := s.Next()
-	return err != step.ErrNotReady
+	return !errors.Is(err, step.ErrNotReady)
 }
 
 func TestSelectStep_Update(t *testing.T) {
@@ -236,7 +237,7 @@ func TestSelectStep_Next(t *testing.T) {
 
 		// Assert
 		_, err := s.Next()
-		if err != step.ErrNotReady {
+		if !errors.Is(err, step.ErrNotReady) {
 			t.Errorf("expected ErrNotReady before selection, got %v", err)
 		}
 	})

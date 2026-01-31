@@ -12,7 +12,7 @@ import (
 
 const (
 	// Global padding applied by Base layout
-	horizontalPadding = 2
+	horizontalPadding = 1
 	verticalPadding   = 1
 )
 

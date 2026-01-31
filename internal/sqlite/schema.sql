@@ -26,6 +26,7 @@ CREATE TABLE datadog_account_statuses_cache (
     account_id TEXT,
     datadog_account_id TEXT,
     log_active_services INTEGER,
+    log_analyzed_count INTEGER,
     log_analyzing_count INTEGER,
     log_analyzing_services INTEGER,
     log_broken_services INTEGER,
@@ -48,6 +49,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_warning TEXT,
     log_warning_at TEXT,
     log_waste_count INTEGER,
+    ready_for_use INTEGER,
     refreshed_at TEXT
 );
 

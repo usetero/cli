@@ -327,8 +327,18 @@ func (m *TUI) View() tea.View {
 
 	m.logger.Debug("final view",
 		"hasMarker", strings.Contains(view.Content, cursor.Marker),
-		"cursorX", func() int { if cur != nil { return cur.X }; return -1 }(),
-		"cursorY", func() int { if cur != nil { return cur.Y }; return -1 }())
+		"cursorX", func() int {
+			if cur != nil {
+				return cur.X
+			}
+			return -1
+		}(),
+		"cursorY", func() int {
+			if cur != nil {
+				return cur.Y
+			}
+			return -1
+		}())
 	view.MouseMode = tea.MouseModeCellMotion
 
 	// Show progress bar if supported terminal and we're busy

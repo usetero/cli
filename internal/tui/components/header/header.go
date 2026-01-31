@@ -87,7 +87,7 @@ func (h *Header) viewThick() string {
 
 	// Left diagonal field
 	const leftWidth = 6
-	fieldStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientStart)
+	fieldStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd) // Cyan
 	leftFieldRow := fieldStyle.Render(strings.Repeat(diag, leftWidth))
 	leftField := new(strings.Builder)
 	for range fieldHeight {
@@ -96,7 +96,7 @@ func (h *Header) viewThick() string {
 
 	// Right diagonal field fills remaining space
 	rightWidth := max(15, h.width-logoWidth-leftWidth-2)
-	rightFieldRow := fieldStyle.Render(strings.Repeat(diag, rightWidth))
+	rightFieldRow := fieldStyle.Render(strings.Repeat(diag, rightWidth)) // Also Cyan
 	rightField := new(strings.Builder)
 	for range fieldHeight {
 		rightField.WriteString(rightFieldRow + "\n")
@@ -120,7 +120,7 @@ func (h *Header) viewThin() string {
 
 	// Brand name
 	brandStyle := lipgloss.NewStyle().
-		Foreground(colors.Brand.GradientStart).
+		Foreground(colors.Brand.GradientStart). // Emerald (primary)
 		Bold(true)
 	brand := brandStyle.Render("tero")
 
@@ -128,13 +128,13 @@ func (h *Header) viewThin() string {
 	var titlePart string
 	if h.title != "" && h.title != "Chat" {
 		titleStyle := lipgloss.NewStyle().
-			Foreground(colors.Brand.GradientEnd).
+			Foreground(colors.Brand.GradientStart). // Emerald (primary)
 			Bold(true)
 		titlePart = " " + titleStyle.Render(h.title)
 	}
 
 	// Diagonal separator
-	diagStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd)
+	diagStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd) // Cyan
 
 	// Right side: org + metadata
 	var rightParts []string

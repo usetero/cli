@@ -38,6 +38,7 @@ type DatadogAccountStatusesCache struct {
 	AccountID              *string
 	DatadogAccountID       *string
 	LogActiveServices      *int64
+	LogAnalyzedCount       *int64
 	LogAnalyzingCount      *int64
 	LogAnalyzingServices   *int64
 	LogBrokenServices      *int64
@@ -60,6 +61,7 @@ type DatadogAccountStatusesCache struct {
 	LogWarning             *string
 	LogWarningAt           *string
 	LogWasteCount          *int64
+	ReadyForUse            *int64
 	RefreshedAt            *string
 }
 
