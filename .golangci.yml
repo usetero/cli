@@ -66,7 +66,7 @@ linters:
       - path: 'pkg/client/generated\.go$'
         linters: [all]
 
-      # Client wrappers match API naming (ApiKey not APIKey)
+      # Client wrappers match API naming (ApiKey not APIKey) - matches generated types
       - path: "pkg/client/"
         text: "ST1003"
         linters: [staticcheck]
@@ -75,11 +75,6 @@ linters:
       - path: "internal/api/apitest/"
         text: "ST1003"
         linters: [staticcheck]
-
-      # sqlite package: local DB, context cancellation not critical
-      # The interface intentionally omits context for simplicity
-      - path: "internal/sqlite/"
-        linters: [noctx]
 
       # Allow unused ctx/logger parameters in interface implementations
       - text: "`(ctx|logger)` is unused"

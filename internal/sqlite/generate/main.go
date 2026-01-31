@@ -11,6 +11,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,6 +31,8 @@ func main() {
 }
 
 func run() error {
+	ctx := context.Background()
+
 	// Create temp database
 	tmpDir, err := os.MkdirTemp("", "tero-generate-*")
 	if err != nil {
@@ -38,7 +41,7 @@ func run() error {
 	defer os.RemoveAll(tmpDir)
 
 	dbPath := filepath.Join(tmpDir, "generate.db")
-	db, err := sqlite.Open(dbPath)
+	db, err := sqlite.Open(ctx, dbPath)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
@@ -50,21 +53,21 @@ func run() error {
 		return fmt.Errorf("get extension path: %w", err)
 	}
 
-	if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 		return fmt.Errorf("load extension: %w", err)
 	}
 
 	fmt.Println("Applying embedded PowerSync schema...")
 
 	// Apply embedded schema to create views (just like runtime)
-	if _, err := db.Exec("SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
 		return fmt.Errorf("replace schema: %w", err)
 	}
 
 	fmt.Println("Reflecting schema from SQLite...")
 
 	// Reflect schema to SQL
-	schemaSQL, err := reflectSchema(db)
+	schemaSQL, err := reflectSchema(ctx, db)
 	if err != nil {
 		return fmt.Errorf("reflect schema: %w", err)
 	}
@@ -80,7 +83,7 @@ func run() error {
 
 	// Run sqlc generate
 	fmt.Println("Running sqlc generate...")
-	if err := runSqlc(); err != nil {
+	if err := runSqlc(ctx); err != nil {
 		return fmt.Errorf("sqlc generate: %w", err)
 	}
 
@@ -90,9 +93,9 @@ func run() error {
 
 // reflectSchema reflects the schema from sqlite_master to SQL.
 // It extracts CREATE VIEW statements for PowerSync views (excluding internal tables).
-func reflectSchema(db *sqlite.DB) (string, error) {
+func reflectSchema(ctx context.Context, db *sqlite.DB) (string, error) {
 	// Query all views created by PowerSync (they have the auto-generated comment)
-	rows, err := db.Query(`
+	rows, err := db.Query(ctx, `
 		SELECT name, sql
 		FROM sqlite_master
 		WHERE type = 'view'
@@ -138,7 +141,7 @@ func reflectSchema(db *sqlite.DB) (string, error) {
 
 	for _, view := range views {
 		// Parse the view to extract column info and generate CREATE TABLE
-		tableSQL, err := viewToTable(db, view.name)
+		tableSQL, err := viewToTable(ctx, db, view.name)
 		if err != nil {
 			return "", fmt.Errorf("convert view %s: %w", view.name, err)
 		}
@@ -151,9 +154,9 @@ func reflectSchema(db *sqlite.DB) (string, error) {
 
 // viewToTable converts a view definition to a CREATE TABLE statement.
 // It queries the view's column info using PRAGMA table_info.
-func viewToTable(db *sqlite.DB, viewName string) (string, error) {
+func viewToTable(ctx context.Context, db *sqlite.DB, viewName string) (string, error) {
 	// Get column info from the view
-	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", viewName))
+	rows, err := db.Query(ctx, fmt.Sprintf("PRAGMA table_info(%s)", viewName))
 	if err != nil {
 		return "", fmt.Errorf("pragma table_info: %w", err)
 	}
@@ -218,14 +221,14 @@ func normalizeSQLiteType(t string) string {
 }
 
 // runSqlc runs sqlc generate from the repository root.
-func runSqlc() error {
+func runSqlc(ctx context.Context) error {
 	// Find repo root (where sqlc.yaml lives)
 	repoRoot, err := findRepoRoot()
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command("sqlc", "generate")
+	cmd := exec.CommandContext(ctx, "sqlc", "generate")
 	cmd.Dir = repoRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -1,6 +1,7 @@
 package powersync
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -88,6 +89,8 @@ func TestLoadExtension(t *testing.T) {
 	t.Run("loads into SQLite database", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
+
 		// Arrange: get extension path
 		extPath, err := ExtensionPath()
 		if err != nil {
@@ -97,14 +100,14 @@ func TestLoadExtension(t *testing.T) {
 		// Arrange: open a database
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(dbPath)
+		db, err := sqlite.Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("sqlite.Open() error = %v", err)
 		}
 		defer db.Close()
 
 		// Act
-		err = db.LoadExtension(extPath, "sqlite3_powersync_init")
+		err = db.LoadExtension(ctx, extPath, "sqlite3_powersync_init")
 
 		// Assert
 		if err != nil {
@@ -119,6 +122,8 @@ func TestUpdateHooks(t *testing.T) {
 	t.Run("tracks table changes", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
+
 		// Arrange: open database and load extension
 		extPath, err := ExtensionPath()
 		if err != nil {
@@ -127,36 +132,36 @@ func TestUpdateHooks(t *testing.T) {
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(dbPath)
+		db, err := sqlite.Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("sqlite.Open() error = %v", err)
 		}
 		defer db.Close()
 
-		if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+		if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 			t.Fatalf("LoadExtension() error = %v", err)
 		}
 
 		// Install update hooks
-		_, err = db.Exec("SELECT powersync_update_hooks('install')")
+		_, err = db.Exec(ctx, "SELECT powersync_update_hooks('install')")
 		if err != nil {
 			t.Fatalf("install hooks error = %v", err)
 		}
 
 		// Create table and insert data
-		_, err = db.Exec("CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
+		_, err = db.Exec(ctx, "CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
 		if err != nil {
 			t.Fatalf("create table error = %v", err)
 		}
 
-		_, err = db.Exec("INSERT INTO messages (content) VALUES ('hello')")
+		_, err = db.Exec(ctx, "INSERT INTO messages (content) VALUES ('hello')")
 		if err != nil {
 			t.Fatalf("insert error = %v", err)
 		}
 
 		// Get changed tables
 		var result string
-		row := db.QueryRow("SELECT powersync_update_hooks('get')")
+		row := db.QueryRow(ctx, "SELECT powersync_update_hooks('get')")
 		if err := row.Scan(&result); err != nil {
 			t.Fatalf("get hooks error = %v", err)
 		}
@@ -167,7 +172,7 @@ func TestUpdateHooks(t *testing.T) {
 		}
 
 		// Second call should return empty (changes cleared)
-		row = db.QueryRow("SELECT powersync_update_hooks('get')")
+		row = db.QueryRow(ctx, "SELECT powersync_update_hooks('get')")
 		if err := row.Scan(&result); err != nil {
 			t.Fatalf("second get hooks error = %v", err)
 		}

@@ -1,6 +1,7 @@
 package powersync
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -208,7 +209,7 @@ func NewController(db sqlite.Database) *Controller {
 
 // Control sends a control command and returns the resulting instructions.
 // The powersync_control function always expects 2 arguments (op, payload).
-func (c *Controller) Control(op ControlOp, payload any) ([]Instruction, error) {
+func (c *Controller) Control(ctx context.Context, op ControlOp, payload any) ([]Instruction, error) {
 	// Determine how to pass the payload to SQLite
 	var sqlPayload any
 	if payload == nil {
@@ -230,7 +231,7 @@ func (c *Controller) Control(op ControlOp, payload any) ([]Instruction, error) {
 	}
 
 	var result []byte
-	err := c.db.QueryRow("SELECT powersync_control(?, ?)", string(op), sqlPayload).Scan(&result)
+	err := c.db.QueryRow(ctx, "SELECT powersync_control(?, ?)", string(op), sqlPayload).Scan(&result)
 	if err != nil {
 		return nil, fmt.Errorf("powersync_control(%s): %w", op, err)
 	}
@@ -253,36 +254,36 @@ func (c *Controller) Control(op ControlOp, payload any) ([]Instruction, error) {
 }
 
 // Start begins a sync stream with the given parameters.
-func (c *Controller) Start(req StartRequest) ([]Instruction, error) {
-	return c.Control(OpStart, req)
+func (c *Controller) Start(ctx context.Context, req StartRequest) ([]Instruction, error) {
+	return c.Control(ctx, OpStart, req)
 }
 
 // Stop stops the current sync stream.
-func (c *Controller) Stop() ([]Instruction, error) {
-	return c.Control(OpStop, nil)
+func (c *Controller) Stop(ctx context.Context) ([]Instruction, error) {
+	return c.Control(ctx, OpStop, nil)
 }
 
 // SendTextLine forwards a JSON line from the sync service.
-func (c *Controller) SendTextLine(line string) ([]Instruction, error) {
-	return c.Control(OpLineText, line)
+func (c *Controller) SendTextLine(ctx context.Context, line string) ([]Instruction, error) {
+	return c.Control(ctx, OpLineText, line)
 }
 
 // SendBinaryLine forwards a BSON line from the sync service.
-func (c *Controller) SendBinaryLine(data []byte) ([]Instruction, error) {
-	return c.Control(OpLineBinary, data)
+func (c *Controller) SendBinaryLine(ctx context.Context, data []byte) ([]Instruction, error) {
+	return c.Control(ctx, OpLineBinary, data)
 }
 
 // NotifyConnection notifies of a connection state change.
-func (c *Controller) NotifyConnection(event ConnectionEvent) ([]Instruction, error) {
-	return c.Control("connection", string(event))
+func (c *Controller) NotifyConnection(ctx context.Context, event ConnectionEvent) ([]Instruction, error) {
+	return c.Control(ctx, "connection", string(event))
 }
 
 // NotifyTokenRefreshed notifies that the auth token was refreshed.
-func (c *Controller) NotifyTokenRefreshed() ([]Instruction, error) {
-	return c.Control(OpRefreshedToken, nil)
+func (c *Controller) NotifyTokenRefreshed(ctx context.Context) ([]Instruction, error) {
+	return c.Control(ctx, OpRefreshedToken, nil)
 }
 
 // NotifyUploadCompleted notifies that CRUD upload completed.
-func (c *Controller) NotifyUploadCompleted() ([]Instruction, error) {
-	return c.Control(OpCompletedUpload, nil)
+func (c *Controller) NotifyUploadCompleted(ctx context.Context) ([]Instruction, error) {
+	return c.Control(ctx, OpCompletedUpload, nil)
 }

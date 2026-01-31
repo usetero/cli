@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 )
@@ -32,7 +33,7 @@ type watchState struct {
 
 // InstallUpdateHooks enables change tracking via PowerSync's update hooks.
 // This must be called after loading the PowerSync extension.
-func (d *DB) InstallUpdateHooks() error {
+func (d *DB) InstallUpdateHooks(ctx context.Context) error {
 	d.watch.mu.Lock()
 	defer d.watch.mu.Unlock()
 
@@ -40,7 +41,7 @@ func (d *DB) InstallUpdateHooks() error {
 		return nil
 	}
 
-	_, err := d.db.Exec("SELECT powersync_update_hooks('install')")
+	_, err := d.db.ExecContext(ctx, "SELECT powersync_update_hooks('install')")
 	if err != nil {
 		return err
 	}
@@ -94,8 +95,9 @@ func (d *DB) checkForChanges() {
 	d.watch.mu.RUnlock()
 
 	// Query for changed tables
+	// Use background context since this is called after writes complete
 	var result string
-	err := d.db.QueryRow("SELECT powersync_update_hooks('get')").Scan(&result)
+	err := d.db.QueryRowContext(context.Background(), "SELECT powersync_update_hooks('get')").Scan(&result)
 	if err != nil {
 		return // Silently ignore errors - don't break writes
 	}

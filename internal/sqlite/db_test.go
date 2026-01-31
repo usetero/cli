@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,21 +12,22 @@ func TestDB_Count(t *testing.T) {
 
 	t.Run("returns zero for empty table", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
 		defer db.Close()
 
-		_, err = db.Exec("CREATE TABLE items (id INTEGER PRIMARY KEY)")
+		_, err = db.Exec(ctx, "CREATE TABLE items (id INTEGER PRIMARY KEY)")
 		if err != nil {
 			t.Fatalf("CREATE TABLE error = %v", err)
 		}
 
-		count, err := db.Count("items")
+		count, err := db.Count(ctx, "items")
 		if err != nil {
 			t.Fatalf("Count() error = %v", err)
 		}
@@ -37,26 +39,27 @@ func TestDB_Count(t *testing.T) {
 
 	t.Run("returns correct count", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
 		defer db.Close()
 
-		_, err = db.Exec("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)")
+		_, err = db.Exec(ctx, "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)")
 		if err != nil {
 			t.Fatalf("CREATE TABLE error = %v", err)
 		}
 
-		_, err = db.Exec("INSERT INTO items (name) VALUES ('a'), ('b'), ('c')")
+		_, err = db.Exec(ctx, "INSERT INTO items (name) VALUES ('a'), ('b'), ('c')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		count, err := db.Count("items")
+		count, err := db.Count(ctx, "items")
 		if err != nil {
 			t.Fatalf("Count() error = %v", err)
 		}
@@ -68,16 +71,17 @@ func TestDB_Count(t *testing.T) {
 
 	t.Run("returns error for nonexistent table", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
 		defer db.Close()
 
-		_, err = db.Count("nonexistent")
+		_, err = db.Count(ctx, "nonexistent")
 		if err == nil {
 			t.Error("expected error for nonexistent table, got nil")
 		}
@@ -89,10 +93,11 @@ func TestDB_Path(t *testing.T) {
 
 	t.Run("returns the database path", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "mydb.sqlite")
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
@@ -109,10 +114,11 @@ func TestDB_Queries(t *testing.T) {
 
 	t.Run("returns non-nil Queries", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
@@ -130,6 +136,7 @@ func TestOpen(t *testing.T) {
 
 	t.Run("creates parent directories if they do not exist", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		// Arrange: create a temp dir and a nested path that doesn't exist
 		tmpDir := t.TempDir()
@@ -142,7 +149,7 @@ func TestOpen(t *testing.T) {
 		}
 
 		// Act
-		db, err := Open(dbPath)
+		db, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("Open() error = %v", err)
 		}
@@ -166,25 +173,26 @@ func TestOpen(t *testing.T) {
 
 	t.Run("opens existing database", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		// Arrange: create a database first
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "existing.sqlite")
 
-		db1, err := Open(dbPath)
+		db1, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("first Open() error = %v", err)
 		}
 
 		// Create a table to verify it's a real database
-		_, err = db1.Exec("CREATE TABLE test (id INTEGER PRIMARY KEY)")
+		_, err = db1.Exec(ctx, "CREATE TABLE test (id INTEGER PRIMARY KEY)")
 		if err != nil {
 			t.Fatalf("CREATE TABLE error = %v", err)
 		}
 		db1.Close()
 
 		// Act: open the same database again
-		db2, err := Open(dbPath)
+		db2, err := Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("second Open() error = %v", err)
 		}
@@ -192,7 +200,7 @@ func TestOpen(t *testing.T) {
 
 		// Assert: table exists
 		var count int64
-		err = db2.QueryRow("SELECT COUNT(*) FROM test").Scan(&count)
+		err = db2.QueryRow(ctx, "SELECT COUNT(*) FROM test").Scan(&count)
 		if err != nil {
 			t.Errorf("expected table to exist, got err: %v", err)
 		}

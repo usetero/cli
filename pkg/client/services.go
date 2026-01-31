@@ -18,6 +18,6 @@ func (c *Client) GetServiceByName(ctx context.Context, name string) (*GetService
 }
 
 // EnableService enables a service for analysis
-func (c *Client) EnableService(ctx context.Context, serviceId string) (*EnableServiceResponse, error) {
-	return EnableService(ctx, c.gql, serviceId)
+func (c *Client) EnableService(ctx context.Context, serviceID string) (*EnableServiceResponse, error) {
+	return EnableService(ctx, c.gql, serviceID)
 }

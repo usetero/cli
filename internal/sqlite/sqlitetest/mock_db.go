@@ -2,6 +2,7 @@
 package sqlitetest
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -14,16 +15,16 @@ type MockDB struct {
 	Counts map[string]int64
 
 	// QueryFunc is called when Query is invoked.
-	QueryFunc func(query string, args ...any) (*sql.Rows, error)
+	QueryFunc func(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 
 	// QueryRowFunc is called when QueryRow is invoked.
-	QueryRowFunc func(query string, args ...any) *sql.Row
+	QueryRowFunc func(ctx context.Context, query string, args ...any) *sql.Row
 
 	// ExecFunc is called when Exec is invoked.
-	ExecFunc func(query string, args ...any) (sql.Result, error)
+	ExecFunc func(ctx context.Context, query string, args ...any) (sql.Result, error)
 
 	// LoadExtensionFunc is called when LoadExtension is invoked.
-	LoadExtensionFunc func(path, entryPoint string) error
+	LoadExtensionFunc func(ctx context.Context, path, entryPoint string) error
 
 	// Closed is set to true when Close is called.
 	Closed bool
@@ -40,31 +41,31 @@ func NewMockDB() *MockDB {
 }
 
 // Query implements sqlite.Database.
-func (m *MockDB) Query(query string, args ...any) (*sql.Rows, error) {
+func (m *MockDB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	if m.QueryFunc != nil {
-		return m.QueryFunc(query, args...)
+		return m.QueryFunc(ctx, query, args...)
 	}
 	return nil, fmt.Errorf("QueryFunc not set")
 }
 
 // QueryRow implements sqlite.Database.
-func (m *MockDB) QueryRow(query string, args ...any) *sql.Row {
+func (m *MockDB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 	if m.QueryRowFunc != nil {
-		return m.QueryRowFunc(query, args...)
+		return m.QueryRowFunc(ctx, query, args...)
 	}
 	return nil
 }
 
 // Exec implements sqlite.Database.
-func (m *MockDB) Exec(query string, args ...any) (sql.Result, error) {
+func (m *MockDB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	if m.ExecFunc != nil {
-		return m.ExecFunc(query, args...)
+		return m.ExecFunc(ctx, query, args...)
 	}
 	return nil, fmt.Errorf("ExecFunc not set")
 }
 
 // Count implements sqlite.Database.
-func (m *MockDB) Count(table string) (int64, error) {
+func (m *MockDB) Count(ctx context.Context, table string) (int64, error) {
 	if count, ok := m.Counts[table]; ok {
 		return count, nil
 	}
@@ -72,9 +73,9 @@ func (m *MockDB) Count(table string) (int64, error) {
 }
 
 // LoadExtension implements sqlite.Database.
-func (m *MockDB) LoadExtension(path, entryPoint string) error {
+func (m *MockDB) LoadExtension(ctx context.Context, path, entryPoint string) error {
 	if m.LoadExtensionFunc != nil {
-		return m.LoadExtensionFunc(path, entryPoint)
+		return m.LoadExtensionFunc(ctx, path, entryPoint)
 	}
 	return nil
 }
@@ -92,7 +93,7 @@ func (m *MockDB) Queries() *sqlite.Queries {
 }
 
 // InstallUpdateHooks implements sqlite.Database.
-func (m *MockDB) InstallUpdateHooks() error {
+func (m *MockDB) InstallUpdateHooks(ctx context.Context) error {
 	return nil
 }
 

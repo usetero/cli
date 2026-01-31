@@ -15,13 +15,13 @@ import (
 
 // Database is the interface for the local SQLite database.
 type Database interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-	Exec(query string, args ...any) (sql.Result, error)
-	Count(table string) (int64, error)
-	LoadExtension(path, entryPoint string) error
+	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRow(ctx context.Context, query string, args ...any) *sql.Row
+	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
+	Count(ctx context.Context, table string) (int64, error)
+	LoadExtension(ctx context.Context, path, entryPoint string) error
 	Queries() *Queries
-	InstallUpdateHooks() error
+	InstallUpdateHooks(ctx context.Context) error
 	Subscribe() *Subscription
 	Close() error
 }
@@ -39,7 +39,7 @@ var _ Database = (*DB)(nil)
 
 // Open opens a SQLite database at the given path.
 // The database file and parent directories are created if they don't exist.
-func Open(path string) (*DB, error) {
+func Open(ctx context.Context, path string) (*DB, error) {
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -52,7 +52,7 @@ func Open(path string) (*DB, error) {
 	}
 
 	// Verify connection
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
@@ -84,19 +84,19 @@ func (d *DB) Queries() *Queries {
 }
 
 // Query executes a query and returns the results.
-func (d *DB) Query(query string, args ...any) (*sql.Rows, error) {
-	return d.db.Query(query, args...)
+func (d *DB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return d.db.QueryContext(ctx, query, args...)
 }
 
 // QueryRow executes a query that returns at most one row.
-func (d *DB) QueryRow(query string, args ...any) *sql.Row {
-	return d.db.QueryRow(query, args...)
+func (d *DB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+	return d.db.QueryRowContext(ctx, query, args...)
 }
 
 // Exec executes a query that doesn't return rows.
 // If update hooks are installed, subscribers are notified of any table changes.
-func (d *DB) Exec(query string, args ...any) (sql.Result, error) {
-	result, err := d.db.Exec(query, args...)
+func (d *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	result, err := d.db.ExecContext(ctx, query, args...)
 	if err == nil {
 		d.checkForChanges()
 	}
@@ -104,10 +104,10 @@ func (d *DB) Exec(query string, args ...any) (sql.Result, error) {
 }
 
 // Count returns the number of rows in the given table.
-func (d *DB) Count(table string) (int64, error) {
+func (d *DB) Count(ctx context.Context, table string) (int64, error) {
 	var count int64
 	// Use quote identifier to prevent SQL injection
-	err := d.db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
+	err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count %s: %w", table, err)
 	}
@@ -118,8 +118,8 @@ func (d *DB) Count(table string) (int64, error) {
 // This uses the go-sqlite3 driver's C API to properly enable and load extensions.
 // The entryPoint can be empty to use the default, or specify a custom entry point
 // like "sqlite3_powersync_init" for the PowerSync extension.
-func (d *DB) LoadExtension(path, entryPoint string) error {
-	conn, err := d.db.Conn(context.Background())
+func (d *DB) LoadExtension(ctx context.Context, path, entryPoint string) error {
+	conn, err := d.db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("get connection: %w", err)
 	}

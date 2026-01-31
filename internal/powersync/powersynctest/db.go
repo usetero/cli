@@ -1,6 +1,7 @@
 package powersynctest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/usetero/cli/internal/powersync"
@@ -13,6 +14,7 @@ import (
 func OpenTestDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
+	ctx := context.Background()
 	db := sqlitetest.OpenTest(t)
 
 	extPath, err := powersync.ExtensionPath()
@@ -20,7 +22,7 @@ func OpenTestDB(t *testing.T) *sqlite.DB {
 		t.Fatalf("ExtensionPath() error = %v", err)
 	}
 
-	if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 		t.Fatalf("LoadExtension() error = %v", err)
 	}
 
@@ -32,10 +34,11 @@ func OpenTestDB(t *testing.T) *sqlite.DB {
 func OpenTestDBWithSchema(t *testing.T) *sqlite.DB {
 	t.Helper()
 
+	ctx := context.Background()
 	db := OpenTestDB(t)
 
 	// Initialize with the embedded schema
-	if _, err := db.Exec("SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
 		t.Fatalf("powersync_replace_schema() error = %v", err)
 	}
 

@@ -1,6 +1,7 @@
 package sqlite_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -13,6 +14,8 @@ import (
 func setupWatchDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
+	ctx := context.Background()
+
 	extPath, err := powersync.ExtensionPath()
 	if err != nil {
 		t.Fatalf("ExtensionPath() error = %v", err)
@@ -20,18 +23,18 @@ func setupWatchDB(t *testing.T) *sqlite.DB {
 
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.sqlite")
-	db, err := sqlite.Open(dbPath)
+	db, err := sqlite.Open(ctx, dbPath)
 	if err != nil {
 		t.Fatalf("sqlite.Open() error = %v", err)
 	}
 
-	if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 		db.Close()
 		t.Fatalf("LoadExtension() error = %v", err)
 	}
 
 	// Create a test table
-	_, err = db.Exec("CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
+	_, err = db.Exec(ctx, "CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
 	if err != nil {
 		db.Close()
 		t.Fatalf("CREATE TABLE error = %v", err)
@@ -46,10 +49,11 @@ func TestDB_InstallUpdateHooks(t *testing.T) {
 	t.Run("installs hooks successfully", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		err := db.InstallUpdateHooks()
+		err := db.InstallUpdateHooks(ctx)
 		if err != nil {
 			t.Errorf("InstallUpdateHooks() error = %v", err)
 		}
@@ -58,14 +62,15 @@ func TestDB_InstallUpdateHooks(t *testing.T) {
 	t.Run("is idempotent", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
 		// Install twice
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("first InstallUpdateHooks() error = %v", err)
 		}
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("second InstallUpdateHooks() error = %v", err)
 		}
 
@@ -73,7 +78,7 @@ func TestDB_InstallUpdateHooks(t *testing.T) {
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		_, err := db.Exec("INSERT INTO messages (content) VALUES ('test')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
@@ -91,16 +96,18 @@ func TestDB_InstallUpdateHooks(t *testing.T) {
 	t.Run("fails without PowerSync extension", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
+
 		// Open DB without loading extension
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(dbPath)
+		db, err := sqlite.Open(ctx, dbPath)
 		if err != nil {
 			t.Fatalf("sqlite.Open() error = %v", err)
 		}
 		defer db.Close()
 
-		err = db.InstallUpdateHooks()
+		err = db.InstallUpdateHooks(ctx)
 		if err == nil {
 			t.Error("expected error without PowerSync extension, got nil")
 		}
@@ -126,10 +133,11 @@ func TestDB_Subscribe(t *testing.T) {
 	t.Run("multiple subscribers receive notifications", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
@@ -138,7 +146,7 @@ func TestDB_Subscribe(t *testing.T) {
 		sub2 := db.Subscribe()
 		defer sub2.Stop()
 
-		_, err := db.Exec("INSERT INTO messages (content) VALUES ('test')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
@@ -159,6 +167,7 @@ func TestDB_Subscribe(t *testing.T) {
 	t.Run("no notification without hooks installed", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
@@ -166,7 +175,7 @@ func TestDB_Subscribe(t *testing.T) {
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		_, err := db.Exec("INSERT INTO messages (content) VALUES ('test')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
@@ -220,17 +229,18 @@ func TestSubscription_Stop(t *testing.T) {
 	t.Run("stops receiving notifications", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
 		sub := db.Subscribe()
 		sub.Stop()
 
-		_, err := db.Exec("INSERT INTO messages (content) VALUES ('test')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
@@ -253,17 +263,18 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("notifies on INSERT", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		_, err := db.Exec("INSERT INTO messages (content) VALUES ('hello')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('hello')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
@@ -281,23 +292,24 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("notifies on UPDATE", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
 		// Insert first
-		_, err := db.Exec("INSERT INTO messages (id, content) VALUES (1, 'hello')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (id, content) VALUES (1, 'hello')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		_, err = db.Exec("UPDATE messages SET content = 'world' WHERE id = 1")
+		_, err = db.Exec(ctx, "UPDATE messages SET content = 'world' WHERE id = 1")
 		if err != nil {
 			t.Fatalf("UPDATE error = %v", err)
 		}
@@ -315,23 +327,24 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("notifies on DELETE", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
 		// Insert first
-		_, err := db.Exec("INSERT INTO messages (id, content) VALUES (1, 'hello')")
+		_, err := db.Exec(ctx, "INSERT INTO messages (id, content) VALUES (1, 'hello')")
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		_, err = db.Exec("DELETE FROM messages WHERE id = 1")
+		_, err = db.Exec(ctx, "DELETE FROM messages WHERE id = 1")
 		if err != nil {
 			t.Fatalf("DELETE error = %v", err)
 		}
@@ -349,10 +362,11 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("no notification on SELECT", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
@@ -360,7 +374,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		defer sub.Stop()
 
 		// SELECT doesn't go through Exec, but let's verify Query doesn't notify
-		rows, err := db.Query("SELECT * FROM messages")
+		rows, err := db.Query(ctx, "SELECT * FROM messages")
 		if err != nil {
 			t.Fatalf("SELECT error = %v", err)
 		}
@@ -377,10 +391,11 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("no notification on failed Exec", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
@@ -388,7 +403,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		defer sub.Stop()
 
 		// This should fail - table doesn't exist
-		_, err := db.Exec("INSERT INTO nonexistent (content) VALUES ('test')")
+		_, err := db.Exec(ctx, "INSERT INTO nonexistent (content) VALUES ('test')")
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -404,16 +419,17 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 	t.Run("notifies with multiple tables changed", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
 		// Create second table
-		_, err := db.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+		_, err := db.Exec(ctx, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
 		if err != nil {
 			t.Fatalf("CREATE TABLE error = %v", err)
 		}
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
@@ -421,7 +437,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		defer sub.Stop()
 
 		// Insert into both tables in one transaction
-		_, err = db.Exec(`
+		_, err = db.Exec(ctx, `
 			INSERT INTO messages (content) VALUES ('hello');
 			INSERT INTO users (name) VALUES ('alice');
 		`)
@@ -460,10 +476,11 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 	t.Run("drops notifications when subscriber is slow", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(); err != nil {
+		if err := db.InstallUpdateHooks(ctx); err != nil {
 			t.Fatalf("InstallUpdateHooks() error = %v", err)
 		}
 
@@ -473,7 +490,7 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 		// Don't read from channel - simulate slow subscriber
 		// Insert multiple times
 		for i := 0; i < 5; i++ {
-			_, err := db.Exec("INSERT INTO messages (content) VALUES ('test')")
+			_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 			if err != nil {
 				t.Fatalf("INSERT error = %v", err)
 			}
@@ -490,7 +507,7 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 		// Subsequent writes should not block (non-blocking send)
 		done := make(chan bool)
 		go func() {
-			_, _ = db.Exec("INSERT INTO messages (content) VALUES ('test')")
+			_, _ = db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
 			done <- true
 		}()
 

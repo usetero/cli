@@ -1,6 +1,7 @@
 package powersync
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -142,6 +143,7 @@ func TestInstruction_UnmarshalJSON(t *testing.T) {
 func setupTestDB(t *testing.T) sqlite.Database {
 	t.Helper()
 
+	ctx := context.Background()
 	db := sqlitetest.OpenTest(t)
 
 	extPath, err := ExtensionPath()
@@ -149,7 +151,7 @@ func setupTestDB(t *testing.T) sqlite.Database {
 		t.Fatalf("ExtensionPath() error = %v", err)
 	}
 
-	if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 		t.Fatalf("LoadExtension() error = %v", err)
 	}
 
@@ -157,7 +159,7 @@ func setupTestDB(t *testing.T) sqlite.Database {
 	// Use a minimal test schema
 	schemaJSON := `{"tables": [{"name": "test", "columns": [{"name": "id", "type": "text"}, {"name": "name", "type": "text"}]}]}`
 
-	if _, err := db.Exec("SELECT powersync_replace_schema(?)", schemaJSON); err != nil {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", schemaJSON); err != nil {
 		t.Fatalf("powersync_replace_schema() error = %v", err)
 	}
 
@@ -170,11 +172,12 @@ func TestController_Start(t *testing.T) {
 	t.Run("returns instructions for sync stream", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Act
-		instructions, err := controller.Start(StartRequest{
+		instructions, err := controller.Start(ctx, StartRequest{
 			IncludeDefaults: true,
 		})
 
@@ -210,17 +213,18 @@ func TestController_Stop(t *testing.T) {
 	t.Run("stops without error", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Start first
-		_, err := controller.Start(StartRequest{IncludeDefaults: true})
+		_, err := controller.Start(ctx, StartRequest{IncludeDefaults: true})
 		if err != nil {
 			t.Fatalf("Start() error = %v", err)
 		}
 
 		// Act
-		_, err = controller.Stop()
+		_, err = controller.Stop(ctx)
 
 		// Assert
 		if err != nil {
@@ -235,14 +239,15 @@ func TestController_NotifyConnection(t *testing.T) {
 	t.Run("accepts established event", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Start first
-		_, _ = controller.Start(StartRequest{IncludeDefaults: true})
+		_, _ = controller.Start(ctx, StartRequest{IncludeDefaults: true})
 
 		// Act
-		_, err := controller.NotifyConnection(ConnectionEstablished)
+		_, err := controller.NotifyConnection(ctx, ConnectionEstablished)
 
 		// Assert
 		if err != nil {
@@ -253,14 +258,15 @@ func TestController_NotifyConnection(t *testing.T) {
 	t.Run("accepts end event", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Start first
-		_, _ = controller.Start(StartRequest{IncludeDefaults: true})
+		_, _ = controller.Start(ctx, StartRequest{IncludeDefaults: true})
 
 		// Act
-		_, err := controller.NotifyConnection(ConnectionEnded)
+		_, err := controller.NotifyConnection(ctx, ConnectionEnded)
 
 		// Assert
 		if err != nil {
@@ -275,16 +281,17 @@ func TestController_SendTextLine(t *testing.T) {
 	t.Run("processes JSON line from sync service", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Start sync first
-		_, _ = controller.Start(StartRequest{IncludeDefaults: true})
-		_, _ = controller.NotifyConnection(ConnectionEstablished)
+		_, _ = controller.Start(ctx, StartRequest{IncludeDefaults: true})
+		_, _ = controller.NotifyConnection(ctx, ConnectionEstablished)
 
 		// Act: send a checkpoint line (common sync message type)
 		line := `{"checkpoint":{"last_op_id":"0","buckets":[]}}`
-		instructions, err := controller.SendTextLine(line)
+		instructions, err := controller.SendTextLine(ctx, line)
 
 		// Assert: should process without error
 		if err != nil {
@@ -302,14 +309,15 @@ func TestController_NotifyTokenRefreshed(t *testing.T) {
 	t.Run("notifies extension of refreshed token", func(t *testing.T) {
 		t.Parallel()
 
+		ctx := context.Background()
 		db := setupTestDB(t)
 		controller := NewController(db)
 
 		// Start first
-		_, _ = controller.Start(StartRequest{IncludeDefaults: true})
+		_, _ = controller.Start(ctx, StartRequest{IncludeDefaults: true})
 
 		// Act
-		_, err := controller.NotifyTokenRefreshed()
+		_, err := controller.NotifyTokenRefreshed(ctx)
 
 		// Assert
 		if err != nil {

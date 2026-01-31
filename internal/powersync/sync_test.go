@@ -467,7 +467,7 @@ func TestSync_WaitForFirstSync(t *testing.T) {
 		mock := &powersynctest.MockStreamer{
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
 				// Simulate sync completion by inserting into ps_sync_state
-				_, err := db.Exec("INSERT INTO ps_sync_state (priority, last_synced_at) VALUES (0, datetime('now'))")
+				_, err := db.Exec(ctx, "INSERT INTO ps_sync_state (priority, last_synced_at) VALUES (0, datetime('now'))")
 				if err != nil {
 					return err
 				}

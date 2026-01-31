@@ -1,6 +1,7 @@
 package sqlitetest
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -13,7 +14,7 @@ func OpenTest(t *testing.T) *sqlite.DB {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "test.sqlite")
-	db, err := sqlite.Open(dbPath)
+	db, err := sqlite.Open(context.Background(), dbPath)
 	if err != nil {
 		t.Fatalf("sqlite.Open() error = %v", err)
 	}

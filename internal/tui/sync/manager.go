@@ -96,7 +96,7 @@ func (m *Manager) Update(msg tea.Msg) tea.Cmd {
 		m.db = msg.db
 
 		// Install update hooks for change notifications
-		if err := m.db.InstallUpdateHooks(); err != nil {
+		if err := m.db.InstallUpdateHooks(m.ctx); err != nil {
 			m.logger.Error("failed to install update hooks", "error", err)
 			// Non-fatal: continue without change notifications
 		}
@@ -146,7 +146,7 @@ func (m *Manager) startSync(accountID string) tea.Cmd {
 		}
 
 		// Open database
-		db, err := sqlite.Open(dbPath)
+		db, err := sqlite.Open(m.ctx, dbPath)
 		if err != nil {
 			return syncStartedMsg{err: err}
 		}

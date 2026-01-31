@@ -97,12 +97,12 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID, token s
 		return fmt.Errorf("get extension path: %w", err)
 	}
 
-	if err := db.LoadExtension(extPath, "sqlite3_powersync_init"); err != nil {
+	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
 		return fmt.Errorf("load extension: %w", err)
 	}
 
 	// Apply embedded schema to create views
-	if _, err := db.Exec("SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
 		return fmt.Errorf("replace schema: %w", err)
 	}
 
@@ -184,7 +184,7 @@ func (s *Sync) WaitForFirstSync(ctx context.Context) error {
 			// This table is populated when PowerSync finishes its first sync
 			if s.db != nil {
 				var count int64
-				err := s.db.QueryRow("SELECT COUNT(*) FROM ps_sync_state").Scan(&count)
+				err := s.db.QueryRow(ctx, "SELECT COUNT(*) FROM ps_sync_state").Scan(&count)
 				if err == nil && count > 0 {
 					return nil
 				}
@@ -281,7 +281,7 @@ func (s *Sync) runSyncIteration(ctx context.Context) error {
 	}
 
 	// Start sync and get instructions from extension
-	instructions, err := s.controller.Start(StartRequest{
+	instructions, err := s.controller.Start(ctx, StartRequest{
 		IncludeDefaults: true,
 		Parameters: map[string]any{
 			"account_id": s.accountID,
@@ -356,7 +356,7 @@ func (s *Sync) refreshToken(ctx context.Context) error {
 	s.stream.SetToken(token)
 
 	// Notify extension that token was refreshed
-	if _, err := s.controller.NotifyTokenRefreshed(); err != nil {
+	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}
 
@@ -372,14 +372,14 @@ func (s *Sync) establishSyncStream(ctx context.Context, req *StreamingSyncReques
 	s.setStatus(StatusSyncing)
 
 	// Notify extension that connection is established
-	if _, err := s.controller.NotifyConnection(ConnectionEstablished); err != nil {
+	if _, err := s.controller.NotifyConnection(ctx, ConnectionEstablished); err != nil {
 		return fmt.Errorf("notify connection established: %w", err)
 	}
 
 	// Connect and process stream
 	err := s.stream.Connect(ctx, req, func(line []byte) error {
 		// Forward line to extension
-		instructions, err := s.controller.SendTextLine(string(line))
+		instructions, err := s.controller.SendTextLine(ctx, string(line))
 		if err != nil {
 			return fmt.Errorf("process line: %w", err)
 		}
@@ -389,7 +389,7 @@ func (s *Sync) establishSyncStream(ctx context.Context, req *StreamingSyncReques
 	})
 
 	// Notify extension that connection ended
-	if _, notifyErr := s.controller.NotifyConnection(ConnectionEnded); notifyErr != nil {
+	if _, notifyErr := s.controller.NotifyConnection(ctx, ConnectionEnded); notifyErr != nil {
 		// Log but don't override the original error
 		_ = notifyErr
 	}
