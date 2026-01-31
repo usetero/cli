@@ -191,8 +191,9 @@ func (m *TUI) checkModeTransition() tea.Cmd {
 			"orgID", org.ID,
 			"accountID", account.ID)
 
-		// Transition to Loading mode - it will receive sync.CompletedMsg when ready
-		m.currentMode = loading.New(m.theme, org, account)
+		// Transition to Loading mode with sync manager reference
+		// Loading checks sync state directly rather than relying on messages
+		m.currentMode = loading.New(m.theme, org, account, m.syncManager)
 
 		if m.width > 0 && m.height > 0 {
 			m.currentMode.SetSize(m.width, m.height)

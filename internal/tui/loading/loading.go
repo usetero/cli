@@ -6,8 +6,12 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tui/sync"
 )
+
+// SyncState provides read-only access to sync manager state.
+type SyncState interface {
+	DB() sqlite.Database
+}
 
 // Loading is the mode shown while waiting for initial sync to complete.
 // It displays a loading indicator and transitions to App once sync is done.
@@ -18,19 +22,21 @@ type Loading struct {
 	org     api.Organization
 	account api.Account
 
+	// Sync state - checked directly rather than relying on messages
+	syncState SyncState
+
 	// State
-	db     sqlite.Database // set when sync completes
-	err    error
 	width  int
 	height int
 }
 
 // New creates a new loading mode.
-func New(theme *styles.Theme, org api.Organization, account api.Account) *Loading {
+func New(theme *styles.Theme, org api.Organization, account api.Account, syncState SyncState) *Loading {
 	return &Loading{
-		theme:   theme,
-		org:     org,
-		account: account,
+		theme:     theme,
+		org:       org,
+		account:   account,
+		syncState: syncState,
 	}
 }
 
@@ -41,10 +47,8 @@ func (l *Loading) Init() tea.Cmd {
 
 // Update handles messages.
 func (l *Loading) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case sync.CompletedMsg:
-		l.db = msg.DB
-	}
+	// No message handling needed - we check syncState directly
+	_ = msg
 	return nil
 }
 
@@ -56,16 +60,9 @@ func (l *Loading) View() string {
 
 	colors := l.theme.Colors
 
-	var content string
-	if l.err != nil {
-		content = lipgloss.NewStyle().
-			Foreground(colors.Error.Fg).
-			Render("Sync error: " + l.err.Error())
-	} else {
-		content = lipgloss.NewStyle().
-			Foreground(colors.Page.TextMuted).
-			Render("Connecting...")
-	}
+	content := lipgloss.NewStyle().
+		Foreground(colors.Page.TextMuted).
+		Render("Connecting...")
 
 	return lipgloss.NewStyle().
 		Width(l.width).
@@ -83,27 +80,27 @@ func (l *Loading) SetSize(width, height int) {
 
 // IsComplete returns true when sync has completed successfully.
 func (l *Loading) IsComplete() bool {
-	return l.db != nil
+	return l.syncState.DB() != nil
 }
 
 // IsBusy returns true while waiting for sync.
 func (l *Loading) IsBusy() bool {
-	return l.db == nil && l.err == nil
+	return l.syncState.DB() == nil
 }
 
 // HasError returns true if sync failed.
 func (l *Loading) HasError() bool {
-	return l.err != nil
+	return false // TODO: expose error from sync manager if needed
 }
 
 // Error returns the sync error.
 func (l *Loading) Error() error {
-	return l.err
+	return nil // TODO: expose error from sync manager if needed
 }
 
 // DB returns the database (only valid after IsComplete returns true).
 func (l *Loading) DB() sqlite.Database {
-	return l.db
+	return l.syncState.DB()
 }
 
 // Organization returns the organization.

@@ -3,6 +3,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/log"
@@ -81,6 +82,7 @@ func StartedMsgForTest(db sqlite.Database, err error) tea.Msg {
 // Update handles sync-related messages.
 // Returns nil for messages it doesn't handle.
 func (m *Manager) Update(msg tea.Msg) tea.Cmd {
+	m.logger.Debug("sync manager received message", "type", fmt.Sprintf("%T", msg))
 	switch msg := msg.(type) {
 	case AccountSelectedMsg:
 		m.logger.Info("account selected, starting sync", "accountID", msg.Account.ID)

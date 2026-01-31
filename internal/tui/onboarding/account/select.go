@@ -190,8 +190,10 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 						s.apiClient.SetAccountID(userPref)
 						s.logger.Debug("auto-selected account from preference", "id", userPref, "name", account.Name)
 						// Emit AccountSelectedMsg to trigger sync
+						// Copy to avoid closure capturing loop variable
+						selectedAccount := account
 						cmds = append(cmds, func() tea.Msg {
-							return AccountSelectedMsg{Account: account}
+							return AccountSelectedMsg{Account: selectedAccount}
 						})
 					}
 				}
