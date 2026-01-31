@@ -230,9 +230,32 @@ func (s *DiscoveryStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 	return s, tea.Batch(cmds...)
 }
 
-// isComplete returns true if discovery is ready
+// isComplete returns true if discovery has finished for all active services.
+// We don't require status == READY because that blocks progress when any service
+// has errors. Instead, we check that all active services are in a terminal state
+// (ready or broken) and at least some are ready.
 func (s *DiscoveryStep) isComplete() bool {
-	return s.status != nil && s.status.Status == api.DatadogAccountStatusReady
+	if s.status == nil {
+		return false
+	}
+
+	// Account is fully ready - simple case
+	if s.status.Status == api.DatadogAccountStatusReady {
+		return true
+	}
+
+	// No active services means nothing to analyze
+	if s.status.ActiveServices == 0 {
+		return false
+	}
+
+	// Check if all active services are in terminal states (ready or broken).
+	// This allows proceeding when 13/14 services are ready and 1 has errors.
+	terminalServices := s.status.ReadyServices + s.status.BrokenServices
+	allTerminal := terminalServices == s.status.ActiveServices
+
+	// Must have at least one ready service to proceed
+	return allTerminal && s.status.ReadyServices > 0
 }
 
 // View renders the discovery UI
@@ -456,7 +479,9 @@ func (s *DiscoveryStep) IsBusy() bool {
 	return !s.isComplete() && s.err == nil
 }
 
-// HasError returns true if there's an error (including DISABLED and BROKEN statuses)
+// HasError returns true if there's an unrecoverable error.
+// BROKEN status with some ready services is NOT an error - we can proceed.
+// Only return true for errors that genuinely block progress.
 func (s *DiscoveryStep) HasError() bool {
 	if s.err != nil {
 		return true
@@ -464,8 +489,18 @@ func (s *DiscoveryStep) HasError() bool {
 	if s.status == nil {
 		return false
 	}
-	return s.status.Status == api.DatadogAccountStatusDisabled ||
-		s.status.Status == api.DatadogAccountStatusBroken
+
+	// All services disabled - can't proceed
+	if s.status.Status == api.DatadogAccountStatusDisabled {
+		return true
+	}
+
+	// BROKEN with no ready services - can't proceed
+	if s.status.Status == api.DatadogAccountStatusBroken && s.status.ReadyServices == 0 {
+		return true
+	}
+
+	return false
 }
 
 // Error returns the current error
@@ -479,7 +514,8 @@ func (s *DiscoveryStep) Error() error {
 	if s.status.Status == api.DatadogAccountStatusDisabled {
 		return fmt.Errorf("all services are disabled")
 	}
-	if s.status.Status == api.DatadogAccountStatusBroken {
+	// Only report BROKEN as error if no services are ready
+	if s.status.Status == api.DatadogAccountStatusBroken && s.status.ReadyServices == 0 {
 		return fmt.Errorf("discovery failed")
 	}
 	return nil

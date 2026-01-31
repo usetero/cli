@@ -9,8 +9,10 @@ require (
 	github.com/Khan/genqlient v0.8.1
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/x/ansi v0.11.4
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/lucasb-eyer/go-colorful v1.3.0
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/rivo/uniseg v0.4.7
 	github.com/spf13/cobra v1.10.2
@@ -36,12 +38,10 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	github.com/mattn/go-sqlite3 v1.14.33 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
