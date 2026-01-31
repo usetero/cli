@@ -459,15 +459,15 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 func TestSync_WaitForFirstSync(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns when ps_buckets has data", func(t *testing.T) {
+	t.Run("returns when ps_sync_state has data", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDBWithSchema(t)
 
 		mock := &powersynctest.MockStreamer{
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				// Simulate sync by inserting data into ps_buckets
-				_, err := db.Exec("INSERT INTO ps_buckets (name) VALUES ('test')")
+				// Simulate sync completion by inserting into ps_sync_state
+				_, err := db.Exec("INSERT INTO ps_sync_state (priority, last_synced_at) VALUES (0, datetime('now'))")
 				if err != nil {
 					return err
 				}

@@ -157,7 +157,7 @@ func (s *Sync) IsRunning() bool {
 	return s.cancel != nil
 }
 
-// WaitForFirstSync blocks until the first sync completes (data in ps_buckets).
+// WaitForFirstSync blocks until the first sync completes.
 // Returns an error if the context is cancelled or sync fails.
 func (s *Sync) WaitForFirstSync(ctx context.Context) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -173,10 +173,11 @@ func (s *Sync) WaitForFirstSync(ctx context.Context) error {
 				return err
 			}
 
-			// Check if ps_buckets has data
+			// Check if sync has completed by looking at ps_sync_state
+			// This table is populated when PowerSync finishes its first sync
 			if s.db != nil {
 				var count int64
-				err := s.db.QueryRow("SELECT COUNT(*) FROM ps_buckets").Scan(&count)
+				err := s.db.QueryRow("SELECT COUNT(*) FROM ps_sync_state").Scan(&count)
 				if err == nil && count > 0 {
 					return nil
 				}
