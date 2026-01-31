@@ -20,6 +20,7 @@ func NewRootCmd(logger log.Logger, version string) *cobra.Command {
 	// Subcommands
 	rootCmd.AddCommand(NewAuthCmd(logger, cliConfig))
 	rootCmd.AddCommand(NewResetCmd(cliConfig))
+	rootCmd.AddCommand(NewDebugCmd(logger, cliConfig))
 
 	return rootCmd
 }

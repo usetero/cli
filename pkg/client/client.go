@@ -199,3 +199,23 @@ func (t *authTransport) SetAccessToken(token string) {
 func (t *authTransport) SetAccountID(accountID string) {
 	t.accountID = accountID
 }
+
+// RawQuery executes a free-form GraphQL query and returns the raw result.
+func (c *Client) RawQuery(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error) {
+	req := &graphql.Request{
+		Query:     query,
+		Variables: variables,
+	}
+	resp := &graphql.Response{
+		Data: new(map[string]interface{}),
+	}
+
+	if err := c.gql.MakeRequest(ctx, req, resp); err != nil {
+		return nil, err
+	}
+
+	if data, ok := resp.Data.(*map[string]interface{}); ok {
+		return *data, nil
+	}
+	return nil, nil
+}
