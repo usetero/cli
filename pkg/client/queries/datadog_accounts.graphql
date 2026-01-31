@@ -51,6 +51,8 @@ query GetDatadogAccountStatus($id: ID!) {
                     logBrokenServices
                     logDisabledServices
                     logInactiveServices
+                    logSavedCount
+                    readyForUse
                 }
             }
         }

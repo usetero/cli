@@ -722,6 +722,11 @@ type DatadogAccountStatus {
   logStatus: DatadogAccountStatusLogStatus!
 
   """
+  True when account has enough analyzed data for a good user experience (>= 50 saved log events)
+  """
+  readyForUse: Boolean!
+
+  """
   Total service log volume in the rolling 7-day window across all active services
   """
   logServiceVolumeInWindow: Int

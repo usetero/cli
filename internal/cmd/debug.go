@@ -111,14 +111,16 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 			fmt.Printf("  %-25s %s\n", s.Help.Render("Service Volume:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.ServiceLogVolume)))
 			fmt.Printf("  %-25s %s\n", s.Help.Render("Discovered Volume:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.DiscoveredLogVolume)))
 
-			// Show completion check
+			// Show onboarding readiness
 			fmt.Println()
-			fmt.Println(s.Title.Render("Completion Check"))
-			terminalServices := ddStatus.ReadyServices + ddStatus.BrokenServices
-			allTerminal := terminalServices == ddStatus.ActiveServices
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Terminal Services:"), s.Body.Render(fmt.Sprintf("%d / %d active", terminalServices, ddStatus.ActiveServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("All Terminal:"), s.Body.Render(fmt.Sprintf("%v", allTerminal)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Can Proceed:"), s.Body.Render(fmt.Sprintf("%v", allTerminal && ddStatus.ReadyServices > 0)))
+			fmt.Println(s.Title.Render("Onboarding"))
+			fmt.Printf("  %-25s %s\n", s.Help.Render("Saved Count:"), s.Body.Render(fmt.Sprintf("%d / 50", ddStatus.SavedCount)))
+			readyForUseStr := fmt.Sprintf("%v", ddStatus.ReadyForUse)
+			if ddStatus.ReadyForUse {
+				fmt.Printf("  %-25s %s\n", s.Help.Render("Ready for Use:"), s.Success.Render(readyForUseStr))
+			} else {
+				fmt.Printf("  %-25s %s\n", s.Help.Render("Ready for Use:"), s.Body.Render(readyForUseStr))
+			}
 
 			return nil
 		},

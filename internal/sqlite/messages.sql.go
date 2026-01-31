@@ -21,7 +21,7 @@ func (q *Queries) CountMessagesByConversation(ctx context.Context, conversationI
 }
 
 const getLatestMessageByConversation = `-- name: GetLatestMessageByConversation :one
-SELECT id, account_id, content, conversation_id, created_at, role, stop_reason FROM messages
+SELECT id, account_id, content, conversation_id, created_at, model, role, stop_reason FROM messages
 WHERE conversation_id = ?
 ORDER BY created_at DESC
 LIMIT 1
@@ -36,6 +36,7 @@ func (q *Queries) GetLatestMessageByConversation(ctx context.Context, conversati
 		&i.Content,
 		&i.ConversationID,
 		&i.CreatedAt,
+		&i.Model,
 		&i.Role,
 		&i.StopReason,
 	)
@@ -43,7 +44,7 @@ func (q *Queries) GetLatestMessageByConversation(ctx context.Context, conversati
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT id, account_id, content, conversation_id, created_at, role, stop_reason FROM messages WHERE id = ?
+SELECT id, account_id, content, conversation_id, created_at, model, role, stop_reason FROM messages WHERE id = ?
 `
 
 func (q *Queries) GetMessage(ctx context.Context, id *string) (Message, error) {
@@ -55,6 +56,7 @@ func (q *Queries) GetMessage(ctx context.Context, id *string) (Message, error) {
 		&i.Content,
 		&i.ConversationID,
 		&i.CreatedAt,
+		&i.Model,
 		&i.Role,
 		&i.StopReason,
 	)
@@ -90,7 +92,7 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) er
 }
 
 const listMessagesByConversation = `-- name: ListMessagesByConversation :many
-SELECT id, account_id, content, conversation_id, created_at, role, stop_reason FROM messages
+SELECT id, account_id, content, conversation_id, created_at, model, role, stop_reason FROM messages
 WHERE conversation_id = ?
 ORDER BY created_at ASC
 `
@@ -110,6 +112,7 @@ func (q *Queries) ListMessagesByConversation(ctx context.Context, conversationID
 			&i.Content,
 			&i.ConversationID,
 			&i.CreatedAt,
+			&i.Model,
 			&i.Role,
 			&i.StopReason,
 		); err != nil {
@@ -127,7 +130,7 @@ func (q *Queries) ListMessagesByConversation(ctx context.Context, conversationID
 }
 
 const listMessagesByConversationDesc = `-- name: ListMessagesByConversationDesc :many
-SELECT id, account_id, content, conversation_id, created_at, role, stop_reason FROM messages
+SELECT id, account_id, content, conversation_id, created_at, model, role, stop_reason FROM messages
 WHERE conversation_id = ?
 ORDER BY created_at DESC
 `
@@ -147,6 +150,7 @@ func (q *Queries) ListMessagesByConversationDesc(ctx context.Context, conversati
 			&i.Content,
 			&i.ConversationID,
 			&i.CreatedAt,
+			&i.Model,
 			&i.Role,
 			&i.StopReason,
 		); err != nil {

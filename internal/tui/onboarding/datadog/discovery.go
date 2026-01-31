@@ -230,32 +230,14 @@ func (s *DiscoveryStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 	return s, tea.Batch(cmds...)
 }
 
-// isComplete returns true if discovery has finished for all active services.
-// We don't require status == READY because that blocks progress when any service
-// has errors. Instead, we check that all active services are in a terminal state
-// (ready or broken) and at least some are ready.
+// isComplete returns true when the account has enough data to proceed.
+// The control plane determines this via ReadyForUse - we don't encode
+// business logic about thresholds in the CLI.
 func (s *DiscoveryStep) isComplete() bool {
 	if s.status == nil {
 		return false
 	}
-
-	// Account is fully ready - simple case
-	if s.status.Status == api.DatadogAccountStatusReady {
-		return true
-	}
-
-	// No active services means nothing to analyze
-	if s.status.ActiveServices == 0 {
-		return false
-	}
-
-	// Check if all active services are in terminal states (ready or broken).
-	// This allows proceeding when 13/14 services are ready and 1 has errors.
-	terminalServices := s.status.ReadyServices + s.status.BrokenServices
-	allTerminal := terminalServices == s.status.ActiveServices
-
-	// Must have at least one ready service to proceed
-	return allTerminal && s.status.ReadyServices > 0
+	return s.status.ReadyForUse
 }
 
 // View renders the discovery UI
@@ -344,39 +326,30 @@ func (s *DiscoveryStep) getStatusText(themeStyles *styles.Styles) string {
 	return themeStyles.Body.Render(fmt.Sprintf("Processing %d services...", st.ServiceCount))
 }
 
-// renderProgress renders the progress bar and service counts
+// renderProgress renders the progress bar and log event counts
 func (s *DiscoveryStep) renderProgress(themeStyles *styles.Styles, colors *styles.Colors) string {
 	st := s.status
 
-	// Calculate effective progress
-	// If we have percent complete from API, use it
-	// Otherwise estimate from ready/total
-	var pct float64
-	if st.PercentComplete > 0 {
-		pct = st.PercentComplete
-	} else if st.ActiveServices > 0 {
-		pct = float64(st.ReadyServices) / float64(st.ActiveServices)
+	// Progress is based on saved count toward the ready_for_use threshold (50)
+	const readyThreshold = 50
+	pct := float64(st.SavedCount) / float64(readyThreshold)
+	if pct > 1.0 {
+		pct = 1.0
 	}
 
 	// Progress bar
 	prog := progress.New(s.theme, 50)
 	progressBar := prog.ViewAs(pct)
 
-	// Service counts - simple and clear
+	// Show saved count progress
 	readyStyle := lipgloss.NewStyle().Foreground(colors.Success.Fg)
 	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 
-	var countText string
-	if st.ActiveServices > 0 {
-		countText = fmt.Sprintf("%s / %s",
-			readyStyle.Render(fmt.Sprintf("%d ready", st.ReadyServices)),
-			mutedStyle.Render(fmt.Sprintf("%d services", st.ActiveServices)))
-	}
+	countText := fmt.Sprintf("%s / %s",
+		readyStyle.Render(fmt.Sprintf("%d", st.SavedCount)),
+		mutedStyle.Render(fmt.Sprintf("%d log events", readyThreshold)))
 
-	if countText != "" {
-		return lipgloss.JoinVertical(lipgloss.Left, progressBar, "", countText)
-	}
-	return progressBar
+	return lipgloss.JoinVertical(lipgloss.Left, progressBar, "", countText)
 }
 
 // renderIssues surfaces any problems the user should know about
@@ -480,8 +453,7 @@ func (s *DiscoveryStep) IsBusy() bool {
 }
 
 // HasError returns true if there's an unrecoverable error.
-// BROKEN status with some ready services is NOT an error - we can proceed.
-// Only return true for errors that genuinely block progress.
+// Broken services are shown as warnings, not errors - users can still proceed.
 func (s *DiscoveryStep) HasError() bool {
 	if s.err != nil {
 		return true
@@ -489,18 +461,8 @@ func (s *DiscoveryStep) HasError() bool {
 	if s.status == nil {
 		return false
 	}
-
-	// All services disabled - can't proceed
-	if s.status.Status == api.DatadogAccountStatusDisabled {
-		return true
-	}
-
-	// BROKEN with no ready services - can't proceed
-	if s.status.Status == api.DatadogAccountStatusBroken && s.status.ReadyServices == 0 {
-		return true
-	}
-
-	return false
+	// All services disabled - nothing to analyze
+	return s.status.Status == api.DatadogAccountStatusDisabled
 }
 
 // Error returns the current error
@@ -513,10 +475,6 @@ func (s *DiscoveryStep) Error() error {
 	}
 	if s.status.Status == api.DatadogAccountStatusDisabled {
 		return fmt.Errorf("all services are disabled")
-	}
-	// Only report BROKEN as error if no services are ready
-	if s.status.Status == api.DatadogAccountStatusBroken && s.status.ReadyServices == 0 {
-		return fmt.Errorf("discovery failed")
 	}
 	return nil
 }

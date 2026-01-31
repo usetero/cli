@@ -491,6 +491,10 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	LogDisabledServices int `json:"logDisabledServices"`
 	// Services with INACTIVE status
 	LogInactiveServices int `json:"logInactiveServices"`
+	// Log events with SAVED status
+	LogSavedCount int `json:"logSavedCount"`
+	// True when account has enough analyzed data for a good user experience (>= 50 saved log events)
+	ReadyForUse bool `json:"readyForUse"`
 }
 
 // GetLogStatus returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogStatus, and is useful for accessing the field via an interface.
@@ -556,6 +560,16 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetLogInactiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogInactiveServices, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogInactiveServices() int {
 	return v.LogInactiveServices
+}
+
+// GetLogSavedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.LogSavedCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetLogSavedCount() int {
+	return v.LogSavedCount
+}
+
+// GetReadyForUse returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.ReadyForUse, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetReadyForUse() bool {
+	return v.ReadyForUse
 }
 
 // GetDatadogAccountStatusResponse is returned by GetDatadogAccountStatus on success.
@@ -1723,6 +1737,8 @@ query GetDatadogAccountStatus ($id: ID!) {
 					logBrokenServices
 					logDisabledServices
 					logInactiveServices
+					logSavedCount
+					readyForUse
 				}
 			}
 		}

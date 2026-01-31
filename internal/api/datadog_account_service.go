@@ -56,6 +56,8 @@ type DatadogAccountStatus struct {
 	BrokenServices      int
 	DisabledServices    int
 	InactiveServices    int
+	SavedCount          int  // Number of log events saved (for progress display)
+	ReadyForUse         bool // Whether the account has enough data to proceed
 }
 
 // HasAccount checks if an account has a Datadog integration configured
@@ -201,6 +203,8 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		BrokenServices:      statusNode.LogBrokenServices,
 		DisabledServices:    statusNode.LogDisabledServices,
 		InactiveServices:    statusNode.LogInactiveServices,
+		SavedCount:          statusNode.LogSavedCount,
+		ReadyForUse:         statusNode.ReadyForUse,
 	}
 
 	s.logger.Debug("fetched datadog account status",

@@ -31,17 +31,18 @@ func TestDiscoveryStep_Update(t *testing.T) {
 	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
 	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
 
-	t.Run("completes when status is ready", func(t *testing.T) {
+	t.Run("completes when ready_for_use is true", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
-					Status:          api.DatadogAccountStatusReady,
-					PercentComplete: 100,
-					ServiceCount:    10,
-					ReadyServices:   10,
+					Status:        api.DatadogAccountStatusAnalyzing, // Status doesn't matter
+					SavedCount:    75,
+					ReadyForUse:   true, // This is what matters
+					ServiceCount:  10,
+					ReadyServices: 8,
 				}, nil
 			},
 		}
@@ -58,7 +59,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 
 		// Assert
 		if !isDiscoveryComplete(updated) {
-			t.Error("expected step to complete when status is ready")
+			t.Error("expected step to complete when ready_for_use is true")
 		}
 		if updated.HasError() {
 			t.Errorf("expected no error, got: %v", updated.Error())
@@ -141,10 +142,11 @@ func TestDiscoveryStep_Update(t *testing.T) {
 					return nil, errors.New("first attempt fails")
 				}
 				return &api.DatadogAccountStatus{
-					Status:          api.DatadogAccountStatusReady,
-					PercentComplete: 100,
-					ServiceCount:    10,
-					ReadyServices:   10,
+					Status:        api.DatadogAccountStatusAnalyzing,
+					SavedCount:    75,
+					ReadyForUse:   true,
+					ServiceCount:  10,
+					ReadyServices: 10,
 				}, nil
 			},
 		}
@@ -423,9 +425,10 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("shows broken status as error", func(t *testing.T) {
+	t.Run("broken status is not an error - just shows warning", func(t *testing.T) {
 		t.Parallel()
-		// Arrange
+		// Arrange - broken services are shown as warnings, not errors
+		// Users can still proceed once ready_for_use is true
 		ddAccountID := "dd-123"
 		poller := &datadogtest.MockStatusPoller{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
@@ -433,6 +436,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 					Status:         api.DatadogAccountStatusBroken,
 					ServiceCount:   5,
 					BrokenServices: 5,
+					ReadyForUse:    false, // Not ready yet
 				}, nil
 			},
 		}
@@ -447,9 +451,15 @@ func TestDiscoveryStep_Update(t *testing.T) {
 			updated, _ = updated.Update(msg)
 		}
 
-		// Assert
-		if !updated.HasError() {
-			t.Error("expected HasError() to return true for BROKEN status")
+		// Assert: BROKEN is not an error - it's surfaced as a warning in the UI
+		if updated.HasError() {
+			t.Error("expected HasError() to return false for BROKEN status - broken services are warnings, not errors")
+		}
+
+		// Assert: view should show broken services warning
+		view := updated.View()
+		if !contains(view, "5 services have errors") {
+			t.Errorf("expected view to show broken services warning, got: %s", view)
 		}
 	})
 

@@ -8,9 +8,20 @@ type Conversation struct {
 	ID          *string
 	AccountID   *string
 	CreatedAt   *string
+	Title       *string
 	UpdatedAt   *string
 	UserID      *string
 	WorkspaceID *string
+}
+
+type ConversationContext struct {
+	ID             *string
+	AccountID      *string
+	AddedBy        *string
+	ConversationID *string
+	CreatedAt      *string
+	EntityID       *string
+	EntityType     *string
 }
 
 type DatadogAccount struct {
@@ -31,7 +42,7 @@ type DatadogAccountStatusesCache struct {
 	LogAnalyzingServices   *int64
 	LogBrokenServices      *int64
 	LogDisabledServices    *int64
-	LogDiscoveredVolume    *int64
+	LogDiscoveredVolume    *string
 	LogDiscoveringCount    *int64
 	LogDiscoveringServices *int64
 	LogError               *string
@@ -42,7 +53,7 @@ type DatadogAccountStatusesCache struct {
 	LogReadyServices       *int64
 	LogSavedCount          *int64
 	LogServiceCount        *int64
-	LogServiceVolume       *int64
+	LogServiceVolume       *string
 	LogStaleServices       *int64
 	LogStatus              *string
 	LogValuableCount       *int64
@@ -112,22 +123,22 @@ type LogEventPolicyStatusesCache struct {
 	ID          *string
 	AccountID   *string
 	ApprovedAt  *string
-	BytesSaved  *float64
+	BytesSaved  *string
 	Category    *string
 	DismissedAt *string
 	LogEventID  *string
 	PolicyID    *string
 	RefreshedAt *string
 	Status      *string
-	VolumeSaved *float64
+	VolumeSaved *string
 	WorkspaceID *string
 }
 
 type LogEventStatusesCache struct {
 	ID               *string
 	AccountID        *string
-	BytesAfter       *float64
-	BytesBefore      *float64
+	BytesAfter       *string
+	BytesBefore      *string
 	DatadogAccountID *string
 	Error            *string
 	HasBeenAnalyzed  *int64
@@ -136,8 +147,8 @@ type LogEventStatusesCache struct {
 	RefreshedAt      *string
 	ServiceID        *string
 	Status           *string
-	VolumeAfter      *float64
-	VolumeBefore     *float64
+	VolumeAfter      *string
+	VolumeBefore     *string
 }
 
 type LogEventVolume struct {
@@ -145,7 +156,7 @@ type LogEventVolume struct {
 	AccountID         *string
 	AttributeAvgBytes *string
 	AvgBytes          *float64
-	Count             *float64
+	Count             *string
 	CreatedAt         *string
 	DatadogLogIndexID *string
 	EdgeInstanceID    *string
@@ -159,6 +170,7 @@ type Message struct {
 	Content        *string
 	ConversationID *string
 	CreatedAt      *string
+	Model          *string
 	Role           *string
 	StopReason     *string
 }
@@ -182,7 +194,7 @@ type ServiceLogVolume struct {
 	ServiceID        *string
 	Timestamp        *string
 	UpdatedAt        *string
-	Volume           *int64
+	Volume           *string
 }
 
 type ServiceStatusesCache struct {
@@ -190,20 +202,20 @@ type ServiceStatusesCache struct {
 	AccountID           *string
 	DatadogAccountID    *string
 	LogAnalyzingCount   *int64
-	LogBytesAfter       *float64
-	LogBytesBefore      *float64
-	LogDiscoveredVolume *int64
+	LogBytesAfter       *string
+	LogBytesBefore      *string
+	LogDiscoveredVolume *string
 	LogDiscoveringCount *int64
 	LogError            *string
 	LogErrorAt          *string
 	LogEventCount       *int64
 	LogPercentComplete  *float64
 	LogSavedCount       *int64
-	LogServiceVolume    *int64
+	LogServiceVolume    *string
 	LogStatus           *string
 	LogValuableCount    *int64
-	LogVolumeAfter      *float64
-	LogVolumeBefore     *float64
+	LogVolumeAfter      *string
+	LogVolumeBefore     *string
 	LogWarning          *string
 	LogWarningAt        *string
 	LogWasteCount       *int64
