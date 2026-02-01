@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 )
@@ -16,7 +17,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("initial status is disconnected", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, nil)
+		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, nil, logtest.New(t))
 
 		if sync.Status() != powersync.StatusDisconnected {
 			t.Errorf("Status() = %v, want %v", sync.Status(), powersync.StatusDisconnected)
@@ -26,7 +27,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("IsRunning is false initially", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{}, nil)
+		sync := powersync.NewSync(&powersync.Config{}, nil, logtest.New(t))
 
 		if sync.IsRunning() {
 			t.Error("IsRunning() should be false before Start")
@@ -36,7 +37,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("LastError is nil initially", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{}, nil)
+		sync := powersync.NewSync(&powersync.Config{}, nil, logtest.New(t))
 
 		if sync.LastError() != nil {
 			t.Error("LastError() should be nil initially")
@@ -51,7 +52,7 @@ func TestSync_Start(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, powersynctest.NewMockTokenRefresher("token"))
+		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, powersynctest.NewMockTokenRefresher("token"), logtest.New(t))
 
 		defer func() {
 			if r := recover(); r == nil {
@@ -347,7 +348,7 @@ func TestSync_AuthErrorTriggersTokenRefresh(t *testing.T) {
 			},
 		}
 
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, refresher)
+		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, refresher, logtest.New(t))
 		sync.SetStreamFactory(powersynctest.NewMockStreamerFactory(mock))
 
 		ctx, cancel := context.WithCancel(context.Background())

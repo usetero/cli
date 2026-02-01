@@ -35,13 +35,12 @@ func TestUploader_Run(t *testing.T) {
 		}
 	})
 
-	t.Run("processes conversation entry and deletes after success", func(t *testing.T) {
+	t.Run("processes entry and deletes after success", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDBWithSchema(t)
 		logger := logtest.New(t)
 
-		// Insert a conversations entry
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
@@ -55,18 +54,15 @@ func TestUploader_Run(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Run in background
 		done := make(chan error)
 		go func() {
 			done <- uploader.Run(ctx)
 		}()
 
-		// Wait for processing
 		time.Sleep(200 * time.Millisecond)
 		cancel()
 		<-done
 
-		// Verify entry was deleted
 		queue := powersync.NewCrudQueue(db)
 		entry, err := queue.GetNextEntry(context.Background())
 		if err != nil {
@@ -83,7 +79,6 @@ func TestUploader_Run(t *testing.T) {
 		db := powersynctest.OpenTestDBWithSchema(t)
 		logger := logtest.New(t)
 
-		// Insert an entry for unknown table
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"unknown_table","id":"row-1","data":{}}`)
 
 		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
@@ -100,7 +95,6 @@ func TestUploader_Run(t *testing.T) {
 		cancel()
 		<-done
 
-		// Entry should be deleted to avoid blocking queue
 		queue := powersync.NewCrudQueue(db)
 		entry, err := queue.GetNextEntry(context.Background())
 		if err != nil {

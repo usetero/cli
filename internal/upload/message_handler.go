@@ -38,7 +38,8 @@ func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry)
 		h.logger.Debug("skipping message PATCH", "id", entry.RowID)
 		return nil
 	case powersync.OpDelete:
-		// TODO: handle deletes if needed
+		// Messages are deleted via conversation deletion, not individually.
+		// Return nil to remove from queue without API call.
 		h.logger.Debug("skipping message DELETE", "id", entry.RowID)
 		return nil
 	default:

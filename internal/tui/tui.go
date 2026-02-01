@@ -138,7 +138,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		apiClient.SetAccountID(m.account.ID)
 		m.conversations = api.NewConversationService(apiClient, m.logger)
 
-		chatClient := chat.NewClient(m.chatEndpoint)
+		chatClient := chat.NewClient(m.chatEndpoint, m.logger)
 		chatClient.SetToken(token)
 		chatClient.SetAccountID(m.account.ID)
 		m.messages = chat.NewMessageService(chatClient)
@@ -239,7 +239,7 @@ func (m *TUI) startSync() tea.Cmd {
 	return func() tea.Msg {
 		done := make(chan struct{})
 
-		sync := powersync.NewSync(m.powersyncConfig, m.auth)
+		sync := powersync.NewSync(m.powersyncConfig, m.auth, m.logger)
 		err := sync.Start(m.ctx, m.db, m.account.ID, func() {
 			close(done)
 		})

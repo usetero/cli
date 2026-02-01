@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -41,6 +42,7 @@ type Sync struct {
 	// Immutable after construction
 	config         *Config
 	tokenRefresher TokenRefresher
+	log            log.Logger
 	streamFactory  func(endpoint, token string) Streamer
 
 	// Set by Start, read by background goroutine
@@ -61,10 +63,11 @@ type Sync struct {
 }
 
 // NewSync creates a Sync instance.
-func NewSync(config *Config, tokenRefresher TokenRefresher) *Sync {
+func NewSync(config *Config, tokenRefresher TokenRefresher, logger log.Logger) *Sync {
 	s := &Sync{
 		config:         config,
 		tokenRefresher: tokenRefresher,
+		log:            logger,
 		streamFactory:  func(endpoint, token string) Streamer { return NewStream(endpoint, token) },
 	}
 	s.status.Store(StatusDisconnected)
@@ -107,6 +110,7 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID string, 
 	ctx, s.cancel = context.WithCancel(ctx)
 	go s.run(ctx)
 
+	s.log.Info("sync started", log.String("accountID", accountID))
 	return nil
 }
 
@@ -122,6 +126,7 @@ func (s *Sync) Stop() {
 	s.db = nil
 	s.done = nil
 	s.status.Store(StatusDisconnected)
+	s.log.Info("sync stopped")
 }
 
 // Status returns the current sync status.
@@ -191,6 +196,7 @@ func (s *Sync) run(ctx context.Context) {
 				s.fail(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
 				return
 			}
+			s.log.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
 			s.status.Store(StatusReconnecting)
 			if err := s.refreshToken(ctx); err != nil {
 				s.fail(fmt.Errorf("token refresh: %w", err))
@@ -200,6 +206,7 @@ func (s *Sync) run(ctx context.Context) {
 		}
 
 		if IsTransientError(err) {
+			s.log.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
 			s.status.Store(StatusReconnecting)
 			s.lastError.Store(err)
 			s.wait(ctx, retryDelay)
@@ -234,6 +241,7 @@ func (s *Sync) wait(ctx context.Context, d time.Duration) {
 func (s *Sync) fail(err error) {
 	s.lastError.Store(err)
 	s.status.Store(StatusError)
+	s.log.Error("sync failed", log.Any("error", err))
 }
 
 // --- Instruction Handling ---
@@ -275,6 +283,7 @@ func (s *Sync) handleInstruction(ctx context.Context, inst Instruction) error {
 func (s *Sync) fireFirstSync() {
 	if !s.firstSyncFired && s.onFirstSync != nil {
 		s.firstSyncFired = true
+		s.log.Info("sync connected")
 		s.onFirstSync()
 	}
 }
@@ -286,6 +295,7 @@ func (s *Sync) connectStream(ctx context.Context, req *StreamingSyncRequest) err
 		return fmt.Errorf("no sync request")
 	}
 
+	s.log.Debug("connecting stream")
 	s.status.Store(StatusSyncing)
 
 	if _, err := s.controller.NotifyConnection(ctx, ConnectionEstablished); err != nil {
@@ -312,6 +322,7 @@ func (s *Sync) connectStream(ctx context.Context, req *StreamingSyncRequest) err
 // --- Token ---
 
 func (s *Sync) refreshToken(ctx context.Context) error {
+	s.log.Debug("refreshing token")
 	token, err := s.tokenRefresher.GetAccessToken(ctx)
 	if err != nil {
 		return err
@@ -320,5 +331,6 @@ func (s *Sync) refreshToken(ctx context.Context) error {
 	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}
+	s.log.Debug("token refreshed")
 	return nil
 }

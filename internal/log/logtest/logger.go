@@ -18,7 +18,7 @@ func (w *testWriter) Write(p []byte) (n int, err error) {
 }
 
 // New creates a logger that writes to testing.T
-// Logs are only shown when the test fails, helping debug failures
+// Logs are only shown when the test fails or with -v flag
 func New(t *testing.T) log.Logger {
 	return slog.New(slog.NewTextHandler(&testWriter{t: t}, &slog.HandlerOptions{
 		Level: slog.LevelDebug,

@@ -28,12 +28,18 @@ type Logger interface {
 }
 
 // New creates a new logger that writes to /tmp/tero.log
-// Returns *slogger.Logger which implements Logger interface
+// Appends to existing log file, with a clear session separator.
 func New() Logger {
-	logFile, err := os.OpenFile("/tmp/tero.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	logFile, err := os.OpenFile("/tmp/tero.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		panic(err)
 	}
+
+	// Write session separator
+	logFile.WriteString("\n")
+	logFile.WriteString("================================================================================\n")
+	logFile.WriteString("SESSION START\n")
+	logFile.WriteString("================================================================================\n")
 
 	return slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: slog.LevelDebug,

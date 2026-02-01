@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/usetero/cli/internal/log"
 )
 
 // Client communicates with the Tero Chat API.
@@ -17,13 +19,15 @@ type Client struct {
 	httpClient *http.Client
 	token      string
 	accountID  string
+	log        log.Logger
 }
 
 // NewClient creates a new Chat API client.
-func NewClient(endpoint string) *Client {
+func NewClient(endpoint string, logger log.Logger) *Client {
 	return &Client{
 		endpoint:   strings.TrimSuffix(endpoint, "/"),
 		httpClient: &http.Client{},
+		log:        logger,
 	}
 }
 
@@ -100,6 +104,8 @@ func (c *Client) SendUserMessage(ctx context.Context, req SendMessageRequest, ha
 		return fmt.Errorf("SendUserMessage requires role=user")
 	}
 
+	c.log.Info("sending message", log.String("messageID", req.MessageID), log.String("conversationID", req.ConversationID))
+
 	body, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
@@ -115,15 +121,18 @@ func (c *Client) SendUserMessage(ctx context.Context, req SendMessageRequest, ha
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		c.log.Error("failed to send message", log.Any("error", err))
 		return fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		c.log.Error("chat API error", log.Int("status", resp.StatusCode))
 		return fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
 	}
 
+	c.log.Debug("streaming response")
 	return c.readSSEStream(resp.Body, handler)
 }
 
@@ -132,6 +141,8 @@ func (c *Client) SaveAssistantMessage(ctx context.Context, req SendMessageReques
 	if req.Role != RoleAssistant {
 		return nil, fmt.Errorf("SaveAssistantMessage requires role=assistant")
 	}
+
+	c.log.Debug("saving assistant message", log.String("messageID", req.MessageID))
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -147,12 +158,14 @@ func (c *Client) SaveAssistantMessage(ctx context.Context, req SendMessageReques
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		c.log.Error("failed to save assistant message", log.Any("error", err))
 		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		c.log.Error("chat API error", log.Int("status", resp.StatusCode))
 		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -161,6 +174,7 @@ func (c *Client) SaveAssistantMessage(ctx context.Context, req SendMessageReques
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
+	c.log.Debug("assistant message saved", log.String("messageID", result.MessageID))
 	return &result, nil
 }
 
@@ -193,6 +207,7 @@ func (c *Client) readSSEStream(r io.Reader, handler StreamHandler) error {
 
 		// Check for stream end
 		if data == "[DONE]" {
+			c.log.Info("response received")
 			return handler(StreamEvent{Done: true})
 		}
 

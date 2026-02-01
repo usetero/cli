@@ -32,4 +32,6 @@ type Client interface {
 
 	// Conversation operations
 	CreateConversation(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error)
+	UpdateConversation(ctx context.Context, id string, input client.UpdateConversationInput) (*client.UpdateConversationResponse, error)
+	DeleteConversation(ctx context.Context, id string) (*client.DeleteConversationResponse, error)
 }

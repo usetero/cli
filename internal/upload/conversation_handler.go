@@ -27,13 +27,9 @@ func (h *conversationHandler) Handle(ctx context.Context, entry *powersync.CrudE
 	case powersync.OpPut:
 		return h.handlePut(ctx, entry)
 	case powersync.OpPatch:
-		// TODO: handle updates if needed
-		h.logger.Debug("skipping conversation PATCH", "id", entry.RowID)
-		return nil
+		return h.handlePatch(ctx, entry)
 	case powersync.OpDelete:
-		// TODO: handle deletes if needed
-		h.logger.Debug("skipping conversation DELETE", "id", entry.RowID)
-		return nil
+		return h.handleDelete(ctx, entry)
 	default:
 		h.logger.Warn("unknown conversation op", "op", entry.Op)
 		return nil
@@ -50,5 +46,27 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 	}
 
 	h.logger.Debug("uploaded conversation", "id", entry.RowID)
+	return nil
+}
+
+func (h *conversationHandler) handlePatch(ctx context.Context, entry *powersync.CrudEntry) error {
+	title, _ := entry.Data["title"].(string)
+
+	_, err := h.conversations.Update(ctx, entry.RowID, title)
+	if err != nil {
+		return fmt.Errorf("update conversation: %w", err)
+	}
+
+	h.logger.Debug("updated conversation", "id", entry.RowID)
+	return nil
+}
+
+func (h *conversationHandler) handleDelete(ctx context.Context, entry *powersync.CrudEntry) error {
+	err := h.conversations.Delete(ctx, entry.RowID)
+	if err != nil {
+		return fmt.Errorf("delete conversation: %w", err)
+	}
+
+	h.logger.Debug("deleted conversation", "id", entry.RowID)
 	return nil
 }

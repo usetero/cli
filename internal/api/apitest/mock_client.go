@@ -19,6 +19,8 @@ type MockClient struct {
 	CreateDatadogAccountWithCredentialsFunc func(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
 	GetDatadogAccountStatusFunc             func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
 	CreateConversationFunc                  func(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error)
+	UpdateConversationFunc                  func(ctx context.Context, id string, input client.UpdateConversationInput) (*client.UpdateConversationResponse, error)
+	DeleteConversationFunc                  func(ctx context.Context, id string) (*client.DeleteConversationResponse, error)
 }
 
 func (m *MockClient) SetAccessToken(token string) {
@@ -92,6 +94,20 @@ func (m *MockClient) GetDatadogAccountStatus(ctx context.Context, id string) (*c
 func (m *MockClient) CreateConversation(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error) {
 	if m.CreateConversationFunc != nil {
 		return m.CreateConversationFunc(ctx, input)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) UpdateConversation(ctx context.Context, id string, input client.UpdateConversationInput) (*client.UpdateConversationResponse, error) {
+	if m.UpdateConversationFunc != nil {
+		return m.UpdateConversationFunc(ctx, id, input)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) DeleteConversation(ctx context.Context, id string) (*client.DeleteConversationResponse, error) {
+	if m.DeleteConversationFunc != nil {
+		return m.DeleteConversationFunc(ctx, id)
 	}
 	return nil, nil
 }

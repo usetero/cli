@@ -91,7 +91,7 @@ func TestIntegration_Sync(t *testing.T) {
 
 		db := sqlitetest.OpenTest(t)
 		psConfig := &powersync.Config{Endpoint: powersyncEndpoint}
-		sync := powersync.NewSync(psConfig, nil)
+		sync := powersync.NewSync(psConfig, nil, logtest.New(t))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

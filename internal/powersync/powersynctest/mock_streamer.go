@@ -3,7 +3,10 @@ package powersynctest
 
 import (
 	"context"
+	"io"
+	"log/slog"
 
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 )
 
@@ -47,7 +50,11 @@ func NewMockStreamerFactory(mock *MockStreamer) func(endpoint, token string) pow
 
 // NewSyncWithMockStreamer creates a Sync with a mock streamer for testing.
 func NewSyncWithMockStreamer(config *powersync.Config, tokenRefresher powersync.TokenRefresher, mock *MockStreamer) *powersync.Sync {
-	s := powersync.NewSync(config, tokenRefresher)
+	s := powersync.NewSync(config, tokenRefresher, discardLogger())
 	s.SetStreamFactory(NewMockStreamerFactory(mock))
 	return s
+}
+
+func discardLogger() log.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

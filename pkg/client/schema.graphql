@@ -2133,6 +2133,12 @@ type Mutation {
   The conversation is owned by the authenticated user.
   """
   createConversation(input: CreateConversationInput!): Conversation!
+
+  """Update a conversation (e.g., set title)."""
+  updateConversation(id: ID!, input: UpdateConversationInput!): Conversation!
+
+  """Delete a conversation and all its messages."""
+  deleteConversation(id: ID!): Boolean!
 }
 
 """
