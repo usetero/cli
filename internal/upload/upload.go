@@ -14,6 +14,26 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 )
 
+// Status represents the current state of the upload queue.
+type Status int
+
+const (
+	StatusIdle      Status = iota // Queue is empty, waiting
+	StatusSyncing                 // Actively uploading entries
+	StatusStalled                 // Upload failed, retrying
+	StatusRecovered               // Recovered from stalled state
+)
+
+// Event is sent when the upload status changes.
+type Event struct {
+	Status         Status
+	Error          error
+	Table          string        // Table of the problematic entry (when stalled)
+	RowID          string        // Row ID of the problematic entry (when stalled)
+	StalledFor     time.Duration // How long we've been stalled
+	ProcessedCount int           // Number of entries processed (when syncing)
+}
+
 // handler processes CRUD entries for a specific table.
 type handler interface {
 	Handle(ctx context.Context, entry *powersync.CrudEntry) error
@@ -29,6 +49,13 @@ type Uploader struct {
 	pollInterval time.Duration
 	retryDelay   time.Duration
 	maxRetries   int
+
+	// Event channel for status updates
+	events chan Event
+
+	// State tracking for visibility
+	stalledSince *time.Time
+	stalledEntry *powersync.CrudEntry
 }
 
 // New creates a new uploader with all handlers wired up.
@@ -40,6 +67,7 @@ func New(db sqlite.Database, conversations api.Conversations, messages chat.Mess
 		pollInterval: 100 * time.Millisecond,
 		retryDelay:   1 * time.Second,
 		maxRetries:   3,
+		events:       make(chan Event, 10), // Buffered to avoid blocking uploader
 	}
 
 	u.handlers["conversations"] = newConversationHandler(conversations, logger)
@@ -48,10 +76,19 @@ func New(db sqlite.Database, conversations api.Conversations, messages chat.Mess
 	return u
 }
 
+// Events returns the channel for receiving upload status events.
+// Consumers should read from this channel to track upload progress.
+func (u *Uploader) Events() <-chan Event {
+	return u.events
+}
+
 // Run starts the upload loop. It blocks until the context is cancelled.
 func (u *Uploader) Run(ctx context.Context) error {
 	u.logger.Info("upload loop started")
-	defer u.logger.Info("upload loop stopped")
+	defer func() {
+		u.logger.Info("upload loop stopped")
+		close(u.events)
+	}()
 
 	for {
 		select {
@@ -63,7 +100,27 @@ func (u *Uploader) Run(ctx context.Context) error {
 		// Process all pending entries
 		processed, err := u.processQueue(ctx)
 		if err != nil {
-			u.logger.Error("error processing upload queue", "error", err)
+			// Track stalled state for visibility
+			if u.stalledSince == nil {
+				now := time.Now()
+				u.stalledSince = &now
+				u.logger.Warn("upload queue stalled", "error", err)
+			} else {
+				u.logger.Debug("upload queue still stalled",
+					"stalledFor", time.Since(*u.stalledSince).Round(time.Second),
+					"error", err,
+				)
+			}
+
+			// Emit stalled event
+			u.emit(ctx, Event{
+				Status:     StatusStalled,
+				Error:      err,
+				Table:      u.stalledEntryTable(),
+				RowID:      u.stalledEntryRowID(),
+				StalledFor: time.Since(*u.stalledSince),
+			})
+
 			// Wait before retrying on error
 			select {
 			case <-ctx.Done():
@@ -73,8 +130,26 @@ func (u *Uploader) Run(ctx context.Context) error {
 			continue
 		}
 
-		// If we processed entries, check for more immediately
+		// If we were stalled, log and emit recovery
+		if u.stalledSince != nil {
+			stalledFor := time.Since(*u.stalledSince)
+			u.logger.Info("upload queue recovered",
+				"stalledFor", stalledFor.Round(time.Second),
+			)
+			u.emit(ctx, Event{
+				Status:     StatusRecovered,
+				StalledFor: stalledFor,
+			})
+			u.stalledSince = nil
+			u.stalledEntry = nil
+		}
+
+		// If we processed entries, emit syncing event and check for more
 		if processed > 0 {
+			u.emit(ctx, Event{
+				Status:         StatusSyncing,
+				ProcessedCount: processed,
+			})
 			continue
 		}
 
@@ -85,6 +160,32 @@ func (u *Uploader) Run(ctx context.Context) error {
 		case <-time.After(u.pollInterval):
 		}
 	}
+}
+
+// emit sends an event to the channel without blocking.
+func (u *Uploader) emit(ctx context.Context, event Event) {
+	select {
+	case u.events <- event:
+	case <-ctx.Done():
+	default:
+		// Channel full, drop event (logging already captures this)
+	}
+}
+
+// stalledEntryTable returns the table of the stalled entry, if any.
+func (u *Uploader) stalledEntryTable() string {
+	if u.stalledEntry != nil {
+		return u.stalledEntry.Table
+	}
+	return ""
+}
+
+// stalledEntryRowID returns the row ID of the stalled entry, if any.
+func (u *Uploader) stalledEntryRowID() string {
+	if u.stalledEntry != nil {
+		return u.stalledEntry.RowID
+	}
+	return ""
 }
 
 // processQueue processes all pending CRUD entries.
@@ -161,6 +262,16 @@ func (u *Uploader) processEntry(ctx context.Context, entry *powersync.CrudEntry)
 		)
 		return nil
 	}
+
+	// Log at Error level - this entry is now blocking the entire queue
+	u.logger.Error("upload blocked",
+		"table", entry.Table,
+		"rowId", entry.RowID,
+		"op", entry.Op,
+		"attempts", u.maxRetries+1,
+		"error", lastErr,
+	)
+	u.stalledEntry = entry
 
 	return fmt.Errorf("upload failed after %d retries: %w", u.maxRetries, lastErr)
 }

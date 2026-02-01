@@ -5,7 +5,7 @@ package styles
 type Palette struct {
 	Brand   ColorFamily // Primary brand color (Emerald)
 	Accent  ColorFamily // Secondary brand for gradients (Lime)
-	Neutral ColorFamily // Grays (Zinc)
+	Neutral ColorFamily // Grays (Neutral)
 	Error   ColorFamily // Error states (Red)
 	Success ColorFamily // Success states (Green)
 	Warning ColorFamily // Warning states (Amber)

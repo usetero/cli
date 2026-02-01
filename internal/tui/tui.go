@@ -49,6 +49,14 @@ type firstSyncCompleteMsg struct {
 	sync *powersync.Sync
 }
 
+// uploadEventMsg wraps an upload event for the bubbletea message loop.
+type uploadEventMsg struct {
+	event upload.Event
+}
+
+// uploadDoneMsg is sent when the uploader goroutine exits.
+type uploadDoneMsg struct{}
+
 // TUI is the top-level model that routes between modes (onboarding, app).
 type TUI struct {
 	// Config - set at construction
@@ -70,7 +78,9 @@ type TUI struct {
 	sync          powersync.Syncer
 	conversations api.Conversations
 	messages      chat.Messages
+	uploader      *upload.Uploader
 	uploaderDone  chan struct{}
+	uploadStatus  upload.Status
 
 	// UI
 	currentMode     mode.Mode
@@ -152,8 +162,16 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case firstSyncCompleteMsg:
 		m.sync = msg.sync
-		m.startUploader()
+		cmds = append(cmds, m.startUploader())
 		cmds = append(cmds, m.transitionToApp())
+
+	case uploadEventMsg:
+		m.uploadStatus = msg.event.Status
+		// TODO: surface status in UI
+		cmds = append(cmds, m.listenUploadEvents())
+
+	case uploadDoneMsg:
+		m.uploader = nil
 	}
 
 	// Delegate to current mode
@@ -257,16 +275,32 @@ func (m *TUI) startSync() tea.Cmd {
 	}
 }
 
-// startUploader starts the upload loop.
-func (m *TUI) startUploader() {
+// startUploader starts the upload loop and returns a command to listen for events.
+func (m *TUI) startUploader() tea.Cmd {
+	m.uploader = upload.New(m.db, m.conversations, m.messages, m.logger)
 	m.uploaderDone = make(chan struct{})
-	uploader := upload.New(m.db, m.conversations, m.messages, m.logger)
 	go func() {
 		defer close(m.uploaderDone)
-		if err := uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
+		if err := m.uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
 			m.logger.Error("upload loop error", "error", err)
 		}
 	}()
+	return m.listenUploadEvents()
+}
+
+// listenUploadEvents returns a command that waits for the next upload event.
+func (m *TUI) listenUploadEvents() tea.Cmd {
+	if m.uploader == nil {
+		return nil
+	}
+	events := m.uploader.Events()
+	return func() tea.Msg {
+		event, ok := <-events
+		if !ok {
+			return uploadDoneMsg{}
+		}
+		return uploadEventMsg{event: event}
+	}
 }
 
 // transitionToApp creates the app mode.
@@ -327,6 +361,9 @@ func (m *TUI) View() tea.View {
 	modeView := m.currentMode.View()
 
 	cleanView, cur := cursor.Extract(modeView)
+	if cur != nil {
+		cur.Color = colors.Accent
+	}
 
 	layers := []*lipgloss.Layer{
 		lipgloss.NewLayer(cleanView),

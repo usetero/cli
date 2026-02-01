@@ -47,16 +47,16 @@ func New(theme *styles.Theme, logger log.Logger) *CommandBar {
 	ta.Focus()
 
 	// Style the textarea
-	base := lipgloss.NewStyle().Background(colors.Page.Bg)
+	base := lipgloss.NewStyle().Foreground(colors.Page.Text)
 	ta.SetStyles(textarea.Styles{
 		Focused: textarea.StyleState{
 			Base:        base,
-			Text:        base.Foreground(colors.Page.Text),
+			Text:        base,
 			Placeholder: base.Foreground(colors.Page.TextMuted),
 			Prompt:      base.Foreground(colors.Accent),
 		},
 		Blurred: textarea.StyleState{
-			Base:        base,
+			Base:        base.Foreground(colors.Page.TextMuted),
 			Text:        base.Foreground(colors.Page.TextMuted),
 			Placeholder: base.Foreground(colors.Page.TextMuted),
 			Prompt:      base.Foreground(colors.Page.TextMuted),

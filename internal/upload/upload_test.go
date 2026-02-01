@@ -35,6 +35,31 @@ func TestUploader_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("closes event channel on exit", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		logger := logtest.New(t)
+
+		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		done := make(chan error)
+		go func() {
+			done <- uploader.Run(ctx)
+		}()
+
+		cancel()
+		<-done
+
+		// Channel should be closed
+		_, ok := <-uploader.Events()
+		if ok {
+			t.Error("event channel should be closed after Run exits")
+		}
+	})
+
 	t.Run("processes entry and deletes after success", func(t *testing.T) {
 		t.Parallel()
 
@@ -59,7 +84,19 @@ func TestUploader_Run(t *testing.T) {
 			done <- uploader.Run(ctx)
 		}()
 
-		time.Sleep(200 * time.Millisecond)
+		// Wait for syncing event
+		select {
+		case event := <-uploader.Events():
+			if event.Status != upload.StatusSyncing {
+				t.Errorf("expected StatusSyncing, got %v", event.Status)
+			}
+			if event.ProcessedCount != 1 {
+				t.Errorf("expected ProcessedCount=1, got %d", event.ProcessedCount)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for syncing event")
+		}
+
 		cancel()
 		<-done
 
@@ -103,5 +140,75 @@ func TestUploader_Run(t *testing.T) {
 		if entry != nil {
 			t.Error("unknown table entry should be deleted")
 		}
+	})
+
+	t.Run("emits stalled event on failure and recovered on success", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		logger := logtest.New(t)
+
+		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
+
+		callCount := 0
+		conversations := &apitest.MockConversations{
+			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
+				callCount++
+				// Fail first 4 attempts (initial + 3 retries), succeed on 5th
+				if callCount <= 4 {
+					return nil, errors.New("temporary error")
+				}
+				return &api.Conversation{ID: "conv-1"}, nil
+			},
+		}
+
+		uploader := upload.New(db, conversations, &chattest.MockMessages{}, logger)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		done := make(chan error)
+		go func() {
+			done <- uploader.Run(ctx)
+		}()
+
+		// Should get stalled event after retries exhausted
+		select {
+		case event := <-uploader.Events():
+			if event.Status != upload.StatusStalled {
+				t.Errorf("expected StatusStalled, got %v", event.Status)
+			}
+			if event.Error == nil {
+				t.Error("expected error in stalled event")
+			}
+			if event.Table != "conversations" {
+				t.Errorf("expected table=conversations, got %s", event.Table)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("timeout waiting for stalled event")
+		}
+
+		// Should get recovered event after success
+		select {
+		case event := <-uploader.Events():
+			if event.Status != upload.StatusRecovered {
+				t.Errorf("expected StatusRecovered, got %v", event.Status)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("timeout waiting for recovered event")
+		}
+
+		// Should get syncing event
+		select {
+		case event := <-uploader.Events():
+			if event.Status != upload.StatusSyncing {
+				t.Errorf("expected StatusSyncing, got %v", event.Status)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for syncing event")
+		}
+
+		cancel()
+		<-done
 	})
 }
