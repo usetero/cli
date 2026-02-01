@@ -7,11 +7,23 @@ import (
 	"github.com/usetero/cli/pkg/client"
 )
 
+// DatadogAccounts provides access to Datadog account operations.
+type DatadogAccounts interface {
+	HasAccount(ctx context.Context, accountID string) (bool, error)
+	GetAccount(ctx context.Context, accountID string) (*DatadogAccount, error)
+	ValidateAPIKey(ctx context.Context, apiKey, site string) (bool, string, error)
+	CreateAccount(ctx context.Context, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error)
+	GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error)
+}
+
 // DatadogAccountService handles Datadog account operations via the control plane API.
 type DatadogAccountService struct {
 	client Client
 	logger log.Logger
 }
+
+// Ensure DatadogAccountService implements DatadogAccounts.
+var _ DatadogAccounts = (*DatadogAccountService)(nil)
 
 // NewDatadogAccountService creates a new Datadog account service.
 func NewDatadogAccountService(client Client, logger log.Logger) *DatadogAccountService {

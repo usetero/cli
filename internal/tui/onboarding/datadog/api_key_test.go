@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
-	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -35,7 +34,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		validated := false
-		validator := &datadogtest.MockAPIKeyValidator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			ValidateAPIKeyFunc: func(ctx context.Context, apiKey string, site string) (bool, string, error) {
 				validated = true
 				return true, "", nil
@@ -44,7 +43,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen (press enter on interstitial)
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -75,7 +74,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 	t.Run("sets error state on invalid key", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		validator := &datadogtest.MockAPIKeyValidator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			ValidateAPIKeyFunc: func(ctx context.Context, apiKey string, site string) (bool, string, error) {
 				return false, "Invalid API key", nil
 			},
@@ -83,7 +82,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -115,7 +114,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		validated := false
-		validator := &datadogtest.MockAPIKeyValidator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			ValidateAPIKeyFunc: func(ctx context.Context, apiKey string, site string) (bool, string, error) {
 				validated = true
 				return true, "", nil
@@ -124,7 +123,7 @@ func TestAPIKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -150,11 +149,11 @@ func TestAPIKeyStep_Update(t *testing.T) {
 	t.Run("transitions from interstitial to input on enter", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		validator := &datadogtest.MockAPIKeyValidator{}
+		ddAccounts := &apitest.MockDatadogAccounts{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", validator, apiClient, logger, nil)
+		s := datadog.NewAPIKeyStep(context.Background(), apiKeyTestTheme(), "admin", testOrg, testAccount, "US1", ddAccounts, apiClient, logger, nil)
 
 		// Assert: not complete initially
 		if isAPIKeyComplete(s) {

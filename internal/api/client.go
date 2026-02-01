@@ -29,4 +29,7 @@ type Client interface {
 	ValidateDatadogApiKey(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error)
 	CreateDatadogAccountWithCredentials(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
 	GetDatadogAccountStatus(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
+
+	// Conversation operations
+	CreateConversation(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error)
 }

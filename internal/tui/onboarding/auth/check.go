@@ -16,13 +16,6 @@ import (
 	"github.com/usetero/cli/pkg/client"
 )
 
-// TokenValidator validates stored auth tokens
-type TokenValidator interface {
-	IsAuthenticated() bool
-	GetAccessToken(ctx context.Context) (string, error)
-	ClearTokens() error
-}
-
 // CheckAuthStep checks if the user has a valid auth token
 type CheckAuthStep struct {
 	// Lifecycle context for cancellation
@@ -32,14 +25,12 @@ type CheckAuthStep struct {
 	theme *styles.Theme
 
 	// Services
-	tokenValidator TokenValidator
-	authService    *authservice.Service
+	auth        authservice.Auth
+	preferences preferences.Preferences
+	apiEndpoint string
+	logger      log.Logger
 
-	// Pass-through to next step
-	preferencesService *preferences.Service
-	apiEndpoint        string
-	logger             log.Logger
-	globalBindings     []key.Binding
+	globalBindings []key.Binding
 
 	// UI state
 	checking     bool
@@ -51,30 +42,26 @@ type CheckAuthStep struct {
 }
 
 // NewCheckAuthStep creates a new auth check step
-func NewCheckAuthStep(ctx context.Context, theme *styles.Theme, tokenValidator TokenValidator, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if tokenValidator == nil {
-		panic("tokenValidator cannot be nil")
-	}
+func NewCheckAuthStep(ctx context.Context, theme *styles.Theme, authService authservice.Auth, prefs preferences.Preferences, apiEndpoint string, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if authService == nil {
 		panic("authService cannot be nil")
 	}
-	if preferencesService == nil {
-		panic("preferencesService cannot be nil")
+	if prefs == nil {
+		panic("prefs cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 
 	return &CheckAuthStep{
-		ctx:                ctx,
-		theme:              theme,
-		tokenValidator:     tokenValidator,
-		authService:        authService,
-		preferencesService: preferencesService,
-		apiEndpoint:        apiEndpoint,
-		logger:             logger,
-		globalBindings:     globalBindings,
-		width:              80,
+		ctx:            ctx,
+		theme:          theme,
+		auth:           authService,
+		preferences:    prefs,
+		apiEndpoint:    apiEndpoint,
+		logger:         logger,
+		globalBindings: globalBindings,
+		width:          80,
 	}
 }
 
@@ -96,16 +83,16 @@ func (s *CheckAuthStep) checkAuth() tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("checking authentication")
 
-		if !s.tokenValidator.IsAuthenticated() {
+		if !s.auth.IsAuthenticated() {
 			return checkAuthMsg{hasValidAuth: false}
 		}
 
 		// Get the access token
-		accessToken, err := s.tokenValidator.GetAccessToken(s.ctx)
+		accessToken, err := s.auth.GetAccessToken(s.ctx)
 		if err != nil {
 			s.logger.Warn("failed to get access token, clearing tokens", "error", err)
 			// Clear invalid tokens
-			_ = s.tokenValidator.ClearTokens()
+			_ = s.auth.ClearTokens()
 			return checkAuthMsg{hasValidAuth: false}
 		}
 
@@ -201,15 +188,15 @@ func (s *CheckAuthStep) Next() (step.Step, error) {
 
 	if !s.hasValidAuth {
 		// No valid auth - go to auth step
-		return NewAuthenticateStep(s.ctx, s.theme, s.logger, s.authService, s.preferencesService, s.apiEndpoint, s.globalBindings), nil
+		return NewAuthenticateStep(s.ctx, s.theme, s.logger, s.auth, s.preferences, s.apiEndpoint, s.globalBindings), nil
 	}
 
 	// Has valid auth - create authenticated client and go to role selection
 	refreshFunc := func() (string, error) {
-		return s.authService.GetAccessToken(s.ctx)
+		return s.auth.GetAccessToken(s.ctx)
 	}
 	apiClient := client.New(s.apiEndpoint, s.accessToken, refreshFunc)
-	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
+	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

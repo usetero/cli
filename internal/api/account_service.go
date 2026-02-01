@@ -7,11 +7,21 @@ import (
 	"github.com/usetero/cli/pkg/client"
 )
 
+// Accounts provides access to accounts.
+type Accounts interface {
+	List(ctx context.Context, organizationID string) ([]Account, error)
+	Get(ctx context.Context, accountID string) (*Account, error)
+	Create(ctx context.Context, organizationID, name string) (*Account, error)
+}
+
 // AccountService handles account-related API operations.
 type AccountService struct {
 	client Client
 	logger log.Logger
 }
+
+// Ensure AccountService implements Accounts.
+var _ Accounts = (*AccountService)(nil)
 
 // NewAccountService creates a new account service.
 func NewAccountService(client Client, logger log.Logger) *AccountService {

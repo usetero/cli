@@ -8,6 +8,7 @@ import (
 const (
 	productionEndpoint          = "https://api.usetero.com/graphql"
 	productionPowerSyncEndpoint = "https://powersync.usetero.com"
+	productionChatEndpoint      = "https://api.usetero.com"
 )
 
 // CLIConfig holds configuration for the Tero CLI.
@@ -17,6 +18,9 @@ type CLIConfig struct {
 
 	// PowerSyncEndpoint is the PowerSync service endpoint for local-first sync
 	PowerSyncEndpoint string
+
+	// ChatEndpoint is the Chat API endpoint for message streaming
+	ChatEndpoint string
 
 	// WorkOSClientID is the WorkOS OAuth client ID for authentication
 	WorkOSClientID string
@@ -30,6 +34,7 @@ func LoadCLIConfig() *CLIConfig {
 	return &CLIConfig{
 		APIEndpoint:       getEnvOrDefault("TERO_API_ENDPOINT", productionEndpoint),
 		PowerSyncEndpoint: getEnvOrDefault("TERO_POWERSYNC_ENDPOINT", productionPowerSyncEndpoint),
+		ChatEndpoint:      getEnvOrDefault("TERO_CHAT_ENDPOINT", productionChatEndpoint),
 		WorkOSClientID:    getEnvOrDefault("TERO_WORKOS_CLIENT_ID", "client_01JQCC2D06JF9ASFA6GRHMFA3N"),
 		Debug:             os.Getenv("TERO_DEBUG") == "true" || os.Getenv("TERO_DEBUG") == "1",
 	}

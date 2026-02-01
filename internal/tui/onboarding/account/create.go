@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/input"
 	"github.com/usetero/cli/internal/tui/keymap"
@@ -17,11 +18,6 @@ import (
 )
 
 const cursorMarker = "┃"
-
-// AccountCreator creates accounts
-type AccountCreator interface {
-	Create(ctx context.Context, orgID string, name string) (*api.Account, error)
-}
 
 // CreateStep handles creating a new account
 type CreateStep struct {
@@ -35,9 +31,9 @@ type CreateStep struct {
 	role string
 	org  api.Organization
 
-	// Services (defined by consumer interfaces)
-	accountCreator      AccountCreator
-	defaultAccountSaver DefaultAccountSaver
+	// Services
+	accounts    api.Accounts
+	preferences preferences.Preferences
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -54,12 +50,12 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new account creation step for the given organization
-func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accountCreator AccountCreator, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if accountCreator == nil {
-		panic("accountCreator cannot be nil")
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if accounts == nil {
+		panic("accounts cannot be nil")
 	}
-	if defaultAccountSaver == nil {
-		panic("defaultAccountSaver cannot be nil")
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -73,17 +69,17 @@ func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org ap
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
-		ctx:                 ctx,
-		theme:               theme,
-		role:                role,
-		org:                 org,
-		accountCreator:      accountCreator,
-		defaultAccountSaver: defaultAccountSaver,
-		apiClient:           apiClient,
-		logger:              logger,
-		input:               inp,
-		width:               80,
-		globalBindings:      globalBindings,
+		ctx:            ctx,
+		theme:          theme,
+		role:           role,
+		org:            org,
+		accounts:       accounts,
+		preferences:    prefs,
+		apiClient:      apiClient,
+		logger:         logger,
+		input:          inp,
+		width:          80,
+		globalBindings: globalBindings,
 	}
 }
 
@@ -138,7 +134,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		s.apiClient.SetAccountID(msg.account.ID)
 
 		// Save account to preferences
-		if err := s.defaultAccountSaver.SetDefaultAccountID(msg.account.ID); err != nil {
+		if err := s.preferences.SetDefaultAccountID(msg.account.ID); err != nil {
 			s.logger.Error("failed to save account preference", "error", err)
 			s.err = err
 			return s, nil
@@ -152,8 +148,9 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 		// Emit AccountSelectedMsg to trigger sync
 		account := *msg.account
+		org := s.org
 		return s, func() tea.Msg {
-			return AccountSelectedMsg{Account: account}
+			return AccountSelectedMsg{Organization: org, Account: account}
 		}
 	}
 
@@ -165,7 +162,7 @@ func (s *CreateStep) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("creating account", "name", name, "organizationID", s.org.ID)
 
-		account, err := s.accountCreator.Create(s.ctx, s.org.ID, name)
+		account, err := s.accounts.Create(s.ctx, s.org.ID, name)
 		if err != nil {
 			return createAccountMsg{err: err}
 		}

@@ -7,10 +7,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
-	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -35,7 +35,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:        api.DatadogAccountStatusAnalyzing, // Status doesn't matter
@@ -48,7 +48,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -70,7 +70,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:            api.DatadogAccountStatusAnalyzing,
@@ -83,7 +83,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -105,14 +105,14 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return nil, errors.New("API error")
 			},
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -135,7 +135,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		// Arrange
 		ddAccountID := "dd-123"
 		attempts := 0
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				attempts++
 				if attempts == 1 {
@@ -152,7 +152,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()
@@ -187,7 +187,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:            api.DatadogAccountStatusAnalyzing,
@@ -202,7 +202,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -225,7 +225,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:           api.DatadogAccountStatusInactive,
@@ -236,7 +236,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -277,7 +277,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:           api.DatadogAccountStatusAnalyzing,
@@ -289,7 +289,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -309,7 +309,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange - DISABLED during onboarding is a bug (auto-enable should have worked)
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:           api.DatadogAccountStatusDisabled,
@@ -320,7 +320,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -345,7 +345,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange - STALE means our system hasn't run in 48+ hours
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:        api.DatadogAccountStatusStale,
@@ -356,7 +356,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -387,7 +387,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange - DISCOVERING with services but no progress means our pipeline is slow
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:              api.DatadogAccountStatusDiscovering,
@@ -401,7 +401,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -430,7 +430,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		// Arrange - broken services are shown as warnings, not errors
 		// Users can still proceed once ready_for_use is true
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:         api.DatadogAccountStatusBroken,
@@ -442,7 +442,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -467,7 +467,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange - some services broken while others are fine
 		ddAccountID := "dd-123"
-		poller := &datadogtest.MockStatusPoller{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			GetStatusFunc: func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error) {
 				return &api.DatadogAccountStatus{
 					Status:            api.DatadogAccountStatusAnalyzing,
@@ -481,7 +481,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, poller, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
 
 		// Act
 		cmd := s.Init()

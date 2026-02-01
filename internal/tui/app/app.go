@@ -3,17 +3,19 @@ package app
 import (
 	"context"
 	"sort"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	tuichat "github.com/usetero/cli/internal/tui/app/chat"
 	"github.com/usetero/cli/internal/tui/app/page"
+	"github.com/usetero/cli/internal/tui/components/commandbar"
 	"github.com/usetero/cli/internal/tui/components/header"
 	"github.com/usetero/cli/internal/tui/components/sidebar"
 	"github.com/usetero/cli/internal/tui/layouts"
@@ -30,6 +32,9 @@ const (
 // App is the main application orchestrator.
 // It renders pages with appropriate chrome (sidebar or header) based on
 // window size, uses Base layout for consistent padding and footer.
+//
+// App owns the command bar and conversation state. You are always in a
+// conversation (though it may not exist in SQLite until the first message).
 type App struct {
 	// Lifecycle context for cancellation
 	ctx context.Context
@@ -40,11 +45,17 @@ type App struct {
 	// Layout - provides padding and footer
 	layout *layouts.Base
 
-	// Base layer - chat
+	// Command bar - always visible at bottom, owned by App
+	commandBar *commandbar.CommandBar
+
+	// Current conversation ID (empty until first message sent)
+	conversationID string
+
+	// Chat page - renders messages for current conversation
 	chat *tuichat.Chat
 
-	// Popover stack - pages layered on top of chat
-	popoverStack []page.Page
+	// Focus stack - pages layered on top of chat (detours)
+	focusStack []page.Page
 
 	// Chrome components (rendered inside layout)
 	sidebar *sidebar.Sidebar
@@ -71,13 +82,13 @@ type App struct {
 
 // New creates a new app. Requires db for database access.
 func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) *App {
-	chatService := chat.NewService(db, logger)
 	return &App{
 		ctx:            ctx,
 		theme:          theme,
 		db:             db,
 		layout:         layouts.NewBase(theme, logger),
-		chat:           tuichat.New(theme, db, chatService, org.ID, account.ID, logger),
+		commandBar:     commandbar.New(theme, logger),
+		chat:           tuichat.New(theme, db, logger),
 		sidebar:        sidebar.New(theme, logger),
 		header:         header.New(theme, logger),
 		logger:         logger,
@@ -89,15 +100,24 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.O
 
 // Init initializes the app
 func (a *App) Init() tea.Cmd {
-	return a.chat.Init()
+	return tea.Batch(
+		a.commandBar.Init(),
+		a.chat.Init(),
+	)
 }
 
-// activePage returns the topmost active page (popover or chat).
-func (a *App) activePage() page.Page {
-	if len(a.popoverStack) > 0 {
-		return a.popoverStack[len(a.popoverStack)-1]
+// focusedPage returns the topmost focused page (detour or chat).
+func (a *App) focusedPage() page.Page {
+	if len(a.focusStack) > 0 {
+		return a.focusStack[len(a.focusStack)-1]
 	}
 	return a.chat
+}
+
+// messageSentMsg is sent when a message has been written to SQLite.
+type messageSentMsg struct {
+	conversationID string
+	err            error
 }
 
 // Update handles messages and routes to the appropriate layer
@@ -106,28 +126,90 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		// Check for popover dismiss (Esc)
-		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) && len(a.popoverStack) > 0 {
-			a.popoverStack = a.popoverStack[:len(a.popoverStack)-1]
+		// Check for focus stack dismiss (Esc)
+		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) && len(a.focusStack) > 0 {
+			a.focusStack = a.focusStack[:len(a.focusStack)-1]
 			a.updateChrome()
 			return nil
 		}
+
+	case commandbar.SubmitMsg:
+		// User submitted input - send message
+		return a.sendMessage(msg.Text)
+
+	case messageSentMsg:
+		if msg.err != nil {
+			a.logger.Error("failed to send message", "error", msg.err)
+			return nil
+		}
+		// Update conversation ID if this was the first message
+		if a.conversationID == "" && msg.conversationID != "" {
+			a.conversationID = msg.conversationID
+			return a.chat.SetConversation(msg.conversationID)
+		}
+		return nil
 	}
 
 	// Update layout (handles footer)
 	cmd := a.layout.Update(msg)
 	cmds = append(cmds, cmd)
 
-	// Route to active page
-	cmd = a.activePage().Update(msg)
+	// Update command bar (always visible)
+	cmd = a.commandBar.Update(msg)
+	cmds = append(cmds, cmd)
+
+	// Route to focused page
+	cmd = a.focusedPage().Update(msg)
 	cmds = append(cmds, cmd)
 
 	return tea.Batch(cmds...)
 }
 
+// sendMessage writes a user message directly to SQLite.
+// The upload loop will sync it to the backend.
+func (a *App) sendMessage(text string) tea.Cmd {
+	return func() tea.Msg {
+		now := time.Now().UTC().Format(time.RFC3339)
+		convID := a.conversationID
+
+		// Create conversation if needed
+		if convID == "" {
+			convID = uuid.New().String()
+			accountID := a.account.ID
+			err := a.db.Queries().InsertConversation(a.ctx, sqlite.InsertConversationParams{
+				ID:        &convID,
+				AccountID: &accountID,
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			})
+			if err != nil {
+				return messageSentMsg{err: err}
+			}
+		}
+
+		// Insert the message
+		msgID := uuid.New().String()
+		accountID := a.account.ID
+		role := "user"
+		err := a.db.Queries().InsertMessage(a.ctx, sqlite.InsertMessageParams{
+			ID:             &msgID,
+			AccountID:      &accountID,
+			ConversationID: &convID,
+			Content:        &text,
+			CreatedAt:      &now,
+			Role:           &role,
+		})
+		if err != nil {
+			return messageSentMsg{err: err}
+		}
+
+		return messageSentMsg{conversationID: convID, err: nil}
+	}
+}
+
 // updateChrome updates sidebar/header/footer with current page's metadata
 func (a *App) updateChrome() {
-	p := a.activePage()
+	p := a.focusedPage()
 	if p == nil {
 		// No page yet, set defaults
 		a.sidebar.SetTitle("Tero")
@@ -170,18 +252,25 @@ func (a *App) View() string {
 	// Get content dimensions from layout
 	contentWidth, contentHeight := a.layout.ContentSize()
 
-	var contentView string
+	// Command bar is always visible at the bottom
+	commandBarView := a.commandBar.View()
+	commandBarHeight := a.commandBar.Height()
+
+	// Remaining height for page content
+	pageAreaHeight := contentHeight - commandBarHeight
+
+	var pageAreaView string
 
 	if a.compact {
 		// Compact mode: header + page content
 		headerView := a.header.View()
 		headerHeight := lipgloss.Height(headerView)
 
-		pageHeight := contentHeight - headerHeight
-		a.activePage().SetSize(contentWidth, pageHeight)
-		pageView := a.activePage().View()
+		pageHeight := pageAreaHeight - headerHeight
+		a.focusedPage().SetSize(contentWidth, pageHeight)
+		pageView := a.focusedPage().View()
 
-		contentView = lipgloss.JoinVertical(
+		pageAreaView = lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerView,
 			pageView,
@@ -189,18 +278,25 @@ func (a *App) View() string {
 	} else {
 		// Wide mode: page content + sidebar
 		pageWidth := contentWidth - SidebarWidth
-		a.activePage().SetSize(pageWidth, contentHeight)
-		a.sidebar.SetSize(SidebarWidth, contentHeight)
+		a.focusedPage().SetSize(pageWidth, pageAreaHeight)
+		a.sidebar.SetSize(SidebarWidth, pageAreaHeight)
 
-		pageView := a.activePage().View()
+		pageView := a.focusedPage().View()
 		sidebarView := a.sidebar.View()
 
-		contentView = lipgloss.JoinHorizontal(
+		pageAreaView = lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			pageView,
 			sidebarView,
 		)
 	}
+
+	// Compose: page area + command bar
+	contentView := lipgloss.JoinVertical(
+		lipgloss.Left,
+		pageAreaView,
+		commandBarView,
+	)
 
 	// Wrap in layout (adds padding + footer)
 	return a.layout.Render(contentView)
@@ -215,22 +311,23 @@ func (a *App) SetSize(width, height int) {
 	// Update layout size
 	a.layout.SetSize(width, height)
 
-	// Update header width (after layout padding)
+	// Update component widths (after layout padding)
 	contentWidth, _ := a.layout.ContentSize()
 	a.header.SetSize(contentWidth)
+	a.commandBar.SetSize(contentWidth)
 }
 
-// PushPopover adds a page to the popover stack
-func (a *App) PushPopover(p page.Page) tea.Cmd {
-	a.popoverStack = append(a.popoverStack, p)
+// PushFocus adds a page to the focus stack (a detour).
+func (a *App) PushFocus(p page.Page) tea.Cmd {
+	a.focusStack = append(a.focusStack, p)
 	a.updateChrome()
 	return p.Init()
 }
 
-// PopPopover removes the top popover
-func (a *App) PopPopover() {
-	if len(a.popoverStack) > 0 {
-		a.popoverStack = a.popoverStack[:len(a.popoverStack)-1]
+// PopFocus removes the top page from the focus stack.
+func (a *App) PopFocus() {
+	if len(a.focusStack) > 0 {
+		a.focusStack = a.focusStack[:len(a.focusStack)-1]
 		a.updateChrome()
 	}
 }
@@ -245,7 +342,7 @@ func (a *App) IsBusy() bool {
 	if a.chat.IsBusy() {
 		return true
 	}
-	for _, p := range a.popoverStack {
+	for _, p := range a.focusStack {
 		if p.IsBusy() {
 			return true
 		}
@@ -253,12 +350,12 @@ func (a *App) IsBusy() bool {
 	return false
 }
 
-// HasError returns true if active layer has an error
+// HasError returns true if focused page has an error
 func (a *App) HasError() bool {
-	return a.activePage().HasError()
+	return a.focusedPage().HasError()
 }
 
 // Error returns the current error
 func (a *App) Error() error {
-	return a.activePage().Error()
+	return a.focusedPage().Error()
 }

@@ -166,3 +166,17 @@ func (q *Queries) ListMessagesByConversationDesc(ctx context.Context, conversati
 	}
 	return items, nil
 }
+
+const updateMessageContent = `-- name: UpdateMessageContent :exec
+UPDATE messages SET content = ? WHERE id = ?
+`
+
+type UpdateMessageContentParams struct {
+	Content *string
+	ID      *string
+}
+
+func (q *Queries) UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error {
+	_, err := q.db.ExecContext(ctx, updateMessageContent, arg.Content, arg.ID)
+	return err
+}

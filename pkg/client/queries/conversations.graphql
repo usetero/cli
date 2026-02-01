@@ -1,0 +1,8 @@
+mutation CreateConversation($input: CreateConversationInput!) {
+  createConversation(input: $input) {
+    id
+    title
+    createdAt
+    updatedAt
+  }
+}

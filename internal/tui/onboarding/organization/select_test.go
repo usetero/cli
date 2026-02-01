@@ -7,12 +7,13 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/auth/authtest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/components/remotelist"
 	"github.com/usetero/cli/internal/tui/onboarding/organization"
-	"github.com/usetero/cli/internal/tui/onboarding/organization/organizationtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -33,24 +34,23 @@ func TestSelectStep_Update(t *testing.T) {
 	t.Run("auto-selects when only one organization exists", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		lister := &organizationtest.MockOrgLister{
+		orgs := &apitest.MockOrganizations{
 			ListFunc: func(ctx context.Context) ([]api.Organization, error) {
 				return []api.Organization{
 					{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"},
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				return "new-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Act: simulate load completing with one org
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}
@@ -70,22 +70,21 @@ func TestSelectStep_Update(t *testing.T) {
 	t.Run("auto-selects from saved preference", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{
-			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
-				return "new-token", nil
-			},
-		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{
 			GetDefaultOrgIDFunc: func() string {
 				return "org-2" // User has a saved preference
 			},
 		}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		auth := &authtest.MockAuth{
+			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
+				return "new-token", nil
+			},
+		}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Act: simulate load completing with multiple orgs
 		items := []list.Item{
@@ -108,14 +107,13 @@ func TestSelectStep_Update(t *testing.T) {
 	t.Run("auto-selects create when no organizations exist", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Act: simulate load completing with no orgs
 		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
@@ -138,18 +136,17 @@ func TestSelectStep_Update(t *testing.T) {
 	t.Run("requires manual selection when multiple orgs and no preference", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{
 			GetDefaultOrgIDFunc: func() string {
 				return "" // No preference
 			},
 		}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		auth := &authtest.MockAuth{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Act: simulate load completing with multiple orgs
 		items := []list.Item{
@@ -170,20 +167,19 @@ func TestSelectStep_Update(t *testing.T) {
 		refreshCalled := false
 		refreshedOrgID := ""
 
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				refreshCalled = true
 				refreshedOrgID = workosOrgID
 				return "new-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Simulate load completing with one org (triggers auto-select)
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-123"}}
@@ -211,14 +207,13 @@ func TestSelectStep_Update(t *testing.T) {
 		// Arrange
 		tokenSet := ""
 
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				return "refreshed-access-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{
 			SetAccessTokenFunc: func(token string) {
 				tokenSet = token
@@ -226,7 +221,7 @@ func TestSelectStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Simulate load completing with one org (triggers auto-select)
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}
@@ -249,18 +244,17 @@ func TestSelectStep_Next(t *testing.T) {
 	t.Run("returns ErrNotReady until token refreshed", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		lister := &organizationtest.MockOrgLister{}
-		refresher := &organizationtest.MockTokenRefresher{
+		orgs := &apitest.MockOrganizations{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				return "new-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", lister, apiClient, orgSaver, accountSaver, refresher, logger, nil)
+		s := organization.NewSelectStep(context.Background(), selectTestTheme(), "admin", orgs, apiClient, prefs, auth, logger, nil)
 
 		// Simulate load completing with one org
 		items := []list.Item{organization.OrgItem{ID: "org-1", Name: "Acme Inc", WorkosOrganizationID: "workos-1"}}

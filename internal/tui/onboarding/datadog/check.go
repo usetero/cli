@@ -13,12 +13,6 @@ import (
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
 
-// DatadogAccountChecker checks if an account has a Datadog integration
-type DatadogAccountChecker interface {
-	HasAccount(ctx context.Context, accountID string) (bool, error)
-	GetAccount(ctx context.Context, accountID string) (*api.DatadogAccount, error)
-}
-
 // CheckDatadogStep checks if the account has a Datadog integration configured
 type CheckDatadogStep struct {
 	// Context for API calls
@@ -32,12 +26,10 @@ type CheckDatadogStep struct {
 	org     api.Organization
 	account api.Account
 
-	// Services (defined by consumer interfaces)
-	datadogChecker DatadogAccountChecker
-
-	// Pass-through to next step
-	apiClient api.Client
-	logger    log.Logger
+	// Services
+	datadogAccounts api.DatadogAccounts
+	apiClient       api.Client
+	logger          log.Logger
 
 	// UI state
 	checking       bool
@@ -50,9 +42,9 @@ type CheckDatadogStep struct {
 }
 
 // NewCheckDatadogStep creates a new Datadog account check step
-func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, datadogChecker DatadogAccountChecker, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if datadogChecker == nil {
-		panic("datadogChecker cannot be nil")
+func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, datadogAccounts api.DatadogAccounts, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if datadogAccounts == nil {
+		panic("datadogAccounts cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -62,16 +54,16 @@ func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, 
 	}
 
 	return &CheckDatadogStep{
-		ctx:            ctx,
-		theme:          theme,
-		role:           role,
-		org:            org,
-		account:        account,
-		datadogChecker: datadogChecker,
-		apiClient:      apiClient,
-		logger:         logger,
-		width:          80,
-		globalBindings: globalBindings,
+		ctx:             ctx,
+		theme:           theme,
+		role:            role,
+		org:             org,
+		account:         account,
+		datadogAccounts: datadogAccounts,
+		apiClient:       apiClient,
+		logger:          logger,
+		width:           80,
+		globalBindings:  globalBindings,
 	}
 }
 
@@ -93,7 +85,7 @@ func (s *CheckDatadogStep) checkDatadogAccount() tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("checking datadog account", log.String("accountID", s.account.ID))
 
-		hasDatadog, err := s.datadogChecker.HasAccount(s.ctx, s.account.ID)
+		hasDatadog, err := s.datadogAccounts.HasAccount(s.ctx, s.account.ID)
 		if err != nil {
 			return checkDatadogMsg{err: err}
 		}
@@ -103,7 +95,7 @@ func (s *CheckDatadogStep) checkDatadogAccount() tea.Cmd {
 		}
 
 		// Fetch the Datadog account details
-		datadogAccount, err := s.datadogChecker.GetAccount(s.ctx, s.account.ID)
+		datadogAccount, err := s.datadogAccounts.GetAccount(s.ctx, s.account.ID)
 		if err != nil {
 			return checkDatadogMsg{err: err}
 		}

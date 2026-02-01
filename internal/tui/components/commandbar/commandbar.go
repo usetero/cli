@@ -85,7 +85,10 @@ func New(theme *styles.Theme, logger log.Logger) *CommandBar {
 
 // Init initializes the command bar
 func (c *CommandBar) Init() tea.Cmd {
-	return textarea.Blink
+	return tea.Batch(
+		c.textarea.Focus(),
+		textarea.Blink,
+	)
 }
 
 // Update handles messages

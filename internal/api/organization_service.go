@@ -7,11 +7,20 @@ import (
 	"github.com/usetero/cli/pkg/client"
 )
 
+// Organizations provides access to organizations.
+type Organizations interface {
+	List(ctx context.Context) ([]Organization, error)
+	Create(ctx context.Context, name string) (*OrganizationBootstrapResult, error)
+}
+
 // OrganizationService handles organization-related API operations.
 type OrganizationService struct {
 	client Client
 	logger log.Logger
 }
+
+// Ensure OrganizationService implements Organizations.
+var _ Organizations = (*OrganizationService)(nil)
 
 // NewOrganizationService creates a new organization service.
 func NewOrganizationService(client Client, logger log.Logger) *OrganizationService {

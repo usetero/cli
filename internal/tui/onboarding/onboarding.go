@@ -43,15 +43,15 @@ func New(
 	ctx context.Context,
 	theme *styles.Theme,
 	logger log.Logger,
-	authService *auth.Service,
-	preferencesService *preferences.Service,
+	authService auth.Auth,
+	prefs preferences.Preferences,
 	apiEndpoint string,
 	globalBindings []key.Binding,
 ) *Onboarding {
 	// Start onboarding flow with auth check step
 	// Check step validates existing auth, or proceeds to auth step if needed
 	flow := step.NewFlow(
-		authcheck.NewCheckAuthStep(ctx, theme, authService, authService, preferencesService, apiEndpoint, logger, globalBindings),
+		authcheck.NewCheckAuthStep(ctx, theme, authService, prefs, apiEndpoint, logger, globalBindings),
 	)
 
 	return &Onboarding{

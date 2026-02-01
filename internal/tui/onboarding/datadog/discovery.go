@@ -39,11 +39,6 @@ func formatVolume(volume int) string {
 
 type tickMsg time.Time
 
-// StatusPoller polls for Datadog account discovery status
-type StatusPoller interface {
-	GetStatus(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error)
-}
-
 type statusFetchedMsg struct {
 	status *api.DatadogAccountStatus
 	err    error
@@ -64,11 +59,9 @@ type DiscoveryStep struct {
 	datadogAccountID *string
 
 	// Services
-	statusPoller StatusPoller
-	logger       log.Logger
-
-	// Pass-through to next step
-	globalBindings []key.Binding
+	datadogAccounts api.DatadogAccounts
+	logger          log.Logger
+	globalBindings  []key.Binding
 
 	// UI state
 	loading   bool
@@ -87,12 +80,12 @@ func NewDiscoveryStep(
 	org api.Organization,
 	account api.Account,
 	datadogAccountID *string,
-	statusPoller StatusPoller,
+	datadogAccounts api.DatadogAccounts,
 	logger log.Logger,
 	globalBindings []key.Binding,
 ) step.Step {
-	if statusPoller == nil {
-		panic("statusPoller cannot be nil")
+	if datadogAccounts == nil {
+		panic("datadogAccounts cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
@@ -109,7 +102,7 @@ func NewDiscoveryStep(
 		org:              org,
 		account:          account,
 		datadogAccountID: datadogAccountID,
-		statusPoller:     statusPoller,
+		datadogAccounts:  datadogAccounts,
 		logger:           logger,
 		globalBindings:   globalBindings,
 		loading:          true,
@@ -153,7 +146,7 @@ func (s *DiscoveryStep) fetchStatus() tea.Cmd {
 		s.logger.Debug("fetching discovery status",
 			log.String("datadogAccountID", *s.datadogAccountID))
 
-		status, err := s.statusPoller.GetStatus(s.ctx, *s.datadogAccountID)
+		status, err := s.datadogAccounts.GetStatus(s.ctx, *s.datadogAccountID)
 		if err != nil {
 			s.logger.Error("failed to fetch discovery status", "error", err)
 			return statusFetchedMsg{err: err}

@@ -27,11 +27,6 @@ type validateAPIKeyMsg struct {
 	errMsg string
 }
 
-// DatadogAPIKeyValidator validates Datadog API keys
-type DatadogAPIKeyValidator interface {
-	ValidateAPIKey(ctx context.Context, apiKey string, site string) (bool, string, error)
-}
-
 // APIKeyStep handles collecting the user's Datadog API key.
 type APIKeyStep struct {
 	// Context for API calls
@@ -46,12 +41,10 @@ type APIKeyStep struct {
 	account api.Account
 	site    string // Selected Datadog site (US1, EU1, etc.)
 
-	// Services (defined by consumer interfaces)
-	apiKeyValidator DatadogAPIKeyValidator
-
-	// Pass-through to next step
-	apiClient api.Client
-	logger    log.Logger
+	// Services
+	datadogAccounts api.DatadogAccounts
+	apiClient       api.Client
+	logger          log.Logger
 
 	// UI state
 	input          *input.Component
@@ -67,9 +60,9 @@ type APIKeyStep struct {
 }
 
 // NewAPIKeyStep creates a new Datadog API key collection step
-func NewAPIKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKeyValidator DatadogAPIKeyValidator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if apiKeyValidator == nil {
-		panic("apiKeyValidator cannot be nil")
+func NewAPIKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, datadogAccounts api.DatadogAccounts, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if datadogAccounts == nil {
+		panic("datadogAccounts cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -97,7 +90,7 @@ func NewAPIKeyStep(ctx context.Context, theme *styles.Theme, role string, org ap
 		org:             org,
 		account:         account,
 		site:            site,
-		apiKeyValidator: apiKeyValidator,
+		datadogAccounts: datadogAccounts,
 		apiClient:       apiClient,
 		logger:          logger,
 		input:           inp,
@@ -216,7 +209,7 @@ func (s *APIKeyStep) validateAPIKey(apiKey string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Debug("validating datadog api key", log.String("site", s.site))
 
-		valid, errorMsg, err := s.apiKeyValidator.ValidateAPIKey(s.ctx, apiKey, s.site)
+		valid, errorMsg, err := s.datadogAccounts.ValidateAPIKey(s.ctx, apiKey, s.site)
 		if err != nil {
 			s.logger.Error("failed to validate api key", "error", err)
 			return validateAPIKeyMsg{

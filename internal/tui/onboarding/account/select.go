@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/components/remotelist"
@@ -22,15 +23,11 @@ import (
 // AccountSelectedMsg is sent when an account is selected during onboarding.
 // This triggers PowerSync to start syncing in the background.
 type AccountSelectedMsg struct {
-	Account api.Account
+	Organization api.Organization
+	Account      api.Account
 }
 
 const createNewAccountID = "__CREATE_NEW__"
-
-// AccountLister lists accounts
-type AccountLister interface {
-	List(ctx context.Context, orgID string) ([]api.Account, error)
-}
 
 // AccountItem implements list.Item for the list component.
 // Exported for testing.
@@ -84,9 +81,9 @@ type SelectStep struct {
 	role string
 	org  api.Organization
 
-	// Services (defined by consumer interfaces)
-	accountLister       AccountLister
-	defaultAccountSaver DefaultAccountSaver
+	// Services
+	accounts    api.Accounts
+	preferences preferences.Preferences
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -102,12 +99,12 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new account selection step for the given organization
-func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accountLister AccountLister, defaultAccountSaver DefaultAccountSaver, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if accountLister == nil {
-		panic("accountLister cannot be nil")
+func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if accounts == nil {
+		panic("accounts cannot be nil")
 	}
-	if defaultAccountSaver == nil {
-		panic("defaultAccountSaver cannot be nil")
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -120,17 +117,17 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org ap
 	remoteList := remotelist.New(theme, delegate, "Loading accounts", logger)
 
 	return &SelectStep{
-		ctx:                 ctx,
-		theme:               theme,
-		role:                role,
-		org:                 org,
-		accountLister:       accountLister,
-		defaultAccountSaver: defaultAccountSaver,
-		apiClient:           apiClient,
-		logger:              logger,
-		remoteList:          remoteList,
-		width:               80,
-		globalBindings:      globalBindings,
+		ctx:            ctx,
+		theme:          theme,
+		role:           role,
+		org:            org,
+		accounts:       accounts,
+		preferences:    prefs,
+		apiClient:      apiClient,
+		logger:         logger,
+		remoteList:     remoteList,
+		width:          80,
+		globalBindings: globalBindings,
 	}
 }
 
@@ -138,7 +135,7 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org ap
 func (s *SelectStep) Init() tea.Cmd {
 	return s.remoteList.InitWithLoader(func() tea.Msg {
 		s.logger.Info("loading accounts", "organizationID", s.org.ID)
-		accounts, err := s.accountLister.List(s.ctx, s.org.ID)
+		accounts, err := s.accounts.List(s.ctx, s.org.ID)
 		if err != nil {
 			s.logger.Error("failed to load accounts", "error", err, "organizationID", s.org.ID)
 			return remotelist.LoadResultMsg{Items: nil, Err: err}
@@ -173,7 +170,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 			}
 
 			// Apply auto-selection logic
-			userPref := s.defaultAccountSaver.GetDefaultAccountID()
+			userPref := s.preferences.GetDefaultAccountID()
 
 			// Case 1: No accounts → auto-select "create"
 			if len(s.accountsList) == 0 {
@@ -192,8 +189,9 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 						// Emit AccountSelectedMsg to trigger sync
 						// Copy to avoid closure capturing loop variable
 						selectedAccount := account
+						selectedOrg := s.org
 						cmds = append(cmds, func() tea.Msg {
-							return AccountSelectedMsg{Account: selectedAccount}
+							return AccountSelectedMsg{Organization: selectedOrg, Account: selectedAccount}
 						})
 					}
 				}
@@ -205,14 +203,15 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				s.selectedAccountID = account.ID
 				s.selectedAccount = account
 				s.apiClient.SetAccountID(account.ID)
-				if err := s.defaultAccountSaver.SetDefaultAccountID(account.ID); err != nil {
+				if err := s.preferences.SetDefaultAccountID(account.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				} else {
 					s.logger.Debug("auto-selected account", "id", account.ID, "name", account.Name, "reason", "only one available")
 				}
 				// Emit AccountSelectedMsg to trigger sync
+				selectedOrg := s.org
 				cmds = append(cmds, func() tea.Msg {
-					return AccountSelectedMsg{Account: account}
+					return AccountSelectedMsg{Organization: selectedOrg, Account: account}
 				})
 			}
 
@@ -238,12 +237,13 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 				s.selectedAccount = account
 				s.apiClient.SetAccountID(ai.ID)
 				s.logger.Info("account selected", "id", ai.ID, "name", ai.Name)
-				if err := s.defaultAccountSaver.SetDefaultAccountID(ai.ID); err != nil {
+				if err := s.preferences.SetDefaultAccountID(ai.ID); err != nil {
 					s.logger.Error("failed to save account preference", "error", err)
 				}
 				// Emit AccountSelectedMsg to trigger sync
+				selectedOrg := s.org
 				cmds = append(cmds, func() tea.Msg {
-					return AccountSelectedMsg{Account: account}
+					return AccountSelectedMsg{Organization: selectedOrg, Account: account}
 				})
 			}
 		case "n":
@@ -314,7 +314,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new account
 	if s.selectedAccountID == createNewAccountID {
 		accountService := api.NewAccountService(s.apiClient, s.logger)
-		return NewCreateStep(s.ctx, s.theme, s.role, s.org, accountService, s.defaultAccountSaver, s.apiClient, s.logger, s.globalBindings), nil
+		return NewCreateStep(s.ctx, s.theme, s.role, s.org, accountService, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Create Datadog service for next step

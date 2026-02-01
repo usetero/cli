@@ -61,7 +61,7 @@ Just run 'tero' to start an interactive chat session.`,
 
 			// Create and run the TUI
 			p := tea.NewProgram(
-				tui.New(cfg, tokenStore, workosClient, endpoint, powersyncConfig, logger),
+				tui.New(cfg, tokenStore, workosClient, endpoint, cliConfig.ChatEndpoint, powersyncConfig, logger),
 				tea.WithFilter(tui.MouseEventFilter),
 			)
 			if _, err := p.Run(); err != nil {

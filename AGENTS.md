@@ -1,50 +1,36 @@
-# AI Agent Bootloader
+# Tero CLI
 
-Tero CLI - presentation layer for the Tero control plane. TUI, MCP server, traditional commands.
+Presentation layer for the Tero control plane. TUI, MCP server, traditional commands.
 
-## Before Writing Code
+## Read First
 
-| Working on... | Read first |
-|--------------|-----------|
-| Anything | `docs/ARCHITECTURE.md` |
-| Tests | `docs/TESTING.md` |
-| Design decisions | `docs/DESIGN.md` |
+| Working on | Read |
+|------------|------|
+| Anything | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Tests | [docs/TESTING.md](docs/TESTING.md) |
+| Logs | [docs/LOGGING.md](docs/LOGGING.md) |
+| Product context | [product.md](../knowledge-base/product.md) |
 
-The docs are short. Don't skip them.
+## Rules
 
-## Hard Rules
+1. **CLI is presentation only.** Intelligence lives in the control plane.
+2. **Control plane is source of truth.** Local data is synced, never owned.
+3. **Dependencies point inward.** Services depend on interfaces, not implementations.
+4. **Composition happens in `cmd/`.** Wire implementations to interfaces there, nowhere else.
+5. **Conventional commits.** `feat:`, `fix:`, `docs:`, `refactor:`, etc.
 
-- **CLI is presentation only.** Intelligence lives in the control plane.
-- **Control plane is source of truth.** Local data is synced, never owned.
-- **Dependencies point inward.** Services depend on interfaces, not implementations.
-- **Composition happens in `cmd/`.** That's where you wire implementations to interfaces.
-- **Conventional commits.** `feat:`, `fix:`, `docs:`, `refactor:`, etc.
+## Code Location
 
-## Workflow
+```
+Wiring dependencies?         → cmd/
+Domain logic?                → internal/{domain}/
+Implementation details?      → internal/{impl}/
+TUI presentation?            → internal/tui/
+```
+
+## Commands
 
 ```bash
 task do      # Format, lint, test - run before commits
 task run     # Fast iteration
 ```
-
-## Decision Trees
-
-### Where does this code go?
-
-```
-Wiring dependencies?                              → cmd/
-Domain logic (auth, preferences)?                 → internal/{domain}/
-Concrete implementation (keyring, workos, config)?→ internal/{impl}/
-TUI presentation?                                 → internal/tui/
-```
-
-### Interface or concrete type?
-
-```
-Used as a dependency by a service?      → Interface (defined by consumer)
-Platform-specific or external API?      → Implementation (implements interface)
-```
-
-## When Stuck
-
-Read the docs. They answer most questions.

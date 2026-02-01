@@ -4,6 +4,33 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// Preferences provides access to user preferences.
+type Preferences interface {
+	GetEmail() string
+	SetEmail(email string) error
+	GetDatadogAPIKey() string
+	SetDatadogAPIKey(key string) error
+	GetDefaultOrgID() string
+	SetDefaultOrgID(orgID string) error
+	GetDefaultOrgName() string
+	SetDefaultOrgName(orgName string) error
+	GetDefaultAccountID() string
+	SetDefaultAccountID(accountID string) error
+	GetDefaultWorkspaceID() string
+	SetDefaultWorkspaceID(workspaceID string) error
+	ClearEmail() error
+	ClearDatadogAPIKey() error
+	ClearDefaultOrgID() error
+	GetHasSeenGreeting() bool
+	SetHasSeenGreeting(seen bool) error
+	GetRole() string
+	SetRole(role string) error
+	GetServices() []string
+	SetServices(services []string) error
+	ClearRole() error
+	ClearServices() error
+}
+
 // Service handles user preferences business logic.
 // It defines domain concepts (email, orgID, etc.) and translates them
 // to/from generic key-value storage operations.
@@ -11,6 +38,9 @@ type Service struct {
 	store  Store
 	logger log.Logger
 }
+
+// Ensure Service implements Preferences.
+var _ Preferences = (*Service)(nil)
 
 // NewService creates a new preferences service.
 func NewService(store Store, logger log.Logger) *Service {

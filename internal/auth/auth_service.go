@@ -8,6 +8,17 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// Auth provides authentication operations.
+type Auth interface {
+	StartDeviceAuth(ctx context.Context) (*DeviceAuth, error)
+	WaitForAuth(ctx context.Context, deviceCode string, interval time.Duration) (*Result, error)
+	IsAuthenticated() bool
+	GetAccessToken(ctx context.Context) (string, error)
+	ClearTokens() error
+	RefreshTokenWithoutOrganization(ctx context.Context) (string, error)
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
+}
+
 // Service handles authentication business logic.
 // It coordinates between the OAuth provider and secure token storage.
 // It defines domain concepts (access_token, refresh_token) and translates them
@@ -17,6 +28,9 @@ type Service struct {
 	storage  SecureStorage
 	logger   log.Logger
 }
+
+// Ensure Service implements Auth.
+var _ Auth = (*Service)(nil)
 
 // NewService creates a new authentication service.
 func NewService(provider OAuthProvider, storage SecureStorage, logger log.Logger) *Service {

@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
@@ -15,18 +16,6 @@ import (
 	"github.com/usetero/cli/internal/tui/onboarding/organization"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
-
-// RoleSaver defines the interface for saving and retrieving role preferences.
-// Consumer-driven interface - this step only needs these methods.
-type RoleSaver interface {
-	SetRole(role string) error
-	GetRole() string
-}
-
-// TokenRefresher refreshes the access token scoped to an organization.
-type TokenRefresher interface {
-	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
-}
 
 const (
 	Platform = "platform"
@@ -66,14 +55,11 @@ type SelectStep struct {
 	// Theme
 	theme *styles.Theme
 
-	// Services (defined by consumer interfaces)
-	roleSaver      RoleSaver
-	tokenRefresher TokenRefresher
-
-	// Pass-through to next step
-	preferencesService *preferences.Service
-	apiClient          api.Client
-	logger             log.Logger
+	// Services
+	preferences preferences.Preferences
+	auth        auth.Auth
+	apiClient   api.Client
+	logger      log.Logger
 
 	// UI state
 	selected       int // 0 = Platform Team, 1 = Service Owner
@@ -84,22 +70,22 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new role selection step.
-func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Client, preferencesService *preferences.Service, tokenRefresher TokenRefresher, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Client, prefs preferences.Preferences, authService auth.Auth, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
-	if preferencesService == nil {
-		panic("preferencesService cannot be nil")
+	if prefs == nil {
+		panic("prefs cannot be nil")
 	}
-	if tokenRefresher == nil {
-		panic("tokenRefresher cannot be nil")
+	if authService == nil {
+		panic("authService cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 
 	// Load saved role and set selected to match
-	savedRole := preferencesService.GetRole()
+	savedRole := prefs.GetRole()
 
 	// Set selected index based on saved role
 	var selected int
@@ -118,17 +104,16 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Clien
 	}
 
 	return &SelectStep{
-		ctx:                ctx,
-		theme:              theme,
-		roleSaver:          preferencesService,
-		tokenRefresher:     tokenRefresher,
-		preferencesService: preferencesService,
-		apiClient:          apiClient,
-		logger:             logger,
-		selected:           selected,
-		width:              80,
-		keyMap:             DefaultKeyMap(),
-		globalBindings:     globalBindings,
+		ctx:            ctx,
+		theme:          theme,
+		preferences:    prefs,
+		auth:           authService,
+		apiClient:      apiClient,
+		logger:         logger,
+		selected:       selected,
+		width:          80,
+		keyMap:         DefaultKeyMap(),
+		globalBindings: globalBindings,
 	}
 }
 
@@ -159,7 +144,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 			s.logger.Info("role selected", "role", role)
 
-			if err := s.roleSaver.SetRole(role); err != nil {
+			if err := s.preferences.SetRole(role); err != nil {
 				s.logger.Error("failed to save role", "error", err)
 				s.err = err
 				return s, nil
@@ -179,7 +164,7 @@ func (s *SelectStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 
 				s.logger.Info("retrying role save", "role", role)
 
-				if err := s.roleSaver.SetRole(role); err != nil {
+				if err := s.preferences.SetRole(role); err != nil {
 					s.logger.Error("failed to save role", "error", err)
 					s.err = err
 					return s, nil
@@ -273,7 +258,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 		return nil, s.err
 	}
 
-	role := s.roleSaver.GetRole()
+	role := s.preferences.GetRole()
 	if role != Platform && role != Engineer {
 		return nil, step.ErrNotReady
 	}
@@ -283,8 +268,8 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// Create organization service for next step
 	organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
-	// Pass accumulated context (role), organization service, client, preferences service, and logger to next step
-	return organization.NewSelectStep(s.ctx, s.theme, role, organizationService, s.apiClient, s.preferencesService, s.preferencesService, s.tokenRefresher, s.logger, s.globalBindings), nil
+	// Pass accumulated context (role), organization service, client, preferences, auth, and logger to next step
+	return organization.NewSelectStep(s.ctx, s.theme, role, organizationService, s.apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

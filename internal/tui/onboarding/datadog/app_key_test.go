@@ -11,7 +11,6 @@ import (
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
-	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -36,7 +35,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		created := false
-		creator := &datadogtest.MockDatadogAccountCreator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				created = true
 				return &api.DatadogAccount{ID: "dd-1", Site: site}, nil
@@ -45,7 +44,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -76,7 +75,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 	t.Run("sets error state on failure", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		creator := &datadogtest.MockDatadogAccountCreator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				return nil, errors.New("invalid application key")
 			},
@@ -84,7 +83,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -116,7 +115,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		created := false
-		creator := &datadogtest.MockDatadogAccountCreator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				created = true
 				return &api.DatadogAccount{ID: "dd-1"}, nil
@@ -125,7 +124,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -152,7 +151,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		attempts := 0
-		creator := &datadogtest.MockDatadogAccountCreator{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				attempts++
 				if attempts == 1 {
@@ -164,7 +163,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", creator, apiClient, logger, nil)
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})

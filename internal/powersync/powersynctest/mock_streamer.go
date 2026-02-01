@@ -44,3 +44,10 @@ func NewMockStreamerFactory(mock *MockStreamer) func(endpoint, token string) pow
 		return mock
 	}
 }
+
+// NewSyncWithMockStreamer creates a Sync with a mock streamer for testing.
+func NewSyncWithMockStreamer(config *powersync.Config, tokenRefresher powersync.TokenRefresher, mock *MockStreamer) *powersync.Sync {
+	s := powersync.NewSync(config, tokenRefresher)
+	s.SetStreamFactory(NewMockStreamerFactory(mock))
+	return s
+}

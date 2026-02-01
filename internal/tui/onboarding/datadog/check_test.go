@@ -11,7 +11,6 @@ import (
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
-	"github.com/usetero/cli/internal/tui/onboarding/datadog/datadogtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -39,7 +38,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 	t.Run("completes when datadog account exists", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		checker := &datadogtest.MockDatadogAccountChecker{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
 				return true, nil
 			},
@@ -50,7 +49,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -76,7 +75,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 	t.Run("completes when no datadog account", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		checker := &datadogtest.MockDatadogAccountChecker{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
 				return false, nil
 			},
@@ -84,7 +83,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -110,7 +109,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 	t.Run("sets error state on failure", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		checker := &datadogtest.MockDatadogAccountChecker{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
 				return false, errors.New("API error")
 			},
@@ -118,7 +117,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -145,7 +144,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		attempts := 0
-		checker := &datadogtest.MockDatadogAccountChecker{
+		ddAccounts := &apitest.MockDatadogAccounts{
 			HasAccountFunc: func(ctx context.Context, accountID string) (bool, error) {
 				attempts++
 				if attempts == 1 {
@@ -160,7 +159,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, checker, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()

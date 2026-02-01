@@ -23,3 +23,6 @@ SELECT COUNT(*) FROM messages WHERE conversation_id = ?;
 -- name: InsertMessage :exec
 INSERT INTO messages (id, account_id, content, conversation_id, created_at, role, stop_reason)
 VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- name: UpdateMessageContent :exec
+UPDATE messages SET content = ? WHERE id = ?;

@@ -8,10 +8,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/auth/authtest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/organization"
-	"github.com/usetero/cli/internal/tui/onboarding/organization/organizationtest"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
@@ -36,7 +37,7 @@ func TestCreateStep_Update(t *testing.T) {
 		createCalled := false
 		createdName := ""
 
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				createCalled = true
 				createdName = name
@@ -50,17 +51,16 @@ func TestCreateStep_Update(t *testing.T) {
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				return "new-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type organization name
 		for _, r := range "Acme Inc" {
@@ -96,19 +96,18 @@ func TestCreateStep_Update(t *testing.T) {
 		// Arrange
 		createCalled := false
 
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				createCalled = true
 				return nil, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Press enter without typing anything
 		updated, _ := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -125,18 +124,17 @@ func TestCreateStep_Update(t *testing.T) {
 	t.Run("sets error state when creation fails", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				return nil, errors.New("organization name already exists")
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Existing Org" {
@@ -164,7 +162,7 @@ func TestCreateStep_Update(t *testing.T) {
 		savedOrgID := ""
 		savedAccountID := ""
 
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{
@@ -176,27 +174,25 @@ func TestCreateStep_Update(t *testing.T) {
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{
-			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
-				return "new-token", nil
-			},
-		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{
+		prefs := &preferencestest.MockPreferences{
 			SetDefaultOrgIDFunc: func(orgID string) error {
 				savedOrgID = orgID
 				return nil
 			},
-		}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{
 			SetDefaultAccountIDFunc: func(accountID string) error {
 				savedAccountID = accountID
 				return nil
 			},
 		}
+		auth := &authtest.MockAuth{
+			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
+				return "new-token", nil
+			},
+		}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "New Org" {
@@ -227,7 +223,7 @@ func TestCreateStep_Update(t *testing.T) {
 		refreshedOrgID := ""
 		tokenSet := ""
 
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{
@@ -239,14 +235,13 @@ func TestCreateStep_Update(t *testing.T) {
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				refreshedOrgID = workosOrgID
 				return "refreshed-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{
 			SetAccessTokenFunc: func(token string) {
 				tokenSet = token
@@ -254,7 +249,7 @@ func TestCreateStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test Org" {
@@ -285,7 +280,7 @@ func TestCreateStep_Update(t *testing.T) {
 		// Arrange
 		callCount := 0
 
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				callCount++
 				if callCount == 1 {
@@ -297,13 +292,12 @@ func TestCreateStep_Update(t *testing.T) {
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type and submit (first attempt fails)
 		for _, r := range "Retry Org" {
@@ -334,7 +328,7 @@ func TestCreateStep_Next(t *testing.T) {
 	t.Run("returns ErrNotReady until created and token refreshed", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		creator := &organizationtest.MockOrgCreator{
+		orgs := &apitest.MockOrganizations{
 			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{ID: "org-123", Name: name, WorkosOrganizationID: "workos-123"},
@@ -342,17 +336,16 @@ func TestCreateStep_Next(t *testing.T) {
 				}, nil
 			},
 		}
-		refresher := &organizationtest.MockTokenRefresher{
+		prefs := &preferencestest.MockPreferences{}
+		auth := &authtest.MockAuth{
 			RefreshTokenWithOrganizationFunc: func(ctx context.Context, workosOrgID string) (string, error) {
 				return "new-token", nil
 			},
 		}
-		orgSaver := &organizationtest.MockDefaultOrgSaver{}
-		accountSaver := &organizationtest.MockDefaultAccountSaver{}
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", creator, orgSaver, accountSaver, refresher, apiClient, logger, nil)
+		s := organization.NewCreateStep(context.Background(), testTheme(), "admin", orgs, prefs, auth, apiClient, logger, nil)
 
 		// Type and submit
 		for _, r := range "Test" {

@@ -39,11 +39,11 @@ type AuthenticateStep struct {
 	theme *styles.Theme
 
 	// Services
-	authService        *authservice.Service
-	preferencesService *preferences.Service
-	apiEndpoint        string
-	logger             log.Logger
-	globalBindings     []key.Binding
+	authService    authservice.Auth
+	preferences    preferences.Preferences
+	apiEndpoint    string
+	logger         log.Logger
+	globalBindings []key.Binding
 
 	// UI state
 	width             int
@@ -70,15 +70,15 @@ type authCompleteMsg struct {
 }
 
 // NewAuthenticateStep creates a new authentication step
-func NewAuthenticateStep(ctx context.Context, theme *styles.Theme, logger log.Logger, authService *authservice.Service, preferencesService *preferences.Service, apiEndpoint string, globalBindings []key.Binding) step.Step {
+func NewAuthenticateStep(ctx context.Context, theme *styles.Theme, logger log.Logger, authService authservice.Auth, prefs preferences.Preferences, apiEndpoint string, globalBindings []key.Binding) step.Step {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 	if authService == nil {
 		panic("authService cannot be nil")
 	}
-	if preferencesService == nil {
-		panic("preferencesService cannot be nil")
+	if prefs == nil {
+		panic("prefs cannot be nil")
 	}
 
 	colors := theme.Colors
@@ -88,15 +88,15 @@ func NewAuthenticateStep(ctx context.Context, theme *styles.Theme, logger log.Lo
 	sp.Style = lipgloss.NewStyle().Foreground(colors.Accent)
 
 	return &AuthenticateStep{
-		ctx:                ctx,
-		theme:              theme,
-		authService:        authService,
-		preferencesService: preferencesService,
-		apiEndpoint:        apiEndpoint,
-		logger:             logger,
-		globalBindings:     globalBindings,
-		state:              stateInitializing,
-		spinner:            sp,
+		ctx:            ctx,
+		theme:          theme,
+		authService:    authService,
+		preferences:    prefs,
+		apiEndpoint:    apiEndpoint,
+		logger:         logger,
+		globalBindings: globalBindings,
+		state:          stateInitializing,
+		spinner:        sp,
 	}
 }
 
@@ -372,6 +372,6 @@ func (s *AuthenticateStep) Next() (step.Step, error) {
 	}
 	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken, refreshFunc)
 
-	// Pass authenticated client, preferences service, and other dependencies to next step
-	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferencesService, s.authService, s.logger, s.globalBindings), nil
+	// Pass authenticated client, preferences, auth, and other dependencies to next step
+	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferences, s.authService, s.logger, s.globalBindings), nil
 }

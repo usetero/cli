@@ -18,11 +18,6 @@ import (
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
 
-// DatadogAccountCreator creates Datadog accounts
-type DatadogAccountCreator interface {
-	CreateAccount(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error)
-}
-
 // createAccountMsg is sent when Datadog account creation completes
 type createAccountMsg struct {
 	account *api.DatadogAccount
@@ -44,12 +39,10 @@ type AppKeyStep struct {
 	site    string // Selected Datadog site
 	apiKey  string // Validated API key from previous step
 
-	// Services (defined by consumer interfaces)
-	accountCreator DatadogAccountCreator
-
-	// Pass-through to next step
-	apiClient api.Client
-	logger    log.Logger
+	// Services
+	datadogAccounts api.DatadogAccounts
+	apiClient       api.Client
+	logger          log.Logger
 
 	// UI state
 	input          *input.Component
@@ -64,9 +57,9 @@ type AppKeyStep struct {
 }
 
 // NewAppKeyStep creates a new Datadog app key collection step
-func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, accountCreator DatadogAccountCreator, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if accountCreator == nil {
-		panic("accountCreator cannot be nil")
+func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, datadogAccounts api.DatadogAccounts, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if datadogAccounts == nil {
+		panic("datadogAccounts cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -82,20 +75,20 @@ func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org ap
 	inp.SetEchoCharacter('•')
 
 	return &AppKeyStep{
-		ctx:            ctx,
-		theme:          theme,
-		role:           role,
-		org:            org,
-		account:        account,
-		site:           site,
-		apiKey:         apiKey,
-		accountCreator: accountCreator,
-		apiClient:      apiClient,
-		logger:         logger,
-		input:          inp,
-		showingInput:   false, // Start with interstitial
-		width:          80,
-		globalBindings: globalBindings,
+		ctx:             ctx,
+		theme:           theme,
+		role:            role,
+		org:             org,
+		account:         account,
+		site:            site,
+		apiKey:          apiKey,
+		datadogAccounts: datadogAccounts,
+		apiClient:       apiClient,
+		logger:          logger,
+		input:           inp,
+		showingInput:    false, // Start with interstitial
+		width:           80,
+		globalBindings:  globalBindings,
 	}
 }
 
@@ -209,7 +202,7 @@ func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Debug("creating datadog account", log.String("accountID", s.account.ID), log.String("site", s.site))
 
-		datadogAccount, err := s.accountCreator.CreateAccount(
+		datadogAccount, err := s.datadogAccounts.CreateAccount(
 			s.ctx,
 			s.account.ID,
 			"Datadog", // Default name

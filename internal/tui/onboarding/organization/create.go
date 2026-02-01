@@ -8,32 +8,15 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/input"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
-
-// OrganizationCreator creates organizations
-type OrganizationCreator interface {
-	Create(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error)
-}
-
-// DefaultAccountSaver defines the interface for saving default account preferences.
-// This is needed because organization bootstrap also creates an account.
-type DefaultAccountSaver interface {
-	GetDefaultAccountID() string
-	SetDefaultAccountID(accountID string) error
-}
-
-// TokenRefresher refreshes the access token scoped to an organization.
-// Used after org creation to get a token with the org_id claim.
-// Returns the new access token so callers can update their API clients.
-type TokenRefresher interface {
-	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
-}
 
 // CreateStep handles creating a new organization
 type CreateStep struct {
@@ -46,11 +29,10 @@ type CreateStep struct {
 	// Accumulated state from previous steps
 	role string
 
-	// Services (defined by consumer interfaces)
-	organizationCreator OrganizationCreator
-	defaultOrgSaver     DefaultOrgSaver
-	defaultAccountSaver DefaultAccountSaver
-	tokenRefresher      TokenRefresher
+	// Services
+	organizations api.Organizations
+	preferences   preferences.Preferences
+	auth          auth.Auth
 
 	// Pass-through to next step
 	apiClient api.Client
@@ -69,18 +51,15 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new organization creation step
-func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organizationCreator OrganizationCreator, defaultOrgSaver DefaultOrgSaver, defaultAccountSaver DefaultAccountSaver, tokenRefresher TokenRefresher, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
-	if organizationCreator == nil {
-		panic("organizationCreator cannot be nil")
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organizations api.Organizations, prefs preferences.Preferences, authService auth.Auth, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if organizations == nil {
+		panic("organizations cannot be nil")
 	}
-	if defaultOrgSaver == nil {
-		panic("defaultOrgSaver cannot be nil")
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
-	if defaultAccountSaver == nil {
-		panic("defaultAccountSaver cannot be nil")
-	}
-	if tokenRefresher == nil {
-		panic("tokenRefresher cannot be nil")
+	if authService == nil {
+		panic("auth cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -94,18 +73,17 @@ func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organi
 	inp.SetCharLimit(100)
 
 	return &CreateStep{
-		ctx:                 ctx,
-		theme:               theme,
-		role:                role,
-		organizationCreator: organizationCreator,
-		defaultOrgSaver:     defaultOrgSaver,
-		defaultAccountSaver: defaultAccountSaver,
-		tokenRefresher:      tokenRefresher,
-		apiClient:           apiClient,
-		logger:              logger,
-		input:               inp,
-		width:               80,
-		globalBindings:      globalBindings,
+		ctx:            ctx,
+		theme:          theme,
+		role:           role,
+		organizations:  organizations,
+		preferences:    prefs,
+		auth:           authService,
+		apiClient:      apiClient,
+		logger:         logger,
+		input:          inp,
+		width:          80,
+		globalBindings: globalBindings,
 	}
 }
 
@@ -164,7 +142,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		s.createdResult = msg.result
 
 		// Save organization to preferences
-		if err := s.defaultOrgSaver.SetDefaultOrgID(msg.result.Organization.ID); err != nil {
+		if err := s.preferences.SetDefaultOrgID(msg.result.Organization.ID); err != nil {
 			s.logger.Error("failed to save org preference", "error", err)
 			s.err = err
 			return s, inputCmd
@@ -172,7 +150,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 		s.logger.Debug("organization saved to preferences", "orgID", msg.result.Organization.ID)
 
 		// Organization bootstrap also creates an account - save it too
-		if err := s.defaultAccountSaver.SetDefaultAccountID(msg.result.Account.ID); err != nil {
+		if err := s.preferences.SetDefaultAccountID(msg.result.Account.ID); err != nil {
 			s.logger.Error("failed to save account preference", "error", err)
 			s.err = err
 			return s, inputCmd
@@ -211,7 +189,7 @@ func (s *CreateStep) Update(msg tea.Msg) (step.Step, tea.Cmd) {
 // refreshToken returns a command that refreshes the token with org scope
 func (s *CreateStep) refreshToken(workosOrgID string) tea.Cmd {
 	return func() tea.Msg {
-		accessToken, err := s.tokenRefresher.RefreshTokenWithOrganization(s.ctx, workosOrgID)
+		accessToken, err := s.auth.RefreshTokenWithOrganization(s.ctx, workosOrgID)
 		return createTokenRefreshMsg{accessToken: accessToken, err: err}
 	}
 }
@@ -221,7 +199,7 @@ func (s *CreateStep) createOrganization(name string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("creating organization", log.String("name", name))
 
-		result, err := s.organizationCreator.Create(s.ctx, name)
+		result, err := s.organizations.Create(s.ctx, name)
 		if err != nil {
 			return createOrgMsg{err: err}
 		}
