@@ -9,7 +9,7 @@ import (
 	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/sqlite/sqlitetest"
+	"github.com/usetero/cli/internal/powersync/powersynctest"
 )
 
 func TestMessageHandler_Handle(t *testing.T) {
@@ -18,7 +18,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT user message uploads and streams response", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 
 		var calledWith struct {
 			messageID      string
@@ -65,10 +65,73 @@ func TestMessageHandler_Handle(t *testing.T) {
 		}
 	})
 
+	t.Run("PUT user message creates assistant message and updates with deltas", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDBWithSchema(t)
+
+		mock := &chattest.MockMessages{
+			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
+				// Simulate streaming: message_start, then multiple deltas, then done
+				if err := handler(chat.StreamEvent{Type: "message_start"}); err != nil {
+					return err
+				}
+				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: "Hello"}}); err != nil {
+					return err
+				}
+				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: " world"}}); err != nil {
+					return err
+				}
+				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: "!"}}); err != nil {
+					return err
+				}
+				return handler(chat.StreamEvent{Done: true})
+			},
+		}
+
+		h := newMessageHandler(mock, db, logtest.New(t))
+
+		entry := &powersync.CrudEntry{
+			Op:    powersync.OpPut,
+			RowID: "msg-1",
+			Data: map[string]any{
+				"role":            "user",
+				"conversation_id": "conv-1",
+				"account_id":      "acc-1",
+				"content":         "Hi",
+			},
+		}
+
+		err := h.Handle(context.Background(), entry)
+		if err != nil {
+			t.Fatalf("Handle() error = %v", err)
+		}
+
+		// Verify assistant message was created and updated in SQLite
+		rows, err := db.Query(context.Background(), "SELECT content FROM messages WHERE role = 'assistant'")
+		if err != nil {
+			t.Fatalf("Query error = %v", err)
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			t.Fatal("expected assistant message in database")
+		}
+
+		var content string
+		if err := rows.Scan(&content); err != nil {
+			t.Fatalf("Scan error = %v", err)
+		}
+
+		if content != "Hello world!" {
+			t.Errorf("assistant message content = %q, want %q", content, "Hello world!")
+		}
+	})
+
 	t.Run("PUT user message returns error on failure", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
@@ -97,7 +160,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT assistant message uploads for durability", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 
 		var calledWith struct {
 			messageID      string
@@ -148,7 +211,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PATCH skips upload and returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
@@ -166,7 +229,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("DELETE skips upload and returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
@@ -184,7 +247,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("unknown role returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := sqlitetest.OpenTest(t)
+		db := powersynctest.OpenTestDBWithSchema(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
