@@ -22,7 +22,10 @@ func newConversationHandler(conversations api.Conversations, logger log.Logger) 
 	}
 }
 
-func (h *conversationHandler) Handle(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *conversationHandler) Handle(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
+	// Conversation handler doesn't emit events currently
+	_ = emit
+
 	switch entry.Op {
 	case powersync.OpPut:
 		return h.handlePut(ctx, entry)

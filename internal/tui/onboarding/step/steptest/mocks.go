@@ -19,6 +19,7 @@ type MockStep struct {
 	ErrorFunc    func() error
 	HelpFunc     func() help.KeyMap
 	NextFunc     func() (step.Step, error)
+	CloseFunc    func() error
 
 	// State for testing
 	Err error
@@ -92,4 +93,11 @@ func (m *MockStep) Next() (step.Step, error) {
 		return m.NextFunc()
 	}
 	return nil, step.ErrNotReady
+}
+
+func (m *MockStep) Close() error {
+	if m.CloseFunc != nil {
+		return m.CloseFunc()
+	}
+	return nil
 }

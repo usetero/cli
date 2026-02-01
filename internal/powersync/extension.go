@@ -1,15 +1,33 @@
 package powersync
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/usetero/cli/internal/sqlite"
 )
 
 //go:embed extensions/*.dylib extensions/*.so
 var embeddedExtensions embed.FS
+
+// LoadExtension loads the PowerSync extension into the database and applies the schema.
+func LoadExtension(ctx context.Context, db sqlite.Database) error {
+	extPath, err := ExtensionPath()
+	if err != nil {
+		return fmt.Errorf("get extension path: %w", err)
+	}
+	if err := db.DB().LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
+		return fmt.Errorf("load extension: %w", err)
+	}
+	if _, err := db.DB().Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
+		return fmt.Errorf("apply schema: %w", err)
+	}
+	return nil
+}
 
 // ExtensionPath returns the path to the PowerSync extension for the current platform.
 // The extension is extracted from the embedded binary to a temporary location.

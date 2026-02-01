@@ -5,13 +5,21 @@ import (
 	"os"
 	"runtime/debug"
 
+	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
 )
 
 // Execute runs the root command
 func Execute(version string) {
-	// Create logger once at the top level
-	logger := log.New()
+	// Load config to determine log level
+	cliConfig := config.LoadCLIConfig()
+
+	level := log.LevelInfo
+	if cliConfig.Debug {
+		level = log.LevelDebug
+	}
+
+	logger := log.New(level)
 
 	defer func() {
 		if r := recover(); r != nil {

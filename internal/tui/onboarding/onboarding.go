@@ -13,8 +13,8 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/layouts"
 	authcheck "github.com/usetero/cli/internal/tui/onboarding/auth"
-	"github.com/usetero/cli/internal/tui/onboarding/complete"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
+	"github.com/usetero/cli/internal/tui/onboarding/sync"
 )
 
 // Onboarding orchestrates the onboarding flow.
@@ -52,6 +52,7 @@ func New(
 	// Check step validates existing auth, or proceeds to auth step if needed
 	flow := step.NewFlow(
 		authcheck.NewCheckAuthStep(ctx, theme, authService, prefs, apiEndpoint, logger, globalBindings),
+		logger,
 	)
 
 	return &Onboarding{
@@ -72,8 +73,11 @@ func (m *Onboarding) Init() tea.Cmd {
 
 // Update handles messages and delegates to the flow
 func (m *Onboarding) Update(msg tea.Msg) tea.Cmd {
-	// Cascade to flow first so error state is up to date
+	var cmds []tea.Cmd
+
+	// Cascade to flow
 	flowCmd := m.flow.Update(msg)
+	cmds = append(cmds, flowCmd)
 
 	// Combine flow bindings + global bindings for layout
 	var bindings []key.Binding
@@ -86,18 +90,19 @@ func (m *Onboarding) Update(msg tea.Msg) tea.Cmd {
 
 	// Cascade to layout
 	layoutCmd := m.layout.Update(msg)
+	cmds = append(cmds, layoutCmd)
 
 	// Check if flow completed and extract org/account from final step
 	if m.flow.IsComplete() && m.org.ID == "" {
 		// Flow completed - extract final state from the last step
-		if lastStep, ok := m.flow.LastStep().(*complete.CompleteStep); ok {
+		if lastStep, ok := m.flow.LastStep().(*sync.Step); ok {
 			m.org = lastStep.Organization()
 			m.account = lastStep.Account()
 			m.logger.Info("onboarding completed", "orgID", m.org.ID, "accountID", m.account.ID)
 		}
 	}
 
-	return tea.Batch(layoutCmd, flowCmd)
+	return tea.Batch(cmds...)
 }
 
 // View renders the onboarding header + current step content
@@ -160,4 +165,9 @@ func (m *Onboarding) Organization() api.Organization {
 // Only valid after IsComplete() returns true
 func (m *Onboarding) Account() api.Account {
 	return m.account
+}
+
+// Close releases any resources held by onboarding.
+func (m *Onboarding) Close() error {
+	return m.flow.Close()
 }

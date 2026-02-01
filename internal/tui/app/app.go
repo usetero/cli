@@ -3,12 +3,10 @@ package app
 import (
 	"context"
 	"sort"
-	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
@@ -169,36 +167,19 @@ func (a *App) Update(msg tea.Msg) tea.Cmd {
 // The upload loop will sync it to the backend.
 func (a *App) sendMessage(text string) tea.Cmd {
 	return func() tea.Msg {
-		now := time.Now().UTC().Format(time.RFC3339)
 		convID := a.conversationID
 
 		// Create conversation if needed
 		if convID == "" {
-			convID = uuid.New().String()
-			accountID := a.account.ID
-			err := a.db.Queries().InsertConversation(a.ctx, sqlite.InsertConversationParams{
-				ID:        &convID,
-				AccountID: &accountID,
-				CreatedAt: &now,
-				UpdatedAt: &now,
-			})
+			var err error
+			convID, err = a.db.Conversations().Create(a.ctx, a.account.ID)
 			if err != nil {
 				return messageSentMsg{err: err}
 			}
 		}
 
 		// Insert the message
-		msgID := uuid.New().String()
-		accountID := a.account.ID
-		role := "user"
-		err := a.db.Queries().InsertMessage(a.ctx, sqlite.InsertMessageParams{
-			ID:             &msgID,
-			AccountID:      &accountID,
-			ConversationID: &convID,
-			Content:        &text,
-			CreatedAt:      &now,
-			Role:           &role,
-		})
+		_, err := a.db.Messages().CreateUserMessage(a.ctx, a.account.ID, convID, text)
 		if err != nil {
 			return messageSentMsg{err: err}
 		}
@@ -358,4 +339,9 @@ func (a *App) HasError() bool {
 // Error returns the current error
 func (a *App) Error() error {
 	return a.focusedPage().Error()
+}
+
+// Close releases any resources held by the app.
+func (a *App) Close() error {
+	return a.chat.Close()
 }

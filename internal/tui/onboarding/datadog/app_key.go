@@ -361,3 +361,8 @@ func (s *AppKeyStep) Help() help.KeyMap {
 		},
 	}
 }
+
+// Close releases any resources held by the step.
+func (s *AppKeyStep) Close() error {
+	return nil
+}

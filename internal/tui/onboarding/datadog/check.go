@@ -218,3 +218,8 @@ func (s *CheckDatadogStep) Help() help.KeyMap {
 	// No user interaction during normal checking
 	return keymap.Simple{Keys: []key.Binding{}}
 }
+
+// Close releases any resources held by the step.
+func (s *CheckDatadogStep) Close() error {
+	return nil
+}

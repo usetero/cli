@@ -30,10 +30,11 @@ type Chat struct {
 
 // New creates a new chat page.
 func New(theme *styles.Theme, db sqlite.Database, logger log.Logger) *Chat {
+	messages := NewMessages(theme, db)
 	return &Chat{
 		theme:    theme,
 		logger:   logger,
-		messages: NewMessageList(theme, db),
+		messages: NewMessageList(theme, messages),
 	}
 }
 
@@ -113,4 +114,9 @@ func (c *Chat) HasError() bool {
 // Error returns the current error.
 func (c *Chat) Error() error {
 	return c.messages.Error()
+}
+
+// Close releases any resources held by the chat.
+func (c *Chat) Close() error {
+	return c.messages.Close()
 }

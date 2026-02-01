@@ -171,9 +171,9 @@ tasks:
       - echo "Cleaned build artifacts and Go caches"
 
   reset:
-    desc: Reset dev environment (auth, config, logs)
+    desc: Reset dev environment (auth, config, database, logs)
     cmds:
-      - go run ./cmd/tero reset
+      - go run ./cmd/tero reset --db
       - rm -f /tmp/tero.log
       - echo "Reset complete"
 

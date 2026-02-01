@@ -24,4 +24,7 @@ type Store interface {
 
 	// Save persists all changes to storage
 	Save() error
+
+	// Clear removes all stored values
+	Clear() error
 }

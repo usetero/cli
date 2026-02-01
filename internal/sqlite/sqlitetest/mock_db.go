@@ -2,29 +2,22 @@
 package sqlitetest
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
-
 	"github.com/usetero/cli/internal/sqlite"
 )
 
 // MockDB is a test double for sqlite.Database.
 type MockDB struct {
-	// Counts maps table names to their row counts.
-	Counts map[string]int64
+	// MessagesImpl is the mock messages implementation.
+	MessagesImpl sqlite.Messages
 
-	// QueryFunc is called when Query is invoked.
-	QueryFunc func(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	// ConversationsImpl is the mock conversations implementation.
+	ConversationsImpl sqlite.Conversations
 
-	// QueryRowFunc is called when QueryRow is invoked.
-	QueryRowFunc func(ctx context.Context, query string, args ...any) *sql.Row
+	// SubscriptionImpl is returned by Subscribe.
+	SubscriptionImpl *sqlite.Subscription
 
-	// ExecFunc is called when Exec is invoked.
-	ExecFunc func(ctx context.Context, query string, args ...any) (sql.Result, error)
-
-	// LoadExtensionFunc is called when LoadExtension is invoked.
-	LoadExtensionFunc func(ctx context.Context, path, entryPoint string) error
+	// DBImpl is returned by DB() for low-level access.
+	DBImpl *sqlite.DB
 
 	// Closed is set to true when Close is called.
 	Closed bool
@@ -35,49 +28,22 @@ var _ sqlite.Database = (*MockDB)(nil)
 
 // NewMockDB creates a new MockDB with sensible defaults.
 func NewMockDB() *MockDB {
-	return &MockDB{
-		Counts: make(map[string]int64),
-	}
+	return &MockDB{}
 }
 
-// Query implements sqlite.Database.
-func (m *MockDB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if m.QueryFunc != nil {
-		return m.QueryFunc(ctx, query, args...)
-	}
-	return nil, fmt.Errorf("QueryFunc not set")
+// Messages implements sqlite.Database.
+func (m *MockDB) Messages() sqlite.Messages {
+	return m.MessagesImpl
 }
 
-// QueryRow implements sqlite.Database.
-func (m *MockDB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
-	if m.QueryRowFunc != nil {
-		return m.QueryRowFunc(ctx, query, args...)
-	}
-	return nil
+// Conversations implements sqlite.Database.
+func (m *MockDB) Conversations() sqlite.Conversations {
+	return m.ConversationsImpl
 }
 
-// Exec implements sqlite.Database.
-func (m *MockDB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	if m.ExecFunc != nil {
-		return m.ExecFunc(ctx, query, args...)
-	}
-	return nil, fmt.Errorf("ExecFunc not set")
-}
-
-// Count implements sqlite.Database.
-func (m *MockDB) Count(ctx context.Context, table string) (int64, error) {
-	if count, ok := m.Counts[table]; ok {
-		return count, nil
-	}
-	return 0, nil
-}
-
-// LoadExtension implements sqlite.Database.
-func (m *MockDB) LoadExtension(ctx context.Context, path, entryPoint string) error {
-	if m.LoadExtensionFunc != nil {
-		return m.LoadExtensionFunc(ctx, path, entryPoint)
-	}
-	return nil
+// Subscribe implements sqlite.Database.
+func (m *MockDB) Subscribe() *sqlite.Subscription {
+	return m.SubscriptionImpl
 }
 
 // Close implements sqlite.Database.
@@ -86,18 +52,7 @@ func (m *MockDB) Close() error {
 	return nil
 }
 
-// Queries implements sqlite.Database.
-// Returns nil - tests using MockDB should use a real in-memory SQLite for query testing.
-func (m *MockDB) Queries() *sqlite.Queries {
-	return nil
-}
-
-// InstallUpdateHooks implements sqlite.Database.
-func (m *MockDB) InstallUpdateHooks(ctx context.Context) error {
-	return nil
-}
-
-// Subscribe implements sqlite.Database.
-func (m *MockDB) Subscribe() *sqlite.Subscription {
-	return nil
+// DB implements sqlite.Database.
+func (m *MockDB) DB() *sqlite.DB {
+	return m.DBImpl
 }

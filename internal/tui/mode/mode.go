@@ -29,4 +29,8 @@ type Mode interface {
 
 	// Error returns the current error, or nil if no error
 	Error() error
+
+	// Close releases any resources held by the mode.
+	// Called when the mode is being destroyed or the application is shutting down.
+	Close() error
 }

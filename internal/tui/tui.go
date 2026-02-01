@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand/v2"
 	"slices"
@@ -18,15 +17,14 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
 	"github.com/usetero/cli/internal/tui/cursor"
+	"github.com/usetero/cli/internal/tui/database"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
-	"github.com/usetero/cli/internal/upload"
 	"github.com/usetero/cli/pkg/client"
 )
 
@@ -38,24 +36,6 @@ const (
 var (
 	DisableMinSizeCheck = false
 )
-
-// databaseOpenedMsg is sent when the database is opened.
-type databaseOpenedMsg struct {
-	db sqlite.Database
-}
-
-// firstSyncCompleteMsg is sent when PowerSync completes its first sync.
-type firstSyncCompleteMsg struct {
-	sync *powersync.Sync
-}
-
-// uploadEventMsg wraps an upload event for the bubbletea message loop.
-type uploadEventMsg struct {
-	event upload.Event
-}
-
-// uploadDoneMsg is sent when the uploader goroutine exits.
-type uploadDoneMsg struct{}
 
 // TUI is the top-level model that routes between modes (onboarding, app).
 type TUI struct {
@@ -72,15 +52,9 @@ type TUI struct {
 	cancel context.CancelFunc
 
 	// State - set after onboarding
-	org           api.Organization
-	account       api.Account
-	db            sqlite.Database
-	sync          powersync.Syncer
-	conversations api.Conversations
-	messages      chat.Messages
-	uploader      *upload.Uploader
-	uploaderDone  chan struct{}
-	uploadStatus  upload.Status
+	org      api.Organization
+	account  api.Account
+	database *database.Database
 
 	// UI
 	currentMode     mode.Mode
@@ -136,8 +110,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle lifecycle messages
-	switch msg := msg.(type) {
-	case account.AccountSelectedMsg:
+	if msg, ok := msg.(account.AccountSelectedMsg); ok {
 		m.org = msg.Organization
 		m.account = msg.Account
 
@@ -147,31 +120,22 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.auth.GetAccessToken(m.ctx)
 		})
 		apiClient.SetAccountID(m.account.ID)
-		m.conversations = api.NewConversationService(apiClient, m.logger)
+		conversations := api.NewConversationService(apiClient, m.logger)
 
 		chatClient := chat.NewClient(m.chatEndpoint, m.logger)
 		chatClient.SetToken(token)
 		chatClient.SetAccountID(m.account.ID)
-		m.messages = chat.NewMessageService(chatClient)
+		messages := chat.NewMessageService(chatClient)
 
-		cmds = append(cmds, m.openDatabase())
+		m.database = database.New(m.ctx, m.powersyncConfig, m.auth, conversations, messages, m.logger)
+		cmds = append(cmds, m.database.Start(m.account.ID))
+	}
 
-	case databaseOpenedMsg:
-		m.db = msg.db
-		cmds = append(cmds, m.startSync())
-
-	case firstSyncCompleteMsg:
-		m.sync = msg.sync
-		cmds = append(cmds, m.startUploader())
-		cmds = append(cmds, m.transitionToApp())
-
-	case uploadEventMsg:
-		m.uploadStatus = msg.event.Status
-		// TODO: surface status in UI
-		cmds = append(cmds, m.listenUploadEvents())
-
-	case uploadDoneMsg:
-		m.uploader = nil
+	// Delegate to database
+	if m.database != nil {
+		if cmd := m.database.Update(msg); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	// Delegate to current mode
@@ -221,93 +185,29 @@ func (m *TUI) checkModeTransition() tea.Cmd {
 		return nil
 	}
 
-	// Onboarding complete -> wait for sync (show loading)
+	// Onboarding complete -> transition to app
 	if ob, ok := m.currentMode.(*onboarding.Onboarding); ok {
 		m.org = ob.Organization()
 		m.account = ob.Account()
 		m.logger.Info("onboarding completed", "accountID", m.account.ID)
-		// Mode stays as onboarding but shows "loading" state
-		// Sync was already started when AccountSelectedMsg was received
+		return m.transitionToApp()
 	}
 
 	return nil
-}
-
-// openDatabase opens the SQLite database for the account.
-func (m *TUI) openDatabase() tea.Cmd {
-	return func() tea.Msg {
-		dbPath, err := m.powersyncConfig.DatabasePath(m.account.ID)
-		if err != nil {
-			m.logger.Error("failed to get database path", "error", err)
-			return nil
-		}
-
-		db, err := sqlite.Open(m.ctx, dbPath)
-		if err != nil {
-			m.logger.Error("failed to open database", "error", err)
-			return nil
-		}
-
-		m.logger.Info("database opened", "path", dbPath)
-		return databaseOpenedMsg{db: db}
-	}
-}
-
-// startSync starts PowerSync. Blocks until first sync completes.
-func (m *TUI) startSync() tea.Cmd {
-	return func() tea.Msg {
-		done := make(chan struct{})
-
-		sync := powersync.NewSync(m.powersyncConfig, m.auth, m.logger)
-		err := sync.Start(m.ctx, m.db, m.account.ID, func() {
-			close(done)
-		})
-		if err != nil {
-			m.logger.Error("failed to start sync", "error", err)
-			return nil
-		}
-
-		m.logger.Info("sync started, waiting for first sync", "accountID", m.account.ID)
-		<-done
-		m.logger.Info("first sync complete", "accountID", m.account.ID)
-
-		return firstSyncCompleteMsg{sync: sync}
-	}
-}
-
-// startUploader starts the upload loop and returns a command to listen for events.
-func (m *TUI) startUploader() tea.Cmd {
-	m.uploader = upload.New(m.db, m.conversations, m.messages, m.logger)
-	m.uploaderDone = make(chan struct{})
-	go func() {
-		defer close(m.uploaderDone)
-		if err := m.uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
-			m.logger.Error("upload loop error", "error", err)
-		}
-	}()
-	return m.listenUploadEvents()
-}
-
-// listenUploadEvents returns a command that waits for the next upload event.
-func (m *TUI) listenUploadEvents() tea.Cmd {
-	if m.uploader == nil {
-		return nil
-	}
-	events := m.uploader.Events()
-	return func() tea.Msg {
-		event, ok := <-events
-		if !ok {
-			return uploadDoneMsg{}
-		}
-		return uploadEventMsg{event: event}
-	}
 }
 
 // transitionToApp creates the app mode.
 func (m *TUI) transitionToApp() tea.Cmd {
 	m.logger.Info("transitioning to app", "accountID", m.account.ID)
 
-	m.currentMode = tuiapp.New(m.ctx, m.theme, m.db, m.org, m.account, m.logger, keymap.Global)
+	// Close the previous mode (onboarding)
+	if m.currentMode != nil {
+		if err := m.currentMode.Close(); err != nil {
+			m.logger.Error("failed to close previous mode", "error", err)
+		}
+	}
+
+	m.currentMode = tuiapp.New(m.ctx, m.theme, m.database.DB(), m.org, m.account, m.logger, keymap.Global)
 
 	if m.width > 0 && m.height > 0 {
 		m.currentMode.SetSize(m.width, m.height)
@@ -317,17 +217,16 @@ func (m *TUI) transitionToApp() tea.Cmd {
 }
 
 func (m *TUI) shutdown() {
+	if m.currentMode != nil {
+		if err := m.currentMode.Close(); err != nil {
+			m.logger.Error("failed to close mode", "error", err)
+		}
+	}
 	if m.cancel != nil {
 		m.cancel()
 	}
-	if m.uploaderDone != nil {
-		<-m.uploaderDone
-	}
-	if m.sync != nil {
-		m.sync.Stop()
-	}
-	if m.db != nil {
-		m.db.Close()
+	if m.database != nil {
+		m.database.Close()
 	}
 }
 

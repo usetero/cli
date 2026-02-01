@@ -375,3 +375,8 @@ func (s *AuthenticateStep) Next() (step.Step, error) {
 	// Pass authenticated client, preferences, auth, and other dependencies to next step
 	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferences, s.authService, s.logger, s.globalBindings), nil
 }
+
+// Close releases any resources held by the step.
+func (s *AuthenticateStep) Close() error {
+	return nil
+}

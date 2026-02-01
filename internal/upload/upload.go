@@ -14,36 +14,15 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// Status represents the current state of the upload queue.
-type Status int
-
-const (
-	StatusIdle      Status = iota // Queue is empty, waiting
-	StatusSyncing                 // Actively uploading entries
-	StatusStalled                 // Upload failed, retrying
-	StatusRecovered               // Recovered from stalled state
-)
-
-// Event is sent when the upload status changes.
-type Event struct {
-	Status         Status
-	Error          error
-	Table          string        // Table of the problematic entry (when stalled)
-	RowID          string        // Row ID of the problematic entry (when stalled)
-	StalledFor     time.Duration // How long we've been stalled
-	ProcessedCount int           // Number of entries processed (when syncing)
-}
-
-// handler processes CRUD entries for a specific table.
-type handler interface {
-	Handle(ctx context.Context, entry *powersync.CrudEntry) error
-}
-
 // Uploader watches the CRUD queue and uploads changes to the backend.
 type Uploader struct {
-	queue    *powersync.CrudQueue
-	handlers map[string]handler
-	logger   log.Logger
+	queue *powersync.CrudQueue
+
+	// Handlers for each table type
+	conversations *conversationHandler
+	messages      *messageHandler
+
+	logger log.Logger
 
 	// Configuration
 	pollInterval time.Duration
@@ -60,20 +39,16 @@ type Uploader struct {
 
 // New creates a new uploader with all handlers wired up.
 func New(db sqlite.Database, conversations api.Conversations, messages chat.Messages, logger log.Logger) *Uploader {
-	u := &Uploader{
-		queue:        powersync.NewCrudQueue(db),
-		handlers:     make(map[string]handler),
-		logger:       logger,
-		pollInterval: 100 * time.Millisecond,
-		retryDelay:   1 * time.Second,
-		maxRetries:   3,
-		events:       make(chan Event, 10), // Buffered to avoid blocking uploader
+	return &Uploader{
+		queue:         powersync.NewCrudQueue(db),
+		conversations: newConversationHandler(conversations, logger),
+		messages:      newMessageHandler(messages, db, logger),
+		logger:        logger,
+		pollInterval:  100 * time.Millisecond,
+		retryDelay:    1 * time.Second,
+		maxRetries:    3,
+		events:        make(chan Event, 10), // Buffered to avoid blocking uploader
 	}
-
-	u.handlers["conversations"] = newConversationHandler(conversations, logger)
-	u.handlers["messages"] = newMessageHandler(messages, db, logger)
-
-	return u
 }
 
 // Events returns the channel for receiving upload status events.
@@ -113,8 +88,7 @@ func (u *Uploader) Run(ctx context.Context) error {
 			}
 
 			// Emit stalled event
-			u.emit(ctx, Event{
-				Status:     StatusStalled,
+			u.emit(ctx, StalledEvent{
 				Error:      err,
 				Table:      u.stalledEntryTable(),
 				RowID:      u.stalledEntryRowID(),
@@ -136,8 +110,7 @@ func (u *Uploader) Run(ctx context.Context) error {
 			u.logger.Info("upload queue recovered",
 				"stalledFor", stalledFor.Round(time.Second),
 			)
-			u.emit(ctx, Event{
-				Status:     StatusRecovered,
+			u.emit(ctx, RecoveredEvent{
 				StalledFor: stalledFor,
 			})
 			u.stalledSince = nil
@@ -146,8 +119,7 @@ func (u *Uploader) Run(ctx context.Context) error {
 
 		// If we processed entries, emit syncing event and check for more
 		if processed > 0 {
-			u.emit(ctx, Event{
-				Status:         StatusSyncing,
+			u.emit(ctx, SyncingEvent{
 				ProcessedCount: processed,
 			})
 			continue
@@ -169,6 +141,13 @@ func (u *Uploader) emit(ctx context.Context, event Event) {
 	case <-ctx.Done():
 	default:
 		// Channel full, drop event (logging already captures this)
+	}
+}
+
+// emitter returns an Emitter function bound to the given context.
+func (u *Uploader) emitter(ctx context.Context) Emitter {
+	return func(event Event) {
+		u.emit(ctx, event)
 	}
 }
 
@@ -213,15 +192,22 @@ func (u *Uploader) processQueue(ctx context.Context) (int, error) {
 
 // processEntry processes a single CRUD entry with retries.
 func (u *Uploader) processEntry(ctx context.Context, entry *powersync.CrudEntry) error {
-	handler, ok := u.handlers[entry.Table]
-	if !ok {
-		u.logger.Warn("no handler for table, skipping",
-			"table", entry.Table,
-			"id", entry.ID,
-			"op", entry.Op,
-		)
-		// Delete unhandled entries to avoid blocking the queue
-		return u.queue.DeleteEntry(ctx, entry.ID)
+	emit := u.emitter(ctx)
+
+	handle := func() error {
+		switch entry.Table {
+		case sqlite.TableConversations:
+			return u.conversations.Handle(ctx, entry, emit)
+		case sqlite.TableMessages:
+			return u.messages.Handle(ctx, entry, emit)
+		default:
+			u.logger.Warn("no handler for table, skipping",
+				"table", entry.Table,
+				"id", entry.ID,
+				"op", entry.Op,
+			)
+			return nil
+		}
 	}
 
 	var lastErr error
@@ -239,7 +225,7 @@ func (u *Uploader) processEntry(ctx context.Context, entry *powersync.CrudEntry)
 			}
 		}
 
-		if err := handler.Handle(ctx, entry); err != nil {
+		if err := handle(); err != nil {
 			lastErr = err
 			u.logger.Warn("upload failed",
 				"table", entry.Table,

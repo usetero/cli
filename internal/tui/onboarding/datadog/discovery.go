@@ -15,8 +15,8 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/progress"
 	"github.com/usetero/cli/internal/tui/keymap"
-	"github.com/usetero/cli/internal/tui/onboarding/complete"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
+	"github.com/usetero/cli/internal/tui/onboarding/sync"
 )
 
 const (
@@ -480,7 +480,7 @@ func (s *DiscoveryStep) Next() (step.Step, error) {
 	if !s.isComplete() {
 		return nil, step.ErrNotReady
 	}
-	return complete.NewCompleteStep(s.ctx, s.theme, s.org, s.account, s.logger, s.globalBindings), nil
+	return sync.New(s.ctx, s.theme, s.org, s.account, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step
@@ -496,4 +496,9 @@ func (s *DiscoveryStep) Help() help.KeyMap {
 		}
 	}
 	return keymap.Simple{Keys: []key.Binding{}}
+}
+
+// Close releases any resources held by the step.
+func (s *DiscoveryStep) Close() error {
+	return nil
 }

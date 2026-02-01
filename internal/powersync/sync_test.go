@@ -2,7 +2,6 @@ package powersync_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -95,7 +94,7 @@ func TestSync_Start(t *testing.T) {
 		}
 	})
 
-	t.Run("sets status to connecting", func(t *testing.T) {
+	t.Run("sets status to syncing when stream connects", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -123,13 +122,10 @@ func TestSync_Start(t *testing.T) {
 		}
 		defer sync.Stop()
 
-		// Wait for sync loop to start
 		<-started
 
-		// Status should be syncing (set when establishing stream)
-		status := sync.Status()
-		if status != powersync.StatusSyncing {
-			t.Errorf("Status() = %v, want %v", status, powersync.StatusSyncing)
+		if sync.Status() != powersync.StatusSyncing {
+			t.Errorf("Status() = %v, want %v", sync.Status(), powersync.StatusSyncing)
 		}
 	})
 
@@ -162,75 +158,6 @@ func TestSync_Start(t *testing.T) {
 		if !sync.IsRunning() {
 			t.Error("IsRunning() should be true after Start")
 		}
-	})
-}
-
-func TestSync_OnFirstSync(t *testing.T) {
-	t.Parallel()
-
-	t.Run("fires callback when sync completes", func(t *testing.T) {
-		t.Parallel()
-
-		db := powersynctest.OpenTestDB(t)
-		called := make(chan struct{})
-
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				// Simulate a successful sync by sending a checkpoint complete line
-				// The controller will emit DidCompleteSync instruction
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
-			powersynctest.NewMockTokenRefresher("token"),
-			mock,
-		)
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		err := sync.Start(ctx, db, "account-123", func() {
-			close(called)
-		})
-		if err != nil {
-			t.Fatalf("Start() error = %v", err)
-		}
-		defer sync.Stop()
-
-		// Note: This test verifies the callback is wired up, but the actual
-		// DidCompleteSync instruction comes from the controller which requires
-		// a more complex mock. For now we just verify no panic on nil callback.
-	})
-
-	t.Run("does not panic with nil callback", func(t *testing.T) {
-		t.Parallel()
-
-		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
-			powersynctest.NewMockTokenRefresher("token"),
-			mock,
-		)
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		// Should not panic with nil callback
-		err := sync.Start(ctx, db, "account-123", nil)
-		if err != nil {
-			t.Fatalf("Start() error = %v", err)
-		}
-		sync.Stop()
 	})
 }
 
@@ -320,7 +247,38 @@ func TestSync_Stop(t *testing.T) {
 	})
 }
 
-func TestSync_AuthErrorTriggersTokenRefresh(t *testing.T) {
+func TestSync_OnFirstSync(t *testing.T) {
+	t.Parallel()
+
+	t.Run("does not panic with nil callback", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		mock := &powersynctest.MockStreamer{
+			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		}
+
+		sync := powersynctest.NewSyncWithMockStreamer(
+			&powersync.Config{Endpoint: "https://example.com"},
+			powersynctest.NewMockTokenRefresher("token"),
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := sync.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		sync.Stop()
+	})
+}
+
+func TestSync_AuthError(t *testing.T) {
 	t.Parallel()
 
 	t.Run("refreshes token on 401 and retries", func(t *testing.T) {
@@ -333,10 +291,8 @@ func TestSync_AuthErrorTriggersTokenRefresh(t *testing.T) {
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
 				connectCalls++
 				if connectCalls == 1 {
-					// First call returns auth error
-					return &powersync.StreamError{Kind: powersync.ErrorKindAuth, StatusCode: 401}
+					return &powersync.StreamError{Kind: powersync.StreamErrorAuth, StatusCode: 401}
 				}
-				// Second call blocks until cancelled
 				<-ctx.Done()
 				return ctx.Err()
 			},
@@ -359,38 +315,30 @@ func TestSync_AuthErrorTriggersTokenRefresh(t *testing.T) {
 			t.Fatalf("Start() error = %v", err)
 		}
 
-		// Wait for retry - needs time for controller.Start() calls
+		// Wait for retry
 		time.Sleep(500 * time.Millisecond)
 		sync.Stop()
 
-		// Token refresh should have been called
 		if refresher.Calls == 0 {
 			t.Error("expected token refresh to be called")
 		}
 
-		// Token should have been updated on the stream
 		if mock.Token != "new-token" {
 			t.Errorf("Token = %q, want %q", mock.Token, "new-token")
-		}
-
-		// Connect should have been called at least once (the retry may or may not
-		// have happened depending on controller state, but token refresh is the key behavior)
-		if connectCalls < 1 {
-			t.Errorf("expected at least 1 connect call, got %d", connectCalls)
 		}
 	})
 }
 
-func TestSync_PermanentErrorStopsSync(t *testing.T) {
+func TestSync_PermanentError(t *testing.T) {
 	t.Parallel()
 
-	t.Run("sets error status on permanent error", func(t *testing.T) {
+	t.Run("sets error status", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
 		mock := &powersynctest.MockStreamer{
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				return &powersync.StreamError{Kind: powersync.ErrorKindPermanent, StatusCode: 400, Message: "bad request"}
+				return &powersync.StreamError{Kind: powersync.StreamErrorPermanent, StatusCode: 400, Message: "bad request"}
 			},
 		}
 
@@ -418,10 +366,10 @@ func TestSync_PermanentErrorStopsSync(t *testing.T) {
 	})
 }
 
-func TestSync_TransientErrorRetries(t *testing.T) {
+func TestSync_TransientError(t *testing.T) {
 	t.Parallel()
 
-	t.Run("retries on transient error", func(t *testing.T) {
+	t.Run("retries after backoff", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -431,7 +379,7 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
 				connectCalls++
 				if connectCalls == 1 {
-					return &powersync.StreamError{Kind: powersync.ErrorKindTransient, StatusCode: 503}
+					return &powersync.StreamError{Kind: powersync.StreamErrorTransient, StatusCode: 503}
 				}
 				<-ctx.Done()
 				return ctx.Err()
@@ -456,13 +404,12 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		sync.Stop()
 
-		// Should have retried at least once after transient error
 		if connectCalls < 2 {
-			t.Errorf("expected at least 2 connect calls (initial + retry), got %d", connectCalls)
+			t.Errorf("expected at least 2 connect calls, got %d", connectCalls)
 		}
 	})
 
-	t.Run("sets reconnecting status on transient error", func(t *testing.T) {
+	t.Run("sets reconnecting status", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -472,11 +419,10 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
 				select {
 				case <-statusChecked:
-					// After status is checked, block until cancelled
 					<-ctx.Done()
 					return ctx.Err()
 				default:
-					return &powersync.StreamError{Kind: powersync.ErrorKindTransient, StatusCode: 503}
+					return &powersync.StreamError{Kind: powersync.StreamErrorTransient, StatusCode: 503}
 				}
 			},
 		}
@@ -495,7 +441,6 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 			t.Fatalf("Start() error = %v", err)
 		}
 
-		// Wait a bit for the error to be processed
 		time.Sleep(200 * time.Millisecond)
 
 		status := sync.Status()
@@ -504,60 +449,6 @@ func TestSync_TransientErrorRetries(t *testing.T) {
 
 		if status != powersync.StatusReconnecting {
 			t.Errorf("Status() = %v, want %v", status, powersync.StatusReconnecting)
-		}
-	})
-}
-
-func TestIsAuthError(t *testing.T) {
-	t.Parallel()
-
-	t.Run("true for auth StreamError", func(t *testing.T) {
-		t.Parallel()
-
-		err := &powersync.StreamError{Kind: powersync.ErrorKindAuth, StatusCode: 401}
-		if !powersync.IsAuthError(err) {
-			t.Error("IsAuthError should return true for ErrorKindAuth")
-		}
-	})
-
-	t.Run("false for transient StreamError", func(t *testing.T) {
-		t.Parallel()
-
-		err := &powersync.StreamError{Kind: powersync.ErrorKindTransient, StatusCode: 500}
-		if powersync.IsAuthError(err) {
-			t.Error("IsAuthError should return false for ErrorKindTransient")
-		}
-	})
-
-	t.Run("true for wrapped auth error", func(t *testing.T) {
-		t.Parallel()
-
-		streamErr := &powersync.StreamError{Kind: powersync.ErrorKindAuth, StatusCode: 401}
-		wrappedErr := errors.Join(errors.New("context"), streamErr)
-		if !powersync.IsAuthError(wrappedErr) {
-			t.Error("IsAuthError should return true for wrapped auth errors")
-		}
-	})
-}
-
-func TestIsTransientError(t *testing.T) {
-	t.Parallel()
-
-	t.Run("true for transient StreamError", func(t *testing.T) {
-		t.Parallel()
-
-		err := &powersync.StreamError{Kind: powersync.ErrorKindTransient, StatusCode: 500}
-		if !powersync.IsTransientError(err) {
-			t.Error("IsTransientError should return true for ErrorKindTransient")
-		}
-	})
-
-	t.Run("false for permanent StreamError", func(t *testing.T) {
-		t.Parallel()
-
-		err := &powersync.StreamError{Kind: powersync.ErrorKindPermanent, StatusCode: 400}
-		if powersync.IsTransientError(err) {
-			t.Error("IsTransientError should return false for ErrorKindPermanent")
 		}
 	})
 }

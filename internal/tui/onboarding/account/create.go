@@ -278,3 +278,8 @@ func (s *CreateStep) Help() help.KeyMap {
 		},
 	}
 }
+
+// Close releases any resources held by the step.
+func (s *CreateStep) Close() error {
+	return nil
+}

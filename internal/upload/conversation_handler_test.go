@@ -11,6 +11,10 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 )
 
+func noopEmitter() Emitter {
+	return func(Event) {}
+}
+
 func TestConversationHandler_Handle(t *testing.T) {
 	t.Parallel()
 
@@ -41,7 +45,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -71,7 +75,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err == nil {
 			t.Error("Handle() expected error, got nil")
 		}
@@ -103,7 +107,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -133,7 +137,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err == nil {
 			t.Error("Handle() expected error, got nil")
 		}
@@ -159,7 +163,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -186,7 +190,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err == nil {
 			t.Error("Handle() expected error, got nil")
 		}
@@ -203,7 +207,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Errorf("Handle() error = %v, want nil for unknown op", err)
 		}

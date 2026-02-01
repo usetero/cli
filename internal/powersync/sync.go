@@ -2,12 +2,19 @@ package powersync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
 
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
+)
+
+const (
+	initialRetryDelay = 1 * time.Second
+	maxRetryDelay     = 30 * time.Second
+	maxAuthRetries    = 2
 )
 
 // TokenRefresher provides access tokens for authentication.
@@ -19,50 +26,36 @@ type TokenRefresher interface {
 type Syncer interface {
 	Stop()
 	Status() Status
+	SyncStatus() *SyncStatus
 	LastError() error
 	IsRunning() bool
 }
 
-// Ensure Sync implements Syncer.
 var _ Syncer = (*Sync)(nil)
 
-// Retry configuration.
-const (
-	initialRetryDelay = 1 * time.Second
-	maxRetryDelay     = 30 * time.Second
-	maxAuthRetries    = 2
-)
-
-// Sync manages PowerSync for a database.
-//
-// Call Start to begin syncing. The onFirstSync callback fires when the initial
-// sync completes. Call Stop to shut down. Status and LastError are safe to call
-// from any goroutine.
+// Sync manages PowerSync synchronization for a database.
 type Sync struct {
-	// Immutable after construction
 	config         *Config
 	tokenRefresher TokenRefresher
 	log            log.Logger
 	streamFactory  func(endpoint, token string) Streamer
 
-	// Set by Start, read by background goroutine
 	db          sqlite.Database
 	accountID   string
 	controller  *Controller
 	stream      Streamer
 	onFirstSync func()
 
-	// Atomic state (safe for concurrent access)
-	status    atomic.Value // Status
-	lastError atomic.Value // error
+	status     atomic.Value // Status
+	syncStatus atomic.Value // *SyncStatus
+	lastError  atomic.Value // error
 
-	// Lifecycle
 	firstSyncFired bool
 	cancel         context.CancelFunc
 	done           chan struct{}
 }
 
-// NewSync creates a Sync instance.
+// NewSync creates a new Sync instance.
 func NewSync(config *Config, tokenRefresher TokenRefresher, logger log.Logger) *Sync {
 	s := &Sync{
 		config:         config,
@@ -74,8 +67,7 @@ func NewSync(config *Config, tokenRefresher TokenRefresher, logger log.Logger) *
 	return s
 }
 
-// SetStreamFactory sets the stream factory. Must be called before Start.
-// This is used by tests to inject mock streamers.
+// SetStreamFactory sets a custom stream factory (for testing).
 func (s *Sync) SetStreamFactory(factory func(endpoint, token string) Streamer) {
 	s.streamFactory = factory
 }
@@ -94,7 +86,7 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID string, 
 		return fmt.Errorf("get initial token: %w", err)
 	}
 
-	if err := s.loadExtension(ctx, db); err != nil {
+	if err := LoadExtension(ctx, db); err != nil {
 		return err
 	}
 
@@ -114,7 +106,7 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID string, 
 	return nil
 }
 
-// Stop shuts down syncing. The database remains open.
+// Stop shuts down syncing.
 func (s *Sync) Stop() {
 	if s.cancel != nil {
 		s.cancel()
@@ -129,7 +121,6 @@ func (s *Sync) Stop() {
 	s.log.Info("sync stopped")
 }
 
-// Status returns the current sync status.
 func (s *Sync) Status() Status {
 	if v := s.status.Load(); v != nil {
 		if status, ok := v.(Status); ok {
@@ -139,7 +130,15 @@ func (s *Sync) Status() Status {
 	return StatusDisconnected
 }
 
-// LastError returns the most recent error, or nil.
+func (s *Sync) SyncStatus() *SyncStatus {
+	if v := s.syncStatus.Load(); v != nil {
+		if ss, ok := v.(*SyncStatus); ok {
+			return ss
+		}
+	}
+	return nil
+}
+
 func (s *Sync) LastError() error {
 	if v := s.lastError.Load(); v != nil {
 		if err, ok := v.(error); ok {
@@ -149,29 +148,11 @@ func (s *Sync) LastError() error {
 	return nil
 }
 
-// IsRunning returns true if sync is active.
 func (s *Sync) IsRunning() bool {
 	return s.cancel != nil
 }
 
-// --- Initialization ---
-
-func (s *Sync) loadExtension(ctx context.Context, db sqlite.Database) error {
-	extPath, err := ExtensionPath()
-	if err != nil {
-		return fmt.Errorf("get extension path: %w", err)
-	}
-	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
-		return fmt.Errorf("load extension: %w", err)
-	}
-	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
-		return fmt.Errorf("apply schema: %w", err)
-	}
-	return nil
-}
-
-// --- Main Loop ---
-
+// run is the main sync loop with retry logic.
 func (s *Sync) run(ctx context.Context) {
 	defer close(s.done)
 
@@ -193,37 +174,39 @@ func (s *Sync) run(ctx context.Context) {
 			return
 		}
 
-		// Handle error
-		if IsAuthError(err) {
-			authRetries++
-			if authRetries > maxAuthRetries {
-				s.fail(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
-				return
+		var streamErr *StreamError
+		if errors.As(err, &streamErr) {
+			if streamErr.IsAuth() {
+				authRetries++
+				if authRetries > maxAuthRetries {
+					s.setError(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
+					return
+				}
+				s.log.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
+				s.status.Store(StatusReconnecting)
+				if err := s.refreshToken(ctx); err != nil {
+					s.setError(fmt.Errorf("token refresh: %w", err))
+					return
+				}
+				continue
 			}
-			s.log.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
-			s.status.Store(StatusReconnecting)
-			if err := s.refreshToken(ctx); err != nil {
-				s.fail(fmt.Errorf("token refresh: %w", err))
-				return
+
+			if streamErr.IsTransient() {
+				s.log.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
+				s.status.Store(StatusReconnecting)
+				s.lastError.Store(err)
+				s.wait(ctx, retryDelay)
+				retryDelay = min(retryDelay*2, maxRetryDelay)
+				continue
 			}
-			continue
 		}
 
-		if IsTransientError(err) {
-			s.log.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
-			s.status.Store(StatusReconnecting)
-			s.lastError.Store(err)
-			s.wait(ctx, retryDelay)
-			retryDelay = min(retryDelay*2, maxRetryDelay)
-			continue
-		}
-
-		// Permanent error
-		s.fail(err)
+		s.setError(err)
 		return
 	}
 }
 
+// syncOnce runs one sync session: start controller, connect stream, process lines.
 func (s *Sync) syncOnce(ctx context.Context) error {
 	instructions, err := s.controller.Start(ctx, StartRequest{
 		IncludeDefaults: true,
@@ -232,69 +215,29 @@ func (s *Sync) syncOnce(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("controller start: %w", err)
 	}
-	return s.handleInstructions(ctx, instructions)
-}
 
-func (s *Sync) wait(ctx context.Context, d time.Duration) {
-	select {
-	case <-ctx.Done():
-	case <-time.After(d):
-	}
-}
-
-func (s *Sync) fail(err error) {
-	s.lastError.Store(err)
-	s.status.Store(StatusError)
-	s.log.Error("sync failed", log.Any("error", err))
-}
-
-// --- Instruction Handling ---
-
-func (s *Sync) handleInstructions(ctx context.Context, instructions []Instruction) error {
 	for _, inst := range instructions {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if err := s.handleInstruction(ctx, inst); err != nil {
-			return err
+
+		switch inst.Type {
+		case InstructionEstablishSyncStream:
+			if err := s.connectAndSync(ctx, inst.Request); err != nil {
+				return err
+			}
+		case InstructionFetchCredentials:
+			if err := s.refreshToken(ctx); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
-func (s *Sync) handleInstruction(ctx context.Context, inst Instruction) error {
-	switch inst.Type {
-	case InstructionEstablishSyncStream:
-		return s.connectStream(ctx, inst.Request)
-	case InstructionFetchCredentials:
-		return s.refreshToken(ctx)
-	case InstructionCloseSyncStream:
-		return nil // Stream closed, loop will reconnect
-	case InstructionDidCompleteSync:
-		s.status.Store(StatusConnected)
-		s.fireFirstSync()
-		return nil
-	case InstructionUpdateSyncStatus:
-		s.status.Store(StatusSyncing)
-		return nil
-	case InstructionLogLine:
-		return nil // TODO: forward to logger
-	default:
-		return nil // Unknown instruction, ignore
-	}
-}
-
-func (s *Sync) fireFirstSync() {
-	if !s.firstSyncFired && s.onFirstSync != nil {
-		s.firstSyncFired = true
-		s.log.Info("sync connected")
-		s.onFirstSync()
-	}
-}
-
-// --- Stream ---
-
-func (s *Sync) connectStream(ctx context.Context, req *StreamingSyncRequest) error {
+// connectAndSync connects to the stream and processes lines until disconnect.
+func (s *Sync) connectAndSync(ctx context.Context, req *StreamingSyncRequest) error {
 	if req == nil {
 		return fmt.Errorf("no sync request")
 	}
@@ -306,15 +249,8 @@ func (s *Sync) connectStream(ctx context.Context, req *StreamingSyncRequest) err
 		return fmt.Errorf("notify connected: %w", err)
 	}
 
-	err := s.stream.Connect(ctx, req, func(line []byte) error {
-		instructions, err := s.controller.SendTextLine(ctx, string(line))
-		if err != nil {
-			return fmt.Errorf("send line: %w", err)
-		}
-		return s.handleInstructions(ctx, instructions)
-	})
+	err := s.stream.Connect(ctx, req, s.handleLine)
 
-	// Always notify disconnection
 	_, _ = s.controller.NotifyConnection(ctx, ConnectionEnded)
 
 	if err != nil {
@@ -323,10 +259,59 @@ func (s *Sync) connectStream(ctx context.Context, req *StreamingSyncRequest) err
 	return nil
 }
 
-// --- Token ---
+// handleLine processes a single line from the sync stream.
+func (s *Sync) handleLine(line []byte) error {
+	ctx := context.Background() // Lines are processed synchronously
+
+	instructions, err := s.controller.SendTextLine(ctx, string(line))
+	if err != nil {
+		return fmt.Errorf("send line: %w", err)
+	}
+
+	for _, inst := range instructions {
+		switch inst.Type {
+		case InstructionDidCompleteSync:
+			s.log.Debug("sync complete")
+			s.status.Store(StatusConnected)
+			s.fireFirstSync()
+
+		case InstructionUpdateSyncStatus:
+			s.status.Store(StatusSyncing)
+			if inst.SyncStatus != nil {
+				s.syncStatus.Store(inst.SyncStatus)
+				if inst.SyncStatus.Downloading != nil {
+					downloaded, total := inst.SyncStatus.Downloading.TotalProgress()
+					s.log.Debug("sync progress", "downloaded", downloaded, "total", total)
+				}
+			}
+
+		case InstructionFetchCredentials:
+			s.log.Debug("received FetchCredentials", "didExpire", inst.DidExpire)
+			if err := s.refreshToken(ctx); err != nil {
+				return err
+			}
+
+		case InstructionCloseSyncStream:
+			s.log.Debug("received CloseSyncStream")
+			return nil
+
+		case InstructionLogLine:
+			s.log.Debug("powersync", "severity", inst.Severity, "line", inst.Line)
+		}
+	}
+
+	return nil
+}
+
+func (s *Sync) fireFirstSync() {
+	if !s.firstSyncFired && s.onFirstSync != nil {
+		s.firstSyncFired = true
+		s.log.Info("sync connected")
+		s.onFirstSync()
+	}
+}
 
 func (s *Sync) refreshToken(ctx context.Context) error {
-	s.log.Debug("refreshing token")
 	token, err := s.tokenRefresher.GetAccessToken(ctx)
 	if err != nil {
 		return err
@@ -335,6 +320,18 @@ func (s *Sync) refreshToken(ctx context.Context) error {
 	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}
-	s.log.Debug("token refreshed")
 	return nil
+}
+
+func (s *Sync) setError(err error) {
+	s.lastError.Store(err)
+	s.status.Store(StatusError)
+	s.log.Error("sync failed", log.Any("error", err))
+}
+
+func (s *Sync) wait(ctx context.Context, d time.Duration) {
+	select {
+	case <-ctx.Done():
+	case <-time.After(d):
+	}
 }

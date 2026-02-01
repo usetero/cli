@@ -8,11 +8,12 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/layouts/layoutstest"
-	"github.com/usetero/cli/internal/tui/onboarding/complete"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/onboarding/step/steptest"
+	"github.com/usetero/cli/internal/tui/onboarding/sync"
 )
 
 // onboardingTestTheme creates a theme for testing
@@ -34,7 +35,7 @@ func TestOnboarding_Update(t *testing.T) {
 
 		// Create onboarding with the mock step
 		onboarding := &Onboarding{
-			flow:           step.NewFlow(testStep),
+			flow:           step.NewFlow(testStep, logger),
 			layout:         layout,
 			ready:          true,
 			logger:         logger,
@@ -64,7 +65,7 @@ func TestOnboarding_Update(t *testing.T) {
 	})
 
 	t.Run("completes when flow completes and extracts org and account", func(t *testing.T) {
-		// Note: Cannot use t.Parallel() here because this test uses t.Setenv
+		t.Parallel()
 		logger := logtest.New(t)
 
 		expectedOrg := api.Organization{ID: "org-123", Name: "Test Org"}
@@ -72,35 +73,33 @@ func TestOnboarding_Update(t *testing.T) {
 
 		layout := layoutstest.NewMockLayout()
 
-		// Create a complete step that holds the accumulated state
-		// This step will return (nil, nil) immediately to complete the flow
-		// because TERO_SKIP_TO_APP is set in the test environment
-		completeStep := complete.NewCompleteStep(context.Background(), onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
+		// Create a sync step that holds the accumulated state
+		syncStep := sync.New(context.Background(), onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
 
-		// Create a step that will transition to complete step
+		// Create a step that will transition to sync step
 		testStep := steptest.NewMockStep()
 		transitioned := false
 		testStep.NextFunc = func() (step.Step, error) {
 			if !transitioned {
 				transitioned = true
-				return completeStep, nil
+				return syncStep, nil
 			}
 			return nil, step.ErrNotReady
 		}
 
 		onboarding := &Onboarding{
-			flow:           step.NewFlow(testStep),
+			flow:           step.NewFlow(testStep, logger),
 			layout:         layout,
 			ready:          true,
 			logger:         logger,
 			globalBindings: nil,
 		}
 
-		// Set TERO_SKIP_TO_APP to make completeStep return (nil, nil)
-		t.Setenv("TERO_SKIP_TO_APP", "true")
-
-		// First update triggers transition to complete step, which then completes
+		// First update triggers transition to sync step
 		onboarding.Update(tea.KeyPressMsg{})
+
+		// Send SyncReadyMsg - sync step handles it and completes
+		onboarding.Update(powersync.SyncReadyMsg{})
 
 		// Verify onboarding completed and extracted the org/account
 		if !onboarding.IsComplete() {
@@ -126,7 +125,7 @@ func TestOnboarding_View(t *testing.T) {
 		layout := layoutstest.NewMockLayout()
 
 		onboarding := &Onboarding{
-			flow:           step.NewFlow(testStep),
+			flow:           step.NewFlow(testStep, logger),
 			layout:         layout,
 			ready:          false, // Not ready
 			logger:         logger,

@@ -67,7 +67,7 @@ func NewCrudQueue(db sqlite.Database) *CrudQueue {
 // HasPendingUploads returns true if there are entries waiting to be uploaded.
 func (q *CrudQueue) HasPendingUploads(ctx context.Context) (bool, error) {
 	var count int64
-	err := q.db.QueryRow(ctx, "SELECT COUNT(*) FROM ps_crud").Scan(&count)
+	err := q.db.DB().QueryRow(ctx, "SELECT COUNT(*) FROM ps_crud").Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("check pending uploads: %w", err)
 	}
@@ -77,7 +77,7 @@ func (q *CrudQueue) HasPendingUploads(ctx context.Context) (bool, error) {
 // GetNextEntry returns the next CRUD entry to process, or nil if the queue is empty.
 func (q *CrudQueue) GetNextEntry(ctx context.Context) (*CrudEntry, error) {
 	var row crudRow
-	err := q.db.QueryRow(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id LIMIT 1").Scan(
+	err := q.db.DB().QueryRow(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id LIMIT 1").Scan(
 		&row.ID, &row.TxID, &row.Data,
 	)
 	if err != nil {
@@ -105,7 +105,7 @@ func (q *CrudQueue) GetNextTransaction(ctx context.Context) ([]CrudEntry, error)
 	}
 
 	// Get all entries with the same transaction ID
-	rows, err := q.db.Query(ctx,
+	rows, err := q.db.DB().Query(ctx,
 		"SELECT id, tx_id, data FROM ps_crud WHERE tx_id = ? ORDER BY id",
 		*first.TxID,
 	)
@@ -132,7 +132,7 @@ func (q *CrudQueue) GetNextTransaction(ctx context.Context) ([]CrudEntry, error)
 
 // DeleteEntry removes an entry from the queue after successful upload.
 func (q *CrudQueue) DeleteEntry(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, "DELETE FROM ps_crud WHERE id = ?", id)
+	_, err := q.db.DB().Exec(ctx, "DELETE FROM ps_crud WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("delete crud entry: %w", err)
 	}
@@ -141,7 +141,7 @@ func (q *CrudQueue) DeleteEntry(ctx context.Context, id int64) error {
 
 // DeleteEntriesUpTo removes all entries up to and including the given ID.
 func (q *CrudQueue) DeleteEntriesUpTo(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, "DELETE FROM ps_crud WHERE id <= ?", id)
+	_, err := q.db.DB().Exec(ctx, "DELETE FROM ps_crud WHERE id <= ?", id)
 	if err != nil {
 		return fmt.Errorf("delete crud entries: %w", err)
 	}

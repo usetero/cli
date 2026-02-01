@@ -178,3 +178,8 @@ func (s *Service) ClearServices() error {
 	s.store.SetList("services", nil)
 	return s.store.Save()
 }
+
+// Clear removes all preferences.
+func (s *Service) Clear() error {
+	return s.store.Clear()
+}

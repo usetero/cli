@@ -12,7 +12,6 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 )
 
-// mockHTTPClient implements powersync.HTTPClient for testing.
 type mockHTTPClient struct {
 	doFunc func(req *http.Request) (*http.Response, error)
 }
@@ -21,7 +20,6 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.doFunc(req)
 }
 
-// mockResponse creates an http.Response with the given status and body.
 func mockResponse(status int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: status,
@@ -51,19 +49,15 @@ func TestStream_Connect(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
-		if !powersync.IsAuthError(err) {
-			t.Errorf("expected auth error, got %v", err)
-		}
-
 		var streamErr *powersync.StreamError
 		if !errors.As(err, &streamErr) {
 			t.Fatalf("expected StreamError, got %T", err)
 		}
+		if !streamErr.IsAuth() {
+			t.Error("expected auth error")
+		}
 		if streamErr.StatusCode != http.StatusUnauthorized {
 			t.Errorf("StatusCode = %d, want %d", streamErr.StatusCode, http.StatusUnauthorized)
-		}
-		if streamErr.Kind != powersync.ErrorKindAuth {
-			t.Errorf("Kind = %v, want ErrorKindAuth", streamErr.Kind)
 		}
 	})
 
@@ -81,7 +75,8 @@ func TestStream_Connect(t *testing.T) {
 			return nil
 		})
 
-		if !powersync.IsAuthError(err) {
+		var streamErr *powersync.StreamError
+		if !errors.As(err, &streamErr) || !streamErr.IsAuth() {
 			t.Errorf("expected auth error, got %v", err)
 		}
 	})
@@ -104,15 +99,9 @@ func TestStream_Connect(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
-		if !powersync.IsTransientError(err) {
-			t.Errorf("expected transient error, got %v", err)
-		}
-
 		var streamErr *powersync.StreamError
-		if errors.As(err, &streamErr) {
-			if streamErr.Kind != powersync.ErrorKindTransient {
-				t.Errorf("Kind = %v, want ErrorKindTransient", streamErr.Kind)
-			}
+		if !errors.As(err, &streamErr) || !streamErr.IsTransient() {
+			t.Errorf("expected transient error, got %v", err)
 		}
 	})
 
@@ -130,7 +119,8 @@ func TestStream_Connect(t *testing.T) {
 			return nil
 		})
 
-		if !powersync.IsTransientError(err) {
+		var streamErr *powersync.StreamError
+		if !errors.As(err, &streamErr) || !streamErr.IsTransient() {
 			t.Errorf("expected transient error, got %v", err)
 		}
 	})
@@ -149,7 +139,8 @@ func TestStream_Connect(t *testing.T) {
 			return nil
 		})
 
-		if !powersync.IsTransientError(err) {
+		var streamErr *powersync.StreamError
+		if !errors.As(err, &streamErr) || !streamErr.IsTransient() {
 			t.Errorf("expected transient error for 429, got %v", err)
 		}
 	})
@@ -172,19 +163,15 @@ func TestStream_Connect(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
-		// Should not be auth or transient
-		if powersync.IsAuthError(err) {
+		var streamErr *powersync.StreamError
+		if !errors.As(err, &streamErr) {
+			t.Fatalf("expected StreamError, got %T", err)
+		}
+		if streamErr.IsAuth() {
 			t.Error("400 should not be classified as auth error")
 		}
-		if powersync.IsTransientError(err) {
+		if streamErr.IsTransient() {
 			t.Error("400 should not be classified as transient error")
-		}
-
-		var streamErr *powersync.StreamError
-		if errors.As(err, &streamErr) {
-			if streamErr.Kind != powersync.ErrorKindPermanent {
-				t.Errorf("Kind = %v, want ErrorKindPermanent", streamErr.Kind)
-			}
 		}
 	})
 
@@ -214,8 +201,8 @@ func TestStream_Connect(t *testing.T) {
 		if !errors.As(err, &streamErr) {
 			t.Fatalf("expected StreamError, got %T", err)
 		}
-		if streamErr.Kind != powersync.ErrorKindTransient {
-			t.Errorf("Kind = %v, want ErrorKindTransient", streamErr.Kind)
+		if !streamErr.IsTransient() {
+			t.Error("network failure should be transient")
 		}
 	})
 
@@ -312,7 +299,7 @@ func TestStream_Connect(t *testing.T) {
 		t.Parallel()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
+		cancel()
 
 		client := &mockHTTPClient{
 			doFunc: func(req *http.Request) (*http.Response, error) {
@@ -326,7 +313,6 @@ func TestStream_Connect(t *testing.T) {
 		})
 
 		if !errors.Is(err, context.Canceled) {
-			// The error might be wrapped
 			var streamErr *powersync.StreamError
 			if errors.As(err, &streamErr) && streamErr.Err != nil {
 				if !errors.Is(streamErr.Err, context.Canceled) {
@@ -344,7 +330,7 @@ func TestStreamError(t *testing.T) {
 		t.Parallel()
 
 		err := &powersync.StreamError{
-			Kind:       powersync.ErrorKindAuth,
+			Kind:       powersync.StreamErrorAuth,
 			StatusCode: 401,
 			Message:    "unauthorized",
 		}
@@ -363,7 +349,7 @@ func TestStreamError(t *testing.T) {
 
 		innerErr := errors.New("connection refused")
 		err := &powersync.StreamError{
-			Kind:    powersync.ErrorKindTransient,
+			Kind:    powersync.StreamErrorTransient,
 			Message: "connection failed",
 			Err:     innerErr,
 		}
@@ -383,6 +369,34 @@ func TestStreamError(t *testing.T) {
 		unwrapped := err.Unwrap()
 		if !errors.Is(unwrapped, innerErr) {
 			t.Errorf("Unwrap() = %v, want %v", unwrapped, innerErr)
+		}
+	})
+
+	t.Run("IsAuth() returns correct value", func(t *testing.T) {
+		t.Parallel()
+
+		authErr := &powersync.StreamError{Kind: powersync.StreamErrorAuth}
+		if !authErr.IsAuth() {
+			t.Error("expected IsAuth() to return true")
+		}
+
+		transientErr := &powersync.StreamError{Kind: powersync.StreamErrorTransient}
+		if transientErr.IsAuth() {
+			t.Error("expected IsAuth() to return false for transient error")
+		}
+	})
+
+	t.Run("IsTransient() returns correct value", func(t *testing.T) {
+		t.Parallel()
+
+		transientErr := &powersync.StreamError{Kind: powersync.StreamErrorTransient}
+		if !transientErr.IsTransient() {
+			t.Error("expected IsTransient() to return true")
+		}
+
+		permanentErr := &powersync.StreamError{Kind: powersync.StreamErrorPermanent}
+		if permanentErr.IsTransient() {
+			t.Error("expected IsTransient() to return false for permanent error")
 		}
 	})
 }

@@ -4,14 +4,18 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/chat/block"
 	"github.com/usetero/cli/internal/sqlite"
+	"github.com/usetero/cli/internal/sqlite/gen"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tui/components/spinner"
+	"github.com/usetero/cli/internal/upload"
 )
 
 // messagesLoadedMsg is sent when messages are loaded from SQLite.
 type messagesLoadedMsg struct {
-	messages []sqlite.Message
+	messages []gen.Message
 	err      error
 }
 
@@ -20,268 +24,282 @@ type tablesChangedMsg struct {
 	tables []string
 }
 
-// MessageList displays a scrollable list of chat messages.
-// Reads from SQLite and re-renders when data changes.
-type MessageList struct {
+// UploadEventMsg wraps upload events for the Bubble Tea message loop.
+type UploadEventMsg struct {
+	Event upload.Event
+}
+
+// Messages provides message data and state for the message list.
+type Messages interface {
+	Init() tea.Cmd
+	Update(msg tea.Msg) tea.Cmd
+	SetConversation(conversationID string) tea.Cmd
+	Refresh() tea.Cmd
+	SetWidth(width int)
+	Items() []Item
+	HasError() bool
+	Error() error
+	IsBusy() bool
+	Close() error
+}
+
+// Compile-time check that sqliteMessages implements Messages.
+var _ Messages = (*sqliteMessages)(nil)
+
+// sqliteMessages loads messages from SQLite.
+type sqliteMessages struct {
 	theme *styles.Theme
 	db    sqlite.Database
 
-	// Current conversation
 	conversationID string
+	items          []Item
+	itemMap        map[string]Item
+	width          int
 
-	// Loaded messages
-	messages []sqlite.Message
-
-	// Message renderer
-	renderer *Message
-
-	// Change subscription
 	subscription *sqlite.Subscription
-
-	// Viewport state
-	width    int
-	height   int
-	offset   int // Scroll offset (lines from bottom)
-	selected int // Selected message index for keyboard nav
-
-	// Focus state
-	focused bool
-
-	// Error state
-	err error
+	err          error
 }
 
-// NewMessageList creates a new message list component.
-func NewMessageList(theme *styles.Theme, db sqlite.Database) *MessageList {
-	return &MessageList{
-		theme:    theme,
-		db:       db,
-		renderer: NewMessage(theme),
-		selected: -1, // No selection
+// NewMessages creates a new messages data manager.
+func NewMessages(theme *styles.Theme, db sqlite.Database) Messages {
+	return &sqliteMessages{
+		theme:   theme,
+		db:      db,
+		itemMap: make(map[string]Item),
 	}
 }
 
-// Init initializes the component and starts listening for changes.
-func (m *MessageList) Init() tea.Cmd {
+// Init starts listening for database changes.
+func (m *sqliteMessages) Init() tea.Cmd {
 	m.subscription = m.db.Subscribe()
 	return m.listenForChanges()
 }
 
-// listenForChanges returns a command that waits for database changes.
-func (m *MessageList) listenForChanges() tea.Cmd {
-	if m.subscription == nil {
-		return nil
-	}
-	return func() tea.Msg {
-		tables, ok := <-m.subscription.Changes()
-		if !ok {
-			return nil // Channel closed
-		}
-		return tablesChangedMsg{tables: tables}
-	}
-}
+// Update handles data-related messages.
+func (m *sqliteMessages) Update(msg tea.Msg) tea.Cmd {
+	var cmds []tea.Cmd
 
-// Update handles messages.
-func (m *MessageList) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case messagesLoadedMsg:
 		if msg.err != nil {
 			m.err = msg.err
 			return nil
 		}
-		m.messages = msg.messages
 		m.err = nil
-		// Auto-scroll to bottom on new messages
-		m.offset = 0
-		return nil
+		return m.buildItems(msg.messages)
 
 	case tablesChangedMsg:
-		// Check if messages table changed
 		for _, table := range msg.tables {
 			if table == "messages" {
-				// Refresh and keep listening
 				return tea.Batch(m.Refresh(), m.listenForChanges())
 			}
 		}
-		// Keep listening even if messages didn't change
 		return m.listenForChanges()
 
-	case tea.KeyPressMsg:
-		if !m.focused {
-			return nil
+	case UploadEventMsg:
+		return m.handleUploadEvent(msg.Event)
+
+	case spinner.TickMsg:
+		// Route tick messages to spinning items
+		for _, item := range m.items {
+			if item.Spinning() {
+				if cmd := item.Update(msg); cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
 		}
-		switch msg.String() {
-		case "up", "k":
-			m.scrollUp()
-		case "down", "j":
-			m.scrollDown()
-		case "home", "g":
-			m.scrollToTop()
-		case "end", "G":
-			m.scrollToBottom()
-		case "pgup":
-			m.pageUp()
-		case "pgdown":
-			m.pageDown()
-		}
+		return tea.Batch(cmds...)
 	}
 
 	return nil
 }
 
-// View renders the message list.
-func (m *MessageList) View() string {
-	if m.width == 0 || m.height == 0 {
-		return ""
-	}
-
-	colors := m.theme.Colors
-
-	// Error state
-	if m.err != nil {
-		return lipgloss.NewStyle().
-			Foreground(colors.Error.Fg).
-			Width(m.width).
-			Height(m.height).
-			Align(lipgloss.Center, lipgloss.Center).
-			Render(m.err.Error())
-	}
-
-	// Empty state
-	if len(m.messages) == 0 {
-		return lipgloss.NewStyle().
-			Foreground(colors.Page.TextMuted).
-			Width(m.width).
-			Height(m.height).
-			Align(lipgloss.Center, lipgloss.Center).
-			Render("Start a conversation...")
-	}
-
-	// Render messages
-	m.renderer.SetWidth(m.width - 2) // Account for padding
-
-	var rendered []string
-	for _, msg := range m.messages {
-		rendered = append(rendered, m.renderer.Render(msg))
-	}
-
-	// Join with spacing
-	content := lipgloss.JoinVertical(lipgloss.Left, rendered...)
-
-	// Apply viewport scrolling
-	// For now, simple overflow - TODO: proper virtual scrolling
-	style := lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Padding(0, 1)
-
-	// Add focus indicator
-	if m.focused {
-		style = style.BorderLeft(true).
-			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(colors.Accent).
-			Width(m.width - 1) // Account for border
-	}
-
-	return style.Render(content)
-}
-
-// SetSize sets the dimensions.
-func (m *MessageList) SetSize(width, height int) {
-	m.width = width
-	m.height = height
-}
-
 // SetConversation sets the current conversation and loads messages.
-func (m *MessageList) SetConversation(conversationID string) tea.Cmd {
+func (m *sqliteMessages) SetConversation(conversationID string) tea.Cmd {
 	m.conversationID = conversationID
-	m.messages = nil
-	m.offset = 0
-	m.selected = -1
+	m.items = nil
+	m.itemMap = make(map[string]Item)
+	m.err = nil
 
 	if conversationID == "" || m.db == nil {
 		return nil
 	}
 
-	return m.loadMessages()
+	return m.load()
 }
 
 // Refresh reloads messages from SQLite.
-func (m *MessageList) Refresh() tea.Cmd {
+func (m *sqliteMessages) Refresh() tea.Cmd {
 	if m.conversationID == "" || m.db == nil {
 		return nil
 	}
-	return m.loadMessages()
+	return m.load()
 }
 
-// loadMessages loads messages from SQLite.
-func (m *MessageList) loadMessages() tea.Cmd {
-	return func() tea.Msg {
-		convID := m.conversationID
-		messages, err := m.db.Queries().ListMessagesByConversation(context.Background(), &convID)
-		return messagesLoadedMsg{messages: messages, err: err}
+// SetWidth sets the width for item rendering.
+func (m *sqliteMessages) SetWidth(width int) {
+	m.width = width
+	for _, item := range m.items {
+		item.SetWidth(width)
 	}
 }
 
-// Focus sets focus state.
-func (m *MessageList) Focus() {
-	m.focused = true
-}
-
-// Blur removes focus.
-func (m *MessageList) Blur() {
-	m.focused = false
-}
-
-// IsFocused returns focus state.
-func (m *MessageList) IsFocused() bool {
-	return m.focused
-}
-
-// Scrolling methods
-
-func (m *MessageList) scrollUp() {
-	m.offset++
-}
-
-func (m *MessageList) scrollDown() {
-	if m.offset > 0 {
-		m.offset--
-	}
-}
-
-func (m *MessageList) scrollToTop() {
-	// Calculate max offset based on content height
-	// For now, just set a large number - will be clamped in render
-	m.offset = len(m.messages) * 10
-}
-
-func (m *MessageList) scrollToBottom() {
-	m.offset = 0
-}
-
-func (m *MessageList) pageUp() {
-	m.offset += m.height / 2
-}
-
-func (m *MessageList) pageDown() {
-	m.offset -= m.height / 2
-	if m.offset < 0 {
-		m.offset = 0
-	}
-}
-
-// IsBusy returns false - message list is never busy.
-func (m *MessageList) IsBusy() bool {
-	return false
+// Items returns the current list of items.
+func (m *sqliteMessages) Items() []Item {
+	return m.items
 }
 
 // HasError returns true if there's an error.
-func (m *MessageList) HasError() bool {
+func (m *sqliteMessages) HasError() bool {
 	return m.err != nil
 }
 
 // Error returns the current error.
-func (m *MessageList) Error() error {
+func (m *sqliteMessages) Error() error {
 	return m.err
+}
+
+// IsBusy returns true if any item is spinning.
+func (m *sqliteMessages) IsBusy() bool {
+	for _, item := range m.items {
+		if item.Spinning() {
+			return true
+		}
+	}
+	return false
+}
+
+// Close releases resources.
+func (m *sqliteMessages) Close() error {
+	if m.subscription != nil {
+		m.subscription.Stop()
+		m.subscription = nil
+	}
+	return nil
+}
+
+// load loads messages from SQLite.
+func (m *sqliteMessages) load() tea.Cmd {
+	return func() tea.Msg {
+		messages, err := m.db.Messages().List(context.Background(), m.conversationID)
+		return messagesLoadedMsg{messages: messages, err: err}
+	}
+}
+
+// listenForChanges waits for database changes.
+func (m *sqliteMessages) listenForChanges() tea.Cmd {
+	if m.subscription == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		tables, ok := <-m.subscription.Changes()
+		if !ok {
+			return nil
+		}
+		return tablesChangedMsg{tables: tables}
+	}
+}
+
+// handleUploadEvent processes upload events.
+func (m *sqliteMessages) handleUploadEvent(event upload.Event) tea.Cmd {
+	switch e := event.(type) {
+	case upload.MessageProcessingEvent:
+		if e.ConversationID != m.conversationID {
+			return nil
+		}
+
+		assistant := NewAssistantMessage(m.theme)
+		assistant.SetWidth(m.width)
+		m.items = append(m.items, assistant)
+		return assistant.Init()
+	}
+	return nil
+}
+
+// buildItems converts SQLite messages into Items.
+func (m *sqliteMessages) buildItems(messages []gen.Message) tea.Cmd {
+	var cmds []tea.Cmd
+	var items []Item
+	itemMap := make(map[string]Item)
+
+	// Find pending assistant to preserve it
+	var pending *AssistantMessage
+	for _, item := range m.items {
+		if am, ok := item.(*AssistantMessage); ok && am.ID() == "" {
+			pending = am
+			break
+		}
+	}
+
+	for _, msg := range messages {
+		if msg.Role == nil || msg.ID == nil {
+			continue
+		}
+
+		role := chat.MessageRole(*msg.Role)
+		id := *msg.ID
+
+		switch role {
+		case chat.RoleUser:
+			item := m.getOrCreateUserMessage(id)
+			item.SetWidth(m.width)
+			if msg.Content != nil {
+				if blocks, err := block.Parse(*msg.Content); err == nil {
+					item.SetContent(blocks)
+				}
+			}
+			items = append(items, item)
+			itemMap[id] = item
+
+		case chat.RoleAssistant:
+			var item *AssistantMessage
+			if pending != nil {
+				pending.SetMessageID(id)
+				item = pending
+				pending = nil
+			} else {
+				item = m.getOrCreateAssistantMessage(id)
+			}
+
+			item.SetWidth(m.width)
+			if msg.Content != nil {
+				if blocks, err := block.Parse(*msg.Content); err == nil {
+					item.SetContent(blocks)
+				}
+			}
+			items = append(items, item)
+			itemMap[id] = item
+
+			if cmd := item.Init(); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+
+	if pending != nil {
+		items = append(items, pending)
+	}
+
+	m.items = items
+	m.itemMap = itemMap
+
+	return tea.Batch(cmds...)
+}
+
+func (m *sqliteMessages) getOrCreateUserMessage(id string) *UserMessage {
+	if existing, ok := m.itemMap[id]; ok {
+		if msg, ok := existing.(*UserMessage); ok {
+			return msg
+		}
+	}
+	return NewUserMessage(m.theme, id)
+}
+
+func (m *sqliteMessages) getOrCreateAssistantMessage(id string) *AssistantMessage {
+	if existing, ok := m.itemMap[id]; ok {
+		if msg, ok := existing.(*AssistantMessage); ok {
+			return msg
+		}
+	}
+	return NewAssistantMessageWithID(m.theme, id)
 }

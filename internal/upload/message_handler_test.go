@@ -50,7 +50,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -102,7 +102,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -176,7 +176,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -238,7 +238,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err == nil {
 			t.Error("Handle() expected error, got nil")
 		}
@@ -280,7 +280,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
+		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
@@ -305,7 +305,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		if err := h.Handle(context.Background(), entry); err != nil {
+		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
 			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
@@ -322,7 +322,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		if err := h.Handle(context.Background(), entry); err != nil {
+		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
 			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
@@ -341,7 +341,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		if err := h.Handle(context.Background(), entry); err != nil {
+		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
 			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})

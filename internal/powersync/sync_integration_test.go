@@ -4,7 +4,6 @@ package powersync_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -28,30 +27,22 @@ import (
 //  3. task test:integration
 
 func TestIntegration_Sync(t *testing.T) {
-	powersyncEndpoint := os.Getenv("TERO_POWERSYNC_ENDPOINT")
-	if powersyncEndpoint == "" {
-		t.Fatalf("TERO_POWERSYNC_ENDPOINT not set")
-	}
-
-	apiEndpoint := os.Getenv("TERO_API_ENDPOINT")
-	if apiEndpoint == "" {
-		t.Fatalf("TERO_API_ENDPOINT not set")
-	}
-
-	workosClientID := os.Getenv("TERO_WORKOS_CLIENT_ID")
-	if workosClientID == "" {
-		t.Fatalf("TERO_WORKOS_CLIENT_ID not set")
-	}
-
-	// Audience URLs for JWT (base URL without path)
-	apiAudience := "https://api.usetero.dev"
-
-	namespace := "api.usetero.dev"
+	cliConfig := config.LoadCLIConfig()
 	logger := logtest.New(t)
+
+	// Derive namespace from API endpoint (empty for production, host for dev)
+	namespace := cliConfig.Namespace()
+	if namespace == "" {
+		namespace = "api.usetero.com" // production keyring namespace
+	}
+
+	t.Logf("Namespace: %s", namespace)
+	t.Logf("API Endpoint: %s", cliConfig.APIEndpoint)
+	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
 
 	// Get valid access token (refreshes if expired)
 	storage := keyring.New(namespace)
-	oauthProvider := workos.NewClient(workosClientID, apiAudience, powersyncEndpoint)
+	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
 	token, err := authSvc.GetAccessToken(context.Background())
@@ -69,11 +60,13 @@ func TestIntegration_Sync(t *testing.T) {
 		t.Fatalf("No default account (run: task run)")
 	}
 
+	t.Logf("Account ID from config: %s", accountID)
+
 	// Validate account exists via API
 	refreshFunc := func() (string, error) {
 		return authSvc.GetAccessToken(context.Background())
 	}
-	apiClient := client.New(apiEndpoint, token, refreshFunc)
+	apiClient := client.New(cliConfig.APIEndpoint, token, refreshFunc)
 	apiClient.SetAccountID(accountID)
 	accountSvc := api.NewAccountService(apiClient, logger)
 
@@ -86,54 +79,52 @@ func TestIntegration_Sync(t *testing.T) {
 	}
 
 	t.Run("connects and syncs data", func(t *testing.T) {
-		t.Logf("Endpoint: %s", powersyncEndpoint)
+		t.Logf("Endpoint: %s", cliConfig.PowerSyncEndpoint)
 		t.Logf("Account: %s (%s)", account.Name, account.ID)
 
 		db := sqlitetest.OpenTest(t)
-		psConfig := &powersync.Config{Endpoint: powersyncEndpoint}
-		sync := powersync.NewSync(psConfig, nil, logtest.New(t))
+		psConfig := &powersync.Config{Endpoint: cliConfig.PowerSyncEndpoint}
+		sync := powersync.NewSync(psConfig, authSvc, logtest.New(t))
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		err := sync.Start(ctx, db, accountID, token)
+		// Wait for first sync to complete
+		firstSyncDone := make(chan struct{})
+		err := sync.Start(ctx, db, accountID, func() {
+			close(firstSyncDone)
+		})
 		if err != nil {
 			t.Fatalf("Start() error = %v", err)
 		}
 		defer sync.Stop()
 
-		// Wait for sync to reach syncing state
-		deadline := time.Now().Add(10 * time.Second)
+		// Wait for first sync with status logging
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
 		var lastStatus powersync.Status
-		var reachedSyncing bool
-		for time.Now().Before(deadline) {
-			status := sync.Status()
-			if status != lastStatus {
-				t.Logf("Status: %s", status)
-				if status == powersync.StatusError {
-					t.Logf("Error: %v", sync.LastError())
+		for {
+			select {
+			case <-firstSyncDone:
+				t.Logf("First sync completed")
+				goto done
+			case <-ticker.C:
+				status := sync.Status()
+				if status != lastStatus {
+					t.Logf("Status: %s", status)
+					if status == powersync.StatusError {
+						t.Fatalf("Sync error: %v", sync.LastError())
+					}
+					lastStatus = status
 				}
-				lastStatus = status
+			case <-ctx.Done():
+				t.Fatalf("Timeout waiting for first sync, last status: %s, error: %v", sync.Status(), sync.LastError())
 			}
-
-			if status == powersync.StatusSyncing {
-				reachedSyncing = true
-			}
-
-			if status == powersync.StatusError {
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
 		}
+	done:
 
-		if !reachedSyncing {
-			t.Fatalf("Never reached syncing state, last status: %s, error: %v", sync.Status(), sync.LastError())
-		}
-
-		if sync.Status() == powersync.StatusError {
-			t.Fatalf("Sync failed: %v", sync.LastError())
-		}
-
+		// Verify data was synced
 		buckets, _ := countBuckets(db)
 		services, _ := countServices(db)
 		t.Logf("Synced %d services, %d buckets", services, buckets)
@@ -149,12 +140,12 @@ func TestIntegration_Sync(t *testing.T) {
 
 func countServices(db sqlite.Database) (int64, error) {
 	var count int64
-	err := db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
+	err := db.DB().QueryRow(context.Background(), "SELECT COUNT(*) FROM services").Scan(&count)
 	return count, err
 }
 
 func countBuckets(db sqlite.Database) (int64, error) {
 	var count int64
-	err := db.QueryRow("SELECT COUNT(*) FROM ps_buckets").Scan(&count)
+	err := db.DB().QueryRow(context.Background(), "SELECT COUNT(*) FROM ps_buckets").Scan(&count)
 	return count, err
 }

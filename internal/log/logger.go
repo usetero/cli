@@ -27,9 +27,20 @@ type Logger interface {
 	Error(msg string, args ...any)
 }
 
+// Level re-exports slog.Level for callers.
+type Level = slog.Level
+
+// Log levels.
+const (
+	LevelDebug = slog.LevelDebug
+	LevelInfo  = slog.LevelInfo
+	LevelWarn  = slog.LevelWarn
+	LevelError = slog.LevelError
+)
+
 // New creates a new logger that writes to /tmp/tero.log
 // Appends to existing log file, with a clear session separator.
-func New() Logger {
+func New(level Level) Logger {
 	logFile, err := os.OpenFile("/tmp/tero.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		panic(err)
@@ -42,6 +53,6 @@ func New() Logger {
 	_, _ = logFile.WriteString("================================================================================\n")
 
 	return slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: level,
 	}))
 }

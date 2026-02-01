@@ -71,32 +71,6 @@ func (b Block) IsDelta() bool {
 	return b.Type == TypeTextDelta || b.Type == TypeThinkingDelta || b.Type == TypeToolInputDelta
 }
 
-// Text is prose content.
-type Text struct {
-	Content string `json:"content"`
-}
-
-// Thinking is the AI's internal reasoning.
-type Thinking struct {
-	Content string `json:"content"`
-}
-
-// NewTextDelta creates a streaming text delta block.
-func NewTextDelta(text string) Block {
-	return Block{
-		Type: TypeTextDelta,
-		Text: &Text{Content: text},
-	}
-}
-
-// NewThinkingDelta creates a streaming thinking delta block.
-func NewThinkingDelta(thinking string) Block {
-	return Block{
-		Type:     TypeThinkingDelta,
-		Thinking: &Thinking{Content: thinking},
-	}
-}
-
 // Parse parses a JSON string into content blocks.
 // Returns nil for empty input.
 func Parse(data string) ([]Block, error) {
@@ -108,4 +82,16 @@ func Parse(data string) ([]Block, error) {
 		return nil, err
 	}
 	return blocks, nil
+}
+
+// Encode serializes blocks to JSON string for storage.
+func Encode(blocks []Block) (string, error) {
+	if len(blocks) == 0 {
+		return "[]", nil
+	}
+	data, err := json.Marshal(blocks)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

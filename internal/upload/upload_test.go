@@ -87,11 +87,11 @@ func TestUploader_Run(t *testing.T) {
 		// Wait for syncing event
 		select {
 		case event := <-uploader.Events():
-			if event.Status != upload.StatusSyncing {
-				t.Errorf("expected StatusSyncing, got %v", event.Status)
-			}
-			if event.ProcessedCount != 1 {
-				t.Errorf("expected ProcessedCount=1, got %d", event.ProcessedCount)
+			syncEvent, ok := event.(upload.SyncingEvent)
+			if !ok {
+				t.Errorf("expected SyncingEvent, got %T", event)
+			} else if syncEvent.ProcessedCount != 1 {
+				t.Errorf("expected ProcessedCount=1, got %d", syncEvent.ProcessedCount)
 			}
 		case <-time.After(time.Second):
 			t.Fatal("timeout waiting for syncing event")
@@ -175,14 +175,16 @@ func TestUploader_Run(t *testing.T) {
 		// Should get stalled event after retries exhausted
 		select {
 		case event := <-uploader.Events():
-			if event.Status != upload.StatusStalled {
-				t.Errorf("expected StatusStalled, got %v", event.Status)
-			}
-			if event.Error == nil {
-				t.Error("expected error in stalled event")
-			}
-			if event.Table != "conversations" {
-				t.Errorf("expected table=conversations, got %s", event.Table)
+			stalledEvent, ok := event.(upload.StalledEvent)
+			if !ok {
+				t.Errorf("expected StalledEvent, got %T", event)
+			} else {
+				if stalledEvent.Error == nil {
+					t.Error("expected error in stalled event")
+				}
+				if stalledEvent.Table != "conversations" {
+					t.Errorf("expected table=conversations, got %s", stalledEvent.Table)
+				}
 			}
 		case <-time.After(10 * time.Second):
 			t.Fatal("timeout waiting for stalled event")
@@ -191,8 +193,8 @@ func TestUploader_Run(t *testing.T) {
 		// Should get recovered event after success
 		select {
 		case event := <-uploader.Events():
-			if event.Status != upload.StatusRecovered {
-				t.Errorf("expected StatusRecovered, got %v", event.Status)
+			if _, ok := event.(upload.RecoveredEvent); !ok {
+				t.Errorf("expected RecoveredEvent, got %T", event)
 			}
 		case <-time.After(5 * time.Second):
 			t.Fatal("timeout waiting for recovered event")
@@ -201,8 +203,8 @@ func TestUploader_Run(t *testing.T) {
 		// Should get syncing event
 		select {
 		case event := <-uploader.Events():
-			if event.Status != upload.StatusSyncing {
-				t.Errorf("expected StatusSyncing, got %v", event.Status)
+			if _, ok := event.(upload.SyncingEvent); !ok {
+				t.Errorf("expected SyncingEvent, got %T", event)
 			}
 		case <-time.After(time.Second):
 			t.Fatal("timeout waiting for syncing event")

@@ -3,15 +3,24 @@ package upload
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/block"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 )
+
+// Message handler events
+
+// MessageProcessingEvent is emitted when we start processing a user message.
+// The TUI can use this to show a loading indicator until the assistant message appears.
+type MessageProcessingEvent struct {
+	ConversationID string
+	UserMessageID  string
+}
+
+func (MessageProcessingEvent) uploadEvent() {}
 
 // messageHandler handles uploading messages to the Chat API.
 type messageHandler struct {
@@ -29,10 +38,10 @@ func newMessageHandler(messages chat.Messages, db sqlite.Database, logger log.Lo
 }
 
 // Handle uploads a message to the backend.
-func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
 	switch entry.Op {
 	case powersync.OpPut:
-		return h.handlePut(ctx, entry)
+		return h.handlePut(ctx, entry, emit)
 	case powersync.OpPatch:
 		// Updates to messages (e.g., streaming content) don't need upload
 		// The final assistant message will be uploaded when complete
@@ -49,12 +58,12 @@ func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry)
 	}
 }
 
-func (h *messageHandler) handlePut(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *messageHandler) handlePut(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
 	role, _ := entry.Data["role"].(string)
 
 	switch chat.MessageRole(role) {
 	case chat.RoleUser:
-		return h.handleUserMessage(ctx, entry)
+		return h.handleUserMessage(ctx, entry, emit)
 	case chat.RoleAssistant:
 		return h.handleAssistantMessage(ctx, entry)
 	default:
@@ -64,10 +73,16 @@ func (h *messageHandler) handlePut(ctx context.Context, entry *powersync.CrudEnt
 }
 
 // handleUserMessage uploads a user message and handles the streaming response.
-func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
 	conversationID, _ := entry.Data["conversation_id"].(string)
 	accountID, _ := entry.Data["account_id"].(string)
 	content, _ := entry.Data["content"].(string)
+
+	// Emit processing event before starting the HTTP request
+	emit(MessageProcessingEvent{
+		ConversationID: conversationID,
+		UserMessageID:  entry.RowID,
+	})
 
 	// Track assistant message state
 	var assistantMsgID string
@@ -84,8 +99,9 @@ func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync
 
 		// Create assistant message on stream start
 		if event.Type == block.TypeMessageStart {
-			assistantMsgID = uuid.New().String()
-			if err := h.createAssistantMessage(ctx, assistantMsgID, conversationID, accountID); err != nil {
+			var err error
+			assistantMsgID, err = h.db.Messages().CreateAssistantMessage(ctx, accountID, conversationID)
+			if err != nil {
 				return fmt.Errorf("create assistant message: %w", err)
 			}
 			messageCreated = true
@@ -95,7 +111,7 @@ func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync
 
 		// Accumulator handles all content block types
 		if acc.Apply(event.Block) && messageCreated {
-			if err := h.updateAssistantContent(ctx, assistantMsgID, acc.JSON()); err != nil {
+			if err := h.db.Messages().UpdateContent(ctx, assistantMsgID, acc.JSON()); err != nil {
 				h.logger.Warn("failed to update assistant message", "error", err)
 			}
 		}
@@ -125,28 +141,4 @@ func (h *messageHandler) handleAssistantMessage(ctx context.Context, entry *powe
 
 	h.logger.Debug("uploaded assistant message", "id", entry.RowID)
 	return nil
-}
-
-// createAssistantMessage creates a new assistant message in SQLite.
-func (h *messageHandler) createAssistantMessage(ctx context.Context, msgID, conversationID, accountID string) error {
-	now := time.Now().UTC().Format(time.RFC3339)
-	role := string(chat.RoleAssistant)
-	content := "[]" // Empty JSON array
-
-	return h.db.Queries().InsertMessage(ctx, sqlite.InsertMessageParams{
-		ID:             &msgID,
-		AccountID:      &accountID,
-		ConversationID: &conversationID,
-		Content:        &content,
-		CreatedAt:      &now,
-		Role:           &role,
-	})
-}
-
-// updateAssistantContent updates an assistant message with new content.
-func (h *messageHandler) updateAssistantContent(ctx context.Context, msgID, content string) error {
-	return h.db.Queries().UpdateMessageContent(ctx, sqlite.UpdateMessageContentParams{
-		ID:      &msgID,
-		Content: &content,
-	})
 }

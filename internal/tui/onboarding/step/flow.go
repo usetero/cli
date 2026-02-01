@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/tui/keymap"
 )
 
@@ -15,14 +16,16 @@ import (
 type Flow struct {
 	current  Step
 	lastStep Step // The final step before flow completed (for extracting accumulated state)
+	logger   log.Logger
 	width    int
 	height   int
 }
 
 // NewFlow creates a new flow starting with the given step
-func NewFlow(startStep Step) *Flow {
+func NewFlow(startStep Step, logger log.Logger) *Flow {
 	return &Flow{
 		current: startStep,
+		logger:  logger,
 	}
 }
 
@@ -60,11 +63,17 @@ func (f *Flow) Update(msg tea.Msg) tea.Cmd {
 			// No more steps - flow complete
 			// Save the last step so we can extract accumulated state
 			f.lastStep = f.current
+			if err := f.current.Close(); err != nil {
+				f.logger.Error("failed to close step", "error", err)
+			}
 			f.current = nil
 			return cmd
 		}
 
-		// Transition to next step
+		// Transition to next step - close the old one first
+		if err := f.current.Close(); err != nil {
+			f.logger.Error("failed to close step", "error", err)
+		}
 		f.current = nextStep
 		f.current.SetSize(f.width, f.height)
 		initCmd := f.current.Init()
@@ -137,4 +146,14 @@ func (f *Flow) Help() help.KeyMap {
 		return keymap.Simple{Keys: []key.Binding{}}
 	}
 	return f.current.Help()
+}
+
+// Close releases any resources held by the current step.
+// Called when the flow is interrupted (e.g., user quits mid-onboarding).
+// Steps that complete normally are closed during transition.
+func (f *Flow) Close() error {
+	if f.current != nil {
+		return f.current.Close()
+	}
+	return nil
 }

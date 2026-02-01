@@ -49,4 +49,7 @@ type Step interface {
 	//   - (nil, ErrNotReady) - step not complete yet, stay on current step
 	//   - (nil, err) - step failed with error
 	Next() (Step, error)
+
+	// Close releases any resources held by the step.
+	Close() error
 }

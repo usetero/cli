@@ -10,8 +10,9 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// blendColors creates a gradient between multiple color stops
-func blendColors(size int, stops ...color.Color) []color.Color {
+// BlendColors creates a gradient between multiple color stops.
+// Blending is done in HCL color space to stay in gamut.
+func BlendColors(size int, stops ...color.Color) []color.Color {
 	if len(stops) < 2 {
 		return nil
 	}
@@ -76,7 +77,7 @@ func ForegroundGrad(input string, bold bool, color1, color2 color.Color) []strin
 		clusters = append(clusters, string(gr.Runes()))
 	}
 
-	ramp := blendColors(len(clusters), color1, color2)
+	ramp := BlendColors(len(clusters), color1, color2)
 	for i, c := range ramp {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(ColorToHex(c)))
 		if bold {

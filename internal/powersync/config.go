@@ -46,3 +46,19 @@ func (c *Config) DatabasePath(accountID string) (string, error) {
 	}
 	return filepath.Join(dataDir, accountID+".sqlite"), nil
 }
+
+// Clear removes all SQLite database files for this environment.
+func (c *Config) Clear() error {
+	dataDir, err := c.DataDir()
+	if err != nil {
+		return err
+	}
+
+	files, _ := filepath.Glob(filepath.Join(dataDir, "*.sqlite"))
+	for _, f := range files {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}

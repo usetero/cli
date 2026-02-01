@@ -216,3 +216,8 @@ func (s *CheckAuthStep) Help() help.KeyMap {
 	// No user interaction during normal checking
 	return keymap.Simple{Keys: []key.Binding{}}
 }
+
+// Close releases any resources held by the step.
+func (s *CheckAuthStep) Close() error {
+	return nil
+}
