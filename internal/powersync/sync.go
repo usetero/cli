@@ -132,7 +132,9 @@ func (s *Sync) Stop() {
 // Status returns the current sync status.
 func (s *Sync) Status() Status {
 	if v := s.status.Load(); v != nil {
-		return v.(Status)
+		if status, ok := v.(Status); ok {
+			return status
+		}
 	}
 	return StatusDisconnected
 }
@@ -140,7 +142,9 @@ func (s *Sync) Status() Status {
 // LastError returns the most recent error, or nil.
 func (s *Sync) LastError() error {
 	if v := s.lastError.Load(); v != nil {
-		return v.(error)
+		if err, ok := v.(error); ok {
+			return err
+		}
 	}
 	return nil
 }

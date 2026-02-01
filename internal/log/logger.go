@@ -35,11 +35,11 @@ func New() Logger {
 		panic(err)
 	}
 
-	// Write session separator
-	logFile.WriteString("\n")
-	logFile.WriteString("================================================================================\n")
-	logFile.WriteString("SESSION START\n")
-	logFile.WriteString("================================================================================\n")
+	// Write session separator (ignore errors - best effort logging)
+	_, _ = logFile.WriteString("\n")
+	_, _ = logFile.WriteString("================================================================================\n")
+	_, _ = logFile.WriteString("SESSION START\n")
+	_, _ = logFile.WriteString("================================================================================\n")
 
 	return slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: slog.LevelDebug,

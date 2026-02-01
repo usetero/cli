@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"slices"
@@ -262,7 +263,7 @@ func (m *TUI) startUploader() {
 	uploader := upload.New(m.db, m.conversations, m.messages, m.logger)
 	go func() {
 		defer close(m.uploaderDone)
-		if err := uploader.Run(m.ctx); err != nil && err != context.Canceled {
+		if err := uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
 			m.logger.Error("upload loop error", "error", err)
 		}
 	}()
