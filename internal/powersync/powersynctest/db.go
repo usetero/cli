@@ -9,7 +9,8 @@ import (
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
-// OpenTestDB creates a temporary SQLite database with the PowerSync extension loaded.
+// OpenTestDB creates a temporary SQLite database with the PowerSync extension
+// loaded and schema initialized. Ready for testing.
 // The database is automatically closed when the test completes.
 func OpenTestDB(t *testing.T) *sqlite.DB {
 	t.Helper()
@@ -26,18 +27,6 @@ func OpenTestDB(t *testing.T) *sqlite.DB {
 		t.Fatalf("LoadExtension() error = %v", err)
 	}
 
-	return db
-}
-
-// OpenTestDBWithSchema creates a temporary SQLite database with the PowerSync extension
-// loaded and schema initialized. Ready for sync operations.
-func OpenTestDBWithSchema(t *testing.T) *sqlite.DB {
-	t.Helper()
-
-	ctx := context.Background()
-	db := OpenTestDB(t)
-
-	// Initialize with the embedded schema
 	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
 		t.Fatalf("powersync_replace_schema() error = %v", err)
 	}

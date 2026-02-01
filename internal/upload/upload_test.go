@@ -21,7 +21,7 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("returns on context cancellation", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		logger := logtest.New(t)
 
 		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
@@ -38,7 +38,7 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("processes entry and deletes after success", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		logger := logtest.New(t)
 
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
@@ -76,7 +76,7 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("skips unknown tables and deletes entry", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		logger := logtest.New(t)
 
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"unknown_table","id":"row-1","data":{}}`)

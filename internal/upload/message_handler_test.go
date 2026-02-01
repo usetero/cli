@@ -18,7 +18,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT user message uploads and streams response", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 
 		var calledWith struct {
 			messageID      string
@@ -68,7 +68,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT user message creates assistant message and updates with deltas", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
@@ -131,7 +131,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT user message returns error on failure", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
@@ -160,7 +160,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PUT assistant message uploads for durability", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 
 		var calledWith struct {
 			messageID      string
@@ -211,7 +211,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("PATCH skips upload and returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
@@ -229,7 +229,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("DELETE skips upload and returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
@@ -247,7 +247,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 	t.Run("unknown role returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDBWithSchema(t)
+		db := powersynctest.OpenTestDB(t)
 		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
 
 		entry := &powersync.CrudEntry{
