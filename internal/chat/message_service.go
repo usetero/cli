@@ -6,6 +6,8 @@ package chat
 import (
 	"context"
 	"fmt"
+
+	"github.com/usetero/cli/internal/chat/block"
 )
 
 // Messages provides access to message operations.
@@ -37,8 +39,8 @@ func (s *MessageService) UploadUserMessage(ctx context.Context, messageID, conve
 		MessageID:      messageID,
 		ConversationID: conversationID,
 		Role:           RoleUser,
-		Content: []ContentBlock{
-			{Type: "text", Text: content},
+		Content: []block.Block{
+			{Type: block.TypeText, Text: &block.Text{Content: content}},
 		},
 	}
 
@@ -56,8 +58,8 @@ func (s *MessageService) UploadAssistantMessage(ctx context.Context, messageID, 
 		MessageID:      messageID,
 		ConversationID: conversationID,
 		Role:           RoleAssistant,
-		Content: []ContentBlock{
-			{Type: "text", Text: content},
+		Content: []block.Block{
+			{Type: block.TypeText, Text: &block.Text{Content: content}},
 		},
 		Model:      model,
 		StopReason: stopReason,

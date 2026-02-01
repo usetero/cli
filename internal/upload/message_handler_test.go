@@ -2,10 +2,12 @@ package upload
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
 	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/chat/block"
 	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
@@ -15,12 +17,12 @@ import (
 func TestMessageHandler_Handle(t *testing.T) {
 	t.Parallel()
 
-	t.Run("PUT user message uploads and streams response", func(t *testing.T) {
+	t.Run("uploads user message with correct parameters", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
 
-		var calledWith struct {
+		var captured struct {
 			messageID      string
 			conversationID string
 			content        string
@@ -28,10 +30,9 @@ func TestMessageHandler_Handle(t *testing.T) {
 
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
-				calledWith.messageID = messageID
-				calledWith.conversationID = conversationID
-				calledWith.content = content
-				// Simulate stream completion
+				captured.messageID = messageID
+				captured.conversationID = conversationID
+				captured.content = content
 				return handler(chat.StreamEvent{Done: true})
 			},
 		}
@@ -54,38 +55,37 @@ func TestMessageHandler_Handle(t *testing.T) {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
-		if calledWith.messageID != "msg-1" {
-			t.Errorf("UploadUserMessage called with messageID = %q, want %q", calledWith.messageID, "msg-1")
+		if captured.messageID != "msg-1" {
+			t.Errorf("messageID = %q, want %q", captured.messageID, "msg-1")
 		}
-		if calledWith.conversationID != "conv-1" {
-			t.Errorf("UploadUserMessage called with conversationID = %q, want %q", calledWith.conversationID, "conv-1")
+		if captured.conversationID != "conv-1" {
+			t.Errorf("conversationID = %q, want %q", captured.conversationID, "conv-1")
 		}
-		if calledWith.content != "Hello" {
-			t.Errorf("UploadUserMessage called with content = %q, want %q", calledWith.content, "Hello")
+		if captured.content != "Hello" {
+			t.Errorf("content = %q, want %q", captured.content, "Hello")
 		}
 	})
 
-	t.Run("PUT user message creates assistant message and updates with deltas", func(t *testing.T) {
+	t.Run("creates assistant message and accumulates streaming deltas", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
 
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
-				// Simulate streaming: message_start, then multiple deltas, then done
-				if err := handler(chat.StreamEvent{Type: "message_start"}); err != nil {
-					return err
+				events := []chat.StreamEvent{
+					{Block: block.Block{Type: block.TypeMessageStart}},
+					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Hello"}}},
+					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: " world"}}},
+					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "!"}}},
+					{Done: true},
 				}
-				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: "Hello"}}); err != nil {
-					return err
+				for _, e := range events {
+					if err := handler(e); err != nil {
+						return err
+					}
 				}
-				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: " world"}}); err != nil {
-					return err
-				}
-				if err := handler(chat.StreamEvent{Type: "content_block_delta", Text: &chat.TextDelta{Content: "!"}}); err != nil {
-					return err
-				}
-				return handler(chat.StreamEvent{Done: true})
+				return nil
 			},
 		}
 
@@ -107,7 +107,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
-		// Verify assistant message was created and updated in SQLite
+		// Query assistant message from SQLite
 		rows, err := db.Query(context.Background(), "SELECT content FROM messages WHERE role = 'assistant'")
 		if err != nil {
 			t.Fatalf("Query error = %v", err)
@@ -118,17 +118,104 @@ func TestMessageHandler_Handle(t *testing.T) {
 			t.Fatal("expected assistant message in database")
 		}
 
-		var content string
-		if err := rows.Scan(&content); err != nil {
+		var contentJSON string
+		if err := rows.Scan(&contentJSON); err != nil {
 			t.Fatalf("Scan error = %v", err)
 		}
 
-		if content != "Hello world!" {
-			t.Errorf("assistant message content = %q, want %q", content, "Hello world!")
+		// Parse and verify content blocks
+		var blocks []block.Block
+		if err := json.Unmarshal([]byte(contentJSON), &blocks); err != nil {
+			t.Fatalf("content is not valid JSON: %v", err)
+		}
+
+		if len(blocks) != 1 {
+			t.Fatalf("got %d blocks, want 1", len(blocks))
+		}
+		if blocks[0].Type != block.TypeText {
+			t.Errorf("block type = %q, want %q", blocks[0].Type, block.TypeText)
+		}
+		if blocks[0].Text.Content != "Hello world!" {
+			t.Errorf("text content = %q, want %q", blocks[0].Text.Content, "Hello world!")
 		}
 	})
 
-	t.Run("PUT user message returns error on failure", func(t *testing.T) {
+	t.Run("accumulates thinking then text as separate blocks", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+
+		mock := &chattest.MockMessages{
+			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
+				events := []chat.StreamEvent{
+					{Block: block.Block{Type: block.TypeMessageStart}},
+					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "Let me think"}}},
+					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "..."}}},
+					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Here's my answer"}}},
+					{Done: true},
+				}
+				for _, e := range events {
+					if err := handler(e); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+		}
+
+		h := newMessageHandler(mock, db, logtest.New(t))
+
+		entry := &powersync.CrudEntry{
+			Op:    powersync.OpPut,
+			RowID: "msg-1",
+			Data: map[string]any{
+				"role":            "user",
+				"conversation_id": "conv-1",
+				"account_id":      "acc-1",
+				"content":         "Question",
+			},
+		}
+
+		err := h.Handle(context.Background(), entry)
+		if err != nil {
+			t.Fatalf("Handle() error = %v", err)
+		}
+
+		rows, err := db.Query(context.Background(), "SELECT content FROM messages WHERE role = 'assistant'")
+		if err != nil {
+			t.Fatalf("Query error = %v", err)
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			t.Fatal("expected assistant message in database")
+		}
+
+		var contentJSON string
+		if err := rows.Scan(&contentJSON); err != nil {
+			t.Fatalf("Scan error = %v", err)
+		}
+
+		var blocks []block.Block
+		if err := json.Unmarshal([]byte(contentJSON), &blocks); err != nil {
+			t.Fatalf("content is not valid JSON: %v", err)
+		}
+
+		if len(blocks) != 2 {
+			t.Fatalf("got %d blocks, want 2", len(blocks))
+		}
+		if blocks[0].Type != block.TypeThinking {
+			t.Errorf("first block type = %q, want %q", blocks[0].Type, block.TypeThinking)
+		}
+		if blocks[0].Thinking.Content != "Let me think..." {
+			t.Errorf("thinking content = %q, want %q", blocks[0].Thinking.Content, "Let me think...")
+		}
+		if blocks[1].Type != block.TypeText {
+			t.Errorf("second block type = %q, want %q", blocks[1].Type, block.TypeText)
+		}
+	})
+
+	t.Run("returns error when upload fails", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -157,26 +244,24 @@ func TestMessageHandler_Handle(t *testing.T) {
 		}
 	})
 
-	t.Run("PUT assistant message uploads for durability", func(t *testing.T) {
+	t.Run("uploads assistant message for durability", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
 
-		var calledWith struct {
-			messageID      string
-			conversationID string
-			content        string
-			model          string
-			stopReason     string
+		var captured struct {
+			messageID  string
+			content    string
+			model      string
+			stopReason string
 		}
 
 		mock := &chattest.MockMessages{
 			UploadAssistantMessageFunc: func(ctx context.Context, messageID, conversationID, content, model, stopReason string) error {
-				calledWith.messageID = messageID
-				calledWith.conversationID = conversationID
-				calledWith.content = content
-				calledWith.model = model
-				calledWith.stopReason = stopReason
+				captured.messageID = messageID
+				captured.content = content
+				captured.model = model
+				captured.stopReason = stopReason
 				return nil
 			},
 		}
@@ -189,7 +274,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			Data: map[string]any{
 				"role":            "assistant",
 				"conversation_id": "conv-1",
-				"content":         "Hi there!",
+				"content":         `[{"type":"text","text":{"content":"Hi there!"}}]`,
 				"model":           "claude-3",
 				"stop_reason":     "end_turn",
 			},
@@ -200,15 +285,15 @@ func TestMessageHandler_Handle(t *testing.T) {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
-		if calledWith.messageID != "msg-2" {
-			t.Errorf("UploadAssistantMessage called with messageID = %q, want %q", calledWith.messageID, "msg-2")
+		if captured.messageID != "msg-2" {
+			t.Errorf("messageID = %q, want %q", captured.messageID, "msg-2")
 		}
-		if calledWith.content != "Hi there!" {
-			t.Errorf("UploadAssistantMessage called with content = %q, want %q", calledWith.content, "Hi there!")
+		if captured.model != "claude-3" {
+			t.Errorf("model = %q, want %q", captured.model, "claude-3")
 		}
 	})
 
-	t.Run("PATCH skips upload and returns nil", func(t *testing.T) {
+	t.Run("PATCH skips upload", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -220,13 +305,12 @@ func TestMessageHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
-		if err != nil {
-			t.Errorf("Handle() error = %v, want nil for PATCH", err)
+		if err := h.Handle(context.Background(), entry); err != nil {
+			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
 
-	t.Run("DELETE skips upload and returns nil", func(t *testing.T) {
+	t.Run("DELETE skips upload", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -238,13 +322,12 @@ func TestMessageHandler_Handle(t *testing.T) {
 			Data:  map[string]any{},
 		}
 
-		err := h.Handle(context.Background(), entry)
-		if err != nil {
-			t.Errorf("Handle() error = %v, want nil for DELETE", err)
+		if err := h.Handle(context.Background(), entry); err != nil {
+			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
 
-	t.Run("unknown role returns nil", func(t *testing.T) {
+	t.Run("unknown role skips upload", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
@@ -258,9 +341,8 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		err := h.Handle(context.Background(), entry)
-		if err != nil {
-			t.Errorf("Handle() error = %v, want nil for unknown role", err)
+		if err := h.Handle(context.Background(), entry); err != nil {
+			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
 }

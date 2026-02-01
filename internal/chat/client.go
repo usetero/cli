@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/usetero/cli/internal/chat/block"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -49,18 +50,12 @@ const (
 	RoleAssistant MessageRole = "assistant"
 )
 
-// ContentBlock represents a block of content in a message.
-type ContentBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text,omitempty"`
-}
-
 // SendMessageRequest is the request body for sending a message.
 type SendMessageRequest struct {
-	MessageID      string         `json:"message_id"`
-	ConversationID string         `json:"conversation_id"`
-	Role           MessageRole    `json:"role"`
-	Content        []ContentBlock `json:"content"`
+	MessageID      string        `json:"message_id"`
+	ConversationID string        `json:"conversation_id"`
+	Role           MessageRole   `json:"role"`
+	Content        []block.Block `json:"content"`
 	// Required for assistant messages only
 	Model      string `json:"model,omitempty"`
 	StopReason string `json:"stop_reason,omitempty"`
@@ -74,24 +69,11 @@ type SendMessageResponse struct {
 }
 
 // StreamEvent represents an SSE event from the chat stream.
+// The server sends typed blocks directly.
 type StreamEvent struct {
-	Type string          `json:"type"`
-	Text *TextDelta      `json:"text,omitempty"`
-	Tool *ToolUseEvent   `json:"tool_use,omitempty"`
-	Done bool            `json:"-"` // Set when we receive [DONE]
-	Raw  json.RawMessage `json:"-"` // The raw event data
-}
-
-// TextDelta contains streamed text content.
-type TextDelta struct {
-	Content string `json:"content"`
-}
-
-// ToolUseEvent contains tool use information.
-type ToolUseEvent struct {
-	ID    string          `json:"id"`
-	Name  string          `json:"name"`
-	Input json.RawMessage `json:"input"`
+	block.Block                 // Embedded block (type, text, thinking, tool_use, tool_result)
+	Done        bool            `json:"-"` // Set when we receive [DONE]
+	Raw         json.RawMessage `json:"-"` // The raw event data
 }
 
 // StreamHandler is called for each event in the stream.

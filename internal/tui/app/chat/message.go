@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/chat/block"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -34,10 +36,10 @@ func (m *Message) Render(msg sqlite.Message) string {
 		return ""
 	}
 
-	switch *msg.Role {
-	case "user":
+	switch chat.MessageRole(*msg.Role) {
+	case chat.RoleUser:
 		return m.renderUser(msg)
-	case "assistant":
+	case chat.RoleAssistant:
 		return m.renderAssistant(msg)
 	default:
 		return ""
@@ -51,7 +53,7 @@ func (m *Message) renderUser(msg sqlite.Message) string {
 	// Parse content blocks
 	content := ""
 	if msg.Content != nil {
-		blocks, err := ParseContentBlocks(*msg.Content)
+		blocks, err := block.Parse(*msg.Content)
 		if err == nil {
 			content = m.extractText(blocks)
 		} else {
@@ -83,32 +85,32 @@ func (m *Message) renderAssistant(msg sqlite.Message) string {
 	var parts []string
 
 	if msg.Content != nil {
-		blocks, err := ParseContentBlocks(*msg.Content)
+		blocks, err := block.Parse(*msg.Content)
 		if err == nil {
-			for _, block := range blocks {
-				switch block.Type {
-				case BlockTypeText:
-					if block.Text != nil && block.Text.Content != "" {
+			for _, b := range blocks {
+				switch b.Type {
+				case block.TypeText:
+					if b.Text != nil && b.Text.Content != "" {
 						text := lipgloss.NewStyle().
 							Foreground(colors.Page.Text).
 							Width(m.width - 4).
-							Render(block.Text.Content)
+							Render(b.Text.Content)
 						parts = append(parts, text)
 					}
 
-				case BlockTypeThinking:
-					if block.Thinking != nil && block.Thinking.Content != "" {
-						parts = append(parts, m.renderThinking(block.Thinking.Content))
+				case block.TypeThinking:
+					if b.Thinking != nil && b.Thinking.Content != "" {
+						parts = append(parts, m.renderThinking(b.Thinking.Content))
 					}
 
-				case BlockTypeToolUse:
-					if block.ToolUse != nil {
-						parts = append(parts, m.renderToolUse(block.ToolUse))
+				case block.TypeToolUse:
+					if b.ToolUse != nil {
+						parts = append(parts, m.renderToolUse(b.ToolUse))
 					}
 
-				case BlockTypeToolResult:
-					if block.ToolResult != nil {
-						parts = append(parts, m.renderToolResult(block.ToolResult))
+				case block.TypeToolResult:
+					if b.ToolResult != nil {
+						parts = append(parts, m.renderToolResult(b.ToolResult))
 					}
 				}
 			}
@@ -153,7 +155,7 @@ func (m *Message) renderThinking(content string) string {
 }
 
 // renderToolUse renders a tool call.
-func (m *Message) renderToolUse(tool *ToolUse) string {
+func (m *Message) renderToolUse(tool *block.ToolUse) string {
 	colors := m.theme.Colors
 
 	// Tool name with icon
@@ -165,7 +167,7 @@ func (m *Message) renderToolUse(tool *ToolUse) string {
 }
 
 // renderToolResult renders a tool result.
-func (m *Message) renderToolResult(result *ToolResult) string {
+func (m *Message) renderToolResult(result *block.ToolResult) string {
 	colors := m.theme.Colors
 
 	if result.IsError {
@@ -181,11 +183,11 @@ func (m *Message) renderToolResult(result *ToolResult) string {
 }
 
 // extractText extracts plain text from content blocks.
-func (m *Message) extractText(blocks []ContentBlock) string {
+func (m *Message) extractText(blocks []block.Block) string {
 	var texts []string
-	for _, block := range blocks {
-		if block.Type == BlockTypeText && block.Text != nil {
-			texts = append(texts, block.Text.Content)
+	for _, b := range blocks {
+		if b.Type == block.TypeText && b.Text != nil {
+			texts = append(texts, b.Text.Content)
 		}
 	}
 	return strings.Join(texts, "\n")
