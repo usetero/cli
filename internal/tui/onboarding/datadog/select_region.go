@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/list"
 	"github.com/usetero/cli/internal/tui/keymap"
@@ -73,8 +74,10 @@ type SelectRegionStep struct {
 	account api.Account
 
 	// Pass-through to next step
-	apiClient api.Client
-	logger    log.Logger
+	workspaces  api.Workspaces
+	preferences preferences.Preferences
+	apiClient   api.Client
+	logger      log.Logger
 
 	// UI state
 	list           *list.List
@@ -84,7 +87,13 @@ type SelectRegionStep struct {
 }
 
 // NewSelectRegionStep creates a new Datadog region selection step
-func NewSelectRegionStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectRegionStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, workspaces api.Workspaces, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
+	}
+	if prefs == nil {
+		panic("preferences cannot be nil")
+	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -113,6 +122,8 @@ func NewSelectRegionStep(ctx context.Context, theme *styles.Theme, role string, 
 		role:           role,
 		org:            org,
 		account:        account,
+		workspaces:     workspaces,
+		preferences:    prefs,
 		apiClient:      apiClient,
 		logger:         logger,
 		list:           l,
@@ -213,7 +224,7 @@ func (s *SelectRegionStep) Next() (step.Step, error) {
 	datadogAccountService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Region selected, continue to API key entry with the selected site
-	return NewAPIKeyStep(s.ctx, s.theme, s.role, s.org, s.account, s.selectedRegion, datadogAccountService, s.apiClient, s.logger, s.globalBindings), nil
+	return NewAPIKeyStep(s.ctx, s.theme, s.role, s.org, s.account, s.selectedRegion, datadogAccountService, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

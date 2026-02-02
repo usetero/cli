@@ -47,16 +47,6 @@ func run() error {
 	}
 	defer db.Close()
 
-	// Load PowerSync extension
-	extPath, err := powersync.ExtensionPath()
-	if err != nil {
-		return fmt.Errorf("get extension path: %w", err)
-	}
-
-	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
-		return fmt.Errorf("load extension: %w", err)
-	}
-
 	fmt.Println("Applying embedded PowerSync schema...")
 
 	// Apply embedded schema to create views (just like runtime)

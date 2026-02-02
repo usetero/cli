@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/api"
 	authservice "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -196,7 +197,11 @@ func (s *CheckAuthStep) Next() (step.Step, error) {
 		return s.auth.GetAccessToken(s.ctx)
 	}
 	apiClient := client.New(s.apiEndpoint, s.accessToken, refreshFunc)
-	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
+
+	// Create workspace service for onboarding flow
+	workspaceService := api.NewWorkspaceService(apiClient, s.logger)
+
+	return role.NewSelectStep(s.ctx, s.theme, workspaceService, apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

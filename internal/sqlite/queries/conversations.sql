@@ -13,5 +13,5 @@ ORDER BY updated_at DESC
 LIMIT 1;
 
 -- name: InsertConversation :exec
-INSERT INTO conversations (id, account_id, created_at, updated_at)
-VALUES (?, ?, ?, ?);
+INSERT INTO conversations (id, account_id, workspace_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?);

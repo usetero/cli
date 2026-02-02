@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
@@ -27,8 +27,8 @@ func isRegionComplete(s step.Step) bool {
 
 func TestSelectRegionStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
-	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
 
 	t.Run("selects region on enter", func(t *testing.T) {
 		t.Parallel()
@@ -36,7 +36,7 @@ func TestSelectRegionStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
+		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", org, account, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// Act: press enter to select first region
 		updated, _ := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -61,7 +61,7 @@ func TestSelectRegionStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", testOrg, testAccount, apiClient, logger, nil)
+		s := datadog.NewSelectRegionStep(context.Background(), selectRegionTestTheme(), "admin", org, account, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// Assert
 		if isRegionComplete(s) {

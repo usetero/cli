@@ -9,11 +9,20 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
+
+func discoveryOrg() api.Organization {
+	return apitest.NewOrganization()
+}
+
+func discoveryAccount() api.Account {
+	return apitest.NewAccount()
+}
 
 // discoveryTestTheme creates a theme for testing
 func discoveryTestTheme() *styles.Theme {
@@ -28,8 +37,8 @@ func isDiscoveryComplete(s step.Step) bool {
 
 func TestDiscoveryStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
-	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+	org := discoveryOrg()
+	account := discoveryAccount()
 
 	t.Run("completes when ready_for_use is true", func(t *testing.T) {
 		t.Parallel()
@@ -48,7 +57,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -83,7 +92,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -112,7 +121,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -152,7 +161,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()
@@ -202,7 +211,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -236,7 +245,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -289,7 +298,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -320,7 +329,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -356,7 +365,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -401,7 +410,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -442,7 +451,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act
 		cmd := s.Init()
@@ -481,7 +490,7 @@ func TestDiscoveryStep_Update(t *testing.T) {
 		}
 		logger := logtest.New(t)
 
-		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", testOrg, testAccount, &ddAccountID, ddAccounts, logger, nil)
+		s := datadog.NewDiscoveryStep(context.Background(), discoveryTestTheme(), "admin", org, account, &ddAccountID, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), logger, nil)
 
 		// Act
 		cmd := s.Init()

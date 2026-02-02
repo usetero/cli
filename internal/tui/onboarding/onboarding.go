@@ -34,6 +34,7 @@ type Onboarding struct {
 	ready          bool
 	org            api.Organization // Set when onboarding completes
 	account        api.Account      // Set when onboarding completes
+	workspace      api.Workspace    // Set when onboarding completes
 	globalBindings []key.Binding
 	logger         log.Logger
 }
@@ -92,13 +93,14 @@ func (m *Onboarding) Update(msg tea.Msg) tea.Cmd {
 	layoutCmd := m.layout.Update(msg)
 	cmds = append(cmds, layoutCmd)
 
-	// Check if flow completed and extract org/account from final step
+	// Check if flow completed and extract org/account/workspace from final step
 	if m.flow.IsComplete() && m.org.ID == "" {
 		// Flow completed - extract final state from the last step
 		if lastStep, ok := m.flow.LastStep().(*sync.Step); ok {
 			m.org = lastStep.Organization()
 			m.account = lastStep.Account()
-			m.logger.Info("onboarding completed", "orgID", m.org.ID, "accountID", m.account.ID)
+			m.workspace = lastStep.Workspace()
+			m.logger.Info("onboarding completed", "orgID", m.org.ID, "accountID", m.account.ID, "workspaceID", m.workspace.ID)
 		}
 	}
 
@@ -165,6 +167,12 @@ func (m *Onboarding) Organization() api.Organization {
 // Only valid after IsComplete() returns true
 func (m *Onboarding) Account() api.Account {
 	return m.account
+}
+
+// Workspace returns the workspace from completed onboarding
+// Only valid after IsComplete() returns true
+func (m *Onboarding) Workspace() api.Workspace {
+	return m.workspace
 }
 
 // Close releases any resources held by onboarding.

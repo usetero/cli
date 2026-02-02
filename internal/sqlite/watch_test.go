@@ -2,12 +2,12 @@ package sqlite_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/usetero/cli/internal/powersync"
+	_ "github.com/usetero/cli/internal/powersync" // registers extension via init()
 	"github.com/usetero/cli/internal/sqlite"
+	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
 // setupWatchDB creates a database with PowerSync extension loaded and hooks installed.
@@ -15,26 +15,10 @@ func setupWatchDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
 	ctx := context.Background()
-
-	extPath, err := powersync.ExtensionPath()
-	if err != nil {
-		t.Fatalf("ExtensionPath() error = %v", err)
-	}
-
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.sqlite")
-	db, err := sqlite.Open(ctx, dbPath)
-	if err != nil {
-		t.Fatalf("sqlite.Open() error = %v", err)
-	}
-
-	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
-		db.Close()
-		t.Fatalf("LoadExtension() error = %v", err)
-	}
+	db := sqlitetest.OpenTest(t)
 
 	// Create a test table
-	_, err = db.Exec(ctx, "CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
+	_, err := db.Exec(ctx, "CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
 	if err != nil {
 		db.Close()
 		t.Fatalf("CREATE TABLE error = %v", err)
@@ -93,25 +77,9 @@ func TestDB_InstallUpdateHooks(t *testing.T) {
 		}
 	})
 
-	t.Run("fails without PowerSync extension", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := context.Background()
-
-		// Open DB without loading extension
-		tmpDir := t.TempDir()
-		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(ctx, dbPath)
-		if err != nil {
-			t.Fatalf("sqlite.Open() error = %v", err)
-		}
-		defer db.Close()
-
-		err = db.InstallUpdateHooks(ctx)
-		if err == nil {
-			t.Error("expected error without PowerSync extension, got nil")
-		}
-	})
+	// Note: "fails without PowerSync extension" test removed because
+	// extension is now globally registered via RegisterExtension() and
+	// automatically loaded on every connection.
 }
 
 func TestDB_Subscribe(t *testing.T) {

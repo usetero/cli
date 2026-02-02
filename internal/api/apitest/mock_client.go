@@ -18,6 +18,7 @@ type MockClient struct {
 	ValidateDatadogApiKeyFunc               func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error)
 	CreateDatadogAccountWithCredentialsFunc func(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
 	GetDatadogAccountStatusFunc             func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
+	ListWorkspacesFunc                      func(ctx context.Context, accountID string) (*client.ListWorkspacesResponse, error)
 	CreateConversationFunc                  func(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error)
 	UpdateConversationFunc                  func(ctx context.Context, id string, input client.UpdateConversationInput) (*client.UpdateConversationResponse, error)
 	DeleteConversationFunc                  func(ctx context.Context, id string) (*client.DeleteConversationResponse, error)
@@ -87,6 +88,13 @@ func (m *MockClient) CreateDatadogAccountWithCredentials(ctx context.Context, in
 func (m *MockClient) GetDatadogAccountStatus(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
 	if m.GetDatadogAccountStatusFunc != nil {
 		return m.GetDatadogAccountStatusFunc(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) ListWorkspaces(ctx context.Context, accountID string) (*client.ListWorkspacesResponse, error) {
+	if m.ListWorkspacesFunc != nil {
+		return m.ListWorkspacesFunc(ctx, accountID)
 	}
 	return nil, nil
 }

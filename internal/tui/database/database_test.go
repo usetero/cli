@@ -6,29 +6,24 @@ import (
 
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/sqlite"
+	"github.com/usetero/cli/internal/powersync/powersynctest"
+	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
 func TestDatabase_New(t *testing.T) {
 	t.Parallel()
 
-	t.Run("creates database model", func(t *testing.T) {
+	t.Run("creates database model with dependencies", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
-		config := &powersync.Config{Endpoint: "http://localhost:8084"}
+		mockSync := &mockPowerSync{}
 		logger := logtest.New(t)
 
-		db := New(ctx, config, nil, nil, nil, logger)
+		db := New(ctx, nil, mockSync, powersynctest.NewMockClient(), powersynctest.NewMockTokenRefresher("token"), nil, nil, logger)
 
 		if db == nil {
 			t.Fatal("expected non-nil database")
-		}
-		if db.ctx != ctx {
-			t.Error("context not set")
-		}
-		if db.powersyncConfig != config {
-			t.Error("config not set")
 		}
 	})
 }
@@ -50,7 +45,7 @@ func TestDatabase_IsReady(t *testing.T) {
 		t.Parallel()
 
 		d := &Database{
-			db: &mockDatabase{},
+			db: sqlitetest.NewMockDB(),
 		}
 
 		if d.IsReady() {
@@ -61,9 +56,11 @@ func TestDatabase_IsReady(t *testing.T) {
 	t.Run("false when syncer is not ready", func(t *testing.T) {
 		t.Parallel()
 
+		mock := &mockPowerSync{running: false}
 		d := &Database{
-			db: &mockDatabase{},
+			db: sqlitetest.NewMockDB(),
 			syncer: &Syncer{
+				sync:    mock,
 				waiting: true,
 			},
 		}
@@ -76,16 +73,17 @@ func TestDatabase_IsReady(t *testing.T) {
 	t.Run("true when db and syncer are ready", func(t *testing.T) {
 		t.Parallel()
 
+		mock := &mockPowerSync{running: true}
 		d := &Database{
-			db: &mockDatabase{},
+			db: sqlitetest.NewMockDB(),
 			syncer: &Syncer{
-				syncer:  &mockSyncer{},
+				sync:    mock,
 				waiting: false,
 			},
 		}
 
 		if !d.IsReady() {
-			t.Error("should be ready")
+			t.Error("should be ready when db exists and syncer is ready")
 		}
 	})
 }
@@ -106,7 +104,7 @@ func TestDatabase_DB(t *testing.T) {
 	t.Run("returns db when opened", func(t *testing.T) {
 		t.Parallel()
 
-		mock := &mockDatabase{}
+		mock := sqlitetest.NewMockDB()
 		d := &Database{db: mock}
 
 		if d.DB() != mock {
@@ -130,36 +128,75 @@ func TestDatabase_Close(t *testing.T) {
 	t.Run("stops syncer and closes db", func(t *testing.T) {
 		t.Parallel()
 
-		mock := &mockSyncer{running: true}
-		mockDB := &mockDatabase{}
+		mockSync := &mockPowerSync{running: true}
+		mockDB := sqlitetest.NewMockDB()
 
 		d := &Database{
 			db: mockDB,
 			syncer: &Syncer{
-				syncer: mock,
+				sync: mockSync,
 			},
 		}
 
 		d.Close()
 
-		if mock.running {
+		if !mockSync.stopped {
 			t.Error("syncer should be stopped")
 		}
-		if !mockDB.closed {
+		if !mockDB.Closed {
 			t.Error("db should be closed")
 		}
 	})
 }
 
-// mockDatabase implements sqlite.Database for testing.
-type mockDatabase struct {
-	closed bool
+func TestDatabase_Update(t *testing.T) {
+	t.Parallel()
+
+	t.Run("databaseOpenedMsg initializes syncer and uploader", func(t *testing.T) {
+		t.Parallel()
+
+		mockSync := &mockPowerSync{}
+		d := &Database{
+			ctx:             context.Background(),
+			syncClient:      mockSync,
+			powersyncClient: powersynctest.NewMockClient(),
+			tokenRefresher:  powersynctest.NewMockTokenRefresher("token"),
+			logger:          logtest.New(t),
+		}
+
+		mockDB := sqlitetest.NewMockDB()
+		cmd := d.Update(databaseOpenedMsg{db: mockDB, accountID: "acc-123"})
+
+		if d.db != mockDB {
+			t.Error("db should be set")
+		}
+		if d.syncer == nil {
+			t.Error("syncer should be initialized")
+		}
+		if d.uploader == nil {
+			t.Error("uploader should be initialized")
+		}
+		if cmd == nil {
+			t.Error("should return batch command to start syncer and uploader")
+		}
+	})
+
+	t.Run("delegates to syncer when initialized", func(t *testing.T) {
+		t.Parallel()
+
+		mockSync := &mockPowerSync{status: powersync.StatusConnected, running: true}
+		d := &Database{
+			syncer: &Syncer{
+				sync:    mockSync,
+				waiting: false,
+			},
+		}
+
+		// SyncStatusQueryMsg should be delegated to syncer
+		cmd := d.Update(powersync.SyncStatusQueryMsg{})
+
+		if cmd == nil {
+			t.Error("should delegate to syncer and return command")
+		}
+	})
 }
-
-func (m *mockDatabase) Messages() sqlite.Messages           { return nil }
-func (m *mockDatabase) Conversations() sqlite.Conversations { return nil }
-func (m *mockDatabase) Subscribe() *sqlite.Subscription     { return nil }
-func (m *mockDatabase) Close() error                        { m.closed = true; return nil }
-func (m *mockDatabase) DB() *sqlite.DB                      { return nil }
-
-var _ sqlite.Database = (*mockDatabase)(nil)

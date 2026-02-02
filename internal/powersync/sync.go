@@ -22,8 +22,9 @@ type TokenRefresher interface {
 	GetAccessToken(ctx context.Context) (string, error)
 }
 
-// Syncer manages data synchronization.
+// Syncer manages PowerSync synchronization.
 type Syncer interface {
+	Start(ctx context.Context, db sqlite.Database, accountID string, onFirstSync func()) error
 	Stop()
 	Status() Status
 	SyncStatus() *SyncStatus
@@ -33,17 +34,17 @@ type Syncer interface {
 
 var _ Syncer = (*Sync)(nil)
 
-// Sync manages PowerSync synchronization for a database.
+// Sync implements Syncer.
 type Sync struct {
-	config         *Config
+	endpoint       string
 	tokenRefresher TokenRefresher
 	log            log.Logger
-	streamFactory  func(endpoint, token string) Streamer
+	clientFactory  func(endpoint string) Client
 
 	db          sqlite.Database
 	accountID   string
 	controller  *Controller
-	stream      Streamer
+	client      Client
 	onFirstSync func()
 
 	status     atomic.Value // Status
@@ -55,21 +56,21 @@ type Sync struct {
 	done           chan struct{}
 }
 
-// NewSync creates a new Sync instance.
-func NewSync(config *Config, tokenRefresher TokenRefresher, logger log.Logger) *Sync {
+// NewSync creates a new Sync. Call Start() when you have a database ready.
+func NewSync(endpoint string, tokenRefresher TokenRefresher, logger log.Logger) *Sync {
 	s := &Sync{
-		config:         config,
+		endpoint:       endpoint,
 		tokenRefresher: tokenRefresher,
 		log:            logger,
-		streamFactory:  func(endpoint, token string) Streamer { return NewStream(endpoint, token) },
+		clientFactory:  NewClient,
 	}
 	s.status.Store(StatusDisconnected)
 	return s
 }
 
-// SetStreamFactory sets a custom stream factory (for testing).
-func (s *Sync) SetStreamFactory(factory func(endpoint, token string) Streamer) {
-	s.streamFactory = factory
+// SetClientFactory sets a custom client factory (for testing).
+func (s *Sync) SetClientFactory(factory func(endpoint string) Client) {
+	s.clientFactory = factory
 }
 
 // Start begins syncing. The onFirstSync callback fires once when initial sync completes.
@@ -86,7 +87,15 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID string, 
 		return fmt.Errorf("get initial token: %w", err)
 	}
 
-	if err := LoadExtension(ctx, db); err != nil {
+	if err := ApplySchema(ctx, db); err != nil {
+		return err
+	}
+
+	// Check database health before starting sync.
+	// A crash during migration or write can leave the database in an
+	// inconsistent state. If corrupt, return an error so caller can reset.
+	queue := NewCrudQueue(db)
+	if err := queue.CheckHealth(ctx); err != nil {
 		return err
 	}
 
@@ -95,7 +104,8 @@ func (s *Sync) Start(ctx context.Context, db sqlite.Database, accountID string, 
 	s.onFirstSync = onFirstSync
 	s.firstSyncFired = false
 	s.controller = NewController(db)
-	s.stream = s.streamFactory(s.config.Endpoint, token)
+	s.client = s.clientFactory(s.endpoint)
+	s.client.SetToken(token)
 	s.done = make(chan struct{})
 	s.status.Store(StatusConnecting)
 
@@ -114,7 +124,7 @@ func (s *Sync) Stop() {
 		s.cancel = nil
 	}
 	s.controller = nil
-	s.stream = nil
+	s.client = nil
 	s.db = nil
 	s.done = nil
 	s.status.Store(StatusDisconnected)
@@ -174,9 +184,9 @@ func (s *Sync) run(ctx context.Context) {
 			return
 		}
 
-		var streamErr *StreamError
-		if errors.As(err, &streamErr) {
-			if streamErr.IsAuth() {
+		var clientErr *ClientError
+		if errors.As(err, &clientErr) {
+			if clientErr.IsAuth() {
 				authRetries++
 				if authRetries > maxAuthRetries {
 					s.setError(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
@@ -191,7 +201,7 @@ func (s *Sync) run(ctx context.Context) {
 				continue
 			}
 
-			if streamErr.IsTransient() {
+			if clientErr.IsTransient() {
 				s.log.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
 				s.status.Store(StatusReconnecting)
 				s.lastError.Store(err)
@@ -237,7 +247,7 @@ func (s *Sync) syncOnce(ctx context.Context) error {
 }
 
 // connectAndSync connects to the stream and processes lines until disconnect.
-func (s *Sync) connectAndSync(ctx context.Context, req *StreamingSyncRequest) error {
+func (s *Sync) connectAndSync(ctx context.Context, req *SyncStreamRequest) error {
 	if req == nil {
 		return fmt.Errorf("no sync request")
 	}
@@ -249,7 +259,7 @@ func (s *Sync) connectAndSync(ctx context.Context, req *StreamingSyncRequest) er
 		return fmt.Errorf("notify connected: %w", err)
 	}
 
-	err := s.stream.Connect(ctx, req, s.handleLine)
+	err := s.client.SyncStream(ctx, req, s.handleLine)
 
 	_, _ = s.controller.NotifyConnection(ctx, ConnectionEnded)
 
@@ -316,7 +326,7 @@ func (s *Sync) refreshToken(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.stream.SetToken(token)
+	s.client.SetToken(token)
 	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}

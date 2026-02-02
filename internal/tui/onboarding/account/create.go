@@ -33,6 +33,7 @@ type CreateStep struct {
 
 	// Services
 	accounts    api.Accounts
+	workspaces  api.Workspaces
 	preferences preferences.Preferences
 
 	// Pass-through to next step
@@ -50,9 +51,12 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new account creation step for the given organization
-func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, workspaces api.Workspaces, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accounts == nil {
 		panic("accounts cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
 	}
 	if prefs == nil {
 		panic("preferences cannot be nil")
@@ -74,6 +78,7 @@ func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, org ap
 		role:           role,
 		org:            org,
 		accounts:       accounts,
+		workspaces:     workspaces,
 		preferences:    prefs,
 		apiClient:      apiClient,
 		logger:         logger,
@@ -251,7 +256,7 @@ func (s *CreateStep) Next() (step.Step, error) {
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// Check for Datadog with accumulated data
-	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, *s.createdAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, *s.createdAccount, datadogService, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

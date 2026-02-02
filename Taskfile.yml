@@ -159,6 +159,15 @@ tasks:
       - doppler run -- go run ./cmd/tero auth status
 
   # ===========================================================================
+  # Dependencies
+  # ===========================================================================
+
+  update:powersync:
+    desc: Update PowerSync SQLite extension to latest release
+    cmds:
+      - ./scripts/update-powersync.sh {{.CLI_ARGS}}
+
+  # ===========================================================================
   # Cleanup
   # ===========================================================================
 

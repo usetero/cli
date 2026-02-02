@@ -21,7 +21,7 @@ const (
 type Instruction struct {
 	Type string
 	// Fields vary by type
-	Request        *StreamingSyncRequest
+	Request        *SyncStreamRequest
 	DidExpire      *bool
 	HideDisconnect *bool
 	SyncStatus     *SyncStatus
@@ -53,7 +53,7 @@ func (i *Instruction) UnmarshalJSON(data []byte) error {
 		switch typ {
 		case InstructionEstablishSyncStream:
 			var p struct {
-				Request *StreamingSyncRequest `json:"request"`
+				Request *SyncStreamRequest `json:"request"`
 			}
 			if err := unmarshalStrict(payload, &p); err != nil {
 				return err

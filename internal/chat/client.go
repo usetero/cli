@@ -114,6 +114,14 @@ func (c *Client) SendUserMessage(ctx context.Context, req SendMessageRequest, ha
 		return fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
 	}
 
+	// Verify we got an SSE stream, not JSON or HTML
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "text/event-stream") {
+		body, _ := io.ReadAll(resp.Body)
+		c.log.Error("unexpected content type", log.String("contentType", contentType))
+		return fmt.Errorf("chat API returned %s instead of text/event-stream (check TERO_CHAT_ENDPOINT): %s", contentType, string(body))
+	}
+
 	c.log.Debug("streaming response")
 	return c.readSSEStream(resp.Body, handler)
 }

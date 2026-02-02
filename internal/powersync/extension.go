@@ -14,7 +14,34 @@ import (
 //go:embed extensions/*.dylib extensions/*.so
 var embeddedExtensions embed.FS
 
+func init() {
+	if err := RegisterExtension(); err != nil {
+		panic(fmt.Sprintf("powersync: %v", err))
+	}
+}
+
+// RegisterExtension configures the SQLite driver to load the PowerSync
+// extension on every new connection. This is called automatically via init().
+func RegisterExtension() error {
+	extPath, err := ExtensionPath()
+	if err != nil {
+		return fmt.Errorf("get extension path: %w", err)
+	}
+	sqlite.SetExtensionPath(extPath)
+	return nil
+}
+
+// ApplySchema applies the PowerSync schema to the database.
+// This should be called once after opening the database.
+func ApplySchema(ctx context.Context, db sqlite.Database) error {
+	if _, err := db.DB().Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
+		return fmt.Errorf("apply schema: %w", err)
+	}
+	return nil
+}
+
 // LoadExtension loads the PowerSync extension into the database and applies the schema.
+// Deprecated: Use RegisterExtension() at startup and ApplySchema() after Open() instead.
 func LoadExtension(ctx context.Context, db sqlite.Database) error {
 	extPath, err := ExtensionPath()
 	if err != nil {

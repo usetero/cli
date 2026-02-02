@@ -3,34 +3,27 @@ package powersync
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/usetero/cli/internal/sqlite"
+	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
 func TestExtensionPath(t *testing.T) {
-	// Note: not parallel - shares cached extension path state
 	t.Run("extracts extension to temp directory", func(t *testing.T) {
-
-		// Act
 		path, err := ExtensionPath()
 		if err != nil {
 			t.Fatalf("ExtensionPath() error = %v", err)
 		}
 
-		// Assert: file exists
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatalf("expected extension file to exist at %s, got err: %v", path, err)
 		}
 
-		// Assert: file is not empty
 		if info.Size() == 0 {
 			t.Error("expected extension file to have content")
 		}
 
-		// Assert: file is executable
 		perm := info.Mode().Perm()
 		if perm&0100 == 0 {
 			t.Errorf("expected extension to be executable, got permissions %o", perm)
@@ -38,8 +31,6 @@ func TestExtensionPath(t *testing.T) {
 	})
 
 	t.Run("returns same path on subsequent calls", func(t *testing.T) {
-
-		// Act
 		path1, err := ExtensionPath()
 		if err != nil {
 			t.Fatalf("first ExtensionPath() error = %v", err)
@@ -50,7 +41,6 @@ func TestExtensionPath(t *testing.T) {
 			t.Fatalf("second ExtensionPath() error = %v", err)
 		}
 
-		// Assert: same path returned (cached, not re-extracted)
 		if path1 != path2 {
 			t.Errorf("expected same path, got %s and %s", path1, path2)
 		}
@@ -63,18 +53,15 @@ func TestExtensionFilename(t *testing.T) {
 	t.Run("returns platform-specific filename", func(t *testing.T) {
 		t.Parallel()
 
-		// Act
 		filename, err := extensionFilename()
 		if err != nil {
 			t.Fatalf("extensionFilename() error = %v", err)
 		}
 
-		// Assert: filename is not empty and has expected extension
 		if filename == "" {
 			t.Error("expected non-empty filename")
 		}
 
-		// Should end in .dylib (macOS) or .so (Linux)
 		hasDylib := len(filename) > 6 && filename[len(filename)-6:] == ".dylib"
 		hasSo := len(filename) > 3 && filename[len(filename)-3:] == ".so"
 		if !hasDylib && !hasSo {
@@ -83,67 +70,66 @@ func TestExtensionFilename(t *testing.T) {
 	})
 }
 
-func TestLoadExtension(t *testing.T) {
-	t.Parallel()
+func TestRegisterExtension(t *testing.T) {
+	t.Run("registers extension for automatic loading", func(t *testing.T) {
+		// RegisterExtension should not error
+		err := RegisterExtension()
+		if err != nil {
+			t.Fatalf("RegisterExtension() error = %v", err)
+		}
 
-	t.Run("loads into SQLite database", func(t *testing.T) {
-		t.Parallel()
+		// After registration, Open() should automatically have extension loaded
+		ctx := context.Background()
+		db := sqlitetest.OpenTest(t)
+
+		// Verify extension is loaded by calling a PowerSync function
+		var result string
+		row := db.QueryRow(ctx, "SELECT powersync_update_hooks('get')")
+		if err := row.Scan(&result); err != nil {
+			t.Fatalf("powersync function call failed (extension not loaded?): %v", err)
+		}
+	})
+}
+
+func TestApplySchema(t *testing.T) {
+	t.Run("applies schema to database", func(t *testing.T) {
+		// Ensure extension is registered
+		if err := RegisterExtension(); err != nil {
+			t.Fatalf("RegisterExtension() error = %v", err)
+		}
 
 		ctx := context.Background()
+		db := sqlitetest.OpenTest(t)
 
-		// Arrange: get extension path
-		extPath, err := ExtensionPath()
-		if err != nil {
-			t.Fatalf("ExtensionPath() error = %v", err)
+		// Apply schema
+		if err := ApplySchema(ctx, db); err != nil {
+			t.Fatalf("ApplySchema() error = %v", err)
 		}
 
-		// Arrange: open a database
-		tmpDir := t.TempDir()
-		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(ctx, dbPath)
-		if err != nil {
-			t.Fatalf("sqlite.Open() error = %v", err)
+		// Verify schema was applied by checking for a known table/view
+		var count int
+		row := db.QueryRow(ctx, "SELECT COUNT(*) FROM sqlite_master WHERE type='view' AND sql LIKE '%powersync%'")
+		if err := row.Scan(&count); err != nil {
+			t.Fatalf("query sqlite_master error = %v", err)
 		}
-		defer db.Close()
 
-		// Act
-		err = db.LoadExtension(ctx, extPath, "sqlite3_powersync_init")
-
-		// Assert
-		if err != nil {
-			t.Errorf("LoadExtension() error = %v", err)
+		if count == 0 {
+			t.Error("expected PowerSync views to be created")
 		}
 	})
 }
 
 func TestUpdateHooks(t *testing.T) {
-	t.Parallel()
-
 	t.Run("tracks table changes", func(t *testing.T) {
-		t.Parallel()
+		if err := RegisterExtension(); err != nil {
+			t.Fatalf("RegisterExtension() error = %v", err)
+		}
 
 		ctx := context.Background()
-
-		// Arrange: open database and load extension
-		extPath, err := ExtensionPath()
-		if err != nil {
-			t.Fatalf("ExtensionPath() error = %v", err)
-		}
-
-		tmpDir := t.TempDir()
-		dbPath := filepath.Join(tmpDir, "test.sqlite")
-		db, err := sqlite.Open(ctx, dbPath)
-		if err != nil {
-			t.Fatalf("sqlite.Open() error = %v", err)
-		}
-		defer db.Close()
-
-		if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
-			t.Fatalf("LoadExtension() error = %v", err)
-		}
+		db := sqlitetest.OpenTest(t)
 
 		// Install update hooks
-		_, err = db.Exec(ctx, "SELECT powersync_update_hooks('install')")
+		_, err := db.Exec(ctx, "SELECT powersync_update_hooks('install')")
 		if err != nil {
 			t.Fatalf("install hooks error = %v", err)
 		}
@@ -166,7 +152,6 @@ func TestUpdateHooks(t *testing.T) {
 			t.Fatalf("get hooks error = %v", err)
 		}
 
-		// Should contain "messages"
 		if result != `["messages"]` {
 			t.Errorf("expected [\"messages\"], got %s", result)
 		}

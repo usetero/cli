@@ -51,7 +51,7 @@ func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID, convers
 		Role:           &role,
 	})
 	if err != nil {
-		return "", err
+		return "", WrapSQLiteError(err, "insert user message")
 	}
 
 	return msgID, nil
@@ -74,7 +74,7 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, co
 		Role:           &role,
 	})
 	if err != nil {
-		return "", err
+		return "", WrapSQLiteError(err, "insert assistant message")
 	}
 
 	return msgID, nil
@@ -82,10 +82,11 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, co
 
 // UpdateContent updates the content of a message.
 func (m *messagesImpl) UpdateContent(ctx context.Context, id, content string) error {
-	return m.queries.UpdateMessageContent(ctx, gen.UpdateMessageContentParams{
+	err := m.queries.UpdateMessageContent(ctx, gen.UpdateMessageContentParams{
 		ID:      &id,
 		Content: &content,
 	})
+	return WrapSQLiteError(err, "update message content")
 }
 
 // List returns all messages for a conversation, ordered by creation time.

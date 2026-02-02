@@ -30,6 +30,9 @@ type Client interface {
 	CreateDatadogAccountWithCredentials(ctx context.Context, input client.CreateDatadogAccountWithCredentialsInput) (*client.CreateDatadogAccountWithCredentialsResponse, error)
 	GetDatadogAccountStatus(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error)
 
+	// Workspace operations
+	ListWorkspaces(ctx context.Context, accountID string) (*client.ListWorkspacesResponse, error)
+
 	// Conversation operations
 	CreateConversation(ctx context.Context, input client.CreateConversationInput) (*client.CreateConversationResponse, error)
 	UpdateConversation(ctx context.Context, id string, input client.UpdateConversationInput) (*client.UpdateConversationResponse, error)

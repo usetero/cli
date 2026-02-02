@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
@@ -68,13 +68,14 @@ func TestOnboarding_Update(t *testing.T) {
 		t.Parallel()
 		logger := logtest.New(t)
 
-		expectedOrg := api.Organization{ID: "org-123", Name: "Test Org"}
-		expectedAccount := api.Account{ID: "acct-456", Name: "Test Account"}
+		expectedOrg := apitest.NewOrganization()
+		expectedAccount := apitest.NewAccount()
+		expectedWorkspace := apitest.NewWorkspace()
 
 		layout := layoutstest.NewMockLayout()
 
 		// Create a sync step that holds the accumulated state
-		syncStep := sync.New(context.Background(), onboardingTestTheme(), expectedOrg, expectedAccount, logger, nil)
+		syncStep := sync.New(context.Background(), onboardingTestTheme(), expectedOrg, expectedAccount, expectedWorkspace, logger, nil)
 
 		// Create a step that will transition to sync step
 		testStep := steptest.NewMockStep()

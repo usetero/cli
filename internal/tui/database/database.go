@@ -5,7 +5,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
@@ -21,8 +20,10 @@ type databaseOpenedMsg struct {
 // Database manages the local data layer: SQLite database, syncer, and uploader.
 type Database struct {
 	ctx             context.Context
-	powersyncConfig *powersync.Config
-	auth            auth.Auth
+	storage         sqlite.Storage
+	syncClient      powersync.Syncer
+	powersyncClient powersync.Client
+	tokenRefresher  TokenRefresher
 	conversations   api.Conversations
 	messages        chat.Messages
 	logger          log.Logger
@@ -35,16 +36,20 @@ type Database struct {
 // New creates a new database model.
 func New(
 	ctx context.Context,
-	powersyncConfig *powersync.Config,
-	auth auth.Auth,
+	storage sqlite.Storage,
+	syncClient powersync.Syncer,
+	powersyncClient powersync.Client,
+	tokenRefresher TokenRefresher,
 	conversations api.Conversations,
 	messages chat.Messages,
 	logger log.Logger,
 ) *Database {
 	return &Database{
 		ctx:             ctx,
-		powersyncConfig: powersyncConfig,
-		auth:            auth,
+		storage:         storage,
+		syncClient:      syncClient,
+		powersyncClient: powersyncClient,
+		tokenRefresher:  tokenRefresher,
 		conversations:   conversations,
 		messages:        messages,
 		logger:          logger,
@@ -54,7 +59,7 @@ func New(
 // Start opens the database and starts the syncer and uploader.
 func (d *Database) Start(accountID string) tea.Cmd {
 	return func() tea.Msg {
-		dbPath, err := d.powersyncConfig.DatabasePath(accountID)
+		dbPath, err := d.storage.DatabasePath(accountID)
 		if err != nil {
 			d.logger.Error("failed to get database path", "error", err)
 			return nil
@@ -79,8 +84,8 @@ func (d *Database) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case databaseOpenedMsg:
 		d.db = msg.db
-		d.syncer = NewSyncer(d.ctx, d.powersyncConfig, d.auth, d.logger)
-		d.uploader = NewUploader(d.ctx, d.db, d.conversations, d.messages, d.logger)
+		d.syncer = NewSyncer(d.ctx, d.storage, d.syncClient, d.logger)
+		d.uploader = NewUploader(d.ctx, d.db, d.powersyncClient, d.tokenRefresher, d.conversations, d.messages, d.logger)
 		return tea.Batch(
 			d.syncer.Start(d.db, msg.accountID),
 			d.uploader.Start(),

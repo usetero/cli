@@ -6,21 +6,38 @@ import (
 
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/sqlite"
 )
 
-// mockSyncer implements powersync.Syncer for testing.
-type mockSyncer struct {
+// mockPowerSync implements powersync.Syncer for testing.
+type mockPowerSync struct {
+	startFunc  func(ctx context.Context, db sqlite.Database, accountID string, onFirstSync func()) error
 	status     powersync.Status
 	syncStatus *powersync.SyncStatus
 	lastError  error
 	running    bool
+	stopped    bool
 }
 
-func (m *mockSyncer) Stop()                             { m.running = false }
-func (m *mockSyncer) Status() powersync.Status          { return m.status }
-func (m *mockSyncer) SyncStatus() *powersync.SyncStatus { return m.syncStatus }
-func (m *mockSyncer) LastError() error                  { return m.lastError }
-func (m *mockSyncer) IsRunning() bool                   { return m.running }
+func (m *mockPowerSync) Start(ctx context.Context, db sqlite.Database, accountID string, onFirstSync func()) error {
+	m.running = true
+	if m.startFunc != nil {
+		return m.startFunc(ctx, db, accountID, onFirstSync)
+	}
+	return nil
+}
+
+func (m *mockPowerSync) Stop() {
+	m.running = false
+	m.stopped = true
+}
+
+func (m *mockPowerSync) Status() powersync.Status          { return m.status }
+func (m *mockPowerSync) SyncStatus() *powersync.SyncStatus { return m.syncStatus }
+func (m *mockPowerSync) LastError() error                  { return m.lastError }
+func (m *mockPowerSync) IsRunning() bool                   { return m.running }
+
+var _ powersync.Syncer = (*mockPowerSync)(nil)
 
 func TestSyncer_Update(t *testing.T) {
 	t.Parallel()
@@ -28,28 +45,24 @@ func TestSyncer_Update(t *testing.T) {
 	t.Run("syncReadyMsg starts polling", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{status: powersync.StatusSyncing, running: true}
+		mock := &mockPowerSync{status: powersync.StatusSyncing, running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 
-		cmd := syncer.Update(syncReadyMsg{syncer: mock})
+		cmd := syncer.Update(syncReadyMsg{})
 
 		if cmd == nil {
 			t.Fatal("expected tick command")
 		}
-		if syncer.syncer != mock {
-			t.Error("syncer not set")
-		}
 		if !syncer.waiting {
-			t.Error("should be waiting")
+			t.Error("should be waiting after syncReadyMsg")
 		}
 	})
 
 	t.Run("syncTickMsg sends SyncReadyMsg when firstSyncDone", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{status: powersync.StatusSyncing, running: true}
-		syncer.syncer = mock
+		mock := &mockPowerSync{status: powersync.StatusConnected, running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = true
 		syncer.firstSyncDone = true
 
@@ -64,27 +77,27 @@ func TestSyncer_Update(t *testing.T) {
 			t.Errorf("expected SyncReadyMsg, got %T", msg)
 		}
 		if syncer.waiting {
-			t.Error("should not be waiting after first sync")
+			t.Error("should not be waiting after first sync complete")
 		}
 	})
 
 	t.Run("syncTickMsg sends StatusUpdateMsg while waiting", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{
-			status: powersync.StatusSyncing,
-			syncStatus: &powersync.SyncStatus{
-				Connected: false,
-				Downloading: &powersync.DownloadProgress{
-					Buckets: map[string]powersync.BucketProgress{
-						"test": {SinceLast: 5, TargetCount: 10},
-					},
+		expectedStatus := &powersync.SyncStatus{
+			Connected: false,
+			Downloading: &powersync.DownloadProgress{
+				Buckets: map[string]powersync.BucketProgress{
+					"test": {SinceLast: 5, TargetCount: 10},
 				},
 			},
-			running: true,
 		}
-		syncer.syncer = mock
+		mock := &mockPowerSync{
+			status:     powersync.StatusSyncing,
+			syncStatus: expectedStatus,
+			running:    true,
+		}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = true
 		syncer.firstSyncDone = false
 
@@ -93,9 +106,6 @@ func TestSyncer_Update(t *testing.T) {
 		if cmd == nil {
 			t.Fatal("expected batch command")
 		}
-
-		// The batch contains status update + tick
-		// We can't easily inspect batch, but verify state is unchanged
 		if !syncer.waiting {
 			t.Error("should still be waiting")
 		}
@@ -104,9 +114,8 @@ func TestSyncer_Update(t *testing.T) {
 	t.Run("syncTickMsg does nothing when not waiting", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{status: powersync.StatusSyncing}
-		syncer.syncer = mock
+		mock := &mockPowerSync{status: powersync.StatusConnected, running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = false
 
 		cmd := syncer.Update(syncTickMsg{})
@@ -116,25 +125,11 @@ func TestSyncer_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("syncTickMsg does nothing when syncer is nil", func(t *testing.T) {
-		t.Parallel()
-
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		syncer.waiting = true
-
-		cmd := syncer.Update(syncTickMsg{})
-
-		if cmd != nil {
-			t.Error("expected no command when syncer is nil")
-		}
-	})
-
 	t.Run("SyncStatusQueryMsg returns SyncReadyMsg when ready", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{status: powersync.StatusConnected}
-		syncer.syncer = mock
+		mock := &mockPowerSync{status: powersync.StatusConnected, running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = false
 
 		cmd := syncer.Update(powersync.SyncStatusQueryMsg{})
@@ -152,9 +147,8 @@ func TestSyncer_Update(t *testing.T) {
 	t.Run("SyncStatusQueryMsg returns StatusUpdateMsg when waiting", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{status: powersync.StatusSyncing}
-		syncer.syncer = mock
+		mock := &mockPowerSync{status: powersync.StatusSyncing, running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = true
 
 		cmd := syncer.Update(powersync.SyncStatusQueryMsg{})
@@ -177,21 +171,23 @@ func TestSyncer_Update(t *testing.T) {
 func TestSyncer_IsReady(t *testing.T) {
 	t.Parallel()
 
-	t.Run("false when syncer is nil", func(t *testing.T) {
+	t.Run("false when sync is not running", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
+		mock := &mockPowerSync{running: false}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
+		syncer.waiting = false
 
 		if syncer.IsReady() {
-			t.Error("should not be ready when syncer is nil")
+			t.Error("should not be ready when sync is not running")
 		}
 	})
 
-	t.Run("false when waiting", func(t *testing.T) {
+	t.Run("false when still waiting for first sync", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		syncer.syncer = &mockSyncer{}
+		mock := &mockPowerSync{running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = true
 
 		if syncer.IsReady() {
@@ -199,15 +195,15 @@ func TestSyncer_IsReady(t *testing.T) {
 		}
 	})
 
-	t.Run("true when syncer exists and not waiting", func(t *testing.T) {
+	t.Run("true when running and not waiting", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		syncer.syncer = &mockSyncer{}
+		mock := &mockPowerSync{running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 		syncer.waiting = false
 
 		if !syncer.IsReady() {
-			t.Error("should be ready")
+			t.Error("should be ready when running and not waiting")
 		}
 	})
 }
@@ -215,26 +211,95 @@ func TestSyncer_IsReady(t *testing.T) {
 func TestSyncer_Stop(t *testing.T) {
 	t.Parallel()
 
-	t.Run("stops the syncer", func(t *testing.T) {
+	t.Run("stops the underlying sync", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
-		mock := &mockSyncer{running: true}
-		syncer.syncer = mock
+		mock := &mockPowerSync{running: true}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 
 		syncer.Stop()
 
-		if mock.running {
-			t.Error("syncer should be stopped")
+		if !mock.stopped {
+			t.Error("sync should be stopped")
+		}
+	})
+}
+
+func TestSyncer_Start(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns syncReadyMsg on success", func(t *testing.T) {
+		t.Parallel()
+
+		mock := &mockPowerSync{}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
+
+		cmd := syncer.Start(nil, "account-123")
+
+		if cmd == nil {
+			t.Fatal("expected command")
+		}
+
+		msg := cmd()
+		if _, ok := msg.(syncReadyMsg); !ok {
+			t.Errorf("expected syncReadyMsg, got %T", msg)
 		}
 	})
 
-	t.Run("safe to call when syncer is nil", func(t *testing.T) {
+	t.Run("returns StatusUpdateMsg with error on failure", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := NewSyncer(context.Background(), nil, nil, logtest.New(t))
+		mock := &mockPowerSync{
+			startFunc: func(ctx context.Context, db sqlite.Database, accountID string, onFirstSync func()) error {
+				return context.DeadlineExceeded
+			},
+		}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
 
-		// Should not panic
-		syncer.Stop()
+		cmd := syncer.Start(nil, "account-123")
+
+		if cmd == nil {
+			t.Fatal("expected command")
+		}
+
+		msg := cmd()
+		statusMsg, ok := msg.(powersync.StatusUpdateMsg)
+		if !ok {
+			t.Fatalf("expected StatusUpdateMsg, got %T", msg)
+		}
+		if statusMsg.Status != powersync.StatusError {
+			t.Errorf("Status = %v, want %v", statusMsg.Status, powersync.StatusError)
+		}
+		if statusMsg.LastError == nil {
+			t.Error("LastError should not be nil")
+		}
+	})
+
+	t.Run("sets waiting to true", func(t *testing.T) {
+		t.Parallel()
+
+		mock := &mockPowerSync{}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
+		syncer.waiting = false
+
+		_ = syncer.Start(nil, "account-123")
+
+		if !syncer.waiting {
+			t.Error("should be waiting after Start")
+		}
+	})
+
+	t.Run("resets firstSyncDone", func(t *testing.T) {
+		t.Parallel()
+
+		mock := &mockPowerSync{}
+		syncer := NewSyncer(context.Background(), nil, mock, logtest.New(t))
+		syncer.firstSyncDone = true
+
+		_ = syncer.Start(nil, "account-123")
+
+		if syncer.firstSyncDone {
+			t.Error("firstSyncDone should be reset")
+		}
 	})
 }

@@ -56,6 +56,7 @@ type SelectStep struct {
 	theme *styles.Theme
 
 	// Services
+	workspaces  api.Workspaces
 	preferences preferences.Preferences
 	auth        auth.Auth
 	apiClient   api.Client
@@ -70,7 +71,10 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new role selection step.
-func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Client, prefs preferences.Preferences, authService auth.Auth, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, workspaces api.Workspaces, apiClient api.Client, prefs preferences.Preferences, authService auth.Auth, logger log.Logger, globalBindings []key.Binding) step.Step {
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
+	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
 	}
@@ -106,6 +110,7 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, apiClient api.Clien
 	return &SelectStep{
 		ctx:            ctx,
 		theme:          theme,
+		workspaces:     workspaces,
 		preferences:    prefs,
 		auth:           authService,
 		apiClient:      apiClient,
@@ -269,7 +274,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	organizationService := api.NewOrganizationService(s.apiClient, s.logger)
 
 	// Pass accumulated context (role), organization service, client, preferences, auth, and logger to next step
-	return organization.NewSelectStep(s.ctx, s.theme, role, organizationService, s.apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
+	return organization.NewSelectStep(s.ctx, s.theme, role, organizationService, s.workspaces, s.apiClient, s.preferences, s.auth, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

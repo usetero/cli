@@ -8,7 +8,7 @@ import (
 const (
 	productionEndpoint          = "https://api.usetero.com/graphql"
 	productionPowerSyncEndpoint = "https://powersync.usetero.com"
-	productionChatEndpoint      = "https://api.usetero.com"
+	productionChatEndpoint      = "https://chat.usetero.com"
 )
 
 // CLIConfig holds configuration for the Tero CLI.

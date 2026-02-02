@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	ddvendor "github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/input"
 	"github.com/usetero/cli/internal/tui/keymap"
@@ -41,6 +42,8 @@ type AppKeyStep struct {
 
 	// Services
 	datadogAccounts api.DatadogAccounts
+	workspaces      api.Workspaces
+	preferences     preferences.Preferences
 	apiClient       api.Client
 	logger          log.Logger
 
@@ -57,9 +60,15 @@ type AppKeyStep struct {
 }
 
 // NewAppKeyStep creates a new Datadog app key collection step
-func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, datadogAccounts api.DatadogAccounts, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, site string, apiKey string, datadogAccounts api.DatadogAccounts, workspaces api.Workspaces, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if datadogAccounts == nil {
 		panic("datadogAccounts cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
+	}
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -83,6 +92,8 @@ func NewAppKeyStep(ctx context.Context, theme *styles.Theme, role string, org ap
 		site:            site,
 		apiKey:          apiKey,
 		datadogAccounts: datadogAccounts,
+		workspaces:      workspaces,
+		preferences:     prefs,
 		apiClient:       apiClient,
 		logger:          logger,
 		input:           inp,
@@ -310,7 +321,7 @@ func (s *AppKeyStep) Next() (step.Step, error) {
 
 	// Datadog account created - move to unified discovery step
 	datadogAccountID := s.createdAccount.ID
-	return NewDiscoveryStep(s.ctx, s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
+	return NewDiscoveryStep(s.ctx, s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.workspaces, s.preferences, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

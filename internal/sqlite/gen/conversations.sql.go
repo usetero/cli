@@ -51,21 +51,23 @@ func (q *Queries) GetLatestConversationByAccount(ctx context.Context, accountID 
 }
 
 const insertConversation = `-- name: InsertConversation :exec
-INSERT INTO conversations (id, account_id, created_at, updated_at)
-VALUES (?, ?, ?, ?)
+INSERT INTO conversations (id, account_id, workspace_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?)
 `
 
 type InsertConversationParams struct {
-	ID        *string
-	AccountID *string
-	CreatedAt *string
-	UpdatedAt *string
+	ID          *string
+	AccountID   *string
+	WorkspaceID *string
+	CreatedAt   *string
+	UpdatedAt   *string
 }
 
 func (q *Queries) InsertConversation(ctx context.Context, arg InsertConversationParams) error {
 	_, err := q.db.ExecContext(ctx, insertConversation,
 		arg.ID,
 		arg.AccountID,
+		arg.WorkspaceID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

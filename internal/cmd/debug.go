@@ -12,8 +12,8 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
 	"github.com/usetero/cli/pkg/client"
@@ -274,20 +274,16 @@ func newDebugPathsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 			fmt.Printf("  %-20s %s\n", s.Help.Render("Config:"), s.Body.Render(configPath))
 
 			// Data directory
-			psConfig := &powersync.Config{Namespace: namespace}
-			dataDir, _ := psConfig.DataDir()
-			fmt.Printf("  %-20s %s\n", s.Help.Render("Data Dir:"), s.Body.Render(dataDir))
-
-			// Extension directory
-			extDir, _ := psConfig.ExtensionDir()
-			fmt.Printf("  %-20s %s\n", s.Help.Render("Extensions:"), s.Body.Render(extDir))
-
-			// Show database path if account is configured
 			cfg, err := config.Load(namespace)
 			if err == nil {
+				baseDir, _ := cfg.BaseDir()
+				fmt.Printf("  %-20s %s\n", s.Help.Render("Base Dir:"), s.Body.Render(baseDir))
+
+				// Show database path if account is configured
 				accountID := cfg.Get("account_id")
 				if accountID != "" {
-					dbPath, _ := psConfig.DatabasePath(accountID)
+					storage := sqlite.NewStorageService(cfg)
+					dbPath, _ := storage.DatabasePath(accountID)
 					fmt.Printf("  %-20s %s\n", s.Help.Render("Database:"), s.Body.Render(dbPath))
 				}
 			}

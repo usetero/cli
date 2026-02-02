@@ -18,14 +18,15 @@ import (
 )
 
 // Step waits for sync to complete before transitioning to the app.
-// By the time the user reaches this step (after Datadog onboarding),
+// By the time the user reaches this step (after workspace selection),
 // sync should already be done. This is a quick sanity check.
 type Step struct {
 	ctx   context.Context
 	theme *styles.Theme
 
-	org     api.Organization
-	account api.Account
+	org       api.Organization
+	account   api.Account
+	workspace api.Workspace
 
 	logger         log.Logger
 	globalBindings []key.Binding
@@ -45,6 +46,7 @@ func New(
 	theme *styles.Theme,
 	org api.Organization,
 	account api.Account,
+	workspace api.Workspace,
 	logger log.Logger,
 	globalBindings []key.Binding,
 ) step.Step {
@@ -61,6 +63,7 @@ func New(
 		theme:          theme,
 		org:            org,
 		account:        account,
+		workspace:      workspace,
 		logger:         logger,
 		globalBindings: globalBindings,
 		spinner:        s,
@@ -192,6 +195,11 @@ func (s *Step) Organization() api.Organization {
 // Account returns the account.
 func (s *Step) Account() api.Account {
 	return s.account
+}
+
+// Workspace returns the workspace.
+func (s *Step) Workspace() api.Workspace {
+	return s.workspace
 }
 
 // Close releases any resources held by the step.

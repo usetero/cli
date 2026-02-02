@@ -78,6 +78,7 @@ type SelectStep struct {
 
 	// Services
 	organizations api.Organizations
+	workspaces    api.Workspaces
 	preferences   preferences.Preferences
 	auth          auth.Auth
 
@@ -104,9 +105,12 @@ type tokenRefreshMsg struct {
 }
 
 // NewSelectStep creates a new organization selection step
-func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, organizations api.Organizations, apiClient api.Client, prefs preferences.Preferences, authService auth.Auth, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, organizations api.Organizations, workspaces api.Workspaces, apiClient api.Client, prefs preferences.Preferences, authService auth.Auth, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizations == nil {
 		panic("organizations cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -129,6 +133,7 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, organi
 		theme:          theme,
 		role:           role,
 		organizations:  organizations,
+		workspaces:     workspaces,
 		preferences:    prefs,
 		auth:           authService,
 		apiClient:      apiClient,
@@ -376,7 +381,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new org
 	if s.selectedOrgID == createNewOrgID {
 		organizationService := api.NewOrganizationService(s.apiClient, s.logger)
-		return NewCreateStep(s.ctx, s.theme, s.role, organizationService, s.preferences, s.auth, s.apiClient, s.logger, s.globalBindings), nil
+		return NewCreateStep(s.ctx, s.theme, s.role, organizationService, s.workspaces, s.preferences, s.auth, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Find the selected org
@@ -392,7 +397,7 @@ func (s *SelectStep) Next() (step.Step, error) {
 	accountService := api.NewAccountService(s.apiClient, s.logger)
 
 	// User selected existing org - pass role, org, and services forward
-	return account.NewSelectStep(s.ctx, s.theme, s.role, selectedOrg, accountService, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
+	return account.NewSelectStep(s.ctx, s.theme, s.role, selectedOrg, accountService, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

@@ -9,6 +9,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
@@ -28,8 +29,8 @@ func isAppKeyComplete(s step.Step) bool {
 
 func TestAppKeyStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
-	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
 
 	t.Run("creates datadog account on enter", func(t *testing.T) {
 		t.Parallel()
@@ -44,7 +45,9 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
+		workspaces := &apitest.MockWorkspaces{}
+		prefs := &preferencestest.MockPreferences{}
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", org, account, "US1", "api-key-123", ddAccounts, workspaces, prefs, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -83,7 +86,9 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
+		workspaces := &apitest.MockWorkspaces{}
+		prefs := &preferencestest.MockPreferences{}
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", org, account, "US1", "api-key-123", ddAccounts, workspaces, prefs, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -124,7 +129,9 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
+		workspaces := &apitest.MockWorkspaces{}
+		prefs := &preferencestest.MockPreferences{}
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", org, account, "US1", "api-key-123", ddAccounts, workspaces, prefs, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -163,7 +170,9 @@ func TestAppKeyStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", testOrg, testAccount, "US1", "api-key-123", ddAccounts, apiClient, logger, nil)
+		workspaces := &apitest.MockWorkspaces{}
+		prefs := &preferencestest.MockPreferences{}
+		s := datadog.NewAppKeyStep(context.Background(), appKeyTestTheme(), "admin", org, account, "US1", "api-key-123", ddAccounts, workspaces, prefs, apiClient, logger, nil)
 
 		// Transition to input screen
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})

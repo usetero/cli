@@ -22,12 +22,18 @@ func TestUploader_Run(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		logger := logtest.New(t)
 
-		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
+		uploader := upload.New(
+			db,
+			powersynctest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			&apitest.MockConversations{},
+			&chattest.MockMessages{},
+			logtest.New(t),
+		)
 
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
+		cancel()
 
 		err := uploader.Run(ctx)
 		if !errors.Is(err, context.Canceled) {
@@ -39,9 +45,15 @@ func TestUploader_Run(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		logger := logtest.New(t)
 
-		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
+		uploader := upload.New(
+			db,
+			powersynctest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			&apitest.MockConversations{},
+			&chattest.MockMessages{},
+			logtest.New(t),
+		)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -53,18 +65,25 @@ func TestUploader_Run(t *testing.T) {
 		cancel()
 		<-done
 
-		// Channel should be closed
-		_, ok := <-uploader.Events()
-		if ok {
-			t.Error("event channel should be closed after Run exits")
+		// Drain any pending events, then verify channel is closed
+		for {
+			_, ok := <-uploader.Events()
+			if !ok {
+				break
+			}
 		}
 	})
 
-	t.Run("processes entry and deletes after success", func(t *testing.T) {
+	t.Run("processes entry and completes batch", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		logger := logtest.New(t)
+		ctx := context.Background()
+
+		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
 
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
@@ -74,9 +93,16 @@ func TestUploader_Run(t *testing.T) {
 			},
 		}
 
-		uploader := upload.New(db, conversations, &chattest.MockMessages{}, logger)
+		uploader := upload.New(
+			db,
+			powersynctest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			conversations,
+			&chattest.MockMessages{},
+			logtest.New(t),
+		)
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		done := make(chan error)
@@ -84,7 +110,6 @@ func TestUploader_Run(t *testing.T) {
 			done <- uploader.Run(ctx)
 		}()
 
-		// Wait for syncing event
 		select {
 		case event := <-uploader.Events():
 			syncEvent, ok := event.(upload.SyncingEvent)
@@ -110,17 +135,29 @@ func TestUploader_Run(t *testing.T) {
 		}
 	})
 
-	t.Run("skips unknown tables and deletes entry", func(t *testing.T) {
+	t.Run("skips unknown tables and completes batch", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		logger := logtest.New(t)
+		ctx := context.Background()
+
+		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
 
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"unknown_table","id":"row-1","data":{}}`)
 
-		uploader := upload.New(db, &apitest.MockConversations{}, &chattest.MockMessages{}, logger)
+		uploader := upload.New(
+			db,
+			powersynctest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			&apitest.MockConversations{},
+			&chattest.MockMessages{},
+			logtest.New(t),
+		)
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		done := make(chan error)
@@ -128,7 +165,15 @@ func TestUploader_Run(t *testing.T) {
 			done <- uploader.Run(ctx)
 		}()
 
-		time.Sleep(200 * time.Millisecond)
+		select {
+		case event := <-uploader.Events():
+			if _, ok := event.(upload.SyncingEvent); !ok {
+				t.Errorf("expected SyncingEvent, got %T", event)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for syncing event")
+		}
+
 		cancel()
 		<-done
 
@@ -138,7 +183,7 @@ func TestUploader_Run(t *testing.T) {
 			t.Fatalf("GetNextEntry() error = %v", err)
 		}
 		if entry != nil {
-			t.Error("unknown table entry should be deleted")
+			t.Error("unknown table entry should be deleted after batch completes")
 		}
 	})
 
@@ -146,7 +191,12 @@ func TestUploader_Run(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		logger := logtest.New(t)
+		ctx := context.Background()
+
+		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
 
 		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
@@ -154,7 +204,6 @@ func TestUploader_Run(t *testing.T) {
 		conversations := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
 				callCount++
-				// Fail first 4 attempts (initial + 3 retries), succeed on 5th
 				if callCount <= 4 {
 					return nil, errors.New("temporary error")
 				}
@@ -162,9 +211,16 @@ func TestUploader_Run(t *testing.T) {
 			},
 		}
 
-		uploader := upload.New(db, conversations, &chattest.MockMessages{}, logger)
+		uploader := upload.New(
+			db,
+			powersynctest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			conversations,
+			&chattest.MockMessages{},
+			logtest.New(t),
+		)
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		done := make(chan error)
@@ -172,7 +228,7 @@ func TestUploader_Run(t *testing.T) {
 			done <- uploader.Run(ctx)
 		}()
 
-		// Should get stalled event after retries exhausted
+		// Stalled event after retries exhausted
 		select {
 		case event := <-uploader.Events():
 			stalledEvent, ok := event.(upload.StalledEvent)
@@ -190,17 +246,17 @@ func TestUploader_Run(t *testing.T) {
 			t.Fatal("timeout waiting for stalled event")
 		}
 
-		// Should get recovered event after success
+		// Recovered event after success
 		select {
 		case event := <-uploader.Events():
 			if _, ok := event.(upload.RecoveredEvent); !ok {
 				t.Errorf("expected RecoveredEvent, got %T", event)
 			}
-		case <-time.After(5 * time.Second):
+		case <-time.After(10 * time.Second):
 			t.Fatal("timeout waiting for recovered event")
 		}
 
-		// Should get syncing event
+		// Syncing event
 		select {
 		case event := <-uploader.Events():
 			if _, ok := event.(upload.SyncingEvent); !ok {

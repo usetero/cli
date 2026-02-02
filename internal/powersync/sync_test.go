@@ -16,7 +16,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("initial status is disconnected", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, nil, logtest.New(t))
+		sync := powersync.NewSync("https://example.com", nil, logtest.New(t))
 
 		if sync.Status() != powersync.StatusDisconnected {
 			t.Errorf("Status() = %v, want %v", sync.Status(), powersync.StatusDisconnected)
@@ -26,7 +26,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("IsRunning is false initially", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{}, nil, logtest.New(t))
+		sync := powersync.NewSync("https://example.com", nil, logtest.New(t))
 
 		if sync.IsRunning() {
 			t.Error("IsRunning() should be false before Start")
@@ -36,7 +36,7 @@ func TestNewSync(t *testing.T) {
 	t.Run("LastError is nil initially", func(t *testing.T) {
 		t.Parallel()
 
-		sync := powersync.NewSync(&powersync.Config{}, nil, logtest.New(t))
+		sync := powersync.NewSync("https://example.com", nil, logtest.New(t))
 
 		if sync.LastError() != nil {
 			t.Error("LastError() should be nil initially")
@@ -51,7 +51,7 @@ func TestSync_Start(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, powersynctest.NewMockTokenRefresher("token"), logtest.New(t))
+		sync := powersync.NewSync("https://example.com", powersynctest.NewMockTokenRefresher("token"), logtest.New(t))
 
 		defer func() {
 			if r := recover(); r == nil {
@@ -66,17 +66,10 @@ func TestSync_Start(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -99,16 +92,15 @@ func TestSync_Start(t *testing.T) {
 
 		db := powersynctest.OpenTestDB(t)
 		started := make(chan struct{})
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				close(started)
-				<-ctx.Done()
-				return ctx.Err()
-			},
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			close(started)
+			<-ctx.Done()
+			return ctx.Err()
 		}
 
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
 			mock,
 		)
@@ -133,17 +125,10 @@ func TestSync_Start(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -168,17 +153,10 @@ func TestSync_Stop(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx := context.Background()
@@ -198,17 +176,10 @@ func TestSync_Stop(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx := context.Background()
@@ -224,17 +195,10 @@ func TestSync_Stop(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx := context.Background()
@@ -254,17 +218,10 @@ func TestSync_OnFirstSync(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		}
-
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			mock,
+			powersynctest.NewMockClient(),
 		)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -287,15 +244,14 @@ func TestSync_AuthError(t *testing.T) {
 		db := powersynctest.OpenTestDB(t)
 
 		connectCalls := 0
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				connectCalls++
-				if connectCalls == 1 {
-					return &powersync.StreamError{Kind: powersync.StreamErrorAuth, StatusCode: 401}
-				}
-				<-ctx.Done()
-				return ctx.Err()
-			},
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			connectCalls++
+			if connectCalls == 1 {
+				return &powersync.ClientError{Kind: powersync.ErrorKindAuth, StatusCode: 401}
+			}
+			<-ctx.Done()
+			return ctx.Err()
 		}
 
 		refresher := &powersynctest.MockTokenRefresher{
@@ -304,8 +260,8 @@ func TestSync_AuthError(t *testing.T) {
 			},
 		}
 
-		sync := powersync.NewSync(&powersync.Config{Endpoint: "https://example.com"}, refresher, logtest.New(t))
-		sync.SetStreamFactory(powersynctest.NewMockStreamerFactory(mock))
+		sync := powersync.NewSync("https://example.com", refresher, logtest.New(t))
+		sync.SetClientFactory(powersynctest.NewMockClientFactory(mock))
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -336,14 +292,13 @@ func TestSync_PermanentError(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				return &powersync.StreamError{Kind: powersync.StreamErrorPermanent, StatusCode: 400, Message: "bad request"}
-			},
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			return &powersync.ClientError{Kind: powersync.ErrorKindPermanent, StatusCode: 400, Message: "bad request"}
 		}
 
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
 			mock,
 		)
@@ -375,19 +330,18 @@ func TestSync_TransientError(t *testing.T) {
 		db := powersynctest.OpenTestDB(t)
 
 		connectCalls := 0
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				connectCalls++
-				if connectCalls == 1 {
-					return &powersync.StreamError{Kind: powersync.StreamErrorTransient, StatusCode: 503}
-				}
-				<-ctx.Done()
-				return ctx.Err()
-			},
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			connectCalls++
+			if connectCalls == 1 {
+				return &powersync.ClientError{Kind: powersync.ErrorKindTransient, StatusCode: 503}
+			}
+			<-ctx.Done()
+			return ctx.Err()
 		}
 
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
 			mock,
 		)
@@ -415,20 +369,19 @@ func TestSync_TransientError(t *testing.T) {
 		db := powersynctest.OpenTestDB(t)
 
 		statusChecked := make(chan struct{})
-		mock := &powersynctest.MockStreamer{
-			ConnectFunc: func(ctx context.Context, req *powersync.StreamingSyncRequest, handler powersync.LineHandler) error {
-				select {
-				case <-statusChecked:
-					<-ctx.Done()
-					return ctx.Err()
-				default:
-					return &powersync.StreamError{Kind: powersync.StreamErrorTransient, StatusCode: 503}
-				}
-			},
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			select {
+			case <-statusChecked:
+				<-ctx.Done()
+				return ctx.Err()
+			default:
+				return &powersync.ClientError{Kind: powersync.ErrorKindTransient, StatusCode: 503}
+			}
 		}
 
-		sync := powersynctest.NewSyncWithMockStreamer(
-			&powersync.Config{Endpoint: "https://example.com"},
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
 			mock,
 		)

@@ -8,8 +8,8 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
 )
@@ -46,8 +46,8 @@ func NewResetCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 
 			// Clear database if requested
 			if includeDB {
-				psConfig := &powersync.Config{Namespace: namespace}
-				if err := psConfig.Clear(); err != nil {
+				storage := sqlite.NewStorageService(cfg)
+				if err := storage.Clear(); err != nil {
 					return fmt.Errorf("failed to clear database: %w", err)
 				}
 

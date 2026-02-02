@@ -2,7 +2,12 @@ package powersynctest
 
 import (
 	"context"
+
+	"github.com/usetero/cli/internal/powersync"
 )
+
+// Ensure MockTokenRefresher implements powersync.TokenRefresher.
+var _ powersync.TokenRefresher = (*MockTokenRefresher)(nil)
 
 // MockTokenRefresher is a test double for powersync.TokenRefresher.
 type MockTokenRefresher struct {

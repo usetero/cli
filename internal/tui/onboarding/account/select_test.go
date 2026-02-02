@@ -31,7 +31,7 @@ func isComplete(s step.Step) bool {
 
 func TestSelectStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+	org := apitest.NewOrganization()
 
 	t.Run("auto-selects when only one account exists", func(t *testing.T) {
 		t.Parallel()
@@ -47,7 +47,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Simulate load completing with one account
 		items := []list.Item{account.AccountItem{ID: "acc-1", Name: "Production"}}
@@ -75,7 +75,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Simulate load completing with multiple accounts
 		items := []list.Item{
@@ -102,7 +102,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Simulate load completing with no accounts
 		updated, _ := s.Update(remotelist.LoadResultMsg{Items: []list.Item{}, Err: nil})
@@ -133,7 +133,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Simulate load completing with multiple accounts
 		items := []list.Item{
@@ -162,7 +162,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -190,7 +190,7 @@ func TestSelectStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Load accounts first
 		items := []list.Item{
@@ -218,7 +218,7 @@ func TestSelectStep_Update(t *testing.T) {
 
 func TestSelectStep_Next(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+	org := apitest.NewOrganization()
 
 	t.Run("returns ErrNotReady before selection", func(t *testing.T) {
 		t.Parallel()
@@ -228,7 +228,7 @@ func TestSelectStep_Next(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewSelectStep(context.Background(), selectTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		_, err := s.Next()
 		if !errors.Is(err, step.ErrNotReady) {

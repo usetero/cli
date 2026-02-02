@@ -7,6 +7,7 @@ import (
 	"github.com/usetero/cli/internal/sqlite/gen"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tui/database"
 	"github.com/usetero/cli/internal/upload"
 )
 
@@ -105,7 +106,7 @@ func TestMessages_Update(t *testing.T) {
 		_ = cmd
 	})
 
-	t.Run("UploadEventMsg adds pending assistant", func(t *testing.T) {
+	t.Run("database.UploadEventMsg adds pending assistant", func(t *testing.T) {
 		t.Parallel()
 
 		db := sqlitetest.OpenTest(t)
@@ -113,7 +114,7 @@ func TestMessages_Update(t *testing.T) {
 		m.SetWidth(80)
 		m.SetConversation("conv-1")
 
-		event := UploadEventMsg{
+		event := database.UploadEventMsg{
 			Event: upload.MessageProcessingEvent{
 				ConversationID: "conv-1",
 				UserMessageID:  "user-1",
@@ -142,14 +143,14 @@ func TestMessages_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("UploadEventMsg ignores other conversations", func(t *testing.T) {
+	t.Run("database.UploadEventMsg ignores other conversations", func(t *testing.T) {
 		t.Parallel()
 
 		db := sqlitetest.OpenTest(t)
 		m := NewMessages(theme, db)
 		m.SetConversation("conv-1")
 
-		event := UploadEventMsg{
+		event := database.UploadEventMsg{
 			Event: upload.MessageProcessingEvent{
 				ConversationID: "other-conv",
 				UserMessageID:  "user-1",
@@ -213,7 +214,7 @@ func TestMessages_BuildItems(t *testing.T) {
 		m.SetConversation("conv-1")
 
 		// Create pending assistant
-		m.Update(UploadEventMsg{
+		m.Update(database.UploadEventMsg{
 			Event: upload.MessageProcessingEvent{
 				ConversationID: "conv-1",
 				UserMessageID:  "user-1",
@@ -266,7 +267,7 @@ func TestMessages_BuildItems(t *testing.T) {
 		m.SetConversation("conv-1")
 
 		// Create pending assistant
-		m.Update(UploadEventMsg{
+		m.Update(database.UploadEventMsg{
 			Event: upload.MessageProcessingEvent{
 				ConversationID: "conv-1",
 				UserMessageID:  "user-1",
@@ -479,7 +480,7 @@ func TestMessages_IsBusy(t *testing.T) {
 		m.SetWidth(80)
 		m.SetConversation("conv-1")
 
-		m.Update(UploadEventMsg{
+		m.Update(database.UploadEventMsg{
 			Event: upload.MessageProcessingEvent{
 				ConversationID: "conv-1",
 				UserMessageID:  "user-1",

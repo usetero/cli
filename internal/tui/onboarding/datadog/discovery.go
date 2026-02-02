@@ -12,11 +12,12 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/progress"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
-	"github.com/usetero/cli/internal/tui/onboarding/sync"
+	"github.com/usetero/cli/internal/tui/onboarding/workspace"
 )
 
 const (
@@ -60,6 +61,8 @@ type DiscoveryStep struct {
 
 	// Services
 	datadogAccounts api.DatadogAccounts
+	workspaces      api.Workspaces
+	preferences     preferences.Preferences
 	logger          log.Logger
 	globalBindings  []key.Binding
 
@@ -81,11 +84,19 @@ func NewDiscoveryStep(
 	account api.Account,
 	datadogAccountID *string,
 	datadogAccounts api.DatadogAccounts,
+	workspaces api.Workspaces,
+	prefs preferences.Preferences,
 	logger log.Logger,
 	globalBindings []key.Binding,
 ) step.Step {
 	if datadogAccounts == nil {
 		panic("datadogAccounts cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
+	}
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
@@ -103,6 +114,8 @@ func NewDiscoveryStep(
 		account:          account,
 		datadogAccountID: datadogAccountID,
 		datadogAccounts:  datadogAccounts,
+		workspaces:       workspaces,
+		preferences:      prefs,
 		logger:           logger,
 		globalBindings:   globalBindings,
 		loading:          true,
@@ -480,7 +493,7 @@ func (s *DiscoveryStep) Next() (step.Step, error) {
 	if !s.isComplete() {
 		return nil, step.ErrNotReady
 	}
-	return sync.New(s.ctx, s.theme, s.org, s.account, s.logger, s.globalBindings), nil
+	return workspace.NewSelectStep(s.ctx, s.theme, s.org, s.account, s.workspaces, s.preferences, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

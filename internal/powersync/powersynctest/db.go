@@ -15,20 +15,12 @@ import (
 func OpenTestDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
+	// Extension is registered via powersync.init()
 	ctx := context.Background()
 	db := sqlitetest.OpenTest(t)
 
-	extPath, err := powersync.ExtensionPath()
-	if err != nil {
-		t.Fatalf("ExtensionPath() error = %v", err)
-	}
-
-	if err := db.LoadExtension(ctx, extPath, "sqlite3_powersync_init"); err != nil {
-		t.Fatalf("LoadExtension() error = %v", err)
-	}
-
-	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
-		t.Fatalf("powersync_replace_schema() error = %v", err)
+	if err := powersync.ApplySchema(ctx, db); err != nil {
+		t.Fatalf("ApplySchema() error = %v", err)
 	}
 
 	return db

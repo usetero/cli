@@ -8,9 +8,6 @@ type Event interface {
 	uploadEvent()
 }
 
-// Emitter is a function that handlers use to emit events.
-type Emitter func(Event)
-
 // Core upload events - emitted by the uploader itself
 
 // SyncingEvent is emitted when entries are being processed.

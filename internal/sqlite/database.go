@@ -9,9 +9,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/usetero/cli/internal/sqlite/gen"
+)
+
+var (
+	// extensionPath is set by powersync.RegisterExtension() to enable
+	// automatic extension loading on every new connection.
+	extensionPath     string
+	extensionPathOnce sync.Once
+	driverRegistered  bool
 )
 
 // Database is the interface for application code.
@@ -37,8 +46,37 @@ type DB struct {
 // Ensure DB implements Database.
 var _ Database = (*DB)(nil)
 
+// SetExtensionPath configures the PowerSync extension to be loaded on every
+// new database connection. This must be called before Open() to have effect.
+// Typically called once at startup by the powersync package.
+func SetExtensionPath(path string) {
+	extensionPathOnce.Do(func() {
+		extensionPath = path
+		registerPowerSyncDriver()
+	})
+}
+
+// registerPowerSyncDriver registers a custom SQLite driver that loads the
+// PowerSync extension on every new connection.
+func registerPowerSyncDriver() {
+	if driverRegistered {
+		return
+	}
+	sql.Register("sqlite3_powersync", &sqlite3.SQLiteDriver{
+		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+			if extensionPath == "" {
+				return nil
+			}
+			return conn.LoadExtension(extensionPath, "sqlite3_powersync_init")
+		},
+	})
+	driverRegistered = true
+}
+
 // Open opens a SQLite database at the given path.
 // The database file and parent directories are created if they don't exist.
+// If SetExtensionPath() was called, the PowerSync extension is automatically
+// loaded on every connection.
 func Open(ctx context.Context, path string) (*DB, error) {
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
@@ -46,7 +84,13 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite3", path)
+	// Use PowerSync driver if extension is configured, otherwise plain sqlite3
+	driverName := "sqlite3"
+	if extensionPath != "" {
+		driverName = "sqlite3_powersync"
+	}
+
+	db, err := sql.Open(driverName, path)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
@@ -148,4 +192,46 @@ func (d *DB) LoadExtension(ctx context.Context, path, entryPoint string) error {
 		}
 		return sqliteConn.LoadExtension(path, entryPoint)
 	})
+}
+
+// Tx wraps a SQL transaction with convenience methods.
+type Tx struct {
+	tx *sql.Tx
+}
+
+// Exec executes a query that doesn't return rows within the transaction.
+func (t *Tx) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return t.tx.ExecContext(ctx, query, args...)
+}
+
+// QueryRow executes a query that returns at most one row within the transaction.
+func (t *Tx) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+	return t.tx.QueryRowContext(ctx, query, args...)
+}
+
+// Query executes a query and returns the results within the transaction.
+func (t *Tx) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return t.tx.QueryContext(ctx, query, args...)
+}
+
+// WithTx executes a function within a database transaction.
+// If the function returns an error, the transaction is rolled back.
+// If the function succeeds, the transaction is committed.
+func (d *DB) WithTx(ctx context.Context, fn func(tx *Tx) error) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+
+	if err := fn(&Tx{tx: tx}); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("rollback failed: %v (original error: %w)", rbErr, err)
+		}
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	return nil
 }

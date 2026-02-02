@@ -130,21 +130,68 @@ func (q *CrudQueue) GetNextTransaction(ctx context.Context) ([]CrudEntry, error)
 	return entries, rows.Err()
 }
 
-// DeleteEntry removes an entry from the queue after successful upload.
-func (q *CrudQueue) DeleteEntry(ctx context.Context, id int64) error {
-	_, err := q.db.DB().Exec(ctx, "DELETE FROM ps_crud WHERE id = ?", id)
+// GetAllEntries returns all pending CRUD entries in order.
+func (q *CrudQueue) GetAllEntries(ctx context.Context) ([]*CrudEntry, error) {
+	rows, err := q.db.DB().Query(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id")
 	if err != nil {
-		return fmt.Errorf("delete crud entry: %w", err)
+		return nil, fmt.Errorf("query crud entries: %w", err)
 	}
-	return nil
+	defer rows.Close()
+
+	var entries []*CrudEntry
+	for rows.Next() {
+		var row crudRow
+		if err := rows.Scan(&row.ID, &row.TxID, &row.Data); err != nil {
+			return nil, fmt.Errorf("scan crud row: %w", err)
+		}
+		entry, err := q.parseEntry(row)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
 }
 
-// DeleteEntriesUpTo removes all entries up to and including the given ID.
-func (q *CrudQueue) DeleteEntriesUpTo(ctx context.Context, id int64) error {
-	_, err := q.db.DB().Exec(ctx, "DELETE FROM ps_crud WHERE id <= ?", id)
+// ErrDatabaseCorrupt indicates the database is in an inconsistent state
+// from a crash during migration or write. The database should be deleted
+// and re-synced from the server.
+var ErrDatabaseCorrupt = fmt.Errorf("database corrupt")
+
+// CheckHealth verifies the database is in a consistent state.
+// Returns ErrDatabaseCorrupt if corruption is detected from a crash.
+func (q *CrudQueue) CheckHealth(ctx context.Context) error {
+	// Check 1: ps_tx must have a row with id=1
+	// This is required for CRUD operations. Missing if crash during migration.
+	var txCount int
+	err := q.db.DB().QueryRow(ctx, "SELECT COUNT(*) FROM ps_tx WHERE id = 1").Scan(&txCount)
 	if err != nil {
-		return fmt.Errorf("delete crud entries: %w", err)
+		return fmt.Errorf("check ps_tx: %w", err)
 	}
+	if txCount == 0 {
+		return fmt.Errorf("%w: ps_tx missing required row", ErrDatabaseCorrupt)
+	}
+
+	// Check 2: $local bucket should not be stuck
+	// Stuck = target_op > last_op with empty ps_crud (crash during upload)
+	hasPending, err := q.HasPendingUploads(ctx)
+	if err != nil {
+		return fmt.Errorf("check pending uploads: %w", err)
+	}
+	if !hasPending {
+		var targetOp, lastOp int64
+		err = q.db.DB().QueryRow(ctx,
+			"SELECT target_op, last_op FROM ps_buckets WHERE name = '$local'",
+		).Scan(&targetOp, &lastOp)
+		if err != nil && err.Error() != "sql: no rows in result set" {
+			return fmt.Errorf("check local bucket: %w", err)
+		}
+		if err == nil && targetOp > lastOp {
+			return fmt.Errorf("%w: $local bucket stuck", ErrDatabaseCorrupt)
+		}
+	}
+
 	return nil
 }
 

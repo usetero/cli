@@ -9,11 +9,20 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/onboarding/datadog"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
+
+func checkOrg() api.Organization {
+	return apitest.NewOrganization()
+}
+
+func checkAccount() api.Account {
+	return apitest.NewAccount()
+}
 
 // checkTestTheme creates a theme for testing
 func checkTestTheme() *styles.Theme {
@@ -32,8 +41,8 @@ func isCheckComplete(s step.Step) bool {
 
 func TestCheckDatadogStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
-	testAccount := api.Account{ID: "acc-1", Name: "Test Account"}
+	org := checkOrg()
+	account := checkAccount()
 
 	t.Run("completes when datadog account exists", func(t *testing.T) {
 		t.Parallel()
@@ -49,7 +58,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", org, account, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -83,7 +92,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", org, account, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -117,7 +126,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", org, account, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// Act: run init command
 		cmd := s.Init()
@@ -159,7 +168,7 @@ func TestCheckDatadogStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", testOrg, testAccount, ddAccounts, apiClient, logger, nil)
+		s := datadog.NewCheckDatadogStep(context.Background(), checkTestTheme(), "admin", org, account, ddAccounts, apitest.NewMockWorkspaces(), preferencestest.NewMockPreferences(), apiClient, logger, nil)
 
 		// First attempt fails
 		cmd := s.Init()

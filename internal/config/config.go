@@ -62,18 +62,32 @@ func (c *Config) SetList(key string, values []string) {
 	c.data[key] = values
 }
 
-// configPath returns the config file path.
-// For production (empty namespace): ~/.tero/config.yaml
-// For other environments: ~/.tero/<namespace>/config.yaml
-func configPath(namespace string) (string, error) {
+// baseDir returns the base directory for all Tero data.
+// For production (empty namespace): ~/.tero
+// For other environments: ~/.tero/{namespace}
+func baseDir(namespace string) (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 	if namespace == "" {
-		return filepath.Join(homeDir, ".tero", "config.yaml"), nil
+		return filepath.Join(homeDir, ".tero"), nil
 	}
-	return filepath.Join(homeDir, ".tero", namespace, "config.yaml"), nil
+	return filepath.Join(homeDir, ".tero", namespace), nil
+}
+
+// BaseDir returns the base directory for all Tero data.
+func (c *Config) BaseDir() (string, error) {
+	return baseDir(c.namespace)
+}
+
+// configPath returns the config file path.
+func configPath(namespace string) (string, error) {
+	dir, err := baseDir(namespace)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "config.yaml"), nil
 }
 
 // Load reads the config from disk.

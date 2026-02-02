@@ -83,6 +83,7 @@ type SelectStep struct {
 
 	// Services
 	accounts    api.Accounts
+	workspaces  api.Workspaces
 	preferences preferences.Preferences
 
 	// Pass-through to next step
@@ -99,9 +100,12 @@ type SelectStep struct {
 }
 
 // NewSelectStep creates a new account selection step for the given organization
-func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, accounts api.Accounts, workspaces api.Workspaces, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if accounts == nil {
 		panic("accounts cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
 	}
 	if prefs == nil {
 		panic("preferences cannot be nil")
@@ -122,6 +126,7 @@ func NewSelectStep(ctx context.Context, theme *styles.Theme, role string, org ap
 		role:           role,
 		org:            org,
 		accounts:       accounts,
+		workspaces:     workspaces,
 		preferences:    prefs,
 		apiClient:      apiClient,
 		logger:         logger,
@@ -314,14 +319,14 @@ func (s *SelectStep) Next() (step.Step, error) {
 	// User wants to create new account
 	if s.selectedAccountID == createNewAccountID {
 		accountService := api.NewAccountService(s.apiClient, s.logger)
-		return NewCreateStep(s.ctx, s.theme, s.role, s.org, accountService, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
+		return NewCreateStep(s.ctx, s.theme, s.role, s.org, accountService, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Create Datadog service for next step
 	datadogService := api.NewDatadogAccountService(s.apiClient, s.logger)
 
 	// User selected existing account, check for Datadog
-	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, s.selectedAccount, datadogService, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewCheckDatadogStep(s.ctx, s.theme, s.role, s.org, s.selectedAccount, datadogService, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
 	"github.com/pkg/browser"
+	"github.com/usetero/cli/internal/api"
 	authservice "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -372,8 +373,11 @@ func (s *AuthenticateStep) Next() (step.Step, error) {
 	}
 	apiClient := client.New(s.apiEndpoint, s.authResult.AccessToken, refreshFunc)
 
+	// Create workspace service for onboarding flow
+	workspaceService := api.NewWorkspaceService(apiClient, s.logger)
+
 	// Pass authenticated client, preferences, auth, and other dependencies to next step
-	return role.NewSelectStep(s.ctx, s.theme, apiClient, s.preferences, s.authService, s.logger, s.globalBindings), nil
+	return role.NewSelectStep(s.ctx, s.theme, workspaceService, apiClient, s.preferences, s.authService, s.logger, s.globalBindings), nil
 }
 
 // Close releases any resources held by the step.

@@ -31,6 +31,7 @@ type CreateStep struct {
 
 	// Services
 	organizations api.Organizations
+	workspaces    api.Workspaces
 	preferences   preferences.Preferences
 	auth          auth.Auth
 
@@ -51,9 +52,12 @@ type CreateStep struct {
 }
 
 // NewCreateStep creates a new organization creation step
-func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organizations api.Organizations, prefs preferences.Preferences, authService auth.Auth, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organizations api.Organizations, workspaces api.Workspaces, prefs preferences.Preferences, authService auth.Auth, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if organizations == nil {
 		panic("organizations cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
 	}
 	if prefs == nil {
 		panic("preferences cannot be nil")
@@ -77,6 +81,7 @@ func NewCreateStep(ctx context.Context, theme *styles.Theme, role string, organi
 		theme:          theme,
 		role:           role,
 		organizations:  organizations,
+		workspaces:     workspaces,
 		preferences:    prefs,
 		auth:           authService,
 		apiClient:      apiClient,
@@ -271,7 +276,7 @@ func (s *CreateStep) Next() (step.Step, error) {
 
 	// Skip account selection since bootstrap creates it automatically
 	// Go to Datadog region selection
-	return datadog.NewSelectRegionStep(s.ctx, s.theme, s.role, *s.createdResult.Organization, *s.createdResult.Account, s.apiClient, s.logger, s.globalBindings), nil
+	return datadog.NewSelectRegionStep(s.ctx, s.theme, s.role, *s.createdResult.Organization, *s.createdResult.Account, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

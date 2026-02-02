@@ -88,7 +88,40 @@ The app layer includes `apptest`—mock implementations for every interface. The
 
 ## The TUI
 
-The TUI is built on [Bubbletea](https://github.com/charmbracelet/bubbletea), a Go framework based on The Elm Architecture. Your application is a model (state), an update function (how state changes), and a view function (how to render state). Messages flow in, trigger updates, the model changes, the view re-renders.
+The TUI is built on [Bubbletea](https://github.com/charmbracelet/bubbletea), a Go framework based on The Elm Architecture. Understanding Bubbletea's model is essential—everything else builds on it.
+
+### Bubbletea Basics
+
+Your application is a model (state), an update function (how state changes), and a view function (how to render state). Messages (`tea.Msg`) flow in, trigger updates, the model changes, the view re-renders.
+
+Commands (`tea.Cmd`) are functions that produce messages. When `Update()` returns a command, Bubbletea executes it and feeds the resulting message back into `Update()`. This is how async operations work—you return a command that does IO, and when it completes, the result arrives as a message.
+
+### Message Flow
+
+Components communicate through messages. When something happens in one component that others need to know about, it emits a `tea.Msg`. Bubbletea propagates the message down through the component tree. Any component can handle it in its `Update()` method.
+
+For background processes (goroutines, channels), you need a bridge to convert Go channel events into Bubbletea messages:
+
+1. A background process emits events to a Go channel
+2. A bridge component listens on that channel and converts events to `tea.Msg` types
+3. The bridge returns the message as a `tea.Cmd` so Bubbletea propagates it
+4. Any component in the tree can handle the message
+
+For example, when a user message starts uploading:
+
+1. `upload.Uploader` (background goroutine) emits `MessageProcessingEvent` to a channel
+2. `database.Uploader` (TUI bridge) receives it and emits `database.UploadEventMsg`
+3. `chat.Messages` handles the message and shows the spinner
+
+The bridge is transparent—it converts and emits. Producers don't know about consumers. Consumers import the message type from the producer package. Dependencies point in the natural direction.
+
+### Component Structure
+
+Bubbletea's Elm-style uses value receivers where `Update()` returns the new model. This works for top-level models (pages, modes) where you want explicit state transitions.
+
+But for leaf components (footer, header, text input), value receivers create a footgun: forgetting to capture the return value silently loses state. So our components use pointer receivers—standard Go for methods that mutate.
+
+The mental model: **pages and modes use value receivers** (Elm-style), **components use pointer receivers** (Go-style).
 
 ### Two Modes
 
@@ -97,14 +130,6 @@ The TUI has two modes: **onboarding** and **app**. They're fundamentally differe
 **Onboarding** is a linear flow. Steps chain together—auth, role selection, organization setup, account creation. Each step knows what comes next. A Flow orchestrator manages transitions. When the final step completes, the TUI transitions to app mode. Onboarding uses FlowContext to accumulate data as steps complete.
 
 **App mode** is the main experience. Chat is home—you always start there and can always escape back. You can focus on other pages (services, policies, expanded views) but you never lose access to the command bar or the ability to return.
-
-### Value vs Pointer Receivers
-
-Bubbletea follows Elm's pattern where `Update()` returns the new state via value receivers. This works well for top-level models (pages, modes) where you want explicit state transitions.
-
-But for leaf components (footer, header, text input), value receivers create a footgun: forgetting to capture the return value silently loses state. So our components use pointer receivers—standard Go for methods that mutate.
-
-The mental model: **pages and modes use value receivers** (Elm-style), **components use pointer receivers** (Go-style).
 
 ---
 

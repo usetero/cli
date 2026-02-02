@@ -2,6 +2,7 @@ package powersync_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/usetero/cli/internal/powersync"
@@ -88,25 +89,50 @@ func TestCrudQueue_GetNextEntry(t *testing.T) {
 	})
 }
 
-func TestCrudQueue_DeleteEntry(t *testing.T) {
+func TestCrudQueue_GetAllEntries(t *testing.T) {
 	t.Parallel()
 
-	t.Run("removes entry from queue", func(t *testing.T) {
+	t.Run("returns empty slice when queue is empty", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"messages","id":"msg-1","data":{}}`)
+		queue := powersync.NewCrudQueue(db)
+
+		entries, err := queue.GetAllEntries(context.Background())
+		if err != nil {
+			t.Fatalf("GetAllEntries() error = %v", err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("GetAllEntries() = %d entries, want 0", len(entries))
+		}
+	})
+
+	t.Run("returns all entries in order", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"messages","id":"first","data":{}}`)
+		powersynctest.InsertCrudEntry(t, db, 2, nil, `{"op":"PATCH","type":"messages","id":"second","data":{}}`)
+		powersynctest.InsertCrudEntry(t, db, 3, nil, `{"op":"DELETE","type":"messages","id":"third","data":{}}`)
 
 		queue := powersync.NewCrudQueue(db)
 
-		err := queue.DeleteEntry(context.Background(), 1)
+		entries, err := queue.GetAllEntries(context.Background())
 		if err != nil {
-			t.Fatalf("DeleteEntry() error = %v", err)
+			t.Fatalf("GetAllEntries() error = %v", err)
+		}
+		if len(entries) != 3 {
+			t.Fatalf("GetAllEntries() = %d entries, want 3", len(entries))
 		}
 
-		entry, _ := queue.GetNextEntry(context.Background())
-		if entry != nil {
-			t.Errorf("entry still exists after delete")
+		if entries[0].RowID != "first" {
+			t.Errorf("entries[0].RowID = %q, want first", entries[0].RowID)
+		}
+		if entries[1].RowID != "second" {
+			t.Errorf("entries[1].RowID = %q, want second", entries[1].RowID)
+		}
+		if entries[2].RowID != "third" {
+			t.Errorf("entries[2].RowID = %q, want third", entries[2].RowID)
 		}
 	})
 }
@@ -143,6 +169,100 @@ func TestCrudQueue_HasPendingUploads(t *testing.T) {
 		}
 		if !has {
 			t.Error("HasPendingUploads() = false, want true")
+		}
+	})
+}
+
+func TestCrudQueue_CheckHealth(t *testing.T) {
+	t.Parallel()
+
+	t.Run("healthy database passes", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		ctx := context.Background()
+
+		queue := powersync.NewCrudQueue(db)
+		err := queue.CheckHealth(ctx)
+		if err != nil {
+			t.Fatalf("CheckHealth() error = %v", err)
+		}
+	})
+
+	t.Run("missing ps_tx row returns corrupt error", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		ctx := context.Background()
+
+		// Delete the required row
+		_, err := db.Exec(ctx, "DELETE FROM ps_tx")
+		if err != nil {
+			t.Fatalf("delete ps_tx: %v", err)
+		}
+
+		queue := powersync.NewCrudQueue(db)
+		err = queue.CheckHealth(ctx)
+		if err == nil {
+			t.Fatal("CheckHealth() should return error")
+		}
+		if !errors.Is(err, powersync.ErrDatabaseCorrupt) {
+			t.Errorf("CheckHealth() error = %v, want ErrDatabaseCorrupt", err)
+		}
+	})
+
+	t.Run("stuck local bucket returns corrupt error", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		ctx := context.Background()
+
+		// Set up $local bucket in stuck state (target_op > last_op with empty ps_crud)
+		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 5)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
+
+		queue := powersync.NewCrudQueue(db)
+		err = queue.CheckHealth(ctx)
+		if err == nil {
+			t.Fatal("CheckHealth() should return error")
+		}
+		if !errors.Is(err, powersync.ErrDatabaseCorrupt) {
+			t.Errorf("CheckHealth() error = %v, want ErrDatabaseCorrupt", err)
+		}
+	})
+
+	t.Run("local bucket with pending data is healthy", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		ctx := context.Background()
+
+		// Set up $local bucket with target_op > last_op, but with actual pending data
+		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 5)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
+		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"messages","id":"msg-1","data":{}}`)
+
+		queue := powersync.NewCrudQueue(db)
+		err = queue.CheckHealth(ctx)
+		if err != nil {
+			t.Fatalf("CheckHealth() error = %v", err)
+		}
+	})
+
+	t.Run("no local bucket is healthy", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+		ctx := context.Background()
+
+		queue := powersync.NewCrudQueue(db)
+		err := queue.CheckHealth(ctx)
+		if err != nil {
+			t.Fatalf("CheckHealth() error = %v", err)
 		}
 	})
 }

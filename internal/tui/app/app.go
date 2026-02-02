@@ -64,8 +64,9 @@ type App struct {
 	db     sqlite.Database
 
 	// Identity
-	org     api.Organization
-	account api.Account
+	org       api.Organization
+	account   api.Account
+	workspace api.Workspace
 
 	// Global key bindings (for footer display)
 	globalBindings []key.Binding
@@ -79,7 +80,7 @@ type App struct {
 }
 
 // New creates a new app. Requires db for database access.
-func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.Organization, account api.Account, logger log.Logger, globalBindings []key.Binding) *App {
+func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.Organization, account api.Account, workspace api.Workspace, logger log.Logger, globalBindings []key.Binding) *App {
 	return &App{
 		ctx:            ctx,
 		theme:          theme,
@@ -92,6 +93,7 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, org api.O
 		logger:         logger,
 		org:            org,
 		account:        account,
+		workspace:      workspace,
 		globalBindings: globalBindings,
 	}
 }
@@ -172,7 +174,7 @@ func (a *App) sendMessage(text string) tea.Cmd {
 		// Create conversation if needed
 		if convID == "" {
 			var err error
-			convID, err = a.db.Conversations().Create(a.ctx, a.account.ID)
+			convID, err = a.db.Conversations().Create(a.ctx, a.account.ID, a.workspace.ID)
 			if err != nil {
 				return messageSentMsg{err: err}
 			}

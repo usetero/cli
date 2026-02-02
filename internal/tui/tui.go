@@ -17,6 +17,7 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	tuiapp "github.com/usetero/cli/internal/tui/app"
 	"github.com/usetero/cli/internal/tui/cursor"
@@ -25,6 +26,7 @@ import (
 	"github.com/usetero/cli/internal/tui/mode"
 	"github.com/usetero/cli/internal/tui/onboarding"
 	"github.com/usetero/cli/internal/tui/onboarding/account"
+	"github.com/usetero/cli/internal/tui/onboarding/workspace"
 	"github.com/usetero/cli/pkg/client"
 )
 
@@ -43,7 +45,9 @@ type TUI struct {
 	logger          log.Logger
 	theme           *styles.Theme
 	auth            auth.Auth
-	powersyncConfig *powersync.Config
+	storage         sqlite.Storage
+	syncClient      powersync.Syncer
+	powersyncClient powersync.Client
 	apiEndpoint     string
 	chatEndpoint    string
 
@@ -52,9 +56,10 @@ type TUI struct {
 	cancel context.CancelFunc
 
 	// State - set after onboarding
-	org      api.Organization
-	account  api.Account
-	database *database.Database
+	org       api.Organization
+	account   api.Account
+	workspace api.Workspace
+	database  *database.Database
 
 	// UI
 	currentMode     mode.Mode
@@ -64,12 +69,15 @@ type TUI struct {
 }
 
 // New creates a new TUI model.
-func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint, chatEndpoint string, powersyncConfig *powersync.Config, logger log.Logger) tea.Model {
+func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.OAuthProvider, apiEndpoint, chatEndpoint, powersyncEndpoint string, logger log.Logger) tea.Model {
 	ctx, cancel := context.WithCancel(context.Background())
 	theme := styles.NewTheme(true)
 
 	authService := auth.NewService(oauthProvider, tokenStore, logger)
 	preferencesService := preferences.NewService(cfg, logger)
+	storageService := sqlite.NewStorageService(cfg)
+	syncClient := powersync.NewSync(powersyncEndpoint, authService, logger)
+	powersyncClient := powersync.NewClient(powersyncEndpoint)
 
 	onboardingMode := onboarding.New(ctx, theme, logger, authService, preferencesService, apiEndpoint, keymap.Global)
 
@@ -79,7 +87,9 @@ func New(cfg *config.Config, tokenStore auth.SecureStorage, oauthProvider auth.O
 		ctx:             ctx,
 		cancel:          cancel,
 		auth:            authService,
-		powersyncConfig: powersyncConfig,
+		storage:         storageService,
+		syncClient:      syncClient,
+		powersyncClient: powersyncClient,
 		apiEndpoint:     apiEndpoint,
 		chatEndpoint:    chatEndpoint,
 		currentMode:     onboardingMode,
@@ -113,6 +123,12 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(account.AccountSelectedMsg); ok {
 		m.org = msg.Organization
 		m.account = msg.Account
+	}
+
+	if msg, ok := msg.(workspace.WorkspaceSelectedMsg); ok {
+		m.org = msg.Organization
+		m.account = msg.Account
+		m.workspace = msg.Workspace
 
 		token, _ := m.auth.GetAccessToken(m.ctx)
 
@@ -127,7 +143,7 @@ func (m *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		chatClient.SetAccountID(m.account.ID)
 		messages := chat.NewMessageService(chatClient)
 
-		m.database = database.New(m.ctx, m.powersyncConfig, m.auth, conversations, messages, m.logger)
+		m.database = database.New(m.ctx, m.storage, m.syncClient, m.powersyncClient, m.auth, conversations, messages, m.logger)
 		cmds = append(cmds, m.database.Start(m.account.ID))
 	}
 
@@ -189,7 +205,8 @@ func (m *TUI) checkModeTransition() tea.Cmd {
 	if ob, ok := m.currentMode.(*onboarding.Onboarding); ok {
 		m.org = ob.Organization()
 		m.account = ob.Account()
-		m.logger.Info("onboarding completed", "accountID", m.account.ID)
+		m.workspace = ob.Workspace()
+		m.logger.Info("onboarding completed", "accountID", m.account.ID, "workspaceID", m.workspace.ID)
 		return m.transitionToApp()
 	}
 
@@ -207,7 +224,7 @@ func (m *TUI) transitionToApp() tea.Cmd {
 		}
 	}
 
-	m.currentMode = tuiapp.New(m.ctx, m.theme, m.database.DB(), m.org, m.account, m.logger, keymap.Global)
+	m.currentMode = tuiapp.New(m.ctx, m.theme, m.database.DB(), m.org, m.account, m.workspace, m.logger, keymap.Global)
 
 	if m.width > 0 && m.height > 0 {
 		m.currentMode.SetSize(m.width, m.height)

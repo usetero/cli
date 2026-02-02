@@ -1,0 +1,13 @@
+query ListWorkspaces($accountID: ID!) {
+    workspaces(where: { accountID: $accountID }) {
+        edges {
+            node {
+                id
+                name
+                purpose
+                createdAt
+            }
+        }
+        totalCount
+    }
+}

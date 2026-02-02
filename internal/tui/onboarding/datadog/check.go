@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
@@ -28,6 +29,8 @@ type CheckDatadogStep struct {
 
 	// Services
 	datadogAccounts api.DatadogAccounts
+	workspaces      api.Workspaces
+	preferences     preferences.Preferences
 	apiClient       api.Client
 	logger          log.Logger
 
@@ -42,9 +45,15 @@ type CheckDatadogStep struct {
 }
 
 // NewCheckDatadogStep creates a new Datadog account check step
-func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, datadogAccounts api.DatadogAccounts, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
+func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, org api.Organization, account api.Account, datadogAccounts api.DatadogAccounts, workspaces api.Workspaces, prefs preferences.Preferences, apiClient api.Client, logger log.Logger, globalBindings []key.Binding) step.Step {
 	if datadogAccounts == nil {
 		panic("datadogAccounts cannot be nil")
+	}
+	if workspaces == nil {
+		panic("workspaces cannot be nil")
+	}
+	if prefs == nil {
+		panic("preferences cannot be nil")
 	}
 	if apiClient == nil {
 		panic("apiClient cannot be nil")
@@ -60,6 +69,8 @@ func NewCheckDatadogStep(ctx context.Context, theme *styles.Theme, role string, 
 		org:             org,
 		account:         account,
 		datadogAccounts: datadogAccounts,
+		workspaces:      workspaces,
+		preferences:     prefs,
 		apiClient:       apiClient,
 		logger:          logger,
 		width:           80,
@@ -190,7 +201,7 @@ func (s *CheckDatadogStep) Next() (step.Step, error) {
 	// Conditional branching based on whether account has Datadog
 	if !s.hasDatadog {
 		// No Datadog account - go to Datadog setup flow
-		return NewSelectRegionStep(s.ctx, s.theme, s.role, s.org, s.account, s.apiClient, s.logger, s.globalBindings), nil
+		return NewSelectRegionStep(s.ctx, s.theme, s.role, s.org, s.account, s.workspaces, s.preferences, s.apiClient, s.logger, s.globalBindings), nil
 	}
 
 	// Create datadog account service for status polling
@@ -198,7 +209,7 @@ func (s *CheckDatadogStep) Next() (step.Step, error) {
 
 	// Datadog account exists - go to unified discovery step
 	datadogAccountID := s.datadogAccount.ID
-	return NewDiscoveryStep(s.ctx, s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.logger, s.globalBindings), nil
+	return NewDiscoveryStep(s.ctx, s.theme, s.role, s.org, s.account, &datadogAccountID, datadogAccountService, s.workspaces, s.preferences, s.logger, s.globalBindings), nil
 }
 
 // Help returns the key bindings for this step

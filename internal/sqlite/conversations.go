@@ -10,7 +10,7 @@ import (
 
 // Conversations provides type-safe access to conversations.
 type Conversations interface {
-	Create(ctx context.Context, accountID string) (string, error)
+	Create(ctx context.Context, accountID, workspaceID string) (string, error)
 	List(ctx context.Context, accountID string) ([]gen.Conversation, error)
 	Get(ctx context.Context, id string) (gen.Conversation, error)
 }
@@ -21,18 +21,19 @@ type conversationsImpl struct {
 }
 
 // Create creates a new conversation and returns its ID.
-func (c *conversationsImpl) Create(ctx context.Context, accountID string) (string, error) {
+func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID string) (string, error) {
 	convID := uuid.New().String()
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	err := c.queries.InsertConversation(ctx, gen.InsertConversationParams{
-		ID:        &convID,
-		AccountID: &accountID,
-		CreatedAt: &now,
-		UpdatedAt: &now,
+		ID:          &convID,
+		AccountID:   &accountID,
+		WorkspaceID: &workspaceID,
+		CreatedAt:   &now,
+		UpdatedAt:   &now,
 	})
 	if err != nil {
-		return "", err
+		return "", WrapSQLiteError(err, "insert conversation")
 	}
 
 	return convID, nil

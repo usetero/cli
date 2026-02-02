@@ -2,42 +2,39 @@ package database
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// syncReadyMsg is sent when PowerSync completes its first sync.
-type syncReadyMsg struct {
-	syncer powersync.Syncer
-}
+// syncReadyMsg is sent when PowerSync has started.
+type syncReadyMsg struct{}
 
 // syncTickMsg triggers a status poll.
 type syncTickMsg struct{}
 
 // Syncer manages the PowerSync lifecycle.
 type Syncer struct {
-	ctx    context.Context
-	config *powersync.Config
-	auth   auth.Auth
-	logger log.Logger
+	ctx     context.Context
+	storage sqlite.Storage
+	sync    powersync.Syncer
+	logger  log.Logger
 
-	syncer        powersync.Syncer
 	waiting       bool // true while waiting for first sync
 	firstSyncDone bool // set by callback when first sync completes
 }
 
 // NewSyncer creates a new syncer model.
-func NewSyncer(ctx context.Context, config *powersync.Config, auth auth.Auth, logger log.Logger) *Syncer {
+func NewSyncer(ctx context.Context, storage sqlite.Storage, sync powersync.Syncer, logger log.Logger) *Syncer {
 	return &Syncer{
-		ctx:    ctx,
-		config: config,
-		auth:   auth,
-		logger: logger,
+		ctx:     ctx,
+		storage: storage,
+		sync:    sync,
+		logger:  logger,
 	}
 }
 
@@ -47,12 +44,47 @@ func (s *Syncer) Start(db sqlite.Database, accountID string) tea.Cmd {
 	s.firstSyncDone = false
 
 	return func() tea.Msg {
-		syncer := powersync.NewSync(s.config, s.auth, s.logger)
-		err := syncer.Start(s.ctx, db, accountID, func() {
+		err := s.sync.Start(s.ctx, db, accountID, func() {
 			// First sync complete - flag it for the next poll tick
 			s.firstSyncDone = true
 		})
 		if err != nil {
+			// If database is corrupt, delete it and retry once.
+			// Sync will repopulate from the server.
+			if errors.Is(err, powersync.ErrDatabaseCorrupt) {
+				s.logger.Warn("database corrupt, resetting", "error", err)
+				db.Close()
+
+				if clearErr := s.storage.ClearDatabase(accountID); clearErr != nil {
+					s.logger.Error("failed to clear corrupt database", "error", clearErr)
+				}
+
+				// Re-open and retry
+				dbPath, _ := s.storage.DatabasePath(accountID)
+				newDB, openErr := sqlite.Open(s.ctx, dbPath)
+				if openErr != nil {
+					s.logger.Error("failed to reopen database after reset", "error", openErr)
+					return powersync.StatusUpdateMsg{
+						Status:    powersync.StatusError,
+						LastError: openErr,
+					}
+				}
+
+				err = s.sync.Start(s.ctx, newDB, accountID, func() {
+					s.firstSyncDone = true
+				})
+				if err != nil {
+					s.logger.Error("failed to start sync after reset", "error", err)
+					return powersync.StatusUpdateMsg{
+						Status:    powersync.StatusError,
+						LastError: err,
+					}
+				}
+
+				s.logger.Info("sync started after database reset", "accountID", accountID)
+				return syncReadyMsg{}
+			}
+
 			s.logger.Error("failed to start sync", "error", err)
 			return powersync.StatusUpdateMsg{
 				Status:    powersync.StatusError,
@@ -62,8 +94,8 @@ func (s *Syncer) Start(db sqlite.Database, accountID string) tea.Cmd {
 
 		s.logger.Info("sync started", "accountID", accountID)
 
-		// Return the syncer immediately so we can poll its status
-		return syncReadyMsg{syncer: syncer}
+		// Return ready so we can start polling status
+		return syncReadyMsg{}
 	}
 }
 
@@ -76,15 +108,14 @@ func (s *Syncer) tickCmd() tea.Cmd {
 
 // Update handles sync-related messages.
 func (s *Syncer) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
+	switch msg.(type) {
 	case syncReadyMsg:
-		s.syncer = msg.syncer
 		s.waiting = true
 		// Start polling for status updates
 		return s.tickCmd()
 
 	case syncTickMsg:
-		if s.syncer == nil || !s.waiting {
+		if !s.waiting {
 			return nil
 		}
 
@@ -95,9 +126,9 @@ func (s *Syncer) Update(msg tea.Msg) tea.Cmd {
 			return func() tea.Msg { return powersync.SyncReadyMsg{} }
 		}
 
-		status := s.syncer.Status()
-		syncStatus := s.syncer.SyncStatus()
-		lastError := s.syncer.LastError()
+		status := s.sync.Status()
+		syncStatus := s.sync.SyncStatus()
+		lastError := s.sync.LastError()
 
 		// Send status update and continue polling
 		return tea.Batch(
@@ -113,17 +144,15 @@ func (s *Syncer) Update(msg tea.Msg) tea.Cmd {
 
 	case powersync.SyncStatusQueryMsg:
 		// Sync step is asking if sync is ready
-		if s.syncer != nil && !s.waiting {
+		if !s.waiting {
 			return func() tea.Msg { return powersync.SyncReadyMsg{} }
 		}
 		// If still waiting, return current status
-		if s.syncer != nil {
-			return func() tea.Msg {
-				return powersync.StatusUpdateMsg{
-					Status:     s.syncer.Status(),
-					SyncStatus: s.syncer.SyncStatus(),
-					LastError:  s.syncer.LastError(),
-				}
+		return func() tea.Msg {
+			return powersync.StatusUpdateMsg{
+				Status:     s.sync.Status(),
+				SyncStatus: s.sync.SyncStatus(),
+				LastError:  s.sync.LastError(),
 			}
 		}
 	}
@@ -133,12 +162,10 @@ func (s *Syncer) Update(msg tea.Msg) tea.Cmd {
 
 // IsReady returns true if sync has completed.
 func (s *Syncer) IsReady() bool {
-	return s.syncer != nil && !s.waiting
+	return s.sync.IsRunning() && !s.waiting
 }
 
 // Stop stops the syncer.
 func (s *Syncer) Stop() {
-	if s.syncer != nil {
-		s.syncer.Stop()
-	}
+	s.sync.Stop()
 }

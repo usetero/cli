@@ -27,6 +27,12 @@ type MockPreferences struct {
 	ClearServicesFunc         func() error
 }
 
+// NewMockPreferences creates a MockPreferences with sensible defaults.
+// All getters return zero values, all setters return nil.
+func NewMockPreferences() *MockPreferences {
+	return &MockPreferences{}
+}
+
 func (m *MockPreferences) GetEmail() string {
 	if m.GetEmailFunc != nil {
 		return m.GetEmailFunc()

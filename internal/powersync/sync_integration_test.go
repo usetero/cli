@@ -50,12 +50,13 @@ func TestIntegration_Sync(t *testing.T) {
 		t.Fatalf("Failed to get access token: %v (run: task auth:login)", err)
 	}
 
-	// Get account ID from config
+	// Get account ID from preferences
 	cfg, err := config.Load(namespace)
 	if err != nil {
 		t.Fatalf("Config not found: %v (run: task run)", err)
 	}
-	accountID := cfg.Get("default_account_id")
+	prefs := preferences.NewService(cfg, logger)
+	accountID := prefs.GetDefaultAccountID()
 	if accountID == "" {
 		t.Fatalf("No default account (run: task run)")
 	}
@@ -83,8 +84,7 @@ func TestIntegration_Sync(t *testing.T) {
 		t.Logf("Account: %s (%s)", account.Name, account.ID)
 
 		db := sqlitetest.OpenTest(t)
-		psConfig := &powersync.Config{Endpoint: cliConfig.PowerSyncEndpoint}
-		sync := powersync.NewSync(psConfig, authSvc, logtest.New(t))
+		sync := powersync.NewSync(cliConfig.PowerSyncEndpoint, authSvc, logtest.New(t))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

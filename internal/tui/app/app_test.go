@@ -7,7 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/styles"
@@ -21,11 +21,12 @@ func TestApp_New(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 	logger := logtest.New(t)
 
-	app := New(ctx, theme, db, org, account, logger, nil)
+	app := New(ctx, theme, db, org, account, workspace, logger, nil)
 
 	if app == nil {
 		t.Fatal("expected app to be created")
@@ -50,14 +51,15 @@ func TestApp_SetSize(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 
 	t.Run("wide mode when width >= threshold", func(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(CompactModeWidth+1, 40)
 
 		if app.compact {
@@ -69,7 +71,7 @@ func TestApp_SetSize(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(CompactModeWidth-1, 40)
 
 		if !app.compact {
@@ -84,14 +86,15 @@ func TestApp_View(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 
 	t.Run("returns empty when size not set", func(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		result := app.View()
 
 		if result != "" {
@@ -103,7 +106,7 @@ func TestApp_View(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(150, 40)
 
 		result := app.View()
@@ -117,14 +120,14 @@ func TestApp_View(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(150, 40)
 
 		result := app.View()
 
 		// Sidebar should show org name
-		if !strings.Contains(result, "Test Org") {
-			t.Error("expected org name in sidebar")
+		if !strings.Contains(result, org.Name) {
+			t.Errorf("expected org name %q in sidebar", org.Name)
 		}
 	})
 }
@@ -135,14 +138,15 @@ func TestApp_FocusStack(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 
 	t.Run("focused page is chat by default", func(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 
 		focused := app.focusedPage()
 
@@ -155,7 +159,7 @@ func TestApp_FocusStack(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		mockPage := &mockPage{title: "Mock Page"}
 
 		app.PushFocus(mockPage)
@@ -172,7 +176,7 @@ func TestApp_FocusStack(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		mockPage := &mockPage{title: "Mock Page"}
 
 		app.PushFocus(mockPage)
@@ -190,7 +194,7 @@ func TestApp_FocusStack(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		mockPage := &mockPage{title: "Mock Page"}
 
 		app.PushFocus(mockPage)
@@ -207,15 +211,16 @@ func TestApp_SendMessage(t *testing.T) {
 
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 
 	t.Run("creates conversation on first message", func(t *testing.T) {
 		t.Parallel()
 
 		db := powersynctest.OpenTestDB(t)
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(150, 40)
 
 		// Submit a message - this returns a command that creates the conversation
@@ -251,7 +256,7 @@ func TestApp_SendMessage(t *testing.T) {
 
 		db := powersynctest.OpenTestDB(t)
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 		app.SetSize(150, 40)
 
 		// First message - creates conversation
@@ -298,14 +303,15 @@ func TestApp_State(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 
 	t.Run("IsComplete always returns false", func(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 
 		if app.IsComplete() {
 			t.Error("expected IsComplete to return false")
@@ -316,7 +322,7 @@ func TestApp_State(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 
 		// Chat is not busy by default
 		if app.IsBusy() {
@@ -328,7 +334,7 @@ func TestApp_State(t *testing.T) {
 		t.Parallel()
 
 		logger := logtest.New(t)
-		app := New(ctx, theme, db, org, account, logger, nil)
+		app := New(ctx, theme, db, org, account, workspace, logger, nil)
 
 		// No error by default
 		if app.HasError() {
@@ -343,15 +349,16 @@ func TestApp_GlobalBindings(t *testing.T) {
 	ctx := context.Background()
 	theme := styles.NewTheme(true)
 	db := powersynctest.OpenTestDB(t)
-	org := api.Organization{Name: "Test Org"}
-	account := api.Account{ID: "acc-1"}
+	org := apitest.NewOrganization()
+	account := apitest.NewAccount()
+	workspace := apitest.NewWorkspace()
 	logger := logtest.New(t)
 
 	bindings := []key.Binding{
 		key.NewBinding(key.WithKeys("ctrl+q"), key.WithHelp("ctrl+q", "quit")),
 	}
 
-	app := New(ctx, theme, db, org, account, logger, bindings)
+	app := New(ctx, theme, db, org, account, workspace, logger, bindings)
 	app.SetSize(150, 40)
 
 	// Global bindings should be stored

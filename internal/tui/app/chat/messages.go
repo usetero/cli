@@ -10,6 +10,7 @@ import (
 	"github.com/usetero/cli/internal/sqlite/gen"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/components/spinner"
+	"github.com/usetero/cli/internal/tui/database"
 	"github.com/usetero/cli/internal/upload"
 )
 
@@ -22,11 +23,6 @@ type messagesLoadedMsg struct {
 // tablesChangedMsg is sent when SQLite tables change.
 type tablesChangedMsg struct {
 	tables []string
-}
-
-// UploadEventMsg wraps upload events for the Bubble Tea message loop.
-type UploadEventMsg struct {
-	Event upload.Event
 }
 
 // Messages provides message data and state for the message list.
@@ -96,7 +92,7 @@ func (m *sqliteMessages) Update(msg tea.Msg) tea.Cmd {
 		}
 		return m.listenForChanges()
 
-	case UploadEventMsg:
+	case database.UploadEventMsg:
 		return m.handleUploadEvent(msg.Event)
 
 	case spinner.TickMsg:

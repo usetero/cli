@@ -16,6 +16,11 @@ import (
 	"github.com/usetero/cli/internal/tui/tuitest"
 )
 
+// testOrg returns a test organization for use in tests
+func testOrg() api.Organization {
+	return apitest.NewOrganization()
+}
+
 // createTestTheme creates a theme for testing
 func createTestTheme() *styles.Theme {
 	return styles.NewTheme(true)
@@ -23,7 +28,7 @@ func createTestTheme() *styles.Theme {
 
 func TestCreateStep_Update(t *testing.T) {
 	t.Parallel()
-	testOrg := api.Organization{ID: "org-1", Name: "Test Org"}
+	org := testOrg()
 
 	t.Run("creates account on enter", func(t *testing.T) {
 		t.Parallel()
@@ -39,7 +44,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -78,7 +83,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Press enter without typing anything
 		updated, cmd := s.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -109,7 +114,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Type a name
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'T', Text: "T"})
@@ -148,7 +153,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Type and submit
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
@@ -181,7 +186,7 @@ func TestCreateStep_Update(t *testing.T) {
 		apiClient := &apitest.MockClient{}
 		logger := logtest.New(t)
 
-		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", testOrg, accounts, prefs, apiClient, logger, nil)
+		s := account.NewCreateStep(context.Background(), createTestTheme(), "admin", org, accounts, apitest.NewMockWorkspaces(), prefs, apiClient, logger, nil)
 
 		// Type and submit (first attempt - fails)
 		updated, _ := s.Update(tea.KeyPressMsg{Code: 'X', Text: "X"})
