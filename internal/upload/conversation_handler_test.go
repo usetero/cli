@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -208,7 +209,8 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		mock := &apitest.MockConversations{
 			DeleteFunc: func(ctx context.Context, id string) error {
-				return errors.New("conversation not found")
+				// Service layer returns wrapped ErrNotFound
+				return fmt.Errorf("delete conversation %s: %w", id, api.ErrNotFound)
 			},
 		}
 
@@ -231,7 +233,8 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		mock := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
-				return nil, errors.New("conversation already exists")
+				// Service layer returns wrapped ErrAlreadyExists
+				return nil, fmt.Errorf("create conversation %s: %w", id, api.ErrAlreadyExists)
 			},
 		}
 

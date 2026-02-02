@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/log"
@@ -52,6 +54,9 @@ func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspac
 	resp, err := s.client.CreateConversation(ctx, input)
 	if err != nil {
 		s.logger.Error("failed to create conversation", "error", err)
+		if classified := classifyError(err); classified != nil {
+			return nil, fmt.Errorf("create conversation %s: %w", id, classified)
+		}
 		return nil, err
 	}
 
@@ -76,6 +81,9 @@ func (s *ConversationService) Update(ctx context.Context, id, title string) (*Co
 	resp, err := s.client.UpdateConversation(ctx, id, input)
 	if err != nil {
 		s.logger.Error("failed to update conversation", "error", err, "id", id)
+		if classified := classifyError(err); classified != nil {
+			return nil, fmt.Errorf("update conversation %s: %w", id, classified)
+		}
 		return nil, err
 	}
 
@@ -89,12 +97,16 @@ func (s *ConversationService) Update(ctx context.Context, id, title string) (*Co
 }
 
 // Delete deletes a conversation.
+// Returns ErrNotFound (via errors.Is) if the conversation does not exist.
 func (s *ConversationService) Delete(ctx context.Context, id string) error {
 	s.logger.Debug("deleting conversation via API", "id", id)
 
 	_, err := s.client.DeleteConversation(ctx, id)
 	if err != nil {
 		s.logger.Error("failed to delete conversation", "error", err, "id", id)
+		if classified := classifyError(err); classified != nil {
+			return errors.Join(fmt.Errorf("delete conversation %s", id), classified)
+		}
 		return err
 	}
 

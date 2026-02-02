@@ -2,6 +2,7 @@ package upload
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -56,7 +57,7 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 	_, err = h.conversations.Create(ctx, id, workspaceID, title)
 	if err != nil {
 		// Already exists is fine - the conversation is there, which is what we wanted
-		if api.IsAlreadyExists(err) {
+		if errors.Is(err, api.ErrAlreadyExists) {
 			h.logger.Debug("conversation already exists, skipping", "id", entry.RowID)
 			return nil
 		}
@@ -83,7 +84,7 @@ func (h *conversationHandler) handleDelete(ctx context.Context, entry *powersync
 	err := h.conversations.Delete(ctx, entry.RowID)
 	if err != nil {
 		// Not found is fine - the conversation is gone, which is what we wanted
-		if api.IsNotFound(err) {
+		if errors.Is(err, api.ErrNotFound) {
 			h.logger.Debug("conversation already deleted, skipping", "id", entry.RowID)
 			return nil
 		}
