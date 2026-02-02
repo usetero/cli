@@ -10,6 +10,10 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 )
 
+// Idempotent operation handling:
+// - DELETE returning "not found" is success (resource already gone)
+// - CREATE returning "already exists" is success (resource already there)
+
 // conversationHandler handles uploading conversations to the GraphQL API.
 type conversationHandler struct {
 	conversations api.Conversations
@@ -51,6 +55,11 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 
 	_, err = h.conversations.Create(ctx, id, workspaceID, title)
 	if err != nil {
+		// Already exists is fine - the conversation is there, which is what we wanted
+		if api.IsAlreadyExists(err) {
+			h.logger.Debug("conversation already exists, skipping", "id", entry.RowID)
+			return nil
+		}
 		return fmt.Errorf("create conversation: %w", err)
 	}
 
@@ -73,6 +82,11 @@ func (h *conversationHandler) handlePatch(ctx context.Context, entry *powersync.
 func (h *conversationHandler) handleDelete(ctx context.Context, entry *powersync.CrudEntry) error {
 	err := h.conversations.Delete(ctx, entry.RowID)
 	if err != nil {
+		// Not found is fine - the conversation is gone, which is what we wanted
+		if api.IsNotFound(err) {
+			h.logger.Debug("conversation already deleted, skipping", "id", entry.RowID)
+			return nil
+		}
 		return fmt.Errorf("delete conversation: %w", err)
 	}
 

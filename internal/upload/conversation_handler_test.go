@@ -203,6 +203,55 @@ func TestConversationHandler_Handle(t *testing.T) {
 		}
 	})
 
+	t.Run("DELETE succeeds when resource not found", func(t *testing.T) {
+		t.Parallel()
+
+		mock := &apitest.MockConversations{
+			DeleteFunc: func(ctx context.Context, id string) error {
+				return errors.New("conversation not found")
+			},
+		}
+
+		h := newConversationHandler(mock, logtest.New(t))
+
+		entry := &powersync.CrudEntry{
+			Op:    powersync.OpDelete,
+			RowID: "conv-1",
+			Data:  map[string]any{},
+		}
+
+		err := h.Handle(context.Background(), entry, noopEmitter())
+		if err != nil {
+			t.Errorf("Handle() error = %v, want nil for not found (idempotent delete)", err)
+		}
+	})
+
+	t.Run("PUT succeeds when resource already exists", func(t *testing.T) {
+		t.Parallel()
+
+		mock := &apitest.MockConversations{
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+				return nil, errors.New("conversation already exists")
+			},
+		}
+
+		h := newConversationHandler(mock, logtest.New(t))
+
+		entry := &powersync.CrudEntry{
+			Op:    powersync.OpPut,
+			RowID: uuid.New().String(),
+			Data: map[string]any{
+				"workspace_id": "ws-1",
+				"title":        "Test",
+			},
+		}
+
+		err := h.Handle(context.Background(), entry, noopEmitter())
+		if err != nil {
+			t.Errorf("Handle() error = %v, want nil for already exists (idempotent create)", err)
+		}
+	})
+
 	t.Run("unknown op returns nil", func(t *testing.T) {
 		t.Parallel()
 

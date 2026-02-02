@@ -24,7 +24,7 @@ echo "Updating PowerSync extension to ${VERSION}"
 
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf $TEMP_DIR' EXIT
 
 # Download each platform binary
 download() {
