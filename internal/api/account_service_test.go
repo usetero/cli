@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -106,7 +107,8 @@ func TestAccountService_Create(t *testing.T) {
 		}
 
 		svc := api.NewAccountService(mockClient, logtest.New(t))
-		account, err := svc.Create(context.Background(), "org-123", "New Account")
+		testID := uuid.New()
+		account, err := svc.Create(context.Background(), testID, "org-123", "New Account")
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -131,7 +133,7 @@ func TestAccountService_Create(t *testing.T) {
 		}
 
 		svc := api.NewAccountService(mockClient, logtest.New(t))
-		_, err := svc.Create(context.Background(), "org-123", "Test")
+		_, err := svc.Create(context.Background(), uuid.New(), "org-123", "Test")
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

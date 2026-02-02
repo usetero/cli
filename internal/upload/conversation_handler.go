@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
@@ -43,7 +44,12 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 	workspaceID, _ := entry.Data["workspace_id"].(string)
 	title, _ := entry.Data["title"].(string)
 
-	_, err := h.conversations.Create(ctx, workspaceID, title)
+	id, err := uuid.Parse(entry.RowID)
+	if err != nil {
+		return fmt.Errorf("invalid conversation ID %q: %w", entry.RowID, err)
+	}
+
+	_, err = h.conversations.Create(ctx, id, workspaceID, title)
 	if err != nil {
 		return fmt.Errorf("create conversation: %w", err)
 	}

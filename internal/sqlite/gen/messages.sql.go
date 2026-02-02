@@ -64,8 +64,8 @@ func (q *Queries) GetMessage(ctx context.Context, id *string) (Message, error) {
 }
 
 const insertMessage = `-- name: InsertMessage :exec
-INSERT INTO messages (id, account_id, content, conversation_id, created_at, role, stop_reason)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO messages (id, account_id, content, conversation_id, created_at, model, role, stop_reason)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertMessageParams struct {
@@ -74,6 +74,7 @@ type InsertMessageParams struct {
 	Content        *string
 	ConversationID *string
 	CreatedAt      *string
+	Model          *string
 	Role           *string
 	StopReason     *string
 }
@@ -85,6 +86,7 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) er
 		arg.Content,
 		arg.ConversationID,
 		arg.CreatedAt,
+		arg.Model,
 		arg.Role,
 		arg.StopReason,
 	)
@@ -178,5 +180,20 @@ type UpdateMessageContentParams struct {
 
 func (q *Queries) UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error {
 	_, err := q.db.ExecContext(ctx, updateMessageContent, arg.Content, arg.ID)
+	return err
+}
+
+const updateMessageMeta = `-- name: UpdateMessageMeta :exec
+UPDATE messages SET model = ?, stop_reason = ? WHERE id = ?
+`
+
+type UpdateMessageMetaParams struct {
+	Model      *string
+	StopReason *string
+	ID         *string
+}
+
+func (q *Queries) UpdateMessageMeta(ctx context.Context, arg UpdateMessageMetaParams) error {
+	_, err := q.db.ExecContext(ctx, updateMessageMeta, arg.Model, arg.StopReason, arg.ID)
 	return err
 }

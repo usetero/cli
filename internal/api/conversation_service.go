@@ -3,13 +3,14 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/pkg/client"
 )
 
 // Conversations provides access to conversations.
 type Conversations interface {
-	Create(ctx context.Context, workspaceID, title string) (*Conversation, error)
+	Create(ctx context.Context, id uuid.UUID, workspaceID, title string) (*Conversation, error)
 	Update(ctx context.Context, id, title string) (*Conversation, error)
 	Delete(ctx context.Context, id string) error
 }
@@ -38,11 +39,12 @@ type Conversation struct {
 	Title       string
 }
 
-// Create creates a new conversation.
-func (s *ConversationService) Create(ctx context.Context, workspaceID, title string) (*Conversation, error) {
-	s.logger.Debug("creating conversation via API", "workspaceID", workspaceID, "title", title)
+// Create creates a new conversation with the given client-provided ID.
+func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspaceID, title string) (*Conversation, error) {
+	s.logger.Debug("creating conversation via API", "id", id.String(), "workspaceID", workspaceID, "title", title)
 
 	input := client.CreateConversationInput{
+		Id:          id.String(),
 		WorkspaceID: workspaceID,
 		Title:       title,
 	}

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/pkg/client"
 )
@@ -11,7 +12,7 @@ import (
 type Accounts interface {
 	List(ctx context.Context, organizationID string) ([]Account, error)
 	Get(ctx context.Context, accountID string) (*Account, error)
-	Create(ctx context.Context, organizationID, name string) (*Account, error)
+	Create(ctx context.Context, id uuid.UUID, organizationID, name string) (*Account, error)
 }
 
 // AccountService handles account-related API operations.
@@ -81,10 +82,11 @@ func (s *AccountService) Get(ctx context.Context, accountID string) (*Account, e
 	}, nil
 }
 
-// Create creates a new account.
-func (s *AccountService) Create(ctx context.Context, organizationID, name string) (*Account, error) {
-	s.logger.Debug("creating account via API", "organizationID", organizationID, "name", name)
+// Create creates a new account with the given client-provided ID.
+func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID, name string) (*Account, error) {
+	s.logger.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
 	input := client.CreateAccountInput{
+		Id:             id.String(),
 		OrganizationID: organizationID,
 		Name:           name,
 	}

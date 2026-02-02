@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/pkg/client"
 )
@@ -12,7 +13,7 @@ type DatadogAccounts interface {
 	HasAccount(ctx context.Context, accountID string) (bool, error)
 	GetAccount(ctx context.Context, accountID string) (*DatadogAccount, error)
 	ValidateAPIKey(ctx context.Context, apiKey, site string) (bool, string, error)
-	CreateAccount(ctx context.Context, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error)
+	CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error)
 	GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error)
 }
 
@@ -155,10 +156,11 @@ func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site
 // Both API key and Application key must be provided.
 // Keys are sent to control plane and stored securely there - never stored locally.
 // The control plane validates the credentials before creating the account.
-func (s *DatadogAccountService) CreateAccount(ctx context.Context, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error) {
-	s.logger.Debug("creating datadog account with credentials via API", "accountID", accountID, "site", site)
+func (s *DatadogAccountService) CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error) {
+	s.logger.Debug("creating datadog account with credentials via API", "id", id.String(), "accountID", accountID, "site", site)
 	input := client.CreateDatadogAccountWithCredentialsInput{
 		Attributes: client.CreateDatadogAccountInput{
+			Id:        id.String(),
 			AccountID: accountID,
 			Name:      name,
 			Site:      client.DatadogAccountSite(site), // US1, US5, EU1, etc.

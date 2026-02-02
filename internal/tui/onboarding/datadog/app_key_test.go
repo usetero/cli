@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -37,7 +38,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Arrange
 		created := false
 		ddAccounts := &apitest.MockDatadogAccounts{
-			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
+			CreateAccountFunc: func(ctx context.Context, id uuid.UUID, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				created = true
 				return &api.DatadogAccount{ID: "dd-1", Site: site}, nil
 			},
@@ -79,7 +80,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		ddAccounts := &apitest.MockDatadogAccounts{
-			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
+			CreateAccountFunc: func(ctx context.Context, id uuid.UUID, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				return nil, errors.New("invalid application key")
 			},
 		}
@@ -121,7 +122,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Arrange
 		created := false
 		ddAccounts := &apitest.MockDatadogAccounts{
-			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
+			CreateAccountFunc: func(ctx context.Context, id uuid.UUID, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				created = true
 				return &api.DatadogAccount{ID: "dd-1"}, nil
 			},
@@ -159,7 +160,7 @@ func TestAppKeyStep_Update(t *testing.T) {
 		// Arrange
 		attempts := 0
 		ddAccounts := &apitest.MockDatadogAccounts{
-			CreateAccountFunc: func(ctx context.Context, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
+			CreateAccountFunc: func(ctx context.Context, id uuid.UUID, accountID string, name string, site string, apiKey string, appKey string) (*api.DatadogAccount, error) {
 				attempts++
 				if attempts == 1 {
 					return nil, errors.New("first attempt fails")

@@ -86,6 +86,8 @@ func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync
 
 	// Track assistant message state
 	var assistantMsgID string
+	var model string
+	var stopReason string
 	messageCreated := false
 
 	// Accumulate content blocks as structured data
@@ -93,19 +95,32 @@ func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync
 
 	err := h.messages.UploadUserMessage(ctx, entry.RowID, conversationID, content, func(event chat.StreamEvent) error {
 		if event.Done {
-			h.logger.Debug("stream complete", "assistantMsgID", assistantMsgID)
+			h.logger.Debug("stream complete", "assistantMsgID", assistantMsgID, "stopReason", stopReason)
+			// Update stop_reason when stream completes (if we have one from the stream)
+			if messageCreated && stopReason != "" {
+				if err := h.db.Messages().UpdateMeta(ctx, assistantMsgID, model, stopReason); err != nil {
+					h.logger.Warn("failed to update assistant message meta", "error", err)
+				}
+			}
+			return nil
+		}
+
+		// Capture stop_reason from message_stop event
+		if event.Type == block.TypeMessageStop && event.MessageStop != nil {
+			stopReason = event.MessageStop.StopReason
 			return nil
 		}
 
 		// Create assistant message on stream start
-		if event.Type == block.TypeMessageStart {
+		if event.Type == block.TypeMessageStart && event.MessageStart != nil {
+			model = event.MessageStart.Model
 			var err error
-			assistantMsgID, err = h.db.Messages().CreateAssistantMessage(ctx, accountID, conversationID)
+			assistantMsgID, err = h.db.Messages().CreateAssistantMessage(ctx, accountID, conversationID, model)
 			if err != nil {
 				return fmt.Errorf("create assistant message: %w", err)
 			}
 			messageCreated = true
-			h.logger.Debug("created assistant message", "id", assistantMsgID)
+			h.logger.Debug("created assistant message", "id", assistantMsgID, "model", model)
 			return nil
 		}
 

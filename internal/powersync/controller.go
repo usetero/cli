@@ -2,6 +2,7 @@ package powersync
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -57,18 +58,44 @@ type StreamKey struct {
 }
 
 // Controller wraps the powersync_control SQLite function with type safety.
+// It holds a dedicated database connection to ensure all operations use the
+// same connection, since the PowerSync extension maintains per-connection state.
 type Controller struct {
-	db sqlite.Database
+	db   sqlite.Database
+	conn *sql.Conn // dedicated connection for state consistency
 }
 
 // NewController creates a new PowerSync controller.
+// Call Close() when done to release the dedicated connection.
 func NewController(db sqlite.Database) *Controller {
 	return &Controller{db: db}
 }
 
+// Close releases the dedicated connection.
+func (c *Controller) Close() error {
+	if c.conn != nil {
+		err := c.conn.Close()
+		c.conn = nil
+		return err
+	}
+	return nil
+}
+
 // Control sends a control command and returns the resulting instructions.
 // The powersync_control function always expects 2 arguments (op, payload).
+// All operations use a dedicated connection to ensure state consistency.
 func (c *Controller) Control(ctx context.Context, op ControlOp, payload any) ([]Instruction, error) {
+	// Lazily acquire a dedicated connection on first use.
+	// This connection is held for the lifetime of the Controller to ensure
+	// all powersync_control calls see the same extension state.
+	if c.conn == nil {
+		conn, err := c.db.DB().Raw().Conn(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("acquire connection: %w", err)
+		}
+		c.conn = conn
+	}
+
 	// Determine how to pass the payload to SQLite
 	var sqlPayload any
 	if payload == nil {
@@ -90,7 +117,7 @@ func (c *Controller) Control(ctx context.Context, op ControlOp, payload any) ([]
 	}
 
 	var result []byte
-	err := c.db.DB().QueryRow(ctx, "SELECT powersync_control(?, ?)", string(op), sqlPayload).Scan(&result)
+	err := c.conn.QueryRowContext(ctx, "SELECT powersync_control(?, ?)", string(op), sqlPayload).Scan(&result)
 	if err != nil {
 		return nil, fmt.Errorf("powersync_control(%s): %w", op, err)
 	}

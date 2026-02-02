@@ -123,7 +123,10 @@ func (s *Sync) Stop() {
 		<-s.done
 		s.cancel = nil
 	}
-	s.controller = nil
+	if s.controller != nil {
+		s.controller.Close()
+		s.controller = nil
+	}
 	s.client = nil
 	s.db = nil
 	s.done = nil
@@ -255,13 +258,24 @@ func (s *Sync) connectAndSync(ctx context.Context, req *SyncStreamRequest) error
 	s.log.Debug("connecting stream")
 	s.status.Store(StatusSyncing)
 
-	if _, err := s.controller.NotifyConnection(ctx, ConnectionEstablished); err != nil {
-		return fmt.Errorf("notify connected: %w", err)
+	// Track if we've notified connection established
+	connected := false
+
+	err := s.client.SyncStream(ctx, req, func(line []byte) error {
+		// Notify connection established on first line received
+		// This ensures the PowerSync extension knows the stream is active
+		if !connected {
+			if _, err := s.controller.NotifyConnection(ctx, ConnectionEstablished); err != nil {
+				return fmt.Errorf("notify connected: %w", err)
+			}
+			connected = true
+		}
+		return s.handleLine(line)
+	})
+
+	if connected {
+		_, _ = s.controller.NotifyConnection(ctx, ConnectionEnded)
 	}
-
-	err := s.client.SyncStream(ctx, req, s.handleLine)
-
-	_, _ = s.controller.NotifyConnection(ctx, ConnectionEnded)
 
 	if err != nil {
 		return fmt.Errorf("stream: %w", err)

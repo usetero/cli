@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -35,7 +36,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		created := false
 		accounts := &apitest.MockAccounts{
-			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, orgID string, name string) (*api.Account, error) {
 				created = true
 				return &api.Account{ID: "acc-new", Name: name}, nil
 			},
@@ -74,7 +75,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		created := false
 		accounts := &apitest.MockAccounts{
-			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, orgID string, name string) (*api.Account, error) {
 				created = true
 				return &api.Account{ID: "acc-new", Name: name}, nil
 			},
@@ -106,7 +107,7 @@ func TestCreateStep_Update(t *testing.T) {
 		t.Parallel()
 
 		accounts := &apitest.MockAccounts{
-			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, orgID string, name string) (*api.Account, error) {
 				return nil, errors.New("API error")
 			},
 		}
@@ -140,7 +141,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		savedID := ""
 		accounts := &apitest.MockAccounts{
-			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, orgID string, name string) (*api.Account, error) {
 				return &api.Account{ID: "acc-saved", Name: name}, nil
 			},
 		}
@@ -174,7 +175,7 @@ func TestCreateStep_Update(t *testing.T) {
 
 		attempts := 0
 		accounts := &apitest.MockAccounts{
-			CreateFunc: func(ctx context.Context, orgID string, name string) (*api.Account, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, orgID string, name string) (*api.Account, error) {
 				attempts++
 				if attempts == 1 {
 					return nil, errors.New("first attempt fails")

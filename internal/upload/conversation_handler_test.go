@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -21,16 +22,19 @@ func TestConversationHandler_Handle(t *testing.T) {
 	t.Run("PUT creates conversation", func(t *testing.T) {
 		t.Parallel()
 
+		testID := uuid.New()
 		var calledWith struct {
+			id          uuid.UUID
 			workspaceID string
 			title       string
 		}
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+				calledWith.id = id
 				calledWith.workspaceID = workspaceID
 				calledWith.title = title
-				return &api.Conversation{ID: "conv-1"}, nil
+				return &api.Conversation{ID: id.String()}, nil
 			},
 		}
 
@@ -38,7 +42,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		entry := &powersync.CrudEntry{
 			Op:    powersync.OpPut,
-			RowID: "conv-1",
+			RowID: testID.String(),
 			Data: map[string]any{
 				"workspace_id": "ws-1",
 				"title":        "Test Conversation",
@@ -50,6 +54,9 @@ func TestConversationHandler_Handle(t *testing.T) {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
+		if calledWith.id != testID {
+			t.Errorf("Create called with id = %v, want %v", calledWith.id, testID)
+		}
 		if calledWith.workspaceID != "ws-1" {
 			t.Errorf("Create called with workspaceID = %q, want %q", calledWith.workspaceID, "ws-1")
 		}
@@ -62,7 +69,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -71,7 +78,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		entry := &powersync.CrudEntry{
 			Op:    powersync.OpPut,
-			RowID: "conv-1",
+			RowID: uuid.New().String(),
 			Data:  map[string]any{},
 		}
 

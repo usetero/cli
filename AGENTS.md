@@ -33,4 +33,5 @@ TUI presentation?            → internal/tui/
 ```bash
 task do      # Format, lint, test - run before commits
 task run     # Fast iteration
+tail -f /tmp/tero.log  # Watch logs
 ```

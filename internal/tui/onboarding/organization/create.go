@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
@@ -204,7 +205,7 @@ func (s *CreateStep) createOrganization(name string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("creating organization", log.String("name", name))
 
-		result, err := s.organizations.Create(s.ctx, name)
+		result, err := s.organizations.Create(s.ctx, uuid.New(), name)
 		if err != nil {
 			return createOrgMsg{err: err}
 		}

@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	ddvendor "github.com/usetero/cli/internal/datadog"
 	"github.com/usetero/cli/internal/log"
@@ -215,6 +216,7 @@ func (s *AppKeyStep) createAccount(appKey string) tea.Cmd {
 
 		datadogAccount, err := s.datadogAccounts.CreateAccount(
 			s.ctx,
+			uuid.New(),
 			s.account.ID,
 			"Datadog", // Default name
 			s.site,

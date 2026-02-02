@@ -37,6 +37,9 @@ type CreateAccountInput struct {
 	Name             string `json:"name"`
 	OrganizationID   string `json:"organizationID"`
 	DatadogAccountID string `json:"datadogAccountID"`
+	// Optional client-provided UUID for offline-first sync.
+	// If provided and a record with this ID exists, returns the existing record.
+	Id string `json:"id"`
 }
 
 // GetName returns CreateAccountInput.Name, and is useful for accessing the field via an interface.
@@ -47,6 +50,9 @@ func (v *CreateAccountInput) GetOrganizationID() string { return v.OrganizationI
 
 // GetDatadogAccountID returns CreateAccountInput.DatadogAccountID, and is useful for accessing the field via an interface.
 func (v *CreateAccountInput) GetDatadogAccountID() string { return v.DatadogAccountID }
+
+// GetId returns CreateAccountInput.Id, and is useful for accessing the field via an interface.
+func (v *CreateAccountInput) GetId() string { return v.Id }
 
 // CreateAccountResponse is returned by CreateAccount on success.
 type CreateAccountResponse struct {
@@ -86,6 +92,9 @@ type CreateConversationInput struct {
 	// AI-generated title, set after first exchange
 	Title       string `json:"title"`
 	WorkspaceID string `json:"workspaceID"`
+	// Optional client-provided UUID for offline-first sync.
+	// If provided and a conversation with this ID exists, returns the existing record.
+	Id string `json:"id"`
 }
 
 // GetTitle returns CreateConversationInput.Title, and is useful for accessing the field via an interface.
@@ -93,6 +102,9 @@ func (v *CreateConversationInput) GetTitle() string { return v.Title }
 
 // GetWorkspaceID returns CreateConversationInput.WorkspaceID, and is useful for accessing the field via an interface.
 func (v *CreateConversationInput) GetWorkspaceID() string { return v.WorkspaceID }
+
+// GetId returns CreateConversationInput.Id, and is useful for accessing the field via an interface.
+func (v *CreateConversationInput) GetId() string { return v.Id }
 
 // CreateConversationResponse is returned by CreateConversation on success.
 type CreateConversationResponse struct {
@@ -114,6 +126,9 @@ type CreateDatadogAccountInput struct {
 	// Datadog site for this account (must be explicit)
 	Site      DatadogAccountSite `json:"site"`
 	AccountID string             `json:"accountID"`
+	// Optional client-provided UUID for offline-first sync.
+	// If provided and a record with this ID exists, returns the existing record.
+	Id string `json:"id"`
 }
 
 // GetName returns CreateDatadogAccountInput.Name, and is useful for accessing the field via an interface.
@@ -124,6 +139,9 @@ func (v *CreateDatadogAccountInput) GetSite() DatadogAccountSite { return v.Site
 
 // GetAccountID returns CreateDatadogAccountInput.AccountID, and is useful for accessing the field via an interface.
 func (v *CreateDatadogAccountInput) GetAccountID() string { return v.AccountID }
+
+// GetId returns CreateDatadogAccountInput.Id, and is useful for accessing the field via an interface.
+func (v *CreateDatadogAccountInput) GetId() string { return v.Id }
 
 // CreateDatadogAccountWithCredentialsCreateDatadogAccount includes the requested fields of the GraphQL type DatadogAccount.
 type CreateDatadogAccountWithCredentialsCreateDatadogAccount struct {
@@ -301,10 +319,16 @@ func (v *CreateOrganizationAndBootstrapResponse) GetCreateOrganizationAndBootstr
 type CreateOrganizationInput struct {
 	// Human-readable name, unique across the system
 	Name string `json:"name"`
+	// Optional client-provided UUID for offline-first sync.
+	// If provided and a record with this ID exists, returns the existing record.
+	Id string `json:"id"`
 }
 
 // GetName returns CreateOrganizationInput.Name, and is useful for accessing the field via an interface.
 func (v *CreateOrganizationInput) GetName() string { return v.Name }
+
+// GetId returns CreateOrganizationInput.Id, and is useful for accessing the field via an interface.
+func (v *CreateOrganizationInput) GetId() string { return v.Id }
 
 // DatadogAccountSite is enum for the field site
 type DatadogAccountSite string

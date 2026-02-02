@@ -3,6 +3,7 @@ package apitest
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 )
 
@@ -11,7 +12,7 @@ type MockDatadogAccounts struct {
 	HasAccountFunc     func(ctx context.Context, accountID string) (bool, error)
 	GetAccountFunc     func(ctx context.Context, accountID string) (*api.DatadogAccount, error)
 	ValidateAPIKeyFunc func(ctx context.Context, apiKey, site string) (bool, string, error)
-	CreateAccountFunc  func(ctx context.Context, accountID, name, site, apiKey, appKey string) (*api.DatadogAccount, error)
+	CreateAccountFunc  func(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*api.DatadogAccount, error)
 	GetStatusFunc      func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error)
 }
 
@@ -36,9 +37,9 @@ func (m *MockDatadogAccounts) ValidateAPIKey(ctx context.Context, apiKey, site s
 	return false, "", nil
 }
 
-func (m *MockDatadogAccounts) CreateAccount(ctx context.Context, accountID, name, site, apiKey, appKey string) (*api.DatadogAccount, error) {
+func (m *MockDatadogAccounts) CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*api.DatadogAccount, error) {
 	if m.CreateAccountFunc != nil {
-		return m.CreateAccountFunc(ctx, accountID, name, site, apiKey, appKey)
+		return m.CreateAccountFunc(ctx, id, accountID, name, site, apiKey, appKey)
 	}
 	return nil, nil
 }

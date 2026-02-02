@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/auth/authtest"
@@ -38,7 +39,7 @@ func TestCreateStep_Update(t *testing.T) {
 		createdName := ""
 
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				createCalled = true
 				createdName = name
 				return &api.OrganizationBootstrapResult{
@@ -98,7 +99,7 @@ func TestCreateStep_Update(t *testing.T) {
 		createCalled := false
 
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				createCalled = true
 				return nil, nil
 			},
@@ -127,7 +128,7 @@ func TestCreateStep_Update(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				return nil, errors.New("organization name already exists")
 			},
 		}
@@ -166,7 +167,7 @@ func TestCreateStep_Update(t *testing.T) {
 		savedAccountID := ""
 
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{
 						ID:                   "org-456",
@@ -228,7 +229,7 @@ func TestCreateStep_Update(t *testing.T) {
 		tokenSet := ""
 
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{
 						ID:                   "org-123",
@@ -286,7 +287,7 @@ func TestCreateStep_Update(t *testing.T) {
 		callCount := 0
 
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				callCount++
 				if callCount == 1 {
 					return nil, errors.New("temporary error")
@@ -335,7 +336,7 @@ func TestCreateStep_Next(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		orgs := &apitest.MockOrganizations{
-			CreateFunc: func(ctx context.Context, name string) (*api.OrganizationBootstrapResult, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error) {
 				return &api.OrganizationBootstrapResult{
 					Organization: &api.Organization{ID: "org-123", Name: name, WorkosOrganizationID: "workos-123"},
 					Account:      &api.Account{ID: "acct-123"},

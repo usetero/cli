@@ -3,19 +3,20 @@ package apitest
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 )
 
 // MockConversations implements api.Conversations for testing.
 type MockConversations struct {
-	CreateFunc func(ctx context.Context, workspaceID, title string) (*api.Conversation, error)
+	CreateFunc func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error)
 	UpdateFunc func(ctx context.Context, id, title string) (*api.Conversation, error)
 	DeleteFunc func(ctx context.Context, id string) error
 }
 
-func (m *MockConversations) Create(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
+func (m *MockConversations) Create(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
 	if m.CreateFunc != nil {
-		return m.CreateFunc(ctx, workspaceID, title)
+		return m.CreateFunc(ctx, id, workspaceID, title)
 	}
 	return nil, nil
 }

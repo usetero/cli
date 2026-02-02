@@ -74,10 +74,11 @@ func TestMessageHandler_Handle(t *testing.T) {
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
 				events := []chat.StreamEvent{
-					{Block: block.Block{Type: block.TypeMessageStart}},
+					{Block: block.Block{Type: block.TypeMessageStart, MessageStart: &block.MessageStart{Model: "claude-sonnet-4-20250514"}}},
 					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Hello"}}},
 					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: " world"}}},
 					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "!"}}},
+					{Block: block.Block{Type: block.TypeMessageStop, MessageStop: &block.MessageStop{StopReason: "end_turn"}}},
 					{Done: true},
 				}
 				for _, e := range events {
@@ -148,10 +149,11 @@ func TestMessageHandler_Handle(t *testing.T) {
 		mock := &chattest.MockMessages{
 			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
 				events := []chat.StreamEvent{
-					{Block: block.Block{Type: block.TypeMessageStart}},
+					{Block: block.Block{Type: block.TypeMessageStart, MessageStart: &block.MessageStart{Model: "claude-sonnet-4-20250514"}}},
 					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "Let me think"}}},
 					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "..."}}},
 					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Here's my answer"}}},
+					{Block: block.Block{Type: block.TypeMessageStop, MessageStop: &block.MessageStop{StopReason: "end_turn"}}},
 					{Done: true},
 				}
 				for _, e := range events {

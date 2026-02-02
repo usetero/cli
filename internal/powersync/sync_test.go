@@ -321,6 +321,53 @@ func TestSync_PermanentError(t *testing.T) {
 	})
 }
 
+func TestSync_NotifyConnectionTiming(t *testing.T) {
+	t.Parallel()
+
+	t.Run("notifies connection only after first line received", func(t *testing.T) {
+		t.Parallel()
+
+		db := powersynctest.OpenTestDB(t)
+
+		// Track when handler is called vs when connection would be notified
+		handlerCalled := make(chan struct{})
+		mock := powersynctest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *powersync.SyncStreamRequest, handler powersync.LineHandler) error {
+			// Simulate stream: call handler with a line, then wait for cancel
+			if err := handler([]byte(`{"token_expires_in":3600}`)); err != nil {
+				return err
+			}
+			close(handlerCalled)
+			<-ctx.Done()
+			return ctx.Err()
+		}
+
+		sync := powersynctest.NewSyncWithMockClient(
+			"https://example.com",
+			powersynctest.NewMockTokenRefresher("token"),
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := sync.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		defer sync.Stop()
+
+		// Wait for handler to be called - if NotifyConnection was called
+		// before handler, the PowerSync extension would error
+		select {
+		case <-handlerCalled:
+			// Success - handler was called which means line was processed
+		case <-time.After(5 * time.Second):
+			t.Fatal("timeout waiting for handler to be called")
+		}
+	})
+}
+
 func TestSync_TransientError(t *testing.T) {
 	t.Parallel()
 

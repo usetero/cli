@@ -147,3 +147,48 @@ func instructionTypes(instructions []powersync.Instruction) []string {
 	}
 	return types
 }
+
+func TestController_ConnectionStateConsistency(t *testing.T) {
+	t.Parallel()
+
+	t.Run("maintains state across multiple operations", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies the fix for the "No iteration is active" bug.
+		// The PowerSync extension maintains per-connection state:
+		// - Start() begins an iteration on a connection
+		// - NotifyConnection/SendTextLine must use the SAME connection
+		// If connection pooling gives us different connections, we get the error.
+
+		ctx := context.Background()
+		db := powersynctest.OpenTestDB(t)
+		controller := powersync.NewController(db)
+		defer controller.Close()
+
+		// Start an iteration
+		_, err := controller.Start(ctx, powersync.StartRequest{IncludeDefaults: true})
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+
+		// These must use the same connection as Start(), or we get
+		// "No iteration is active" error
+		_, err = controller.NotifyConnection(ctx, powersync.ConnectionEstablished)
+		if err != nil {
+			t.Fatalf("NotifyConnection(established) error = %v", err)
+		}
+
+		// Send a line - requires iteration to be active
+		line := `{"token_expires_in":3600}`
+		_, err = controller.SendTextLine(ctx, line)
+		if err != nil {
+			t.Fatalf("SendTextLine() error = %v", err)
+		}
+
+		// End the connection
+		_, err = controller.NotifyConnection(ctx, powersync.ConnectionEnded)
+		if err != nil {
+			t.Fatalf("NotifyConnection(end) error = %v", err)
+		}
+	})
+}

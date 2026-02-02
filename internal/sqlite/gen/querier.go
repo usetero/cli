@@ -23,6 +23,7 @@ type Querier interface {
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error
+	UpdateMessageMeta(ctx context.Context, arg UpdateMessageMetaParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -1,12 +1,15 @@
 package apitest
 
-import "github.com/usetero/cli/internal/api"
+import (
+	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api"
+)
 
 // NewOrganization creates a test organization with sensible defaults.
 // Use functional options to override specific fields.
 func NewOrganization(opts ...func(*api.Organization)) api.Organization {
 	org := api.Organization{
-		ID:   "org-test",
+		ID:   uuid.New().String(),
 		Name: "Test Organization",
 	}
 	for _, opt := range opts {
@@ -19,7 +22,7 @@ func NewOrganization(opts ...func(*api.Organization)) api.Organization {
 // Use functional options to override specific fields.
 func NewAccount(opts ...func(*api.Account)) api.Account {
 	acc := api.Account{
-		ID:   "acc-test",
+		ID:   uuid.New().String(),
 		Name: "Test Account",
 	}
 	for _, opt := range opts {
@@ -32,7 +35,7 @@ func NewAccount(opts ...func(*api.Account)) api.Account {
 // Use functional options to override specific fields.
 func NewWorkspace(opts ...func(*api.Workspace)) api.Workspace {
 	ws := api.Workspace{
-		ID:   "ws-test",
+		ID:   uuid.New().String(),
 		Name: "Test Workspace",
 	}
 	for _, opt := range opts {

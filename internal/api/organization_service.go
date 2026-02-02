@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/pkg/client"
 )
@@ -10,7 +11,7 @@ import (
 // Organizations provides access to organizations.
 type Organizations interface {
 	List(ctx context.Context) ([]Organization, error)
-	Create(ctx context.Context, name string) (*OrganizationBootstrapResult, error)
+	Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error)
 }
 
 // OrganizationService handles organization-related API operations.
@@ -68,9 +69,10 @@ func (s *OrganizationService) List(ctx context.Context) ([]Organization, error) 
 }
 
 // Create creates a new organization with bootstrapped account and workspace.
-func (s *OrganizationService) Create(ctx context.Context, name string) (*OrganizationBootstrapResult, error) {
-	s.logger.Debug("creating organization with bootstrap via API", "name", name)
+func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error) {
+	s.logger.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
 	input := client.CreateOrganizationInput{
+		Id:   id.String(),
 		Name: name,
 	}
 

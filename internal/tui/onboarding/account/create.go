@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -167,7 +168,7 @@ func (s *CreateStep) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
 		s.logger.Info("creating account", "name", name, "organizationID", s.org.ID)
 
-		account, err := s.accounts.Create(s.ctx, s.org.ID, name)
+		account, err := s.accounts.Create(s.ctx, uuid.New(), s.org.ID, name)
 		if err != nil {
 			return createAccountMsg{err: err}
 		}

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/chat/chattest"
@@ -85,11 +86,12 @@ func TestUploader_Run(t *testing.T) {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		convID := uuid.New().String()
+		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
-				return &api.Conversation{ID: "conv-1"}, nil
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+				return &api.Conversation{ID: id.String()}, nil
 			},
 		}
 
@@ -198,16 +200,17 @@ func TestUploader_Run(t *testing.T) {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"conv-1","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		convID := uuid.New().String()
+		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		callCount := 0
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
 				callCount++
 				if callCount <= 4 {
 					return nil, errors.New("temporary error")
 				}
-				return &api.Conversation{ID: "conv-1"}, nil
+				return &api.Conversation{ID: id.String()}, nil
 			},
 		}
 

@@ -71,7 +71,7 @@ type SendMessageResponse struct {
 // StreamEvent represents an SSE event from the chat stream.
 // The server sends typed blocks directly.
 type StreamEvent struct {
-	block.Block                 // Embedded block (type, text, thinking, tool_use, tool_result)
+	block.Block                 // Embedded block (type, text, thinking, tool_use, tool_result, message_start, message_stop)
 	Done        bool            `json:"-"` // Set when we receive [DONE]
 	Raw         json.RawMessage `json:"-"` // The raw event data
 }

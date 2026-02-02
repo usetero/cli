@@ -26,17 +26,30 @@ const (
 
 	// Stream control types - signal stream lifecycle events.
 	TypeMessageStart Type = "message_start"
+	TypeMessageStop  Type = "message_stop"
 )
 
 // Block is one element in a message's content array.
 // Exactly one of the typed fields is populated, determined by Type.
 type Block struct {
-	Type           Type        `json:"type"`
-	Text           *Text       `json:"text,omitempty"`
-	Thinking       *Thinking   `json:"thinking,omitempty"`
-	ToolUse        *ToolUse    `json:"tool_use,omitempty"`
-	ToolResult     *ToolResult `json:"tool_result,omitempty"`
-	ToolInputDelta string      `json:"tool_input_delta,omitempty"` // Streaming only - partial JSON
+	Type           Type          `json:"type"`
+	Text           *Text         `json:"text,omitempty"`
+	Thinking       *Thinking     `json:"thinking,omitempty"`
+	ToolUse        *ToolUse      `json:"tool_use,omitempty"`
+	ToolResult     *ToolResult   `json:"tool_result,omitempty"`
+	ToolInputDelta string        `json:"tool_input_delta,omitempty"` // Streaming only - partial JSON
+	MessageStart   *MessageStart `json:"message_start,omitempty"`    // Stream control - message metadata
+	MessageStop    *MessageStop  `json:"message_stop,omitempty"`     // Stream control - stop reason
+}
+
+// MessageStart contains metadata sent at the start of a message stream.
+type MessageStart struct {
+	Model string `json:"model"`
+}
+
+// MessageStop contains metadata sent at the end of a message stream.
+type MessageStop struct {
+	StopReason string `json:"stop_reason"`
 }
 
 // Validate checks that exactly one typed field is populated and matches the type.

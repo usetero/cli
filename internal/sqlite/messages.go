@@ -20,8 +20,9 @@ const (
 // Messages provides type-safe access to messages.
 type Messages interface {
 	CreateUserMessage(ctx context.Context, accountID, conversationID, text string) (string, error)
-	CreateAssistantMessage(ctx context.Context, accountID, conversationID string) (string, error)
+	CreateAssistantMessage(ctx context.Context, accountID, conversationID, model string) (string, error)
 	UpdateContent(ctx context.Context, id, content string) error
+	UpdateMeta(ctx context.Context, id, model, stopReason string) error
 	List(ctx context.Context, conversationID string) ([]gen.Message, error)
 }
 
@@ -59,7 +60,7 @@ func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID, convers
 
 // CreateAssistantMessage creates an empty assistant message placeholder.
 // Returns the new message ID. Content is added via UpdateContent as it streams in.
-func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, conversationID string) (string, error) {
+func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, conversationID, model string) (string, error) {
 	msgID := uuid.New().String()
 	now := time.Now().UTC().Format(time.RFC3339)
 	role := string(RoleAssistant)
@@ -71,6 +72,7 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, co
 		ConversationID: &conversationID,
 		Content:        &content,
 		CreatedAt:      &now,
+		Model:          &model,
 		Role:           &role,
 	})
 	if err != nil {
@@ -87,6 +89,16 @@ func (m *messagesImpl) UpdateContent(ctx context.Context, id, content string) er
 		Content: &content,
 	})
 	return WrapSQLiteError(err, "update message content")
+}
+
+// UpdateMeta updates the model and stop_reason of a message.
+func (m *messagesImpl) UpdateMeta(ctx context.Context, id, model, stopReason string) error {
+	err := m.queries.UpdateMessageMeta(ctx, gen.UpdateMessageMetaParams{
+		ID:         &id,
+		Model:      &model,
+		StopReason: &stopReason,
+	})
+	return WrapSQLiteError(err, "update message meta")
 }
 
 // List returns all messages for a conversation, ordered by creation time.
