@@ -50,7 +50,7 @@ type Model struct {
 	chatClient  chat.Client
 
 	// Runtime (created after account selection)
-	db       sqlite.Database
+	db       sqlite.DB
 	uploader upload.Uploader
 
 	// Components

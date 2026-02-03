@@ -3,20 +3,20 @@ package chat
 import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/usetero/cli/internal/domain/tool"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
 )
 
 // ToolBlock displays a tool use and its result.
 type ToolBlock struct {
 	theme  *styles.Theme
-	use    *tool.Use
-	result *tool.Result
+	use    *domain.ToolUse
+	result *domain.ToolResult
 	width  int
 }
 
 // NewToolBlock creates a new tool block component.
-func NewToolBlock(theme *styles.Theme, use *tool.Use) ToolBlock {
+func NewToolBlock(theme *styles.Theme, use *domain.ToolUse) ToolBlock {
 	return ToolBlock{
 		theme: theme,
 		use:   use,
@@ -38,10 +38,9 @@ func (m ToolBlock) View() string {
 	colors := m.theme.Colors
 
 	// Tool name header
-	name := string(m.use.Name)
 	header := lipgloss.NewStyle().
 		Foreground(colors.Page.TextMuted).
-		Render("[" + name + "]")
+		Render("[" + m.use.Name + "]")
 
 	// Show result if available
 	if m.result != nil {
@@ -75,7 +74,7 @@ func (m ToolBlock) SetWidth(width int) ToolBlock {
 }
 
 // SetResult returns a new ToolBlock with the given result.
-func (m ToolBlock) SetResult(result *tool.Result) ToolBlock {
+func (m ToolBlock) SetResult(result *domain.ToolResult) ToolBlock {
 	m.result = result
 	return m
 }

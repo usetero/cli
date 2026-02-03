@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+// asDatabase casts DB interface to *database for testing internal methods.
+func asDatabase(db DB) *database {
+	return db.(*database)
+}
+
 func TestDB_Count(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +32,7 @@ func TestDB_Count(t *testing.T) {
 			t.Fatalf("CREATE TABLE error = %v", err)
 		}
 
-		count, err := db.Count(ctx, "items")
+		count, err := asDatabase(db).Count(ctx, "items")
 		if err != nil {
 			t.Fatalf("Count() error = %v", err)
 		}
@@ -59,7 +64,7 @@ func TestDB_Count(t *testing.T) {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		count, err := db.Count(ctx, "items")
+		count, err := asDatabase(db).Count(ctx, "items")
 		if err != nil {
 			t.Fatalf("Count() error = %v", err)
 		}
@@ -81,7 +86,7 @@ func TestDB_Count(t *testing.T) {
 		}
 		defer db.Close()
 
-		_, err = db.Count(ctx, "nonexistent")
+		_, err = asDatabase(db).Count(ctx, "nonexistent")
 		if err == nil {
 			t.Error("expected error for nonexistent table, got nil")
 		}
@@ -103,8 +108,9 @@ func TestDB_Path(t *testing.T) {
 		}
 		defer db.Close()
 
-		if db.Path() != dbPath {
-			t.Errorf("Path() = %q, want %q", db.Path(), dbPath)
+		d := asDatabase(db)
+		if d.Path() != dbPath {
+			t.Errorf("Path() = %q, want %q", d.Path(), dbPath)
 		}
 	})
 }
@@ -124,7 +130,7 @@ func TestDB_Queries(t *testing.T) {
 		}
 		defer db.Close()
 
-		q := db.Queries()
+		q := asDatabase(db).Queries()
 		if q == nil {
 			t.Error("Queries() returned nil")
 		}

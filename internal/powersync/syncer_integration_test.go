@@ -136,8 +136,8 @@ func TestIntegration_Syncer(t *testing.T) {
 	})
 }
 
-func countBuckets(db sqlite.Database) (int64, error) {
+func countBuckets(db sqlite.DB) (int64, error) {
 	var count int64
-	err := db.DB().QueryRow(context.Background(), "SELECT COUNT(*) FROM ps_buckets").Scan(&count)
+	err := db.QueryRow(context.Background(), "SELECT COUNT(*) FROM ps_buckets").Scan(&count)
 	return count, err
 }

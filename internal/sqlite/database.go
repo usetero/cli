@@ -23,28 +23,29 @@ var (
 	driverRegistered  bool
 )
 
-// Database is the interface for application code.
-// It provides type-safe access to domain data.
-type Database interface {
+// DB is the interface for application code.
+// It provides type-safe access to domain data and raw query execution.
+type DB interface {
 	Messages() Messages
 	Conversations() Conversations
 	Subscribe() *Subscription
+	Query(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) *sql.Row
+	Exec(ctx context.Context, sql string, args ...any) (sql.Result, error)
+	WithTx(ctx context.Context, fn func(tx *Tx) error) error
+	Raw() *sql.DB
 	Close() error
-	// DB returns the underlying *DB for infrastructure code that needs
-	// low-level access (powersync, raw queries, etc).
-	DB() *DB
 }
 
-// DB wraps a SQLite database connection.
-// It implements the Database interface.
-type DB struct {
+// database is the concrete implementation of DB.
+type database struct {
 	db    *sql.DB
 	path  string
 	watch watchState
 }
 
-// Ensure DB implements Database.
-var _ Database = (*DB)(nil)
+// Ensure database implements DB.
+var _ DB = (*database)(nil)
 
 // SetExtensionPath configures the PowerSync extension to be loaded on every
 // new database connection. This must be called before Open() to have effect.
@@ -77,7 +78,7 @@ func registerPowerSyncDriver() {
 // The database file and parent directories are created if they don't exist.
 // If SetExtensionPath() was called, the PowerSync extension is automatically
 // loaded on every connection.
-func Open(ctx context.Context, path string) (*DB, error) {
+func Open(ctx context.Context, path string) (DB, error) {
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -101,7 +102,7 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	d := &DB{
+	d := &database{
 		db:   db,
 		path: path,
 	}
@@ -118,58 +119,62 @@ func Open(ctx context.Context, path string) (*DB, error) {
 }
 
 // Close closes the database connection.
-func (d *DB) Close() error {
+func (d *database) Close() error {
 	return d.db.Close()
 }
 
-// DB returns itself. This implements Database.DB() and allows
-// infrastructure code to access low-level methods.
-func (d *DB) DB() *DB {
-	return d
-}
-
 // Path returns the database file path.
-func (d *DB) Path() string {
+func (d *database) Path() string {
 	return d.path
 }
 
 // Raw returns the underlying *sql.DB for advanced use cases.
-func (d *DB) Raw() *sql.DB {
+func (d *database) Raw() *sql.DB {
 	return d.db
 }
 
 // Queries returns a Queries instance for running typed queries.
-func (d *DB) Queries() *gen.Queries {
+func (d *database) Queries() *gen.Queries {
 	return gen.New(d.db)
 }
 
 // Messages returns type-safe message operations.
-func (d *DB) Messages() Messages {
+func (d *database) Messages() Messages {
 	return &messagesImpl{queries: d.Queries()}
 }
 
 // Conversations returns type-safe conversation operations.
-func (d *DB) Conversations() Conversations {
+func (d *database) Conversations() Conversations {
 	return &conversationsImpl{queries: d.Queries()}
 }
 
 // Query executes a query and returns the results.
-func (d *DB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+func (d *database) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return d.db.QueryContext(ctx, query, args...)
 }
 
+// BeginTx starts a transaction with the given options.
+// Use opts.ReadOnly = true to prevent writes.
+func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	tx, err := d.db.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{tx: tx}, nil
+}
+
 // QueryRow executes a query that returns at most one row.
-func (d *DB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 	return d.db.QueryRowContext(ctx, query, args...)
 }
 
 // Exec executes a query that doesn't return rows.
-func (d *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return d.db.ExecContext(ctx, query, args...)
 }
 
 // Count returns the number of rows in the given table.
-func (d *DB) Count(ctx context.Context, table string) (int64, error) {
+func (d *database) Count(ctx context.Context, table string) (int64, error) {
 	var count int64
 	// Use quote identifier to prevent SQL injection
 	err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
@@ -183,7 +188,7 @@ func (d *DB) Count(ctx context.Context, table string) (int64, error) {
 // This uses the go-sqlite3 driver's C API to properly enable and load extensions.
 // The entryPoint can be empty to use the default, or specify a custom entry point
 // like "sqlite3_powersync_init" for the PowerSync extension.
-func (d *DB) LoadExtension(ctx context.Context, path, entryPoint string) error {
+func (d *database) LoadExtension(ctx context.Context, path, entryPoint string) error {
 	conn, err := d.db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("get connection: %w", err)
@@ -219,10 +224,20 @@ func (t *Tx) Query(ctx context.Context, query string, args ...any) (*sql.Rows, e
 	return t.tx.QueryContext(ctx, query, args...)
 }
 
+// Commit commits the transaction.
+func (t *Tx) Commit() error {
+	return t.tx.Commit()
+}
+
+// Rollback aborts the transaction.
+func (t *Tx) Rollback() error {
+	return t.tx.Rollback()
+}
+
 // WithTx executes a function within a database transaction.
 // If the function returns an error, the transaction is rolled back.
 // If the function succeeds, the transaction is committed.
-func (d *DB) WithTx(ctx context.Context, fn func(tx *Tx) error) error {
+func (d *database) WithTx(ctx context.Context, fn func(tx *Tx) error) error {
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)

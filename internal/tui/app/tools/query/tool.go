@@ -3,11 +3,13 @@
 package query
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 
 	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/sqlite"
 )
 
 //go:embed schema.sql
@@ -15,9 +17,7 @@ var schema string
 
 // Tool executes read-only SQL queries against the local catalog.
 type Tool struct {
-	// QueryFunc executes a query and returns results.
-	// Injected by the chat model at runtime.
-	QueryFunc func(sql string) ([]map[string]any, error)
+	DB sqlite.DB
 }
 
 func (t Tool) Definition() chat.Tool {
@@ -59,9 +59,49 @@ func (t Tool) Execute(input json.RawMessage) (any, error) {
 		return nil, err
 	}
 
-	if t.QueryFunc == nil {
-		return nil, fmt.Errorf("query function not configured")
+	ctx := context.Background()
+
+	// Get a dedicated connection and set read-only mode
+	conn, err := t.DB.Raw().Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	// PRAGMA query_only prevents any writes on this connection
+	if _, err := conn.ExecContext(ctx, "PRAGMA query_only = ON"); err != nil {
+		return nil, err
 	}
 
-	return t.QueryFunc(in.SQL)
+	rows, err := conn.QueryContext(ctx, in.SQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []map[string]any
+	for rows.Next() {
+		values := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, err
+		}
+
+		row := make(map[string]any, len(cols))
+		for i, col := range cols {
+			row[col] = values[i]
+		}
+		results = append(results, row)
+	}
+
+	return results, rows.Err()
 }

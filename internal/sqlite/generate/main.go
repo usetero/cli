@@ -83,7 +83,7 @@ func run() error {
 
 // reflectSchema reflects the schema from sqlite_master to SQL.
 // It extracts CREATE VIEW statements for PowerSync views (excluding internal tables).
-func reflectSchema(ctx context.Context, db *sqlite.DB) (string, error) {
+func reflectSchema(ctx context.Context, db sqlite.DB) (string, error) {
 	// Query all views created by PowerSync (they have the auto-generated comment)
 	rows, err := db.Query(ctx, `
 		SELECT name, sql
@@ -144,7 +144,7 @@ func reflectSchema(ctx context.Context, db *sqlite.DB) (string, error) {
 
 // viewToTable converts a view definition to a CREATE TABLE statement.
 // It queries the view's column info using PRAGMA table_info.
-func viewToTable(ctx context.Context, db *sqlite.DB, viewName string) (string, error) {
+func viewToTable(ctx context.Context, db sqlite.DB, viewName string) (string, error) {
 	// Get column info from the view
 	rows, err := db.Query(ctx, fmt.Sprintf("PRAGMA table_info(%s)", viewName))
 	if err != nil {

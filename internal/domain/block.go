@@ -3,8 +3,6 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/usetero/cli/internal/domain/tool"
 )
 
 // BlockType identifies the kind of content block.
@@ -33,8 +31,8 @@ type Block struct {
 	Type           BlockType     `json:"type"`
 	Text           *TextBlock    `json:"text,omitempty"`
 	Thinking       *Thinking     `json:"thinking,omitempty"`
-	ToolUse        *tool.Use     `json:"tool_use,omitempty"`
-	ToolResult     *tool.Result  `json:"tool_result,omitempty"`
+	ToolUse        *ToolUse      `json:"tool_use,omitempty"`
+	ToolResult     *ToolResult   `json:"tool_result,omitempty"`
 	ToolInputDelta string        `json:"tool_input_delta,omitempty"`
 	MessageStart   *MessageStart `json:"message_start,omitempty"`
 	MessageStop    *MessageStop  `json:"message_stop,omitempty"`

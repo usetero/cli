@@ -13,7 +13,7 @@ import (
 // OpenTestDB creates a temporary SQLite database with the PowerSync extension
 // loaded and schema initialized. Ready for testing.
 // The database is automatically closed when the test completes.
-func OpenTestDB(t *testing.T) *sqlite.DB {
+func OpenTestDB(t *testing.T) sqlite.DB {
 	t.Helper()
 
 	// Extension is registered via extension.init()
@@ -28,7 +28,7 @@ func OpenTestDB(t *testing.T) *sqlite.DB {
 }
 
 // InsertCrudEntry inserts a test entry into the ps_crud table.
-func InsertCrudEntry(t *testing.T, db *sqlite.DB, id int64, txID *int64, data string) {
+func InsertCrudEntry(t *testing.T, db sqlite.DB, id int64, txID *int64, data string) {
 	t.Helper()
 
 	ctx := context.Background()

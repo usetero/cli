@@ -13,7 +13,7 @@ import (
 
 // setupWatchDB creates a database with PowerSync extension loaded.
 // Hooks are installed automatically by Open().
-func setupWatchDB(t *testing.T) *sqlite.DB {
+func setupWatchDB(t *testing.T) sqlite.DB {
 	t.Helper()
 
 	ctx := context.Background()

@@ -27,7 +27,7 @@ type TokenRefresher interface {
 
 // Syncer manages PowerSync synchronization.
 type Syncer interface {
-	Start(ctx context.Context, db sqlite.Database, accountID string, onFirstSync func()) error
+	Start(ctx context.Context, db sqlite.DB, accountID string, onFirstSync func()) error
 	Stop()
 	State() State
 	IsReady() bool
@@ -42,7 +42,7 @@ type syncer struct {
 	log            log.Logger
 	clientFactory  func(endpoint string) api.Client
 
-	database    sqlite.Database
+	database    sqlite.DB
 	accountID   string
 	controller  *extension.Controller
 	client      api.Client
@@ -86,7 +86,7 @@ func NewSyncer(endpoint string, tokenRefresher TokenRefresher, logger log.Logger
 }
 
 // Start begins syncing. The onFirstSync callback fires once when initial sync completes.
-func (s *syncer) Start(ctx context.Context, database sqlite.Database, accountID string, onFirstSync func()) error {
+func (s *syncer) Start(ctx context.Context, database sqlite.DB, accountID string, onFirstSync func()) error {
 	if accountID == "" {
 		panic("powersync: accountID is required")
 	}

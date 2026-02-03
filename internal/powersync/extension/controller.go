@@ -61,13 +61,13 @@ type StreamKey struct {
 // It holds a dedicated database connection to ensure all operations use the
 // same connection, since the PowerSync extension maintains per-connection state.
 type Controller struct {
-	db   sqlite.Database
+	db   sqlite.DB
 	conn *sql.Conn // dedicated connection for state consistency
 }
 
 // NewController creates a new PowerSync controller.
 // Call Close() when done to release the dedicated connection.
-func NewController(db sqlite.Database) *Controller {
+func NewController(db sqlite.DB) *Controller {
 	return &Controller{db: db}
 }
 
@@ -89,7 +89,7 @@ func (c *Controller) Control(ctx context.Context, op ControlOp, payload any) ([]
 	// This connection is held for the lifetime of the Controller to ensure
 	// all powersync_control calls see the same extension state.
 	if c.conn == nil {
-		conn, err := c.db.DB().Raw().Conn(ctx)
+		conn, err := c.db.Raw().Conn(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("acquire connection: %w", err)
 		}

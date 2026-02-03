@@ -13,7 +13,7 @@ import (
 //
 // This must be called after uploading entries and fetching a write checkpoint
 // from the server. The checkpoint signals to sync that uploads are complete.
-func CompleteBatch(ctx context.Context, db *sqlite.DB, lastEntryID int64, checkpoint string) error {
+func CompleteBatch(ctx context.Context, db sqlite.DB, lastEntryID int64, checkpoint string) error {
 	return db.WithTx(ctx, func(tx *sqlite.Tx) error {
 		// Delete all uploaded entries
 		if _, err := tx.Exec(ctx, "DELETE FROM ps_crud WHERE id <= ?", lastEntryID); err != nil {
@@ -35,7 +35,7 @@ func CompleteBatch(ctx context.Context, db *sqlite.DB, lastEntryID int64, checkp
 
 // GetClientID returns the PowerSync client ID for this database.
 // This ID is used when fetching write checkpoints from the server.
-func GetClientID(ctx context.Context, db *sqlite.DB) (string, error) {
+func GetClientID(ctx context.Context, db sqlite.DB) (string, error) {
 	var clientID string
 	err := db.QueryRow(ctx, "SELECT powersync_client_id()").Scan(&clientID)
 	if err != nil {

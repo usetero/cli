@@ -7,7 +7,6 @@ import (
 
 	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/domain/tool"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -119,7 +118,7 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 		}, nil
 
 	case domain.BlockTypeToolUse:
-		input, err := toToolInput(block.ToolUse)
+		input, err := rawJSONToMap(block.ToolUse.Input)
 		if err != nil {
 			return gen.ContentBlockInput{}, fmt.Errorf("tool_use block: %w", err)
 		}
@@ -127,13 +126,13 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 			Type: gen.ContentBlockTypeToolUse,
 			ToolUse: &gen.ToolUseInput{
 				Id:    block.ToolUse.ID,
-				Name:  string(block.ToolUse.Name),
+				Name:  block.ToolUse.Name,
 				Input: input,
 			},
 		}, nil
 
 	case domain.BlockTypeToolResult:
-		content, err := toToolResultContent(block.ToolResult)
+		content, err := rawJSONToMapPtr(block.ToolResult.Content)
 		if err != nil {
 			return gen.ContentBlockInput{}, fmt.Errorf("tool_result block: %w", err)
 		}
@@ -162,102 +161,24 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 	return gen.ContentBlockInput{}, fmt.Errorf("unknown block type: %s", block.Type)
 }
 
-func toToolInput(use *tool.Use) (map[string]any, error) {
-	switch use.Name {
-	case tool.AddContext:
-		if use.AddContext == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.AddContext)
-	case tool.RemoveContext:
-		if use.RemoveContext == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.RemoveContext)
-	case tool.Query:
-		if use.Query == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.Query)
-	case tool.ShowMetric:
-		if use.ShowMetric == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.ShowMetric)
-	case tool.ShowSeries:
-		if use.ShowSeries == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.ShowSeries)
-	case tool.ShowTimeSeries:
-		if use.ShowTimeSeries == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.ShowTimeSeries)
-	case tool.ShowTable:
-		if use.ShowTable == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.ShowTable)
-	case tool.StartJourney:
-		if use.StartJourney == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.StartJourney)
-	case tool.EndJourney:
-		if use.EndJourney == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.EndJourney)
-	case tool.ApprovePolicy:
-		if use.ApprovePolicy == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.ApprovePolicy)
-	case tool.DismissPolicy:
-		if use.DismissPolicy == nil {
-			return nil, fmt.Errorf("tool %s: missing typed input", use.Name)
-		}
-		return structToMap(use.DismissPolicy)
-	}
-
-	return nil, fmt.Errorf("unknown tool: %s", use.Name)
-}
-
-func toToolResultContent(result *tool.Result) (*map[string]any, error) {
-	if result.AddContext != nil {
-		m, err := structToMap(result.AddContext)
-		return &m, err
-	}
-	if result.RemoveContext != nil {
-		m, err := structToMap(result.RemoveContext)
-		return &m, err
-	}
-	if result.Query != nil {
-		m, err := structToMap(result.Query)
-		return &m, err
-	}
-	if result.ApprovePolicy != nil {
-		m, err := structToMap(result.ApprovePolicy)
-		return &m, err
-	}
-	if result.DismissPolicy != nil {
-		m, err := structToMap(result.DismissPolicy)
-		return &m, err
-	}
-
-	// No typed result - this is OK for client-executed tools
-	return nil, nil
-}
-
-func structToMap(v any) (map[string]any, error) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("marshal struct: %w", err)
+func rawJSONToMap(data json.RawMessage) (map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
 	}
 	var m map[string]any
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("unmarshal to map: %w", err)
+		return nil, err
 	}
 	return m, nil
+}
+
+func rawJSONToMapPtr(data json.RawMessage) (*map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	return &m, nil
 }

@@ -1,10 +1,10 @@
 package chat
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/domain/tool"
 )
 
 func TestAccumulator_TextDeltas(t *testing.T) {
@@ -125,10 +125,10 @@ func TestAccumulator_ToolUse(t *testing.T) {
 	// Tool use (comes as complete block)
 	acc.Handle(Event{Block: domain.Block{
 		Type: domain.BlockTypeToolUse,
-		ToolUse: &tool.Use{
-			ID:       "tool-1",
-			Name:     tool.Query,
-			RawInput: `{"limit": 10}`,
+		ToolUse: &domain.ToolUse{
+			ID:    "tool-1",
+			Name:  "query",
+			Input: json.RawMessage(`{"limit": 10}`),
 		},
 	}})
 

@@ -32,7 +32,7 @@ type Uploader interface {
 
 // uploader is the concrete implementation of Uploader.
 type uploader struct {
-	db             sqlite.Database
+	db             sqlite.DB
 	queue          *db.CrudQueue
 	client         psapi.Client
 	tokenRefresher TokenRefresher
@@ -54,7 +54,7 @@ type uploader struct {
 
 // New creates a new uploader.
 func New(
-	database sqlite.Database,
+	database sqlite.DB,
 	client psapi.Client,
 	tokenRefresher TokenRefresher,
 	conversations api.Conversations,
@@ -156,7 +156,7 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 	}
 
 	// Get write checkpoint from PowerSync server
-	clientID, err := db.GetClientID(ctx, u.db.DB())
+	clientID, err := db.GetClientID(ctx, u.db)
 	if err != nil {
 		return 0, fmt.Errorf("get client id: %w", err)
 	}
@@ -168,7 +168,7 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 
 	// Complete batch atomically
 	lastID := entries[len(entries)-1].ID
-	if err := db.CompleteBatch(ctx, u.db.DB(), lastID, checkpoint); err != nil {
+	if err := db.CompleteBatch(ctx, u.db, lastID, checkpoint); err != nil {
 		return 0, fmt.Errorf("complete batch: %w", err)
 	}
 

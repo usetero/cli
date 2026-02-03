@@ -17,7 +17,7 @@ const (
 // Call Stop() when done to prevent leaks.
 type Subscription struct {
 	ch     chan []Table
-	db     *DB
+	db     *database
 	closed bool
 	mu     sync.Mutex
 }
@@ -44,7 +44,7 @@ type watchState struct {
 // Starts a background goroutine that polls for changes and notifies subscribers.
 // The goroutine stops when ctx is cancelled.
 // Called automatically by Open() when the PowerSync extension is loaded.
-func (d *DB) installUpdateHooks(ctx context.Context) error {
+func (d *database) installUpdateHooks(ctx context.Context) error {
 	d.watch.mu.Lock()
 	defer d.watch.mu.Unlock()
 
@@ -67,7 +67,7 @@ func (d *DB) installUpdateHooks(ctx context.Context) error {
 }
 
 // pollForChanges runs in the background, checking for table changes periodically.
-func (d *DB) pollForChanges(ctx context.Context) {
+func (d *database) pollForChanges(ctx context.Context) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -84,7 +84,7 @@ func (d *DB) pollForChanges(ctx context.Context) {
 // Subscribe returns a Subscription that receives table names when they change.
 // The channel has a buffer of 1 to avoid blocking the poller.
 // Call Stop() on the subscription when done to prevent leaks.
-func (d *DB) Subscribe() *Subscription {
+func (d *database) Subscribe() *Subscription {
 	d.watch.mu.Lock()
 	defer d.watch.mu.Unlock()
 
@@ -100,7 +100,7 @@ func (d *DB) Subscribe() *Subscription {
 }
 
 // unsubscribe removes a subscriber and closes its channel.
-func (d *DB) unsubscribe(sub *Subscription) {
+func (d *database) unsubscribe(sub *Subscription) {
 	sub.mu.Lock()
 	defer sub.mu.Unlock()
 
@@ -119,7 +119,7 @@ func (d *DB) unsubscribe(sub *Subscription) {
 }
 
 // checkForChanges queries the update hooks and notifies subscribers.
-func (d *DB) checkForChanges() {
+func (d *database) checkForChanges() {
 	d.watch.mu.RLock()
 	if !d.watch.installed || len(d.watch.subscribers) == 0 {
 		d.watch.mu.RUnlock()

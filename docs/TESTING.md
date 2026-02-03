@@ -84,6 +84,26 @@ func TestSync_Connect(t *testing.T) {
 
 Exception: tests using `t.Setenv()` can't run in parallel.
 
+### Use Test Helpers
+
+Use the `*test` packages for common test doubles:
+
+```go
+import (
+    "github.com/usetero/cli/internal/log/logtest"
+    "github.com/usetero/cli/internal/chat/chattest"
+    "github.com/usetero/cli/internal/sqlite/sqlitetest"
+)
+
+func TestFoo(t *testing.T) {
+    logger := logtest.New(t)  // logs appear on test failure
+    client := &chattest.MockClient{...}
+    db := sqlitetest.OpenBareDB(t)
+}
+```
+
+`logtest.New(t)` is preferred over discarding logs—you'll want them when debugging failures.
+
 ## File Naming
 
 | Type | File | Build Tag | Function Prefix |

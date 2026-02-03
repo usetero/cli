@@ -29,7 +29,7 @@ func TestCompleteBatch(t *testing.T) {
 		}
 
 		// Complete batch for entries 1 and 2
-		err = db.CompleteBatch(ctx, database.DB(), 2, "100")
+		err = db.CompleteBatch(ctx, database, 2, "100")
 		if err != nil {
 			t.Fatalf("CompleteBatch() error = %v", err)
 		}
@@ -66,7 +66,7 @@ func TestCompleteBatch(t *testing.T) {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
-		err = db.CompleteBatch(ctx, database.DB(), 0, "42")
+		err = db.CompleteBatch(ctx, database, 0, "42")
 		if err != nil {
 			t.Fatalf("CompleteBatch() error = %v", err)
 		}
@@ -91,7 +91,7 @@ func TestCompleteBatch(t *testing.T) {
 		dbtest.InsertCrudEntry(t, database, 1, nil, `{"op":"PUT","type":"messages","id":"msg-1","data":{}}`)
 
 		// Don't create $local bucket - update should fail
-		err := db.CompleteBatch(ctx, database.DB(), 1, "100")
+		err := db.CompleteBatch(ctx, database, 1, "100")
 
 		// Should succeed (UPDATE affects 0 rows but doesn't error)
 		// This is actually fine - if there's no $local bucket, sync hasn't started
@@ -120,7 +120,7 @@ func TestGetClientID(t *testing.T) {
 		database := dbtest.OpenTestDB(t)
 		ctx := context.Background()
 
-		clientID, err := db.GetClientID(ctx, database.DB())
+		clientID, err := db.GetClientID(ctx, database)
 		if err != nil {
 			t.Fatalf("GetClientID() error = %v", err)
 		}
@@ -140,12 +140,12 @@ func TestGetClientID(t *testing.T) {
 		database := dbtest.OpenTestDB(t)
 		ctx := context.Background()
 
-		id1, err := db.GetClientID(ctx, database.DB())
+		id1, err := db.GetClientID(ctx, database)
 		if err != nil {
 			t.Fatalf("first GetClientID() error = %v", err)
 		}
 
-		id2, err := db.GetClientID(ctx, database.DB())
+		id2, err := db.GetClientID(ctx, database)
 		if err != nil {
 			t.Fatalf("second GetClientID() error = %v", err)
 		}

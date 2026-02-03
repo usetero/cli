@@ -17,20 +17,9 @@ import (
 	"github.com/usetero/cli/internal/tui/components/thinking"
 )
 
-// eventMsg wraps a streaming event from the Chat API.
-type eventMsg struct {
-	event chat.Event
-}
-
-// errorMsg is sent when the Chat API returns an error.
-type errorMsg struct {
-	err error
-}
-
-// persistedMsg is sent when the assistant message is persisted.
-type persistedMsg struct {
-	messageID domain.MessageID
-	err       error
+// turnEventMsg wraps a TurnEvent for the Bubble Tea message loop.
+type turnEventMsg struct {
+	event TurnEvent
 }
 
 // messagesLoadedMsg is sent when messages are loaded from SQLite.
@@ -45,8 +34,8 @@ type messagesLoadedMsg struct {
 type Model struct {
 	ctx    context.Context
 	theme  *styles.Theme
-	db     sqlite.Database
-	client chat.Client
+	db     sqlite.DB
+	turn   Turn
 	logger log.Logger
 
 	// Identity
@@ -63,19 +52,19 @@ type Model struct {
 	// Streaming state
 	streaming *chat.Accumulator
 	thinking  thinking.Model
-	eventCh   chan tea.Msg
+	eventCh   chan TurnEvent
 
 	width  int
 	height int
 }
 
 // New creates a new chat model.
-func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client chat.Client, accountID domain.AccountID, workspaceID domain.WorkspaceID, globalTools tools.Tools, logger log.Logger) Model {
+func New(ctx context.Context, theme *styles.Theme, db sqlite.DB, turn Turn, accountID domain.AccountID, workspaceID domain.WorkspaceID, globalTools tools.Tools, logger log.Logger) Model {
 	m := Model{
 		ctx:         ctx,
 		theme:       theme,
 		db:          db,
-		client:      client,
+		turn:        turn,
 		logger:      logger,
 		accountID:   accountID,
 		workspaceID: workspaceID,
@@ -87,43 +76,8 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client ch
 // viewTools returns the tools specific to the chat view.
 func (m Model) viewTools() tools.Tools {
 	return tools.Tools{
-		query.Tool{QueryFunc: m.executeQuery},
+		query.Tool{DB: m.db},
 	}
-}
-
-// executeQuery runs a read-only SQL query against the local database.
-func (m Model) executeQuery(sql string) ([]map[string]any, error) {
-	rows, err := m.db.DB().Query(m.ctx, sql)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	cols, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	var results []map[string]any
-	for rows.Next() {
-		values := make([]any, len(cols))
-		ptrs := make([]any, len(cols))
-		for i := range values {
-			ptrs[i] = &values[i]
-		}
-
-		if err := rows.Scan(ptrs...); err != nil {
-			return nil, err
-		}
-
-		row := make(map[string]any, len(cols))
-		for i, col := range cols {
-			row[col] = values[i]
-		}
-		results = append(results, row)
-	}
-
-	return results, rows.Err()
 }
 
 // Init initializes the chat model.
@@ -150,40 +104,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case messages.SubmitMsg:
 		return m.handleSubmit(msg.Text)
 
-	case eventMsg:
-		m.streaming.Handle(msg.event)
-
-		// Check if streaming is done
-		if msg.event.Done {
-			var assistantMsg *domain.Message
-			m, assistantMsg = m.finishStreaming()
-			if assistantMsg != nil {
-				cmds = append(cmds, m.persistAssistantMessage(assistantMsg))
-			}
-			m.eventCh = nil
-			return m, tea.Batch(cmds...)
-		}
-
-		// Continue reading from the channel
-		if m.eventCh != nil {
-			cmds = append(cmds, m.waitForNextEvent())
-		}
-		return m, tea.Batch(cmds...)
-
-	case errorMsg:
-		m.logger.Error("chat API error", "error", msg.err)
-		m.eventCh = nil
-		m.streaming = nil
-		// TODO: show error to user
-		return m, nil
-
-	case persistedMsg:
-		if msg.err != nil {
-			m.logger.Error("failed to persist assistant message", "error", msg.err)
-		} else {
-			m.logger.Debug("assistant message persisted", "id", msg.messageID)
-		}
-		return m, nil
+	case turnEventMsg:
+		return m.handleTurnEvent(msg.event)
 
 	case messagesLoadedMsg:
 		if msg.err != nil {
@@ -197,6 +119,49 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// handleTurnEvent processes events from the Turn.
+func (m Model) handleTurnEvent(event TurnEvent) (Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	// Handle errors
+	if event.Error != nil {
+		m.logger.Error("turn error", "error", event.Error)
+		m.streaming = nil
+		m.eventCh = nil
+		return m, nil
+	}
+
+	// Handle streaming events (update accumulator for live display)
+	if event.Event != nil {
+		m.streaming.Handle(*event.Event)
+	}
+
+	// Handle completed assistant messages (update conversation state)
+	if event.AssistantMessage != nil {
+		m.messages = append(m.messages, *event.AssistantMessage)
+		// Reset accumulator for potential next round (tool use)
+		m.streaming = chat.NewAccumulator()
+	}
+
+	// Handle tool results (for display)
+	if event.ToolResult != nil {
+		// Tool results are added to messages by the Turn as part of the user message
+		// We just log it here for debugging
+		m.logger.Debug("tool result received", "tool_use_id", event.ToolResult.ToolResult.ToolUseID)
+	}
+
+	// Check if turn is complete
+	if event.Done {
+		m.streaming = nil
+		m.eventCh = nil
+		return m, nil
+	}
+
+	// Continue reading from the channel
+	cmds = append(cmds, m.waitForNextEvent())
+	return m, tea.Batch(cmds...)
 }
 
 // View renders the chat.
@@ -307,7 +272,6 @@ func (m Model) SetConversation(conversationID domain.ConversationID) (Model, tea
 func (m Model) handleSubmit(text string) (Model, tea.Cmd) {
 	ctx := m.ctx
 	db := m.db
-	client := m.client
 	accountID := m.accountID
 	workspaceID := m.workspaceID
 	convID := m.conversationID
@@ -324,13 +288,19 @@ func (m Model) handleSubmit(text string) (Model, tea.Cmd) {
 	}
 
 	// Create user message
-	msgID := domain.NewMessageID()
 	userMsg := domain.Message{
-		ID:             msgID,
+		ID:             domain.NewMessageID(),
 		ConversationID: convID,
 		Role:           domain.RoleUser,
 		Content:        []domain.Block{domain.NewTextBlock(text)},
 		CreatedAt:      time.Now(),
+	}
+
+	// Persist user message
+	_, err := db.Messages().CreateUserMessage(ctx, accountID, convID, text)
+	if err != nil {
+		m.logger.Error("failed to persist user message", "error", err)
+		return m, nil
 	}
 
 	// Append to state
@@ -342,42 +312,13 @@ func (m Model) handleSubmit(text string) (Model, tea.Cmd) {
 	// Start thinking animation
 	m.thinking = thinking.New(m.theme, "Thinking")
 
-	// Create channel for events
-	m.eventCh = make(chan tea.Msg, 100)
+	// Create channel for turn events
+	m.eventCh = make(chan TurnEvent, 100)
 
-	// Start the streaming goroutine
-	go m.streamChat(ctx, db, client, accountID, convID, userMsg, m.tools, m.eventCh)
+	// Start the turn
+	go m.turn.Run(ctx, convID.String(), m.messages, m.tools, m.eventCh)
 
 	return m, tea.Batch(m.waitForNextEvent(), m.thinking.Init())
-}
-
-// streamChat runs in a goroutine and sends events to the channel.
-func (m Model) streamChat(ctx context.Context, db sqlite.Database, client chat.Client, accountID domain.AccountID, convID domain.ConversationID, userMsg domain.Message, t tools.Tools, eventCh chan<- tea.Msg) {
-	defer close(eventCh)
-
-	// Persist user message to SQLite
-	_, err := db.Messages().CreateUserMessage(ctx, accountID, convID, userMsg.Content[0].Text.Content)
-	if err != nil {
-		eventCh <- errorMsg{err: err}
-		return
-	}
-
-	// Build request with full message history and tools
-	req := chat.Request{
-		ConversationID: convID.String(),
-		Messages:       m.messages,
-		Tools:          t.Definitions(),
-	}
-
-	// Stream the response
-	err = client.Send(ctx, req, func(event chat.Event) error {
-		eventCh <- eventMsg{event: event}
-		return nil
-	})
-
-	if err != nil {
-		eventCh <- errorMsg{err: err}
-	}
 }
 
 // waitForNextEvent returns a command that waits for the next event from the channel.
@@ -387,64 +328,11 @@ func (m Model) waitForNextEvent() tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		msg, ok := <-ch
+		event, ok := <-ch
 		if !ok {
-			return nil
+			return turnEventMsg{event: TurnEvent{Done: true}}
 		}
-		return msg
-	}
-}
-
-// finishStreaming finalizes the streaming message and adds it to state.
-func (m Model) finishStreaming() (Model, *domain.Message) {
-	if m.streaming == nil {
-		return m, nil
-	}
-
-	msg := &domain.Message{
-		ConversationID: m.conversationID,
-		Role:           domain.RoleAssistant,
-		Content:        m.streaming.Blocks(),
-		Model:          m.streaming.Model(),
-		StopReason:     m.streaming.StopReason(),
-	}
-
-	m.messages = append(m.messages, *msg)
-	m.streaming = nil
-
-	return m, msg
-}
-
-// persistAssistantMessage saves the completed assistant message to SQLite.
-func (m Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
-	ctx := m.ctx
-	db := m.db
-	accountID := m.accountID
-	logger := m.logger
-
-	return func() tea.Msg {
-		content, err := domain.EncodeBlocks(msg.Content)
-		if err != nil {
-			return persistedMsg{err: err}
-		}
-
-		msgID, err := db.Messages().CreateAssistantMessage(ctx, accountID, msg.ConversationID, msg.Model)
-		if err != nil {
-			return persistedMsg{err: err}
-		}
-
-		err = db.Messages().UpdateContent(ctx, msgID, content)
-		if err != nil {
-			return persistedMsg{err: err}
-		}
-
-		err = db.Messages().UpdateMeta(ctx, msgID, msg.Model, msg.StopReason)
-		if err != nil {
-			return persistedMsg{err: err}
-		}
-
-		logger.Debug("persisted assistant message", "id", msgID)
-		return persistedMsg{messageID: msgID}
+		return turnEventMsg{event: event}
 	}
 }
 

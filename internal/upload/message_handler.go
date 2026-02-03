@@ -32,11 +32,11 @@ import (
 // messageHandler persists messages to the control plane via GraphQL.
 type messageHandler struct {
 	messages api.Messages
-	db       sqlite.Database
+	db       sqlite.DB
 	logger   log.Logger
 }
 
-func newMessageHandler(messages api.Messages, db sqlite.Database, logger log.Logger) *messageHandler {
+func newMessageHandler(messages api.Messages, db sqlite.DB, logger log.Logger) *messageHandler {
 	return &messageHandler{
 		messages: messages,
 		db:       db,

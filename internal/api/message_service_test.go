@@ -2,13 +2,13 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/domain/tool"
 	"github.com/usetero/cli/internal/log/logtest"
 )
 
@@ -102,7 +102,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		}
 	})
 
-	t.Run("sends tool_use block with typed input", func(t *testing.T) {
+	t.Run("sends tool_use block with raw input", func(t *testing.T) {
 		t.Parallel()
 
 		var captured gen.CreateMessageInput
@@ -122,12 +122,10 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			Content: []domain.Block{
 				{
 					Type: domain.BlockTypeToolUse,
-					ToolUse: &tool.Use{
-						ID:   "tool-1",
-						Name: tool.Query,
-						Query: &tool.QueryInput{
-							SQL: "SELECT * FROM logs",
-						},
+					ToolUse: &domain.ToolUse{
+						ID:    "tool-1",
+						Name:  "query",
+						Input: json.RawMessage(`{"sql": "SELECT * FROM logs"}`),
 					},
 				},
 			},
@@ -154,73 +152,6 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		sql, ok := block.ToolUse.Input["sql"].(string)
 		if !ok || sql != "SELECT * FROM logs" {
 			t.Errorf("ToolUse.Input[sql] = %v, want %q", block.ToolUse.Input["sql"], "SELECT * FROM logs")
-		}
-	})
-
-	t.Run("rejects tool_use with nil typed input", func(t *testing.T) {
-		t.Parallel()
-
-		mockClient := &apitest.MockClient{
-			CreateMessageFunc: func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error) {
-				t.Error("CreateMessage should not be called")
-				return &gen.CreateMessageResponse{}, nil
-			},
-		}
-
-		svc := api.NewMessageService(mockClient, logtest.New(t))
-
-		msg := &domain.Message{
-			ID:             "msg-123",
-			ConversationID: "conv-456",
-			Role:           domain.RoleAssistant,
-			Content: []domain.Block{
-				{
-					Type: domain.BlockTypeToolUse,
-					ToolUse: &tool.Use{
-						ID:    "tool-1",
-						Name:  tool.Query,
-						Query: nil, // Missing typed input
-					},
-				},
-			},
-		}
-
-		err := svc.CreateMessage(context.Background(), msg)
-		if err == nil {
-			t.Fatal("CreateMessage() expected error for nil typed input, got nil")
-		}
-	})
-
-	t.Run("rejects unknown tool name", func(t *testing.T) {
-		t.Parallel()
-
-		mockClient := &apitest.MockClient{
-			CreateMessageFunc: func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error) {
-				t.Error("CreateMessage should not be called")
-				return &gen.CreateMessageResponse{}, nil
-			},
-		}
-
-		svc := api.NewMessageService(mockClient, logtest.New(t))
-
-		msg := &domain.Message{
-			ID:             "msg-123",
-			ConversationID: "conv-456",
-			Role:           domain.RoleAssistant,
-			Content: []domain.Block{
-				{
-					Type: domain.BlockTypeToolUse,
-					ToolUse: &tool.Use{
-						ID:   "tool-1",
-						Name: tool.Name("unknown_tool"),
-					},
-				},
-			},
-		}
-
-		err := svc.CreateMessage(context.Background(), msg)
-		if err == nil {
-			t.Fatal("CreateMessage() expected error for unknown tool, got nil")
 		}
 	})
 
@@ -265,7 +196,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		}
 	})
 
-	t.Run("sends tool_result with typed content", func(t *testing.T) {
+	t.Run("sends tool_result with raw content", func(t *testing.T) {
 		t.Parallel()
 
 		var captured gen.CreateMessageInput
@@ -285,12 +216,9 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			Content: []domain.Block{
 				{
 					Type: domain.BlockTypeToolResult,
-					ToolResult: &tool.Result{
+					ToolResult: &domain.ToolResult{
 						ToolUseID: "tool-1",
-						Query: &tool.QueryResult{
-							Columns: []string{"id", "name"},
-							Rows:    [][]any{{"1", "foo"}},
-						},
+						Content:   json.RawMessage(`{"columns": ["id", "name"], "rows": [["1", "foo"]]}`),
 					},
 				},
 			},
@@ -340,7 +268,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			Content: []domain.Block{
 				{
 					Type: domain.BlockTypeToolResult,
-					ToolResult: &tool.Result{
+					ToolResult: &domain.ToolResult{
 						ToolUseID: "tool-1",
 						IsError:   true,
 						Error:     "something went wrong",

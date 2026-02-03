@@ -41,8 +41,8 @@ func SchemaJSON() string {
 
 // ApplySchema applies the PowerSync schema to the database.
 // This should be called once after opening the database.
-func ApplySchema(ctx context.Context, db sqlite.Database) error {
-	if _, err := db.DB().Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
+func ApplySchema(ctx context.Context, db sqlite.DB) error {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", SchemaJSON()); err != nil {
 		return fmt.Errorf("apply schema: %w", err)
 	}
 	return nil

@@ -20,7 +20,7 @@ import (
 type Model struct {
 	ctx    context.Context
 	theme  *styles.Theme
-	db     sqlite.Database
+	db     sqlite.DB
 	logger log.Logger
 
 	// Components
@@ -34,7 +34,7 @@ type Model struct {
 }
 
 // New creates a new app model.
-func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client chat.Client, account domain.Account, workspace domain.Workspace, logger log.Logger) Model {
+func New(ctx context.Context, theme *styles.Theme, db sqlite.DB, client chat.Client, account domain.Account, workspace domain.Workspace, logger log.Logger) Model {
 	if ctx == nil {
 		panic("app.New: ctx is nil")
 	}
@@ -51,13 +51,15 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client ch
 		panic("app.New: logger is nil")
 	}
 
+	turn := appchat.NewTurn(client, logger)
+
 	return Model{
 		ctx:        ctx,
 		theme:      theme,
 		db:         db,
 		logger:     logger,
 		commandBar: NewCommandBar(theme),
-		chat:       appchat.New(ctx, theme, db, client, account.ID, workspace.ID, tools.All(), logger),
+		chat:       appchat.New(ctx, theme, db, turn, account.ID, workspace.ID, tools.All(), logger),
 	}
 }
 

@@ -58,11 +58,11 @@ type crudData struct {
 
 // CrudQueue provides access to the PowerSync CRUD upload queue.
 type CrudQueue struct {
-	db sqlite.Database
+	db sqlite.DB
 }
 
 // NewCrudQueue creates a new CRUD queue accessor.
-func NewCrudQueue(db sqlite.Database) *CrudQueue {
+func NewCrudQueue(db sqlite.DB) *CrudQueue {
 	return &CrudQueue{
 		db: db,
 	}
@@ -71,7 +71,7 @@ func NewCrudQueue(db sqlite.Database) *CrudQueue {
 // HasPendingUploads returns true if there are entries waiting to be uploaded.
 func (q *CrudQueue) HasPendingUploads(ctx context.Context) (bool, error) {
 	var count int64
-	err := q.db.DB().QueryRow(ctx, "SELECT COUNT(*) FROM ps_crud").Scan(&count)
+	err := q.db.QueryRow(ctx, "SELECT COUNT(*) FROM ps_crud").Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("check pending uploads: %w", err)
 	}
@@ -81,7 +81,7 @@ func (q *CrudQueue) HasPendingUploads(ctx context.Context) (bool, error) {
 // GetNextEntry returns the next CRUD entry to process, or nil if the queue is empty.
 func (q *CrudQueue) GetNextEntry(ctx context.Context) (*CrudEntry, error) {
 	var row crudRow
-	err := q.db.DB().QueryRow(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id LIMIT 1").Scan(
+	err := q.db.QueryRow(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id LIMIT 1").Scan(
 		&row.ID, &row.TxID, &row.Data,
 	)
 	if err != nil {
@@ -109,7 +109,7 @@ func (q *CrudQueue) GetNextTransaction(ctx context.Context) ([]CrudEntry, error)
 	}
 
 	// Get all entries with the same transaction ID
-	rows, err := q.db.DB().Query(ctx,
+	rows, err := q.db.Query(ctx,
 		"SELECT id, tx_id, data FROM ps_crud WHERE tx_id = ? ORDER BY id",
 		*first.TxID,
 	)
@@ -136,7 +136,7 @@ func (q *CrudQueue) GetNextTransaction(ctx context.Context) ([]CrudEntry, error)
 
 // GetAllEntries returns all pending CRUD entries in order.
 func (q *CrudQueue) GetAllEntries(ctx context.Context) ([]*CrudEntry, error) {
-	rows, err := q.db.DB().Query(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id")
+	rows, err := q.db.Query(ctx, "SELECT id, tx_id, data FROM ps_crud ORDER BY id")
 	if err != nil {
 		return nil, fmt.Errorf("query crud entries: %w", err)
 	}
@@ -169,7 +169,7 @@ func (q *CrudQueue) CheckHealth(ctx context.Context) error {
 	// Check 1: ps_tx must have a row with id=1
 	// This is required for CRUD operations. Missing if crash during migration.
 	var txCount int
-	err := q.db.DB().QueryRow(ctx, "SELECT COUNT(*) FROM ps_tx WHERE id = 1").Scan(&txCount)
+	err := q.db.QueryRow(ctx, "SELECT COUNT(*) FROM ps_tx WHERE id = 1").Scan(&txCount)
 	if err != nil {
 		return fmt.Errorf("check ps_tx: %w", err)
 	}
@@ -185,7 +185,7 @@ func (q *CrudQueue) CheckHealth(ctx context.Context) error {
 	}
 	if !hasPending {
 		var targetOp, lastOp int64
-		err = q.db.DB().QueryRow(ctx,
+		err = q.db.QueryRow(ctx,
 			"SELECT target_op, last_op FROM ps_buckets WHERE name = '$local'",
 		).Scan(&targetOp, &lastOp)
 		if err != nil && err.Error() != "sql: no rows in result set" {
