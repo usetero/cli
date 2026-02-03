@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
-	"github.com/usetero/cli/internal/chat/chattest"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync"
+	psapitest "github.com/usetero/cli/internal/powersync/api/apitest"
+	"github.com/usetero/cli/internal/powersync/db"
+	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/upload"
 )
@@ -22,14 +23,14 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("returns on context cancellation", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 
 		uploader := upload.New(
-			db,
-			powersynctest.NewMockClient(),
+			testDB,
+			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			&apitest.MockConversations{},
-			&chattest.MockMessages{},
+			apitest.NewMockConversations(),
+			apitest.NewMockMessages(),
 			logtest.New(t),
 		)
 
@@ -45,14 +46,14 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("closes event channel on exit", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 
 		uploader := upload.New(
-			db,
-			powersynctest.NewMockClient(),
+			testDB,
+			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			&apitest.MockConversations{},
-			&chattest.MockMessages{},
+			apitest.NewMockConversations(),
+			apitest.NewMockMessages(),
 			logtest.New(t),
 		)
 
@@ -78,29 +79,29 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("processes entry and completes batch", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 		ctx := context.Background()
 
-		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		_, err := testDB.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
 		if err != nil {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
 		convID := uuid.New().String()
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
-				return &api.Conversation{ID: id.String()}, nil
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
+				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
 			},
 		}
 
 		uploader := upload.New(
-			db,
-			powersynctest.NewMockClient(),
+			testDB,
+			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
-			&chattest.MockMessages{},
+			apitest.NewMockMessages(),
 			logtest.New(t),
 		)
 
@@ -127,7 +128,7 @@ func TestUploader_Run(t *testing.T) {
 		cancel()
 		<-done
 
-		queue := powersync.NewCrudQueue(db)
+		queue := db.NewCrudQueue(testDB)
 		entry, err := queue.GetNextEntry(context.Background())
 		if err != nil {
 			t.Fatalf("GetNextEntry() error = %v", err)
@@ -140,22 +141,22 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("skips unknown tables and completes batch", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 		ctx := context.Background()
 
-		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		_, err := testDB.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
 		if err != nil {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"unknown_table","id":"row-1","data":{}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"unknown_table","id":"row-1","data":{}}`)
 
 		uploader := upload.New(
-			db,
-			powersynctest.NewMockClient(),
+			testDB,
+			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			&apitest.MockConversations{},
-			&chattest.MockMessages{},
+			apitest.NewMockConversations(),
+			apitest.NewMockMessages(),
 			logtest.New(t),
 		)
 
@@ -179,7 +180,7 @@ func TestUploader_Run(t *testing.T) {
 		cancel()
 		<-done
 
-		queue := powersync.NewCrudQueue(db)
+		queue := db.NewCrudQueue(testDB)
 		entry, err := queue.GetNextEntry(context.Background())
 		if err != nil {
 			t.Fatalf("GetNextEntry() error = %v", err)
@@ -192,34 +193,34 @@ func TestUploader_Run(t *testing.T) {
 	t.Run("emits stalled event on failure and recovered on success", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 		ctx := context.Background()
 
-		_, err := db.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		_, err := testDB.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
 		if err != nil {
 			t.Fatalf("setup bucket: %v", err)
 		}
 
 		convID := uuid.New().String()
-		powersynctest.InsertCrudEntry(t, db, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		callCount := 0
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
 				callCount++
 				if callCount <= 4 {
 					return nil, errors.New("temporary error")
 				}
-				return &api.Conversation{ID: id.String()}, nil
+				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
 			},
 		}
 
 		uploader := upload.New(
-			db,
-			powersynctest.NewMockClient(),
+			testDB,
+			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
-			&chattest.MockMessages{},
+			apitest.NewMockMessages(),
 			logtest.New(t),
 		)
 

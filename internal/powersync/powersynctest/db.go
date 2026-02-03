@@ -1,38 +1,28 @@
+// Package powersynctest provides test utilities for the powersync package.
+//
+// For database test helpers, use powersync/db/dbtest.
+// For mock API clients, use powersync/api/apitest.
 package powersynctest
 
 import (
-	"context"
-	"testing"
+	"io"
+	"log/slog"
 
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/sqlite"
-	"github.com/usetero/cli/internal/sqlite/sqlitetest"
+	"github.com/usetero/cli/internal/powersync/api/apitest"
 )
 
-// OpenTestDB creates a temporary SQLite database with the PowerSync extension
-// loaded and schema initialized. Ready for testing.
-// The database is automatically closed when the test completes.
-func OpenTestDB(t *testing.T) *sqlite.DB {
-	t.Helper()
-
-	// Extension is registered via powersync.init()
-	ctx := context.Background()
-	db := sqlitetest.OpenTest(t)
-
-	if err := powersync.ApplySchema(ctx, db); err != nil {
-		t.Fatalf("ApplySchema() error = %v", err)
-	}
-
-	return db
+// NewSyncerWithMockClient creates a Syncer with a mock client for testing.
+func NewSyncerWithMockClient(endpoint string, tokenRefresher powersync.TokenRefresher, mock *apitest.MockClient) powersync.Syncer {
+	return powersync.NewSyncer(
+		endpoint,
+		tokenRefresher,
+		discardLogger(),
+		powersync.WithClientFactory(apitest.NewMockClientFactory(mock)),
+	)
 }
 
-// InsertCrudEntry inserts a test entry into the ps_crud table.
-func InsertCrudEntry(t *testing.T, db *sqlite.DB, id int64, txID *int64, data string) {
-	t.Helper()
-
-	ctx := context.Background()
-	_, err := db.Exec(ctx, "INSERT INTO ps_crud (id, tx_id, data) VALUES (?, ?, ?)", id, txID, data)
-	if err != nil {
-		t.Fatalf("InsertCrudEntry() error = %v", err)
-	}
+func discardLogger() log.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

@@ -101,10 +101,20 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	return &DB{
+	d := &DB{
 		db:   db,
 		path: path,
-	}, nil
+	}
+
+	// Install update hooks for change notifications (only works with PowerSync extension)
+	if extensionPath != "" {
+		if err := d.installUpdateHooks(ctx); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("install update hooks: %w", err)
+		}
+	}
+
+	return d, nil
 }
 
 // Close closes the database connection.
@@ -154,13 +164,8 @@ func (d *DB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 }
 
 // Exec executes a query that doesn't return rows.
-// If update hooks are installed, subscribers are notified of any table changes.
 func (d *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	result, err := d.db.ExecContext(ctx, query, args...)
-	if err == nil {
-		d.checkForChanges()
-	}
-	return result, err
+	return d.db.ExecContext(ctx, query, args...)
 }
 
 // Count returns the number of rows in the given table.

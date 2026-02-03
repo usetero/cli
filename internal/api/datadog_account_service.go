@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/pkg/client"
 )
 
 // DatadogAccounts provides access to Datadog account operations.
@@ -128,9 +128,9 @@ func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID string
 func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site string) (bool, string, error) {
 	s.logger.Debug("validating datadog API key via control plane", "site", site)
 
-	input := client.ValidateDatadogApiKeyInput{
+	input := gen.ValidateDatadogApiKeyInput{
 		ApiKey: apiKey,
-		Site:   client.DatadogAccountSite(site),
+		Site:   gen.DatadogAccountSite(site),
 	}
 
 	resp, err := s.client.ValidateDatadogApiKey(ctx, input)
@@ -158,14 +158,14 @@ func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site
 // The control plane validates the credentials before creating the account.
 func (s *DatadogAccountService) CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error) {
 	s.logger.Debug("creating datadog account with credentials via API", "id", id.String(), "accountID", accountID, "site", site)
-	input := client.CreateDatadogAccountWithCredentialsInput{
-		Attributes: client.CreateDatadogAccountInput{
+	input := gen.CreateDatadogAccountWithCredentialsInput{
+		Attributes: gen.CreateDatadogAccountInput{
 			Id:        id.String(),
 			AccountID: accountID,
 			Name:      name,
-			Site:      client.DatadogAccountSite(site), // US1, US5, EU1, etc.
+			Site:      gen.DatadogAccountSite(site), // US1, US5, EU1, etc.
 		},
-		Credentials: client.CreateDatadogCredentialsInput{
+		Credentials: gen.CreateDatadogCredentialsInput{
 			ApiKey: apiKey,
 			AppKey: appKey,
 		},

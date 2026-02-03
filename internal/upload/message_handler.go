@@ -1,35 +1,42 @@
 package upload
 
+// Message Upload Flow
+//
+// The upload queue handles DURABILITY ONLY. It persists messages to the
+// control plane via GraphQL so they survive device loss and sync across devices.
+//
+// The upload queue does NOT call the Chat API. The TUI calls the Chat API
+// directly with the full message history and streams the response.
+//
+// Flow:
+//   1. User submits message in TUI
+//   2. TUI writes user message to SQLite (creates ps_crud PUT entry)
+//   3. TUI calls Chat API directly, streams response
+//   4. TUI writes assistant message to SQLite as deltas arrive
+//   5. Upload queue (background) persists messages to GraphQL
+//
+// For user messages: upload on PUT (initial create)
+// For assistant messages: upload when complete (entry contains stop_reason)
+
 import (
 	"context"
 	"fmt"
 
-	"github.com/usetero/cli/internal/chat"
-	"github.com/usetero/cli/internal/chat/block"
+	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// Message handler events
-
-// MessageProcessingEvent is emitted when we start processing a user message.
-// The TUI can use this to show a loading indicator until the assistant message appears.
-type MessageProcessingEvent struct {
-	ConversationID string
-	UserMessageID  string
-}
-
-func (MessageProcessingEvent) uploadEvent() {}
-
-// messageHandler handles uploading messages to the Chat API.
+// messageHandler persists messages to the control plane via GraphQL.
 type messageHandler struct {
-	messages chat.Messages
+	messages api.Messages
 	db       sqlite.Database
 	logger   log.Logger
 }
 
-func newMessageHandler(messages chat.Messages, db sqlite.Database, logger log.Logger) *messageHandler {
+func newMessageHandler(messages api.Messages, db sqlite.Database, logger log.Logger) *messageHandler {
 	return &messageHandler{
 		messages: messages,
 		db:       db,
@@ -37,19 +44,13 @@ func newMessageHandler(messages chat.Messages, db sqlite.Database, logger log.Lo
 	}
 }
 
-// Handle uploads a message to the backend.
-func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
+// Handle persists a message to the control plane.
+func (h *messageHandler) Handle(ctx context.Context, entry *db.CrudEntry, emit Emitter) error {
 	switch entry.Op {
-	case powersync.OpPut:
-		return h.handlePut(ctx, entry, emit)
-	case powersync.OpPatch:
-		// Updates to messages (e.g., streaming content) don't need upload
-		// The final assistant message will be uploaded when complete
-		h.logger.Debug("skipping message PATCH", "id", entry.RowID)
-		return nil
-	case powersync.OpDelete:
+	case db.OpPut, db.OpPatch:
+		return h.handlePutOrPatch(ctx, entry)
+	case db.OpDelete:
 		// Messages are deleted via conversation deletion, not individually.
-		// Return nil to remove from queue without API call.
 		h.logger.Debug("skipping message DELETE", "id", entry.RowID)
 		return nil
 	default:
@@ -58,102 +59,54 @@ func (h *messageHandler) Handle(ctx context.Context, entry *powersync.CrudEntry,
 	}
 }
 
-func (h *messageHandler) handlePut(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
-	role, _ := entry.Data["role"].(string)
+func (h *messageHandler) handlePutOrPatch(ctx context.Context, entry *db.CrudEntry) error {
+	msg, err := h.db.Messages().Get(ctx, domain.MessageID(entry.RowID))
+	if err != nil {
+		// Message may have been deleted, skip
+		h.logger.Debug("message not found, skipping", "id", entry.RowID, "error", err)
+		return nil
+	}
 
-	switch chat.MessageRole(role) {
-	case chat.RoleUser:
-		return h.handleUserMessage(ctx, entry, emit)
-	case chat.RoleAssistant:
-		return h.handleAssistantMessage(ctx, entry)
+	switch msg.Role {
+	case domain.RoleUser:
+		// User messages: persist on PUT (initial create)
+		if entry.Op == db.OpPut {
+			return h.persistUserMessage(ctx, entry, msg)
+		}
+		h.logger.Debug("skipping user message PATCH", "id", entry.RowID)
+		return nil
+
+	case domain.RoleAssistant:
+		// Assistant messages: persist when complete (entry sets stop_reason)
+		_, hasStopReason := entry.Data["stop_reason"]
+		if !hasStopReason {
+			h.logger.Debug("skipping assistant message (incomplete)", "id", entry.RowID, "op", entry.Op)
+			return nil
+		}
+		return h.persistAssistantMessage(ctx, msg)
+
 	default:
-		h.logger.Warn("unknown message role", "role", role)
+		h.logger.Warn("unknown message role", "role", msg.Role)
 		return nil
 	}
 }
 
-// handleUserMessage uploads a user message and handles the streaming response.
-func (h *messageHandler) handleUserMessage(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
-	conversationID, _ := entry.Data["conversation_id"].(string)
-	accountID, _ := entry.Data["account_id"].(string)
-	content, _ := entry.Data["content"].(string)
-
-	// Emit processing event before starting the HTTP request
-	emit(MessageProcessingEvent{
-		ConversationID: conversationID,
-		UserMessageID:  entry.RowID,
-	})
-
-	// Track assistant message state
-	var assistantMsgID string
-	var model string
-	var stopReason string
-	messageCreated := false
-
-	// Accumulate content blocks as structured data
-	acc := block.NewAccumulator()
-
-	err := h.messages.UploadUserMessage(ctx, entry.RowID, conversationID, content, func(event chat.StreamEvent) error {
-		if event.Done {
-			h.logger.Debug("stream complete", "assistantMsgID", assistantMsgID, "stopReason", stopReason)
-			// Update stop_reason when stream completes (if we have one from the stream)
-			if messageCreated && stopReason != "" {
-				if err := h.db.Messages().UpdateMeta(ctx, assistantMsgID, model, stopReason); err != nil {
-					h.logger.Warn("failed to update assistant message meta", "error", err)
-				}
-			}
-			return nil
-		}
-
-		// Capture stop_reason from message_stop event
-		if event.Type == block.TypeMessageStop && event.MessageStop != nil {
-			stopReason = event.MessageStop.StopReason
-			return nil
-		}
-
-		// Create assistant message on stream start
-		if event.Type == block.TypeMessageStart && event.MessageStart != nil {
-			model = event.MessageStart.Model
-			var err error
-			assistantMsgID, err = h.db.Messages().CreateAssistantMessage(ctx, accountID, conversationID, model)
-			if err != nil {
-				return fmt.Errorf("create assistant message: %w", err)
-			}
-			messageCreated = true
-			h.logger.Debug("created assistant message", "id", assistantMsgID, "model", model)
-			return nil
-		}
-
-		// Accumulator handles all content block types
-		if acc.Apply(event.Block) && messageCreated {
-			if err := h.db.Messages().UpdateContent(ctx, assistantMsgID, acc.JSON()); err != nil {
-				h.logger.Warn("failed to update assistant message", "error", err)
-			}
-		}
-
-		return nil
-	})
-
+func (h *messageHandler) persistUserMessage(ctx context.Context, entry *db.CrudEntry, msg *domain.Message) error {
+	err := h.messages.CreateMessage(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("upload user message: %w", err)
+		return fmt.Errorf("persist user message: %w", err)
 	}
 
-	h.logger.Debug("uploaded user message", "id", entry.RowID)
+	h.logger.Debug("persisted user message", "id", entry.RowID)
 	return nil
 }
 
-// handleAssistantMessage uploads an assistant message for durability.
-func (h *messageHandler) handleAssistantMessage(ctx context.Context, entry *powersync.CrudEntry) error {
-	conversationID, _ := entry.Data["conversation_id"].(string)
-	content, _ := entry.Data["content"].(string)
-	model, _ := entry.Data["model"].(string)
-	stopReason, _ := entry.Data["stop_reason"].(string)
-
-	err := h.messages.UploadAssistantMessage(ctx, entry.RowID, conversationID, content, model, stopReason)
+func (h *messageHandler) persistAssistantMessage(ctx context.Context, msg *domain.Message) error {
+	err := h.messages.CreateMessage(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("upload assistant message: %w", err)
+		return fmt.Errorf("persist assistant message: %w", err)
 	}
 
-	h.logger.Debug("uploaded assistant message", "id", entry.RowID)
+	h.logger.Debug("persisted assistant message", "id", msg.ID)
 	return nil
 }

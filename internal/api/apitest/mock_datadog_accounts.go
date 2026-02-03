@@ -16,6 +16,11 @@ type MockDatadogAccounts struct {
 	GetStatusFunc      func(ctx context.Context, datadogAccountID string) (*api.DatadogAccountStatus, error)
 }
 
+// NewMockDatadogAccounts creates a MockDatadogAccounts with sensible defaults.
+func NewMockDatadogAccounts() *MockDatadogAccounts {
+	return &MockDatadogAccounts{}
+}
+
 func (m *MockDatadogAccounts) HasAccount(ctx context.Context, accountID string) (bool, error) {
 	if m.HasAccountFunc != nil {
 		return m.HasAccountFunc(ctx, accountID)

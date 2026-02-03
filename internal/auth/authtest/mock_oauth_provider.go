@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // MockOAuthProvider is a test double for auth.OAuthProvider.
@@ -11,7 +12,7 @@ type MockOAuthProvider struct {
 	AuthorizeDeviceFunc              func(ctx context.Context) (*auth.DeviceAuthResponse, error)
 	PollAuthenticationFunc           func(ctx context.Context, deviceCode string) (*auth.AuthenticationResponse, error)
 	RefreshTokenFunc                 func(ctx context.Context, refreshToken string) (*auth.RefreshResponse, error)
-	RefreshTokenWithOrganizationFunc func(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error)
+	RefreshTokenWithOrganizationFunc func(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error)
 }
 
 func (m *MockOAuthProvider) AuthorizeDevice(ctx context.Context) (*auth.DeviceAuthResponse, error) {
@@ -35,7 +36,7 @@ func (m *MockOAuthProvider) RefreshToken(ctx context.Context, refreshToken strin
 	return nil, nil
 }
 
-func (m *MockOAuthProvider) RefreshTokenWithOrganization(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error) {
+func (m *MockOAuthProvider) RefreshTokenWithOrganization(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error) {
 	if m.RefreshTokenWithOrganizationFunc != nil {
 		return m.RefreshTokenWithOrganizationFunc(ctx, refreshToken, organizationID)
 	}

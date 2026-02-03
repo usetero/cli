@@ -4,15 +4,16 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api/gen"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/pkg/client"
 )
 
 // Accounts provides access to accounts.
 type Accounts interface {
-	List(ctx context.Context, organizationID string) ([]Account, error)
-	Get(ctx context.Context, accountID string) (*Account, error)
-	Create(ctx context.Context, id uuid.UUID, organizationID, name string) (*Account, error)
+	List(ctx context.Context, organizationID domain.OrganizationID) ([]domain.Account, error)
+	Get(ctx context.Context, accountID domain.AccountID) (*domain.Account, error)
+	Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error)
 }
 
 // AccountService handles account-related API operations.
@@ -32,26 +33,20 @@ func NewAccountService(client Client, logger log.Logger) *AccountService {
 	}
 }
 
-// Account is the domain model for an account.
-type Account struct {
-	ID   string
-	Name string
-}
-
 // List fetches all accounts for an organization.
-func (s *AccountService) List(ctx context.Context, organizationID string) ([]Account, error) {
+func (s *AccountService) List(ctx context.Context, organizationID domain.OrganizationID) ([]domain.Account, error) {
 	s.logger.Debug("fetching accounts from API", "organizationID", organizationID)
-	resp, err := s.client.ListAccounts(ctx, organizationID)
+	resp, err := s.client.ListAccounts(ctx, organizationID.String())
 	if err != nil {
 		s.logger.Error("failed to fetch accounts", "error", err, "organizationID", organizationID)
 		return nil, err
 	}
 
 	// Convert GraphQL response to domain model
-	accounts := make([]Account, len(resp.Accounts.Edges))
+	accounts := make([]domain.Account, len(resp.Accounts.Edges))
 	for i, edge := range resp.Accounts.Edges {
-		accounts[i] = Account{
-			ID:   edge.Node.Id,
+		accounts[i] = domain.Account{
+			ID:   domain.AccountID(edge.Node.Id),
 			Name: edge.Node.Name,
 		}
 	}
@@ -61,9 +56,9 @@ func (s *AccountService) List(ctx context.Context, organizationID string) ([]Acc
 }
 
 // Get fetches a single account by ID. Returns nil if not found.
-func (s *AccountService) Get(ctx context.Context, accountID string) (*Account, error) {
+func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*domain.Account, error) {
 	s.logger.Debug("fetching account from API", "accountID", accountID)
-	resp, err := s.client.GetAccount(ctx, accountID)
+	resp, err := s.client.GetAccount(ctx, accountID.String())
 	if err != nil {
 		s.logger.Error("failed to fetch account", "error", err, "accountID", accountID)
 		return nil, err
@@ -76,18 +71,18 @@ func (s *AccountService) Get(ctx context.Context, accountID string) (*Account, e
 	}
 
 	node := resp.Accounts.Edges[0].Node
-	return &Account{
-		ID:   node.Id,
+	return &domain.Account{
+		ID:   domain.AccountID(node.Id),
 		Name: node.DatadogAccount.Name,
 	}, nil
 }
 
 // Create creates a new account with the given client-provided ID.
-func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID, name string) (*Account, error) {
+func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error) {
 	s.logger.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
-	input := client.CreateAccountInput{
+	input := gen.CreateAccountInput{
 		Id:             id.String(),
-		OrganizationID: organizationID,
+		OrganizationID: organizationID.String(),
 		Name:           name,
 	}
 
@@ -97,8 +92,8 @@ func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationI
 		return nil, err
 	}
 
-	account := &Account{
-		ID:   resp.CreateAccount.Id,
+	account := &domain.Account{
+		ID:   domain.AccountID(resp.CreateAccount.Id),
 		Name: resp.CreateAccount.Name,
 	}
 

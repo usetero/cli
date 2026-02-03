@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -16,7 +17,7 @@ type Auth interface {
 	GetAccessToken(ctx context.Context) (string, error)
 	ClearTokens() error
 	RefreshTokenWithoutOrganization(ctx context.Context) (string, error)
-	RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error)
+	RefreshTokenWithOrganization(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error)
 }
 
 // Service handles authentication business logic.
@@ -258,7 +259,7 @@ func (s *Service) RefreshTokenWithoutOrganization(ctx context.Context) (string, 
 // RefreshTokenWithOrganization refreshes the access token scoped to an organization.
 // This is used after creating/selecting an organization to get a token with the org_id claim.
 // Returns the new access token so callers can update their API clients.
-func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error) {
+func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error) {
 	s.logger.Debug("refreshing token with organization", "workos_org_id", workosOrgID)
 
 	refreshToken, err := s.storage.Get("refresh_token")

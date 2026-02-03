@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-const baseURL = "https://api.workos.com"
+const (
+	baseURL        = "https://api.workos.com"
+	requestTimeout = 30 * time.Second
+)
 
 // Client provides access to WorkOS device code flow authentication.
 type Client struct {
@@ -26,6 +29,6 @@ func NewClient(clientID string, audiences ...string) *Client {
 		baseURL:    baseURL,
 		clientID:   clientID,
 		audiences:  audiences,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: &http.Client{Timeout: requestTimeout},
 	}
 }

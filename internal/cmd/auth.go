@@ -13,20 +13,21 @@ import (
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
-	"github.com/usetero/cli/pkg/client"
 )
 
 // org represents an organization for selection
 type org struct {
-	ID       string
+	ID       domain.OrganizationID
 	Name     string
-	WorkosID string
+	WorkosID domain.WorkosOrganizationID
 }
 
 func NewAuthCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
@@ -101,11 +102,8 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			// Fetch organizations
-			refreshFunc := func() (string, error) {
-				return authService.GetAccessToken(ctx)
-			}
-			apiClient := client.New(cliConfig.APIEndpoint, result.AccessToken, refreshFunc)
-			orgs, err := fetchOrganizations(ctx, apiClient)
+			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
 				fmt.Println(s.Help.Render("\nCould not fetch organizations: " + err.Error()))
@@ -132,13 +130,10 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			// Refresh token with selected org
-			newToken, err := authService.RefreshTokenWithOrganization(ctx, selectedOrg.WorkosID)
+			_, err = authService.RefreshTokenWithOrganization(ctx, selectedOrg.WorkosID)
 			if err != nil {
 				return fmt.Errorf("failed to select organization: %w", err)
 			}
-
-			// Update the API client with new token (not strictly needed, but consistent)
-			apiClient.SetAccessToken(newToken)
 
 			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
@@ -166,18 +161,14 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 
 			ctx := cmd.Context()
 
-			// Get current token
-			token, err := authService.GetAccessToken(ctx)
-			if err != nil {
+			// Verify authenticated
+			if _, err := authService.GetAccessToken(ctx); err != nil {
 				return fmt.Errorf("not authenticated: run 'tero auth login' first")
 			}
 
 			// Fetch organizations
-			refreshFunc := func() (string, error) {
-				return authService.GetAccessToken(ctx)
-			}
-			apiClient := client.New(cliConfig.APIEndpoint, token, refreshFunc)
-			orgs, err := fetchOrganizations(ctx, apiClient)
+			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				return fmt.Errorf("failed to fetch organizations: %w", err)
 			}
@@ -319,17 +310,12 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 				orgName := workosOrgID // fallback to ID
 				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 				authService := auth.NewService(workosClient, tokenStore, logger)
-				if currentToken, err := authService.GetAccessToken(cmd.Context()); err == nil {
-					refreshFunc := func() (string, error) {
-						return authService.GetAccessToken(cmd.Context())
-					}
-					apiClient := client.New(cliConfig.APIEndpoint, currentToken, refreshFunc)
-					if orgs, err := fetchOrganizations(cmd.Context(), apiClient); err == nil {
-						for _, o := range orgs {
-							if o.WorkosID == workosOrgID {
-								orgName = o.Name
-								break
-							}
+				services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+				if orgs, err := fetchOrganizations(cmd.Context(), services); err == nil {
+					for _, o := range orgs {
+						if o.WorkosID == domain.WorkosOrganizationID(workosOrgID) {
+							orgName = o.Name
+							break
 						}
 					}
 				}
@@ -353,18 +339,18 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 }
 
 // fetchOrganizations fetches the list of organizations from the API
-func fetchOrganizations(ctx context.Context, apiClient *client.Client) ([]org, error) {
-	resp, err := apiClient.ListOrganizations(ctx)
+func fetchOrganizations(ctx context.Context, services api.APIServices) ([]org, error) {
+	apiOrgs, err := services.Organizations.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	orgs := make([]org, 0, len(resp.Organizations.Edges))
-	for _, edge := range resp.Organizations.Edges {
+	orgs := make([]org, 0, len(apiOrgs))
+	for _, o := range apiOrgs {
 		orgs = append(orgs, org{
-			ID:       edge.Node.Id,
-			Name:     edge.Node.Name,
-			WorkosID: edge.Node.WorkosOrganizationID,
+			ID:       o.ID,
+			Name:     o.Name,
+			WorkosID: o.WorkosOrganizationID,
 		})
 	}
 	return orgs, nil

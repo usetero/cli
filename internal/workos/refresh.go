@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // RefreshToken exchanges a refresh token for a new access token.
@@ -19,11 +20,11 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*auth.R
 
 // RefreshTokenWithOrganization exchanges a refresh token for a new access token scoped to an organization.
 // The organizationID should be the WorkOS organization ID.
-func (c *Client) RefreshTokenWithOrganization(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error) {
+func (c *Client) RefreshTokenWithOrganization(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error) {
 	return c.refreshToken(ctx, refreshToken, organizationID)
 }
 
-func (c *Client) refreshToken(ctx context.Context, refreshToken, organizationID string) (*auth.RefreshResponse, error) {
+func (c *Client) refreshToken(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error) {
 	endpoint := fmt.Sprintf("%s/user_management/authenticate", c.baseURL)
 
 	data := url.Values{}
@@ -31,7 +32,7 @@ func (c *Client) refreshToken(ctx context.Context, refreshToken, organizationID 
 	data.Set("refresh_token", refreshToken)
 	data.Set("grant_type", "refresh_token")
 	if organizationID != "" {
-		data.Set("organization_id", organizationID)
+		data.Set("organization_id", organizationID.String())
 	}
 	for _, aud := range c.audiences {
 		data.Add("audience", aud)

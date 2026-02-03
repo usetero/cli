@@ -16,7 +16,6 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
-	"github.com/usetero/cli/pkg/client"
 )
 
 func NewDebugCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
@@ -59,15 +58,14 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 				return nil
 			}
 
-			// Get API client
-			apiClient, err := getAPIClient(cmd.Context(), logger, cliConfig)
+			// Get API services
+			services, err := getAPIServices(cmd.Context(), logger, cliConfig)
 			if err != nil {
 				return err
 			}
 
 			// Get the datadog account for this account
-			ddService := api.NewDatadogAccountService(apiClient, logger)
-			ddAccount, err := ddService.GetAccount(cmd.Context(), accountID)
+			ddAccount, err := services.DatadogAccounts.GetAccount(cmd.Context(), accountID.String())
 			if err != nil {
 				return fmt.Errorf("failed to get datadog account: %w", err)
 			}
@@ -78,7 +76,7 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 			}
 
 			// Fetch status
-			ddStatus, err := ddService.GetStatus(cmd.Context(), ddAccount.ID)
+			ddStatus, err := services.DatadogAccounts.GetStatus(cmd.Context(), ddAccount.ID)
 			if err != nil {
 				return fmt.Errorf("failed to fetch status: %w", err)
 			}
@@ -166,10 +164,10 @@ func newDebugPrefsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 				}
 			}
 
-			printPref("Organization ID", prefs.GetDefaultOrgID())
+			printPref("Organization ID", prefs.GetDefaultOrgID().String())
 			printPref("Organization Name", prefs.GetDefaultOrgName())
-			printPref("Account ID", prefs.GetDefaultAccountID())
-			printPref("Workspace ID", prefs.GetDefaultWorkspaceID())
+			printPref("Account ID", prefs.GetDefaultAccountID().String())
+			printPref("Workspace ID", prefs.GetDefaultWorkspaceID().String())
 			printPref("Role", prefs.GetRole())
 			printPref("Email", prefs.GetEmail())
 
@@ -209,8 +207,8 @@ func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.C
 				}
 			}
 
-			// Get API client
-			apiClient, err := getAPIClient(cmd.Context(), logger, cliConfig)
+			// Get API services
+			services, err := getAPIServices(cmd.Context(), logger, cliConfig)
 			if err != nil {
 				return err
 			}
@@ -220,12 +218,12 @@ func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.C
 			if cfg != nil {
 				prefs := preferences.NewService(cfg, logger)
 				if accountID := prefs.GetDefaultAccountID(); accountID != "" {
-					apiClient.SetAccountID(accountID)
+					services.SetAccountID(accountID)
 				}
 			}
 
 			// Execute query
-			result, err := apiClient.RawQuery(cmd.Context(), query, vars)
+			result, err := services.RawQuery(cmd.Context(), query, vars)
 			if err != nil {
 				return fmt.Errorf("query failed: %w", err)
 			}
@@ -293,23 +291,20 @@ func newDebugPathsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 	}
 }
 
-// getAPIClient creates an authenticated API client
-func getAPIClient(ctx context.Context, logger log.Logger, cliConfig *config.CLIConfig) (*client.Client, error) {
+// getAPIServices creates authenticated API services
+func getAPIServices(ctx context.Context, logger log.Logger, cliConfig *config.CLIConfig) (api.APIServices, error) {
 	namespace := cliConfig.Namespace()
 	tokenStore := keyring.New(namespace)
 	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 	authService := auth.NewService(workosClient, tokenStore, logger)
 
-	token, err := authService.GetAccessToken(ctx)
+	// Verify we're authenticated
+	_, err := authService.GetAccessToken(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("not authenticated: run 'tero auth login' first")
+		return api.APIServices{}, fmt.Errorf("not authenticated: run 'tero auth login' first")
 	}
 
-	refreshFunc := func() (string, error) {
-		return authService.GetAccessToken(ctx)
-	}
-
-	return client.New(cliConfig.APIEndpoint, token, refreshFunc), nil
+	return api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger), nil
 }
 
 func ifEmpty(s, fallback string) string {

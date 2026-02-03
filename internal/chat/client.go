@@ -1,7 +1,13 @@
+// Package chat provides a client for the stateless Chat API.
+//
+// The Chat API is a pure function: f(messages, context) → stream of blocks.
+// It doesn't read or write messages to any database. The client sends the
+// full conversation history on every request and receives a streamed response.
+//
+// Message persistence is handled separately by the caller.
 package chat
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,84 +15,99 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/usetero/cli/internal/chat/block"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 )
 
-// Client communicates with the Tero Chat API.
-type Client struct {
-	endpoint   string
-	httpClient *http.Client
-	token      string
-	accountID  string
-	log        log.Logger
+const (
+	retryMax     = 3
+	retryWaitMin = 100 * time.Millisecond
+	retryWaitMax = 2 * time.Second
+)
+
+// HTTPDoer is the interface for making HTTP requests.
+type HTTPDoer interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
+// Client sends messages to the Chat API and streams responses.
+// This interface allows services to be tested without real API calls.
+type Client interface {
+	Send(ctx context.Context, req Request, handler Handler) error
+	SetAccountID(accountID string)
+}
+
+// client is the concrete implementation of Client.
+type client struct {
+	endpoint   string
+	httpClient HTTPDoer
+	auth       auth.Auth
+	accountID  string
+	logger     log.Logger
+}
+
+// Ensure client implements Client.
+var _ Client = (*client)(nil)
+
 // NewClient creates a new Chat API client.
-func NewClient(endpoint string, logger log.Logger) *Client {
-	return &Client{
+// - Retries transient errors (connection reset, 502/503/504) up to 3 times with backoff
+// - Gets a fresh token via auth.GetAccessToken before each request
+func NewClient(endpoint string, authService auth.Auth, logger log.Logger) Client {
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = retryMax
+	retryClient.RetryWaitMin = retryWaitMin
+	retryClient.RetryWaitMax = retryWaitMax
+	retryClient.Logger = nil
+
+	return &client{
 		endpoint:   strings.TrimSuffix(endpoint, "/"),
-		httpClient: &http.Client{},
-		log:        logger,
+		httpClient: retryClient.StandardClient(),
+		auth:       authService,
+		logger:     logger,
 	}
 }
 
-// SetToken sets the authentication token.
-func (c *Client) SetToken(token string) {
-	c.token = token
+// NewClientWithHTTP creates a new Chat API client with a custom HTTP client (for testing).
+func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDoer, logger log.Logger) Client {
+	return &client{
+		endpoint:   strings.TrimSuffix(endpoint, "/"),
+		httpClient: httpClient,
+		auth:       authService,
+		logger:     logger,
+	}
 }
 
 // SetAccountID sets the account ID for requests.
-func (c *Client) SetAccountID(accountID string) {
+func (c *client) SetAccountID(accountID string) {
 	c.accountID = accountID
 }
 
-// MessageRole is the role of a message sender.
-type MessageRole string
+// Handler is called for each event in the response stream.
+type Handler func(Event) error
 
-const (
-	RoleUser      MessageRole = "user"
-	RoleAssistant MessageRole = "assistant"
-)
+// Send sends the conversation to the Chat API and streams the response.
+//
+// The handler is called for each event:
+//   - MessageStart: contains model info
+//   - TextDelta, ThinkingDelta, ToolInputDelta: streaming content
+//   - ToolUse: complete tool call
+//   - MessageStop: contains stop_reason, signals end of response
+//   - Done: stream complete (after MessageStop)
+func (c *client) Send(ctx context.Context, req Request, handler Handler) error {
+	c.logger.Debug("sending to chat API",
+		log.String("conversation_id", req.ConversationID),
+		log.Int("message_count", len(req.Messages)),
+		log.Int("context_count", len(req.Context)),
+	)
 
-// SendMessageRequest is the request body for sending a message.
-type SendMessageRequest struct {
-	MessageID      string        `json:"message_id"`
-	ConversationID string        `json:"conversation_id"`
-	Role           MessageRole   `json:"role"`
-	Content        []block.Block `json:"content"`
-	// Required for assistant messages only
-	Model      string `json:"model,omitempty"`
-	StopReason string `json:"stop_reason,omitempty"`
-}
-
-// SendMessageResponse is the response for assistant message saves.
-type SendMessageResponse struct {
-	MessageID      string `json:"message_id"`
-	ConversationID string `json:"conversation_id"`
-	CreatedAt      string `json:"created_at"`
-}
-
-// StreamEvent represents an SSE event from the chat stream.
-// The server sends typed blocks directly.
-type StreamEvent struct {
-	block.Block                 // Embedded block (type, text, thinking, tool_use, tool_result, message_start, message_stop)
-	Done        bool            `json:"-"` // Set when we receive [DONE]
-	Raw         json.RawMessage `json:"-"` // The raw event data
-}
-
-// StreamHandler is called for each event in the stream.
-type StreamHandler func(event StreamEvent) error
-
-// SendUserMessage sends a user message and streams the response.
-// The handler is called for each SSE event received.
-func (c *Client) SendUserMessage(ctx context.Context, req SendMessageRequest, handler StreamHandler) error {
-	if req.Role != RoleUser {
-		return fmt.Errorf("SendUserMessage requires role=user")
+	// Get fresh token for this request
+	token, err := c.auth.GetAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("get access token: %w", err)
 	}
-
-	c.log.Info("sending message", log.String("messageID", req.MessageID), log.String("conversationID", req.ConversationID))
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -98,120 +119,33 @@ func (c *Client) SendUserMessage(ctx context.Context, req SendMessageRequest, ha
 		return fmt.Errorf("create request: %w", err)
 	}
 
-	c.setHeaders(httpReq)
-	httpReq.Header.Set("Accept", "text/event-stream")
+	c.setHeaders(httpReq, token)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		c.log.Error("failed to send message", log.Any("error", err))
 		return fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		c.log.Error("chat API error", log.Int("status", resp.StatusCode))
 		return fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Verify we got an SSE stream, not JSON or HTML
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "text/event-stream") {
 		body, _ := io.ReadAll(resp.Body)
-		c.log.Error("unexpected content type", log.String("contentType", contentType))
-		return fmt.Errorf("chat API returned %s instead of text/event-stream (check TERO_CHAT_ENDPOINT): %s", contentType, string(body))
+		return fmt.Errorf("expected text/event-stream, got %s: %s", contentType, string(body))
 	}
 
-	c.log.Debug("streaming response")
-	return c.readSSEStream(resp.Body, handler)
+	return readStream(resp.Body, handler)
 }
 
-// SaveAssistantMessage saves an assistant message for durability.
-func (c *Client) SaveAssistantMessage(ctx context.Context, req SendMessageRequest) (*SendMessageResponse, error) {
-	if req.Role != RoleAssistant {
-		return nil, fmt.Errorf("SaveAssistantMessage requires role=assistant")
-	}
-
-	c.log.Debug("saving assistant message", log.String("messageID", req.MessageID))
-
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint+"/api/chat/v1/messages", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	c.setHeaders(httpReq)
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		c.log.Error("failed to save assistant message", log.Any("error", err))
-		return nil, fmt.Errorf("send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		c.log.Error("chat API error", log.Int("status", resp.StatusCode))
-		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
-	}
-
-	var result SendMessageResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
-	}
-
-	c.log.Debug("assistant message saved", log.String("messageID", result.MessageID))
-	return &result, nil
-}
-
-func (c *Client) setHeaders(req *http.Request) {
+func (c *client) setHeaders(req *http.Request, token string) {
 	req.Header.Set("Content-Type", "application/json")
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	}
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Authorization", "Bearer "+token)
 	if c.accountID != "" {
 		req.Header.Set("X-Account-ID", c.accountID)
 	}
-}
-
-func (c *Client) readSSEStream(r io.Reader, handler StreamHandler) error {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Skip empty lines and comments
-		if line == "" || strings.HasPrefix(line, ":") {
-			continue
-		}
-
-		// Parse SSE data line
-		if !strings.HasPrefix(line, "data: ") {
-			continue
-		}
-
-		data := strings.TrimPrefix(line, "data: ")
-
-		// Check for stream end
-		if data == "[DONE]" {
-			c.log.Info("response received")
-			return handler(StreamEvent{Done: true})
-		}
-
-		// Parse JSON event
-		var event StreamEvent
-		if err := json.Unmarshal([]byte(data), &event); err != nil {
-			return fmt.Errorf("parse SSE event: %w", err)
-		}
-		event.Raw = json.RawMessage(data)
-
-		if err := handler(event); err != nil {
-			return err
-		}
-	}
-
-	return scanner.Err()
 }

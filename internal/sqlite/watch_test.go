@@ -6,16 +6,18 @@ import (
 	"time"
 
 	_ "github.com/usetero/cli/internal/powersync" // registers extension via init()
+	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
-// setupWatchDB creates a database with PowerSync extension loaded and hooks installed.
+// setupWatchDB creates a database with PowerSync extension loaded.
+// Hooks are installed automatically by Open().
 func setupWatchDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
 	ctx := context.Background()
-	db := sqlitetest.OpenTest(t)
+	db := sqlitetest.OpenBareDB(t)
 
 	// Create a test table
 	_, err := db.Exec(ctx, "CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
@@ -25,61 +27,6 @@ func setupWatchDB(t *testing.T) *sqlite.DB {
 	}
 
 	return db
-}
-
-func TestDB_InstallUpdateHooks(t *testing.T) {
-	t.Parallel()
-
-	t.Run("installs hooks successfully", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := context.Background()
-		db := setupWatchDB(t)
-		defer db.Close()
-
-		err := db.InstallUpdateHooks(ctx)
-		if err != nil {
-			t.Errorf("InstallUpdateHooks() error = %v", err)
-		}
-	})
-
-	t.Run("is idempotent", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := context.Background()
-		db := setupWatchDB(t)
-		defer db.Close()
-
-		// Install twice
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("first InstallUpdateHooks() error = %v", err)
-		}
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("second InstallUpdateHooks() error = %v", err)
-		}
-
-		// Should still work - insert and verify subscriber gets notified
-		sub := db.Subscribe()
-		defer sub.Stop()
-
-		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
-		if err != nil {
-			t.Fatalf("INSERT error = %v", err)
-		}
-
-		select {
-		case tables := <-sub.Changes():
-			if len(tables) != 1 || tables[0] != "messages" {
-				t.Errorf("expected [messages], got %v", tables)
-			}
-		case <-time.After(100 * time.Millisecond):
-			t.Error("expected notification, got timeout")
-		}
-	})
-
-	// Note: "fails without PowerSync extension" test removed because
-	// extension is now globally registered via RegisterExtension() and
-	// automatically loaded on every connection.
 }
 
 func TestDB_Subscribe(t *testing.T) {
@@ -105,10 +52,6 @@ func TestDB_Subscribe(t *testing.T) {
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
 		sub1 := db.Subscribe()
 		defer sub1.Stop()
 		sub2 := db.Subscribe()
@@ -123,36 +66,12 @@ func TestDB_Subscribe(t *testing.T) {
 		for i, sub := range []*sqlite.Subscription{sub1, sub2} {
 			select {
 			case tables := <-sub.Changes():
-				if len(tables) != 1 || tables[0] != "messages" {
+				if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 					t.Errorf("subscriber %d: expected [messages], got %v", i+1, tables)
 				}
 			case <-time.After(100 * time.Millisecond):
 				t.Errorf("subscriber %d: expected notification, got timeout", i+1)
 			}
-		}
-	})
-
-	t.Run("no notification without hooks installed", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := context.Background()
-		db := setupWatchDB(t)
-		defer db.Close()
-
-		// Subscribe but don't install hooks
-		sub := db.Subscribe()
-		defer sub.Stop()
-
-		_, err := db.Exec(ctx, "INSERT INTO messages (content) VALUES ('test')")
-		if err != nil {
-			t.Fatalf("INSERT error = %v", err)
-		}
-
-		select {
-		case tables := <-sub.Changes():
-			t.Errorf("expected no notification without hooks, got %v", tables)
-		case <-time.After(50 * time.Millisecond):
-			// Expected - no notification
 		}
 	})
 }
@@ -201,10 +120,6 @@ func TestSubscription_Stop(t *testing.T) {
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
 		sub := db.Subscribe()
 		sub.Stop()
 
@@ -235,10 +150,6 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
 		sub := db.Subscribe()
 		defer sub.Stop()
 
@@ -249,7 +160,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 
 		select {
 		case tables := <-sub.Changes():
-			if len(tables) != 1 || tables[0] != "messages" {
+			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
 		case <-time.After(100 * time.Millisecond):
@@ -270,10 +181,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
+		// Drain the INSERT notification
 		sub := db.Subscribe()
 		defer sub.Stop()
 
@@ -284,7 +192,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 
 		select {
 		case tables := <-sub.Changes():
-			if len(tables) != 1 || tables[0] != "messages" {
+			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
 		case <-time.After(100 * time.Millisecond):
@@ -305,10 +213,6 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			t.Fatalf("INSERT error = %v", err)
 		}
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
 		sub := db.Subscribe()
 		defer sub.Stop()
 
@@ -319,7 +223,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 
 		select {
 		case tables := <-sub.Changes():
-			if len(tables) != 1 || tables[0] != "messages" {
+			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
 		case <-time.After(100 * time.Millisecond):
@@ -333,10 +237,6 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
-
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
 
 		sub := db.Subscribe()
 		defer sub.Stop()
@@ -363,10 +263,6 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		db := setupWatchDB(t)
 		defer db.Close()
 
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
-
 		sub := db.Subscribe()
 		defer sub.Stop()
 
@@ -388,26 +284,15 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
-		db := setupWatchDB(t)
-		defer db.Close()
-
-		// Create second table
-		_, err := db.Exec(ctx, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
-		if err != nil {
-			t.Fatalf("CREATE TABLE error = %v", err)
-		}
-
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
+		db := dbtest.OpenTestDB(t)
 
 		sub := db.Subscribe()
 		defer sub.Stop()
 
-		// Insert into both tables in one transaction
-		_, err = db.Exec(ctx, `
-			INSERT INTO messages (content) VALUES ('hello');
-			INSERT INTO users (name) VALUES ('alice');
+		// Insert into both messages and conversations
+		_, err := db.Exec(ctx, `
+			INSERT INTO messages (id, account_id, conversation_id, role) VALUES ('msg-1', 'acc-1', 'conv-1', 'user');
+			INSERT INTO conversations (id, account_id, title) VALUES ('conv-1', 'acc-1', 'Test');
 		`)
 		if err != nil {
 			t.Fatalf("INSERT error = %v", err)
@@ -420,17 +305,126 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			}
 			// Check both tables are present (order may vary)
 			hasMessages := false
-			hasUsers := false
+			hasConversations := false
 			for _, table := range tables {
-				if table == "messages" {
+				if table == sqlite.TableMessages {
 					hasMessages = true
 				}
-				if table == "users" {
-					hasUsers = true
+				if table == sqlite.TableConversations {
+					hasConversations = true
 				}
 			}
-			if !hasMessages || !hasUsers {
-				t.Errorf("expected [messages, users], got %v", tables)
+			if !hasMessages || !hasConversations {
+				t.Errorf("expected [messages, conversations], got %v", tables)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Error("expected notification, got timeout")
+		}
+	})
+}
+
+func TestDB_Messages_NotifiesSubscribers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("CreateAssistantMessage notifies subscribers", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		db := dbtest.OpenTestDB(t)
+
+		sub := db.Subscribe()
+		defer sub.Stop()
+
+		_, err := db.Messages().CreateAssistantMessage(ctx, "acc-1", "conv-1", "claude-3")
+		if err != nil {
+			t.Fatalf("CreateAssistantMessage() error = %v", err)
+		}
+
+		select {
+		case tables := <-sub.Changes():
+			hasMessages := false
+			for _, table := range tables {
+				if table == sqlite.TableMessages {
+					hasMessages = true
+					break
+				}
+			}
+			if !hasMessages {
+				t.Errorf("expected messages table in %v", tables)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Error("expected notification, got timeout")
+		}
+	})
+
+	t.Run("UpdateContent notifies subscribers", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		db := dbtest.OpenTestDB(t)
+
+		// Create message first
+		msgID, err := db.Messages().CreateAssistantMessage(ctx, "acc-1", "conv-1", "claude-3")
+		if err != nil {
+			t.Fatalf("CreateAssistantMessage() error = %v", err)
+		}
+
+		sub := db.Subscribe()
+		defer sub.Stop()
+
+		err = db.Messages().UpdateContent(ctx, msgID, `[{"type":"text"}]`)
+		if err != nil {
+			t.Fatalf("UpdateContent() error = %v", err)
+		}
+
+		select {
+		case tables := <-sub.Changes():
+			hasMessages := false
+			for _, table := range tables {
+				if table == sqlite.TableMessages {
+					hasMessages = true
+					break
+				}
+			}
+			if !hasMessages {
+				t.Errorf("expected messages table in %v", tables)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Error("expected notification, got timeout")
+		}
+	})
+
+	t.Run("UpdateMeta notifies subscribers", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		db := dbtest.OpenTestDB(t)
+
+		// Create message first
+		msgID, err := db.Messages().CreateAssistantMessage(ctx, "acc-1", "conv-1", "claude-3")
+		if err != nil {
+			t.Fatalf("CreateAssistantMessage() error = %v", err)
+		}
+
+		sub := db.Subscribe()
+		defer sub.Stop()
+
+		err = db.Messages().UpdateMeta(ctx, msgID, "claude-3", "end_turn")
+		if err != nil {
+			t.Fatalf("UpdateMeta() error = %v", err)
+		}
+
+		select {
+		case tables := <-sub.Changes():
+			hasMessages := false
+			for _, table := range tables {
+				if table == sqlite.TableMessages {
+					hasMessages = true
+					break
+				}
+			}
+			if !hasMessages {
+				t.Errorf("expected messages table in %v", tables)
 			}
 		case <-time.After(100 * time.Millisecond):
 			t.Error("expected notification, got timeout")
@@ -447,10 +441,6 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 		ctx := context.Background()
 		db := setupWatchDB(t)
 		defer db.Close()
-
-		if err := db.InstallUpdateHooks(ctx); err != nil {
-			t.Fatalf("InstallUpdateHooks() error = %v", err)
-		}
 
 		sub := db.Subscribe()
 		defer sub.Stop()

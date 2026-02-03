@@ -1,6 +1,10 @@
 package auth
 
-import "context"
+import (
+	"context"
+
+	"github.com/usetero/cli/internal/domain"
+)
 
 // OAuthProvider defines the interface for OAuth device authorization flow.
 // This allows Service to work with any OAuth provider (WorkOS, Auth0, etc.).
@@ -9,7 +13,7 @@ type OAuthProvider interface {
 	AuthorizeDevice(ctx context.Context) (*DeviceAuthResponse, error)
 	PollAuthentication(ctx context.Context, deviceCode string) (*AuthenticationResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*RefreshResponse, error)
-	RefreshTokenWithOrganization(ctx context.Context, refreshToken, organizationID string) (*RefreshResponse, error)
+	RefreshTokenWithOrganization(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*RefreshResponse, error)
 }
 
 // DeviceAuthResponse represents the response from device authorization.

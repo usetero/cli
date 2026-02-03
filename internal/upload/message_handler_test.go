@@ -2,348 +2,278 @@ package upload
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
-	"github.com/usetero/cli/internal/chat"
-	"github.com/usetero/cli/internal/chat/block"
-	"github.com/usetero/cli/internal/chat/chattest"
+	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/powersync/powersynctest"
+	"github.com/usetero/cli/internal/powersync/db"
+	"github.com/usetero/cli/internal/powersync/db/dbtest"
 )
 
 func TestMessageHandler_Handle(t *testing.T) {
 	t.Parallel()
 
-	t.Run("uploads user message with correct parameters", func(t *testing.T) {
+	t.Run("persists user message on PUT", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 
-		var captured struct {
-			messageID      string
-			conversationID string
-			content        string
-		}
-
-		mock := &chattest.MockMessages{
-			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
-				captured.messageID = messageID
-				captured.conversationID = conversationID
-				captured.content = content
-				return handler(chat.StreamEvent{Done: true})
-			},
-		}
-
-		h := newMessageHandler(mock, db, logtest.New(t))
-
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
-			RowID: "msg-1",
-			Data: map[string]any{
-				"role":            "user",
-				"conversation_id": "conv-1",
-				"account_id":      "acc-1",
-				"content":         "Hello",
-			},
-		}
-
-		err := h.Handle(context.Background(), entry, noopEmitter())
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[{"type":"text","text":{"content":"Hello"}}]', 'user', '2024-01-01T00:00:00Z')`)
 		if err != nil {
-			t.Fatalf("Handle() error = %v", err)
+			t.Fatalf("insert message: %v", err)
 		}
 
-		if captured.messageID != "msg-1" {
-			t.Errorf("messageID = %q, want %q", captured.messageID, "msg-1")
-		}
-		if captured.conversationID != "conv-1" {
-			t.Errorf("conversationID = %q, want %q", captured.conversationID, "conv-1")
-		}
-		if captured.content != "Hello" {
-			t.Errorf("content = %q, want %q", captured.content, "Hello")
-		}
-	})
+		var captured *domain.Message
 
-	t.Run("creates assistant message and accumulates streaming deltas", func(t *testing.T) {
-		t.Parallel()
-
-		db := powersynctest.OpenTestDB(t)
-
-		mock := &chattest.MockMessages{
-			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
-				events := []chat.StreamEvent{
-					{Block: block.Block{Type: block.TypeMessageStart, MessageStart: &block.MessageStart{Model: "claude-sonnet-4-20250514"}}},
-					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Hello"}}},
-					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: " world"}}},
-					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "!"}}},
-					{Block: block.Block{Type: block.TypeMessageStop, MessageStop: &block.MessageStop{StopReason: "end_turn"}}},
-					{Done: true},
-				}
-				for _, e := range events {
-					if err := handler(e); err != nil {
-						return err
-					}
-				}
+		mock := &apitest.MockMessages{
+			CreateMessageFunc: func(ctx context.Context, msg *domain.Message) error {
+				captured = msg
 				return nil
 			},
 		}
 
-		h := newMessageHandler(mock, db, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: "msg-1",
 			Data: map[string]any{
 				"role":            "user",
 				"conversation_id": "conv-1",
 				"account_id":      "acc-1",
-				"content":         "Hi",
+				"content":         `[{"type":"text","text":{"content":"Hello"}}]`,
 			},
 		}
 
-		err := h.Handle(context.Background(), entry, noopEmitter())
+		err = h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
-		// Query assistant message from SQLite
-		rows, err := db.Query(context.Background(), "SELECT content FROM messages WHERE role = 'assistant'")
-		if err != nil {
-			t.Fatalf("Query error = %v", err)
+		if captured == nil {
+			t.Fatal("expected CreateMessage to be called")
 		}
-		defer rows.Close()
-
-		if !rows.Next() {
-			t.Fatal("expected assistant message in database")
+		if captured.ID != "msg-1" {
+			t.Errorf("id = %q, want %q", captured.ID, "msg-1")
 		}
-
-		var contentJSON string
-		if err := rows.Scan(&contentJSON); err != nil {
-			t.Fatalf("Scan error = %v", err)
+		if captured.ConversationID != "conv-1" {
+			t.Errorf("conversationID = %q, want %q", captured.ConversationID, "conv-1")
 		}
-
-		// Parse and verify content blocks
-		var blocks []block.Block
-		if err := json.Unmarshal([]byte(contentJSON), &blocks); err != nil {
-			t.Fatalf("content is not valid JSON: %v", err)
-		}
-
-		if len(blocks) != 1 {
-			t.Fatalf("got %d blocks, want 1", len(blocks))
-		}
-		if blocks[0].Type != block.TypeText {
-			t.Errorf("block type = %q, want %q", blocks[0].Type, block.TypeText)
-		}
-		if blocks[0].Text.Content != "Hello world!" {
-			t.Errorf("text content = %q, want %q", blocks[0].Text.Content, "Hello world!")
+		if captured.Role != domain.RoleUser {
+			t.Errorf("role = %q, want %q", captured.Role, domain.RoleUser)
 		}
 	})
 
-	t.Run("accumulates thinking then text as separate blocks", func(t *testing.T) {
+	t.Run("skips user message on PATCH", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 
-		mock := &chattest.MockMessages{
-			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
-				events := []chat.StreamEvent{
-					{Block: block.Block{Type: block.TypeMessageStart, MessageStart: &block.MessageStart{Model: "claude-sonnet-4-20250514"}}},
-					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "Let me think"}}},
-					{Block: block.Block{Type: block.TypeThinkingDelta, Thinking: &block.Thinking{Content: "..."}}},
-					{Block: block.Block{Type: block.TypeTextDelta, Text: &block.Text{Content: "Here's my answer"}}},
-					{Block: block.Block{Type: block.TypeMessageStop, MessageStop: &block.MessageStop{StopReason: "end_turn"}}},
-					{Done: true},
-				}
-				for _, e := range events {
-					if err := handler(e); err != nil {
-						return err
-					}
-				}
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[{"type":"text","text":{"content":"Hello"}}]', 'user', '2024-01-01T00:00:00Z')`)
+		if err != nil {
+			t.Fatalf("insert message: %v", err)
+		}
+
+		called := false
+		mock := &apitest.MockMessages{
+			CreateMessageFunc: func(ctx context.Context, msg *domain.Message) error {
+				called = true
 				return nil
 			},
 		}
 
-		h := newMessageHandler(mock, db, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPatch,
 			RowID: "msg-1",
 			Data: map[string]any{
-				"role":            "user",
-				"conversation_id": "conv-1",
-				"account_id":      "acc-1",
-				"content":         "Question",
+				"content": `[{"type":"text","text":{"content":"Hello updated"}}]`,
 			},
 		}
 
-		err := h.Handle(context.Background(), entry, noopEmitter())
+		err = h.Handle(context.Background(), entry, noopEmitter())
+		if err != nil {
+			t.Fatalf("Handle() error = %v", err)
+		}
+		if called {
+			t.Error("expected CreateMessage to not be called on PATCH for user message")
+		}
+	})
+
+	t.Run("persists assistant message when stop_reason is set", func(t *testing.T) {
+		t.Parallel()
+
+		testDB := dbtest.OpenTestDB(t)
+
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, model, stop_reason, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[{"type":"text","text":{"content":"Hi"}}]', 'assistant', 'claude-3', 'end_turn', '2024-01-01T00:00:00Z')`)
+		if err != nil {
+			t.Fatalf("insert message: %v", err)
+		}
+
+		var captured *domain.Message
+
+		mock := &apitest.MockMessages{
+			CreateMessageFunc: func(ctx context.Context, msg *domain.Message) error {
+				captured = msg
+				return nil
+			},
+		}
+
+		h := newMessageHandler(mock, testDB, logtest.New(t))
+
+		entry := &db.CrudEntry{
+			Op:    db.OpPatch,
+			RowID: "msg-1",
+			Data: map[string]any{
+				"stop_reason": "end_turn",
+			},
+		}
+
+		err = h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
 
-		rows, err := db.Query(context.Background(), "SELECT content FROM messages WHERE role = 'assistant'")
-		if err != nil {
-			t.Fatalf("Query error = %v", err)
+		if captured == nil {
+			t.Fatal("expected CreateMessage to be called")
 		}
-		defer rows.Close()
-
-		if !rows.Next() {
-			t.Fatal("expected assistant message in database")
+		if captured.ID != "msg-1" {
+			t.Errorf("id = %q, want %q", captured.ID, "msg-1")
 		}
-
-		var contentJSON string
-		if err := rows.Scan(&contentJSON); err != nil {
-			t.Fatalf("Scan error = %v", err)
+		if captured.Model != "claude-3" {
+			t.Errorf("model = %q, want %q", captured.Model, "claude-3")
 		}
-
-		var blocks []block.Block
-		if err := json.Unmarshal([]byte(contentJSON), &blocks); err != nil {
-			t.Fatalf("content is not valid JSON: %v", err)
-		}
-
-		if len(blocks) != 2 {
-			t.Fatalf("got %d blocks, want 2", len(blocks))
-		}
-		if blocks[0].Type != block.TypeThinking {
-			t.Errorf("first block type = %q, want %q", blocks[0].Type, block.TypeThinking)
-		}
-		if blocks[0].Thinking.Content != "Let me think..." {
-			t.Errorf("thinking content = %q, want %q", blocks[0].Thinking.Content, "Let me think...")
-		}
-		if blocks[1].Type != block.TypeText {
-			t.Errorf("second block type = %q, want %q", blocks[1].Type, block.TypeText)
+		if captured.StopReason != "end_turn" {
+			t.Errorf("stopReason = %q, want %q", captured.StopReason, "end_turn")
 		}
 	})
 
-	t.Run("returns error when upload fails", func(t *testing.T) {
+	t.Run("skips assistant message without stop_reason", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
 
-		mock := &chattest.MockMessages{
-			UploadUserMessageFunc: func(ctx context.Context, messageID, conversationID, content string, handler chat.StreamHandler) error {
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, model, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[]', 'assistant', 'claude-3', '2024-01-01T00:00:00Z')`)
+		if err != nil {
+			t.Fatalf("insert message: %v", err)
+		}
+
+		called := false
+		mock := &apitest.MockMessages{
+			CreateMessageFunc: func(ctx context.Context, msg *domain.Message) error {
+				called = true
+				return nil
+			},
+		}
+
+		h := newMessageHandler(mock, testDB, logtest.New(t))
+
+		entry := &db.CrudEntry{
+			Op:    db.OpPatch,
+			RowID: "msg-1",
+			Data: map[string]any{
+				"content": `[{"type":"text","text":{"content":"partial"}}]`,
+			},
+		}
+
+		err = h.Handle(context.Background(), entry, noopEmitter())
+		if err != nil {
+			t.Fatalf("Handle() error = %v", err)
+		}
+		if called {
+			t.Error("expected CreateMessage to not be called without stop_reason")
+		}
+	})
+
+	t.Run("returns error when persist fails", func(t *testing.T) {
+		t.Parallel()
+
+		testDB := dbtest.OpenTestDB(t)
+
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[{"type":"text","text":{"content":"Hello"}}]', 'user', '2024-01-01T00:00:00Z')`)
+		if err != nil {
+			t.Fatalf("insert message: %v", err)
+		}
+
+		mock := &apitest.MockMessages{
+			CreateMessageFunc: func(ctx context.Context, msg *domain.Message) error {
 				return errors.New("network error")
 			},
 		}
 
-		h := newMessageHandler(mock, db, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: "msg-1",
 			Data: map[string]any{
 				"role":            "user",
 				"conversation_id": "conv-1",
-				"content":         "Hello",
+				"content":         `[{"type":"text","text":{"content":"Hello"}}]`,
 			},
 		}
 
-		err := h.Handle(context.Background(), entry, noopEmitter())
+		err = h.Handle(context.Background(), entry, noopEmitter())
 		if err == nil {
 			t.Error("Handle() expected error, got nil")
 		}
 	})
 
-	t.Run("uploads assistant message for durability", func(t *testing.T) {
+	t.Run("skips DELETE", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
+		testDB := dbtest.OpenTestDB(t)
+		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.New(t))
 
-		var captured struct {
-			messageID  string
-			content    string
-			model      string
-			stopReason string
-		}
-
-		mock := &chattest.MockMessages{
-			UploadAssistantMessageFunc: func(ctx context.Context, messageID, conversationID, content, model, stopReason string) error {
-				captured.messageID = messageID
-				captured.content = content
-				captured.model = model
-				captured.stopReason = stopReason
-				return nil
-			},
-		}
-
-		h := newMessageHandler(mock, db, logtest.New(t))
-
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
-			RowID: "msg-2",
-			Data: map[string]any{
-				"role":            "assistant",
-				"conversation_id": "conv-1",
-				"content":         `[{"type":"text","text":{"content":"Hi there!"}}]`,
-				"model":           "claude-3",
-				"stop_reason":     "end_turn",
-			},
+		entry := &db.CrudEntry{
+			Op:    db.OpDelete,
+			RowID: "msg-1",
+			Data:  map[string]any{},
 		}
 
 		err := h.Handle(context.Background(), entry, noopEmitter())
 		if err != nil {
-			t.Fatalf("Handle() error = %v", err)
-		}
-
-		if captured.messageID != "msg-2" {
-			t.Errorf("messageID = %q, want %q", captured.messageID, "msg-2")
-		}
-		if captured.model != "claude-3" {
-			t.Errorf("model = %q, want %q", captured.model, "claude-3")
-		}
-	})
-
-	t.Run("PATCH skips upload", func(t *testing.T) {
-		t.Parallel()
-
-		db := powersynctest.OpenTestDB(t)
-		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
-
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPatch,
-			RowID: "msg-1",
-			Data:  map[string]any{},
-		}
-
-		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
 			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})
 
-	t.Run("DELETE skips upload", func(t *testing.T) {
+	t.Run("skips unknown role", func(t *testing.T) {
 		t.Parallel()
 
-		db := powersynctest.OpenTestDB(t)
-		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
+		testDB := dbtest.OpenTestDB(t)
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpDelete,
-			RowID: "msg-1",
-			Data:  map[string]any{},
+		_, err := testDB.Exec(context.Background(),
+			`INSERT INTO messages (id, account_id, conversation_id, content, role, created_at)
+			 VALUES ('msg-1', 'acc-1', 'conv-1', '[]', 'system', '2024-01-01T00:00:00Z')`)
+		if err != nil {
+			t.Fatalf("insert message: %v", err)
 		}
 
-		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
-			t.Errorf("Handle() error = %v, want nil", err)
-		}
-	})
+		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.New(t))
 
-	t.Run("unknown role skips upload", func(t *testing.T) {
-		t.Parallel()
-
-		db := powersynctest.OpenTestDB(t)
-		h := newMessageHandler(&chattest.MockMessages{}, db, logtest.New(t))
-
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: "msg-1",
 			Data: map[string]any{
 				"role": "system",
 			},
 		}
 
-		if err := h.Handle(context.Background(), entry, noopEmitter()); err != nil {
+		err = h.Handle(context.Background(), entry, noopEmitter())
+		if err != nil {
 			t.Errorf("Handle() error = %v, want nil", err)
 		}
 	})

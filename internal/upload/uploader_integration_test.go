@@ -14,10 +14,10 @@ import (
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 	"github.com/usetero/cli/internal/upload"
 	"github.com/usetero/cli/internal/workos"
-	"github.com/usetero/cli/pkg/client"
 )
 
 // Integration tests run against real services.
@@ -43,13 +43,13 @@ func TestIntegration_Upload(t *testing.T) {
 	t.Logf("Chat Endpoint: %s", cliConfig.ChatEndpoint)
 	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
 
-	// Get auth token
+	// Get auth service
 	storage := keyring.New(namespace)
 	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
-	token, err := authSvc.GetAccessToken(ctx)
-	if err != nil {
+	// Verify we have valid credentials
+	if _, err := authSvc.GetAccessToken(ctx); err != nil {
 		t.Fatalf("Failed to get access token: %v (run: task auth:login)", err)
 	}
 
@@ -73,32 +73,27 @@ func TestIntegration_Upload(t *testing.T) {
 	t.Logf("Account ID: %s", accountID)
 	t.Logf("Workspace ID: %s", workspaceID)
 
-	// Create API client
-	refreshFunc := func() (string, error) {
-		return authSvc.GetAccessToken(ctx)
-	}
-	apiClient := client.New(cliConfig.APIEndpoint, token, refreshFunc)
-	apiClient.SetAccountID(accountID)
+	// Create API services
+	services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
+	services.SetAccountID(domain.AccountID(accountID))
 
 	// Create chat client
-	chatClient := chat.NewClient(cliConfig.ChatEndpoint, logger)
-	chatClient.SetToken(token)
+	chatClient := chat.NewClient(cliConfig.ChatEndpoint, authSvc, logger)
 	chatClient.SetAccountID(accountID)
 
-	// Create services
-	conversationsSvc := api.NewConversationService(apiClient, logger)
-	messagesSvc := chat.NewMessageService(chatClient)
+	// Create message service
+	messagesSvc := api.NewMessageService(chatClient, logger)
 
 	t.Run("mutation round-trip maintains healthy database", func(t *testing.T) {
 		// Create fresh database with PowerSync
-		db := sqlitetest.OpenTest(t)
+		db := sqlitetest.OpenBareDB(t)
 
 		if err := powersync.ApplySchema(ctx, db); err != nil {
 			t.Fatalf("ApplySchema() error = %v", err)
 		}
 
 		// Start PowerSync
-		sync := powersync.NewSync(cliConfig.PowerSyncEndpoint, authSvc, logger)
+		sync := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logger)
 
 		syncCtx, syncCancel := context.WithTimeout(ctx, 60*time.Second)
 		defer syncCancel()
@@ -130,7 +125,7 @@ func TestIntegration_Upload(t *testing.T) {
 
 		// Start upload loop
 		powersyncClient := powersync.NewClient(cliConfig.PowerSyncEndpoint)
-		uploader := upload.New(db, powersyncClient, authSvc, conversationsSvc, messagesSvc, logger)
+		uploader := upload.New(db, powersyncClient, authSvc, services.Conversations, messagesSvc, logger)
 
 		uploadCtx, uploadCancel := context.WithCancel(ctx)
 		defer uploadCancel()

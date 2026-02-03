@@ -1,6 +1,7 @@
 package preferences
 
 import (
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -10,14 +11,14 @@ type Preferences interface {
 	SetEmail(email string) error
 	GetDatadogAPIKey() string
 	SetDatadogAPIKey(key string) error
-	GetDefaultOrgID() string
-	SetDefaultOrgID(orgID string) error
+	GetDefaultOrgID() domain.OrganizationID
+	SetDefaultOrgID(orgID domain.OrganizationID) error
 	GetDefaultOrgName() string
 	SetDefaultOrgName(orgName string) error
-	GetDefaultAccountID() string
-	SetDefaultAccountID(accountID string) error
-	GetDefaultWorkspaceID() string
-	SetDefaultWorkspaceID(workspaceID string) error
+	GetDefaultAccountID() domain.AccountID
+	SetDefaultAccountID(accountID domain.AccountID) error
+	GetDefaultWorkspaceID() domain.WorkspaceID
+	SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error
 	ClearEmail() error
 	ClearDatadogAPIKey() error
 	ClearDefaultOrgID() error
@@ -73,13 +74,13 @@ func (s *Service) SetDatadogAPIKey(key string) error {
 }
 
 // GetDefaultOrgID returns the default organization ID
-func (s *Service) GetDefaultOrgID() string {
-	return s.store.Get("default_org_id")
+func (s *Service) GetDefaultOrgID() domain.OrganizationID {
+	return domain.OrganizationID(s.store.Get("default_org_id"))
 }
 
 // SetDefaultOrgID saves the default organization ID
-func (s *Service) SetDefaultOrgID(orgID string) error {
-	s.store.Set("default_org_id", orgID)
+func (s *Service) SetDefaultOrgID(orgID domain.OrganizationID) error {
+	s.store.Set("default_org_id", orgID.String())
 	return s.store.Save()
 }
 
@@ -95,24 +96,24 @@ func (s *Service) SetDefaultOrgName(orgName string) error {
 }
 
 // GetDefaultAccountID returns the default account ID
-func (s *Service) GetDefaultAccountID() string {
-	return s.store.Get("default_account_id")
+func (s *Service) GetDefaultAccountID() domain.AccountID {
+	return domain.AccountID(s.store.Get("default_account_id"))
 }
 
 // SetDefaultAccountID saves the default account ID
-func (s *Service) SetDefaultAccountID(accountID string) error {
-	s.store.Set("default_account_id", accountID)
+func (s *Service) SetDefaultAccountID(accountID domain.AccountID) error {
+	s.store.Set("default_account_id", accountID.String())
 	return s.store.Save()
 }
 
 // GetDefaultWorkspaceID returns the default workspace ID
-func (s *Service) GetDefaultWorkspaceID() string {
-	return s.store.Get("default_workspace_id")
+func (s *Service) GetDefaultWorkspaceID() domain.WorkspaceID {
+	return domain.WorkspaceID(s.store.Get("default_workspace_id"))
 }
 
 // SetDefaultWorkspaceID saves the default workspace ID
-func (s *Service) SetDefaultWorkspaceID(workspaceID string) error {
-	s.store.Set("default_workspace_id", workspaceID)
+func (s *Service) SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error {
+	s.store.Set("default_workspace_id", workspaceID.String())
 	return s.store.Save()
 }
 

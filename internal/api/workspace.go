@@ -3,18 +3,13 @@ package api
 import (
 	"context"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
-// Workspace is the domain model for a workspace.
-type Workspace struct {
-	ID   string
-	Name string
-}
-
 // Workspaces provides access to workspaces.
 type Workspaces interface {
-	List(ctx context.Context, accountID string) ([]Workspace, error)
+	List(ctx context.Context, accountID string) ([]domain.Workspace, error)
 }
 
 // WorkspaceService handles workspace-related API operations.
@@ -35,7 +30,7 @@ func NewWorkspaceService(client Client, logger log.Logger) *WorkspaceService {
 }
 
 // List fetches all workspaces for an account.
-func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]Workspace, error) {
+func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]domain.Workspace, error) {
 	s.logger.Debug("fetching workspaces from API", "accountID", accountID)
 	resp, err := s.client.ListWorkspaces(ctx, accountID)
 	if err != nil {
@@ -44,10 +39,10 @@ func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]Worksp
 	}
 
 	// Convert GraphQL response to domain model
-	workspaces := make([]Workspace, len(resp.Workspaces.Edges))
+	workspaces := make([]domain.Workspace, len(resp.Workspaces.Edges))
 	for i, edge := range resp.Workspaces.Edges {
-		workspaces[i] = Workspace{
-			ID:   edge.Node.Id,
+		workspaces[i] = domain.Workspace{
+			ID:   domain.WorkspaceID(edge.Node.Id),
 			Name: edge.Node.Name,
 		}
 	}

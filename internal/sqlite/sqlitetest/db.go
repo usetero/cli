@@ -8,9 +8,10 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// OpenTest creates a temporary SQLite database for testing.
-// The database is automatically closed when the test completes.
-func OpenTest(t *testing.T) *sqlite.DB {
+// OpenBareDB creates a temporary SQLite database WITHOUT the PowerSync schema.
+// Use this only for low-level tests (extension loading, watch hooks with custom tables).
+// For most tests, use dbtest.OpenTestDB() which includes the full schema.
+func OpenBareDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "test.sqlite")

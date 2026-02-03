@@ -1,19 +1,21 @@
 package preferencestest
 
+import "github.com/usetero/cli/internal/domain"
+
 // MockPreferences implements preferences.Preferences for testing.
 type MockPreferences struct {
 	GetEmailFunc              func() string
 	SetEmailFunc              func(email string) error
 	GetDatadogAPIKeyFunc      func() string
 	SetDatadogAPIKeyFunc      func(key string) error
-	GetDefaultOrgIDFunc       func() string
-	SetDefaultOrgIDFunc       func(orgID string) error
+	GetDefaultOrgIDFunc       func() domain.OrganizationID
+	SetDefaultOrgIDFunc       func(orgID domain.OrganizationID) error
 	GetDefaultOrgNameFunc     func() string
 	SetDefaultOrgNameFunc     func(orgName string) error
-	GetDefaultAccountIDFunc   func() string
-	SetDefaultAccountIDFunc   func(accountID string) error
-	GetDefaultWorkspaceIDFunc func() string
-	SetDefaultWorkspaceIDFunc func(workspaceID string) error
+	GetDefaultAccountIDFunc   func() domain.AccountID
+	SetDefaultAccountIDFunc   func(accountID domain.AccountID) error
+	GetDefaultWorkspaceIDFunc func() domain.WorkspaceID
+	SetDefaultWorkspaceIDFunc func(workspaceID domain.WorkspaceID) error
 	ClearEmailFunc            func() error
 	ClearDatadogAPIKeyFunc    func() error
 	ClearDefaultOrgIDFunc     func() error
@@ -61,14 +63,14 @@ func (m *MockPreferences) SetDatadogAPIKey(key string) error {
 	return nil
 }
 
-func (m *MockPreferences) GetDefaultOrgID() string {
+func (m *MockPreferences) GetDefaultOrgID() domain.OrganizationID {
 	if m.GetDefaultOrgIDFunc != nil {
 		return m.GetDefaultOrgIDFunc()
 	}
 	return ""
 }
 
-func (m *MockPreferences) SetDefaultOrgID(orgID string) error {
+func (m *MockPreferences) SetDefaultOrgID(orgID domain.OrganizationID) error {
 	if m.SetDefaultOrgIDFunc != nil {
 		return m.SetDefaultOrgIDFunc(orgID)
 	}
@@ -89,28 +91,28 @@ func (m *MockPreferences) SetDefaultOrgName(orgName string) error {
 	return nil
 }
 
-func (m *MockPreferences) GetDefaultAccountID() string {
+func (m *MockPreferences) GetDefaultAccountID() domain.AccountID {
 	if m.GetDefaultAccountIDFunc != nil {
 		return m.GetDefaultAccountIDFunc()
 	}
 	return ""
 }
 
-func (m *MockPreferences) SetDefaultAccountID(accountID string) error {
+func (m *MockPreferences) SetDefaultAccountID(accountID domain.AccountID) error {
 	if m.SetDefaultAccountIDFunc != nil {
 		return m.SetDefaultAccountIDFunc(accountID)
 	}
 	return nil
 }
 
-func (m *MockPreferences) GetDefaultWorkspaceID() string {
+func (m *MockPreferences) GetDefaultWorkspaceID() domain.WorkspaceID {
 	if m.GetDefaultWorkspaceIDFunc != nil {
 		return m.GetDefaultWorkspaceIDFunc()
 	}
 	return ""
 }
 
-func (m *MockPreferences) SetDefaultWorkspaceID(workspaceID string) error {
+func (m *MockPreferences) SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error {
 	if m.SetDefaultWorkspaceIDFunc != nil {
 		return m.SetDefaultWorkspaceIDFunc(workspaceID)
 	}

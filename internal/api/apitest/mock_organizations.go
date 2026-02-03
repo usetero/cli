@@ -5,15 +5,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // MockOrganizations implements api.Organizations for testing.
 type MockOrganizations struct {
-	ListFunc   func(ctx context.Context) ([]api.Organization, error)
+	ListFunc   func(ctx context.Context) ([]domain.Organization, error)
 	CreateFunc func(ctx context.Context, id uuid.UUID, name string) (*api.OrganizationBootstrapResult, error)
 }
 
-func (m *MockOrganizations) List(ctx context.Context) ([]api.Organization, error) {
+// NewMockOrganizations creates a MockOrganizations with sensible defaults.
+func NewMockOrganizations() *MockOrganizations {
+	return &MockOrganizations{}
+}
+
+func (m *MockOrganizations) List(ctx context.Context) ([]domain.Organization, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx)
 	}

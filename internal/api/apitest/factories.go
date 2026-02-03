@@ -1,15 +1,14 @@
 package apitest
 
 import (
-	"github.com/google/uuid"
-	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // NewOrganization creates a test organization with sensible defaults.
 // Use functional options to override specific fields.
-func NewOrganization(opts ...func(*api.Organization)) api.Organization {
-	org := api.Organization{
-		ID:   uuid.New().String(),
+func NewOrganization(opts ...func(*domain.Organization)) domain.Organization {
+	org := domain.Organization{
+		ID:   domain.NewOrganizationID(),
 		Name: "Test Organization",
 	}
 	for _, opt := range opts {
@@ -20,9 +19,9 @@ func NewOrganization(opts ...func(*api.Organization)) api.Organization {
 
 // NewAccount creates a test account with sensible defaults.
 // Use functional options to override specific fields.
-func NewAccount(opts ...func(*api.Account)) api.Account {
-	acc := api.Account{
-		ID:   uuid.New().String(),
+func NewAccount(opts ...func(*domain.Account)) domain.Account {
+	acc := domain.Account{
+		ID:   domain.NewAccountID(),
 		Name: "Test Account",
 	}
 	for _, opt := range opts {
@@ -33,9 +32,9 @@ func NewAccount(opts ...func(*api.Account)) api.Account {
 
 // NewWorkspace creates a test workspace with sensible defaults.
 // Use functional options to override specific fields.
-func NewWorkspace(opts ...func(*api.Workspace)) api.Workspace {
-	ws := api.Workspace{
-		ID:   uuid.New().String(),
+func NewWorkspace(opts ...func(*domain.Workspace)) domain.Workspace {
+	ws := domain.Workspace{
+		ID:   domain.NewWorkspaceID(),
 		Name: "Test Workspace",
 	}
 	for _, opt := range opts {

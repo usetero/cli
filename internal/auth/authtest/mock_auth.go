@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // MockAuth implements auth.Auth for testing.
@@ -15,7 +16,7 @@ type MockAuth struct {
 	GetAccessTokenFunc                  func(ctx context.Context) (string, error)
 	ClearTokensFunc                     func() error
 	RefreshTokenWithoutOrganizationFunc func(ctx context.Context) (string, error)
-	RefreshTokenWithOrganizationFunc    func(ctx context.Context, workosOrgID string) (string, error)
+	RefreshTokenWithOrganizationFunc    func(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error)
 }
 
 func (m *MockAuth) StartDeviceAuth(ctx context.Context) (*auth.DeviceAuth, error) {
@@ -60,7 +61,7 @@ func (m *MockAuth) RefreshTokenWithoutOrganization(ctx context.Context) (string,
 	return "", nil
 }
 
-func (m *MockAuth) RefreshTokenWithOrganization(ctx context.Context, workosOrgID string) (string, error) {
+func (m *MockAuth) RefreshTokenWithOrganization(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error) {
 	if m.RefreshTokenWithOrganizationFunc != nil {
 		return m.RefreshTokenWithOrganizationFunc(ctx, workosOrgID)
 	}

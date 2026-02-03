@@ -7,8 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/powersync/db"
 )
 
 // Idempotent operation handling:
@@ -28,16 +29,16 @@ func newConversationHandler(conversations api.Conversations, logger log.Logger) 
 	}
 }
 
-func (h *conversationHandler) Handle(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
+func (h *conversationHandler) Handle(ctx context.Context, entry *db.CrudEntry, emit Emitter) error {
 	// Conversation handler doesn't emit events currently
 	_ = emit
 
 	switch entry.Op {
-	case powersync.OpPut:
+	case db.OpPut:
 		return h.handlePut(ctx, entry)
-	case powersync.OpPatch:
+	case db.OpPatch:
 		return h.handlePatch(ctx, entry)
-	case powersync.OpDelete:
+	case db.OpDelete:
 		return h.handleDelete(ctx, entry)
 	default:
 		h.logger.Warn("unknown conversation op", "op", entry.Op)
@@ -45,7 +46,7 @@ func (h *conversationHandler) Handle(ctx context.Context, entry *powersync.CrudE
 	}
 }
 
-func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry) error {
 	workspaceID, _ := entry.Data["workspace_id"].(string)
 	title, _ := entry.Data["title"].(string)
 
@@ -54,7 +55,7 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 		return fmt.Errorf("invalid conversation ID %q: %w", entry.RowID, err)
 	}
 
-	_, err = h.conversations.Create(ctx, id, workspaceID, title)
+	_, err = h.conversations.Create(ctx, id, domain.WorkspaceID(workspaceID), title)
 	if err != nil {
 		// Already exists is fine - the conversation is there, which is what we wanted
 		if errors.Is(err, api.ErrAlreadyExists) {
@@ -68,10 +69,10 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *powersync.Cr
 	return nil
 }
 
-func (h *conversationHandler) handlePatch(ctx context.Context, entry *powersync.CrudEntry) error {
+func (h *conversationHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) error {
 	title, _ := entry.Data["title"].(string)
 
-	_, err := h.conversations.Update(ctx, entry.RowID, title)
+	_, err := h.conversations.Update(ctx, domain.ConversationID(entry.RowID), title)
 	if err != nil {
 		return fmt.Errorf("update conversation: %w", err)
 	}
@@ -80,8 +81,8 @@ func (h *conversationHandler) handlePatch(ctx context.Context, entry *powersync.
 	return nil
 }
 
-func (h *conversationHandler) handleDelete(ctx context.Context, entry *powersync.CrudEntry) error {
-	err := h.conversations.Delete(ctx, entry.RowID)
+func (h *conversationHandler) handleDelete(ctx context.Context, entry *db.CrudEntry) error {
+	err := h.conversations.Delete(ctx, domain.ConversationID(entry.RowID))
 	if err != nil {
 		// Not found is fine - the conversation is gone, which is what we wanted
 		if errors.Is(err, api.ErrNotFound) {

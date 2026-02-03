@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/powersync/extension"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -50,7 +50,7 @@ func run() error {
 	fmt.Println("Applying embedded PowerSync schema...")
 
 	// Apply embedded schema to create views (just like runtime)
-	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", powersync.SchemaJSON()); err != nil {
+	if _, err := db.Exec(ctx, "SELECT powersync_replace_schema(?)", extension.SchemaJSON()); err != nil {
 		return fmt.Errorf("replace schema: %w", err)
 	}
 

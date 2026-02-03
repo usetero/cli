@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
+	psapi "github.com/usetero/cli/internal/powersync/api"
+	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -25,12 +25,18 @@ type TokenRefresher interface {
 }
 
 // Uploader watches the CRUD queue and uploads changes to the backend.
-type Uploader struct {
+type Uploader interface {
+	Run(ctx context.Context) error
+	Events() <-chan Event
+}
+
+// uploader is the concrete implementation of Uploader.
+type uploader struct {
 	db             sqlite.Database
-	queue          *powersync.CrudQueue
-	client         powersync.Client
+	queue          *db.CrudQueue
+	client         psapi.Client
 	tokenRefresher TokenRefresher
-	handlers       map[string]Handler
+	handlers       map[sqlite.Table]Handler
 	logger         log.Logger
 
 	// Configuration
@@ -43,26 +49,26 @@ type Uploader struct {
 
 	// State tracking
 	stalledSince *time.Time
-	stalledEntry *powersync.CrudEntry
+	stalledEntry *db.CrudEntry
 }
 
 // New creates a new uploader.
 func New(
-	db sqlite.Database,
-	client powersync.Client,
+	database sqlite.Database,
+	client psapi.Client,
 	tokenRefresher TokenRefresher,
 	conversations api.Conversations,
-	messages chat.Messages,
+	messages api.Messages,
 	logger log.Logger,
-) *Uploader {
-	return &Uploader{
-		db:             db,
-		queue:          powersync.NewCrudQueue(db),
+) Uploader {
+	return &uploader{
+		db:             database,
+		queue:          db.NewCrudQueue(database),
 		client:         client,
 		tokenRefresher: tokenRefresher,
-		handlers: map[string]Handler{
+		handlers: map[sqlite.Table]Handler{
 			sqlite.TableConversations: newConversationHandler(conversations, logger),
-			sqlite.TableMessages:      newMessageHandler(messages, db, logger),
+			sqlite.TableMessages:      newMessageHandler(messages, database, logger),
 		},
 		logger:       logger,
 		pollInterval: defaultPollInterval,
@@ -73,12 +79,12 @@ func New(
 }
 
 // Events returns the channel for receiving upload status events.
-func (u *Uploader) Events() <-chan Event {
+func (u *uploader) Events() <-chan Event {
 	return u.events
 }
 
 // Run starts the upload loop. It blocks until the context is cancelled.
-func (u *Uploader) Run(ctx context.Context) error {
+func (u *uploader) Run(ctx context.Context) error {
 	u.logger.Info("upload loop started")
 	defer func() {
 		u.logger.Info("upload loop stopped")
@@ -132,7 +138,7 @@ func (u *Uploader) Run(ctx context.Context) error {
 // 2. Upload each to backend
 // 3. Fetch write checkpoint
 // 4. Complete batch atomically
-func (u *Uploader) uploadAll(ctx context.Context) (int, error) {
+func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 	entries, err := u.queue.GetAllEntries(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("get entries: %w", err)
@@ -150,7 +156,7 @@ func (u *Uploader) uploadAll(ctx context.Context) (int, error) {
 	}
 
 	// Get write checkpoint from PowerSync server
-	clientID, err := powersync.GetClientID(ctx, u.db.DB())
+	clientID, err := db.GetClientID(ctx, u.db.DB())
 	if err != nil {
 		return 0, fmt.Errorf("get client id: %w", err)
 	}
@@ -162,7 +168,7 @@ func (u *Uploader) uploadAll(ctx context.Context) (int, error) {
 
 	// Complete batch atomically
 	lastID := entries[len(entries)-1].ID
-	if err := powersync.CompleteBatch(ctx, u.db.DB(), lastID, checkpoint); err != nil {
+	if err := db.CompleteBatch(ctx, u.db.DB(), lastID, checkpoint); err != nil {
 		return 0, fmt.Errorf("complete batch: %w", err)
 	}
 
@@ -171,7 +177,7 @@ func (u *Uploader) uploadAll(ctx context.Context) (int, error) {
 }
 
 // uploadEntry uploads a single entry with retries.
-func (u *Uploader) uploadEntry(ctx context.Context, entry *powersync.CrudEntry, emit Emitter) error {
+func (u *uploader) uploadEntry(ctx context.Context, entry *db.CrudEntry, emit Emitter) error {
 	handler, ok := u.handlers[entry.Table]
 	if !ok {
 		u.logger.Warn("no handler for table, skipping", "table", entry.Table, "rowId", entry.RowID)
@@ -199,7 +205,7 @@ func (u *Uploader) uploadEntry(ctx context.Context, entry *powersync.CrudEntry, 
 	return lastErr
 }
 
-func (u *Uploader) handleError(ctx context.Context, err error) {
+func (u *uploader) handleError(ctx context.Context, err error) {
 	if u.stalledSince == nil {
 		now := time.Now()
 		u.stalledSince = &now
@@ -214,21 +220,21 @@ func (u *Uploader) handleError(ctx context.Context, err error) {
 	})
 }
 
-func (u *Uploader) stalledTable() string {
+func (u *uploader) stalledTable() sqlite.Table {
 	if u.stalledEntry != nil {
 		return u.stalledEntry.Table
 	}
 	return ""
 }
 
-func (u *Uploader) stalledRowID() string {
+func (u *uploader) stalledRowID() string {
 	if u.stalledEntry != nil {
 		return u.stalledEntry.RowID
 	}
 	return ""
 }
 
-func (u *Uploader) emit(ctx context.Context, event Event) {
+func (u *uploader) emit(ctx context.Context, event Event) {
 	select {
 	case u.events <- event:
 	case <-ctx.Done():
@@ -236,11 +242,11 @@ func (u *Uploader) emit(ctx context.Context, event Event) {
 	}
 }
 
-func (u *Uploader) emitter(ctx context.Context) Emitter {
+func (u *uploader) emitter(ctx context.Context) Emitter {
 	return func(event Event) { u.emit(ctx, event) }
 }
 
-func (u *Uploader) wait(ctx context.Context, d time.Duration) {
+func (u *uploader) wait(ctx context.Context, d time.Duration) {
 	select {
 	case <-ctx.Done():
 	case <-time.After(d):

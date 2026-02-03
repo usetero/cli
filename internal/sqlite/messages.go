@@ -4,26 +4,18 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/usetero/cli/internal/chat/block"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
-)
-
-// Role identifies who sent a message.
-type Role string
-
-const (
-	RoleUser      Role = "user"
-	RoleAssistant Role = "assistant"
 )
 
 // Messages provides type-safe access to messages.
 type Messages interface {
-	CreateUserMessage(ctx context.Context, accountID, conversationID, text string) (string, error)
-	CreateAssistantMessage(ctx context.Context, accountID, conversationID, model string) (string, error)
-	UpdateContent(ctx context.Context, id, content string) error
-	UpdateMeta(ctx context.Context, id, model, stopReason string) error
-	List(ctx context.Context, conversationID string) ([]gen.Message, error)
+	Get(ctx context.Context, id domain.MessageID) (*domain.Message, error)
+	CreateUserMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, text string) (domain.MessageID, error)
+	CreateAssistantMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, model string) (domain.MessageID, error)
+	UpdateContent(ctx context.Context, id domain.MessageID, content string) error
+	UpdateMeta(ctx context.Context, id domain.MessageID, model, stopReason string) error
+	List(ctx context.Context, conversationID domain.ConversationID) ([]domain.Message, error)
 }
 
 // messagesImpl implements Messages.
@@ -31,22 +23,35 @@ type messagesImpl struct {
 	queries *gen.Queries
 }
 
+// Get retrieves a message by ID.
+func (m *messagesImpl) Get(ctx context.Context, id domain.MessageID) (*domain.Message, error) {
+	idStr := id.String()
+	row, err := m.queries.GetMessage(ctx, &idStr)
+	if err != nil {
+		return nil, WrapSQLiteError(err, "get message")
+	}
+	return toMessage(row), nil
+}
+
 // CreateUserMessage creates a user message with properly encoded content.
 // Returns the new message ID.
-func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID, conversationID, text string) (string, error) {
-	msgID := uuid.New().String()
+func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, text string) (domain.MessageID, error) {
+	msgID := domain.NewMessageID()
+	msgIDStr := msgID.String()
+	accountIDStr := accountID.String()
+	convIDStr := conversationID.String()
 	now := time.Now().UTC().Format(time.RFC3339)
-	role := string(RoleUser)
+	role := string(domain.RoleUser)
 
-	content, err := block.EncodeText(text)
+	content, err := domain.EncodeText(text)
 	if err != nil {
 		return "", err
 	}
 
 	err = m.queries.InsertMessage(ctx, gen.InsertMessageParams{
-		ID:             &msgID,
-		AccountID:      &accountID,
-		ConversationID: &conversationID,
+		ID:             &msgIDStr,
+		AccountID:      &accountIDStr,
+		ConversationID: &convIDStr,
 		Content:        &content,
 		CreatedAt:      &now,
 		Role:           &role,
@@ -60,16 +65,19 @@ func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID, convers
 
 // CreateAssistantMessage creates an empty assistant message placeholder.
 // Returns the new message ID. Content is added via UpdateContent as it streams in.
-func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, conversationID, model string) (string, error) {
-	msgID := uuid.New().String()
+func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, model string) (domain.MessageID, error) {
+	msgID := domain.NewMessageID()
+	msgIDStr := msgID.String()
+	accountIDStr := accountID.String()
+	convIDStr := conversationID.String()
 	now := time.Now().UTC().Format(time.RFC3339)
-	role := string(RoleAssistant)
+	role := string(domain.RoleAssistant)
 	content := "[]" // Empty JSON array
 
 	err := m.queries.InsertMessage(ctx, gen.InsertMessageParams{
-		ID:             &msgID,
-		AccountID:      &accountID,
-		ConversationID: &conversationID,
+		ID:             &msgIDStr,
+		AccountID:      &accountIDStr,
+		ConversationID: &convIDStr,
 		Content:        &content,
 		CreatedAt:      &now,
 		Model:          &model,
@@ -83,18 +91,20 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID, co
 }
 
 // UpdateContent updates the content of a message.
-func (m *messagesImpl) UpdateContent(ctx context.Context, id, content string) error {
+func (m *messagesImpl) UpdateContent(ctx context.Context, id domain.MessageID, content string) error {
+	idStr := id.String()
 	err := m.queries.UpdateMessageContent(ctx, gen.UpdateMessageContentParams{
-		ID:      &id,
+		ID:      &idStr,
 		Content: &content,
 	})
 	return WrapSQLiteError(err, "update message content")
 }
 
 // UpdateMeta updates the model and stop_reason of a message.
-func (m *messagesImpl) UpdateMeta(ctx context.Context, id, model, stopReason string) error {
+func (m *messagesImpl) UpdateMeta(ctx context.Context, id domain.MessageID, model, stopReason string) error {
+	idStr := id.String()
 	err := m.queries.UpdateMessageMeta(ctx, gen.UpdateMessageMetaParams{
-		ID:         &id,
+		ID:         &idStr,
 		Model:      &model,
 		StopReason: &stopReason,
 	})
@@ -102,6 +112,53 @@ func (m *messagesImpl) UpdateMeta(ctx context.Context, id, model, stopReason str
 }
 
 // List returns all messages for a conversation, ordered by creation time.
-func (m *messagesImpl) List(ctx context.Context, conversationID string) ([]gen.Message, error) {
-	return m.queries.ListMessagesByConversation(ctx, &conversationID)
+func (m *messagesImpl) List(ctx context.Context, conversationID domain.ConversationID) ([]domain.Message, error) {
+	convIDStr := conversationID.String()
+	rows, err := m.queries.ListMessagesByConversation(ctx, &convIDStr)
+	if err != nil {
+		return nil, WrapSQLiteError(err, "list messages")
+	}
+
+	messages := make([]domain.Message, 0, len(rows))
+	for _, row := range rows {
+		if msg := toMessage(row); msg != nil {
+			messages = append(messages, *msg)
+		}
+	}
+	return messages, nil
+}
+
+// toMessage converts a gen.Message to a domain.Message.
+// Returns nil if essential fields are missing.
+func toMessage(row gen.Message) *domain.Message {
+	if row.ID == nil || row.Role == nil {
+		return nil
+	}
+
+	msg := &domain.Message{
+		ID:   domain.MessageID(*row.ID),
+		Role: domain.Role(*row.Role),
+	}
+
+	if row.ConversationID != nil {
+		msg.ConversationID = domain.ConversationID(*row.ConversationID)
+	}
+	if row.Model != nil {
+		msg.Model = *row.Model
+	}
+	if row.StopReason != nil {
+		msg.StopReason = *row.StopReason
+	}
+	if row.CreatedAt != nil {
+		if t, err := time.Parse(time.RFC3339, *row.CreatedAt); err == nil {
+			msg.CreatedAt = t
+		}
+	}
+	if row.Content != nil {
+		if blocks, err := domain.ParseBlocks(*row.Content); err == nil {
+			msg.Content = blocks
+		}
+	}
+
+	return msg
 }

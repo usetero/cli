@@ -33,34 +33,40 @@ The CLI never implements intelligence. It doesn't analyze log patterns, calculat
 │                 └───────┬───────┘                                       │
 └─────────────────────────┼───────────────────────────────────────────────┘
                           │
-                          │ PowerSync (bidirectional sync)
-                          ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Control Plane                                   │
-│  ┌───────────┐    ┌───────────┐    ┌───────────┐                       │
-│  │  GraphQL  │    │   Chat    │    │  Catalog  │                       │
-│  │    API    │    │  Service  │    │  Service  │                       │
-│  └───────────┘    └─────┬─────┘    └───────────┘                       │
-│                         │                                               │
-│                         ▼                                               │
-│                 ┌───────────────┐                                       │
-│                 │    Claude     │  AI reasoning, tool calls            │
-│                 └───────────────┘                                       │
-└─────────────────────────────────────────────────────────────────────────┘
+          ┌───────────────┴───────────────┐
+          │                               │
+          ▼                               ▼
+┌─────────────────────┐     ┌─────────────────────────────────────────────┐
+│  Chat API (direct)  │     │            Control Plane                    │
+│                     │     │  ┌───────────┐    ┌───────────┐            │
+│  Stateless HTTP     │     │  │  GraphQL  │    │  Catalog  │            │
+│  Client sends full  │     │  │    API    │    │  Service  │            │
+│  message history    │     │  └───────────┘    └───────────┘            │
+│         │           │     │        ▲                                    │
+│         ▼           │     │        │ Upload queue (durability)         │
+│  ┌───────────┐      │     └────────┼────────────────────────────────────┘
+│  │  Claude   │      │              │
+│  └───────────┘      │              │ PowerSync (catalog sync)
+└─────────────────────┘              │
+          │                          │
+          └──────────────────────────┘
+              SSE stream back to client
 ```
 
 **The chat loop:**
 
-1. User types a message in the command bar
-2. Client writes user message to local SQLite
-3. PowerSync syncs the message to the control plane
-4. Control plane loads conversation history, builds system prompt, calls Claude
-5. Claude responds (possibly with tool calls for views, context changes, etc.)
-6. Control plane writes assistant message to database
-7. PowerSync syncs the response back to the client
-8. Client renders the new message
+1. User types a message and hits enter
+2. Client creates conversation in SQLite if new, then writes user message
+3. Client calls Chat API directly with the full message history from SQLite
+4. Chat API is stateless—it builds the prompt from the messages you send, calls Claude
+5. Claude streams response blocks back via SSE (text, thinking, tool calls)
+6. Client renders blocks in real-time as they arrive
+7. When stream completes (stop_reason received), client writes assistant message to SQLite
+8. Upload queue (background) persists messages to GraphQL for durability
 
-The client never calls Claude directly. It writes messages and renders responses. The control plane handles everything in between.
+**Key principle: the client is the exclusive writer.** SQLite is the source of truth. The Chat API never persists anything—it's a pure function from messages to response stream. The upload queue handles durability by persisting to the server via GraphQL, but this is decoupled from the chat flow.
+
+**Why client sends full history:** The Chat API is 100% stateless. No database lookups, no sync concerns, no race conditions. What you send is what the model sees. The upload queue can be behind—doesn't matter for chat correctness. It only matters for durability and multi-device sync.
 
 ---
 
@@ -107,11 +113,12 @@ For background processes (goroutines, channels), you need a bridge to convert Go
 3. The bridge returns the message as a `tea.Cmd` so Bubbletea propagates it
 4. Any component in the tree can handle the message
 
-For example, when a user message starts uploading:
+For example, streaming chat responses:
 
-1. `upload.Uploader` (background goroutine) emits `MessageProcessingEvent` to a channel
-2. `database.Uploader` (TUI bridge) receives it and emits `database.UploadEventMsg`
-3. `chat.Messages` handles the message and shows the spinner
+1. User submits message, TUI starts a goroutine that calls Chat API
+2. Chat API streams SSE events, goroutine converts each to a `tea.Msg`
+3. TUI receives messages and updates UI in real-time (text deltas, thinking blocks, etc.)
+4. When stream completes, TUI writes the assistant message to SQLite
 
 The bridge is transparent—it converts and emits. Producers don't know about consumers. Consumers import the message type from the producer package. Dependencies point in the natural direction.
 
@@ -228,13 +235,18 @@ Views are tool results. When the AI creates a view, it's a tool call with a view
 
 When the user submits:
 
-1. Client writes user message to local SQLite
-2. PowerSync syncs to control plane
-3. Control plane processes (calls Claude, etc.)
-4. Assistant message syncs back
-5. Client renders it
+1. Client creates conversation in SQLite (if new)
+2. Client writes user message to SQLite immediately
+3. Client reads full message history from SQLite
+4. Client calls Chat API directly with history + new message
+5. Chat API streams response blocks via SSE
+6. Client renders blocks in real-time as they arrive (ephemeral UI state)
+7. When stream completes, client writes assistant message to SQLite
+8. UI re-renders from SQLite (now showing persisted message)
 
-The client doesn't wait for a response. It writes optimistically and renders when data arrives via sync.
+The Chat API is stateless—it doesn't store messages. The client sends the full conversation history on every request. This eliminates sync concerns: what you send is what the model sees.
+
+The upload queue runs independently, persisting messages to GraphQL for durability. It doesn't block chat—if it's behind, chat still works correctly.
 
 ---
 
@@ -306,16 +318,21 @@ This is why navigation is instant. Filtering, sorting, searching—all local que
 
 ### What's Local vs Remote
 
-**Local (via PowerSync):**
-- Catalog entities (services, log events, policies, etc.)
-- Conversations and messages
+**Local (SQLite, client-owned):**
+- Catalog entities (services, log events, policies, etc.) — synced via PowerSync
+- Conversations and messages — written by client, uploaded for durability
 - Conversation context
 - Views
 
 **Remote (via API):**
-- Actual telemetry (raw logs, metric data points)
-- Actions requiring immediate server processing
+- Chat inference (Chat API) — stateless, client sends full history, gets streamed response
+- Actual telemetry (raw logs, metric data points) — proxied from vendor
 - Authentication flows
+
+**Durability (via GraphQL upload queue):**
+- Messages are written locally first, then uploaded to GraphQL for persistence
+- Upload queue runs independently — doesn't block chat
+- Server-side messages enable multi-device sync and recovery
 
 The catalog describes data. The telemetry is the actual data. When you need real logs, Tero proxies the request to the vendor.
 

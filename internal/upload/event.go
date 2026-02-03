@@ -1,6 +1,10 @@
 package upload
 
-import "time"
+import (
+	"time"
+
+	"github.com/usetero/cli/internal/sqlite"
+)
 
 // Event is the interface for all upload events.
 // Handlers can define their own event types that implement this interface.
@@ -20,7 +24,7 @@ func (SyncingEvent) uploadEvent() {}
 // StalledEvent is emitted when upload is blocked on a failing entry.
 type StalledEvent struct {
 	Error      error
-	Table      string
+	Table      sqlite.Table
 	RowID      string
 	StalledFor time.Duration
 }

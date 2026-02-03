@@ -35,6 +35,7 @@ linters:
 
     # Type safety
     - forcetypeassert # Unchecked type assertions can panic
+    - exhaustive # Exhaustive enum switches
 
     # Additional checks
     - nilerr # Returns nil even when error is not nil
@@ -42,6 +43,11 @@ linters:
     - usestdlibvars # Use stdlib constants
 
   settings:
+    exhaustive:
+      check: switch
+      default-signifies-exhaustive: true
+      check-generated: false
+
     govet:
       enable-all: true
       disable:

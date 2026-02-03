@@ -5,5 +5,10 @@
 //
 // You don't query through powersync - just use sqlite directly.
 //
-//go:generate go run ./generate
+// Subpackages:
+//   - api: HTTP client for PowerSync service
+//   - extension: SQLite extension interface and wire types
+//   - db: Local database operations (CRUD queue, batch completion)
+//
+//go:generate go run ./extension/generate
 package powersync

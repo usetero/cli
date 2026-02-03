@@ -11,32 +11,27 @@ import (
 var ErrNotReady = errors.New("step not ready")
 
 // Step represents a single step in the onboarding flow.
-// Steps are self-contained components that collect user input and pass data forward.
-//
-// Each step manages its own layout and state.
-// The onboarding flow orchestrates progression through steps.
+// Implementations must use value receivers and return new values.
 type Step interface {
 	// Init initializes the step and returns any initial commands
 	Init() tea.Cmd
 
-	// Update handles messages and updates step state
-	// Returns the updated step and any commands to execute
+	// Update handles messages and returns the updated step
 	Update(tea.Msg) (Step, tea.Cmd)
 
-	// View renders the step's UI as a string
+	// View renders the step's UI
 	View() string
 
-	// SetSize sets the width and height available for rendering
-	SetSize(width, height int)
+	// SetSize returns a new step with the given dimensions
+	SetSize(width, height int) Step
 
-	// IsBusy returns true if this step is performing a background operation
-	// (e.g., network request, validation, etc.)
+	// IsBusy returns true if performing a background operation
 	IsBusy() bool
 
-	// HasError returns true if this step is in an error state
+	// HasError returns true if in an error state
 	HasError() bool
 
-	// Error returns the current error, or nil if no error
+	// Error returns the current error, or nil
 	Error() error
 
 	// Help returns the key bindings for this step
@@ -45,11 +40,11 @@ type Step interface {
 	// Next returns the next step in the flow.
 	// Returns:
 	//   - (nextStep, nil) - transition to nextStep
-	//   - (nil, nil) - flow complete, no more steps
-	//   - (nil, ErrNotReady) - step not complete yet, stay on current step
-	//   - (nil, err) - step failed with error
+	//   - (nil, nil) - flow complete
+	//   - (nil, ErrNotReady) - not complete yet
+	//   - (nil, err) - step failed
 	Next() (Step, error)
 
-	// Close releases any resources held by the step.
+	// Close releases any resources
 	Close() error
 }

@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/pkg/client"
 )
 
 func TestAccountService_List(t *testing.T) {
@@ -17,12 +17,12 @@ func TestAccountService_List(t *testing.T) {
 	t.Run("transforms GraphQL edges to domain accounts", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
-				return &client.ListAccountsResponse{
-					Accounts: client.ListAccountsAccountsAccountConnection{
-						Edges: []client.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
-							{Node: client.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
-							{Node: client.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
+			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
+				return &gen.ListAccountsResponse{
+					Accounts: gen.ListAccountsAccountsAccountConnection{
+						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
+							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
+							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
 						},
 					},
 				}, nil
@@ -49,10 +49,10 @@ func TestAccountService_List(t *testing.T) {
 	t.Run("returns empty slice when no accounts", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
-				return &client.ListAccountsResponse{
-					Accounts: client.ListAccountsAccountsAccountConnection{
-						Edges: []client.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
+			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
+				return &gen.ListAccountsResponse{
+					Accounts: gen.ListAccountsAccountsAccountConnection{
+						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
 					},
 				}, nil
 			},
@@ -72,7 +72,7 @@ func TestAccountService_List(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ListAccountsFunc: func(ctx context.Context, orgID string) (*client.ListAccountsResponse, error) {
+			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -93,12 +93,12 @@ func TestAccountService_Create(t *testing.T) {
 	t.Parallel()
 	t.Run("creates account and returns domain model", func(t *testing.T) {
 		t.Parallel()
-		var capturedInput client.CreateAccountInput
+		var capturedInput gen.CreateAccountInput
 		mockClient := &apitest.MockClient{
-			CreateAccountFunc: func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error) {
+			CreateAccountFunc: func(ctx context.Context, input gen.CreateAccountInput) (*gen.CreateAccountResponse, error) {
 				capturedInput = input
-				return &client.CreateAccountResponse{
-					CreateAccount: client.CreateAccountCreateAccount{
+				return &gen.CreateAccountResponse{
+					CreateAccount: gen.CreateAccountCreateAccount{
 						Id:   "acc-new",
 						Name: "New Account",
 					},
@@ -127,7 +127,7 @@ func TestAccountService_Create(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			CreateAccountFunc: func(ctx context.Context, input client.CreateAccountInput) (*client.CreateAccountResponse, error) {
+			CreateAccountFunc: func(ctx context.Context, input gen.CreateAccountInput) (*gen.CreateAccountResponse, error) {
 				return nil, errors.New("validation error")
 			},
 		}

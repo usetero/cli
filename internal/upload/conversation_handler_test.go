@@ -9,8 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync"
+	"github.com/usetero/cli/internal/powersync/db"
 )
 
 func noopEmitter() Emitter {
@@ -26,23 +27,23 @@ func TestConversationHandler_Handle(t *testing.T) {
 		testID := uuid.New()
 		var calledWith struct {
 			id          uuid.UUID
-			workspaceID string
+			workspaceID domain.WorkspaceID
 			title       string
 		}
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
 				calledWith.id = id
 				calledWith.workspaceID = workspaceID
 				calledWith.title = title
-				return &api.Conversation{ID: id.String()}, nil
+				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
 			},
 		}
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: testID.String(),
 			Data: map[string]any{
 				"workspace_id": "ws-1",
@@ -70,15 +71,15 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: uuid.New().String(),
 			Data:  map[string]any{},
 		}
@@ -93,22 +94,22 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		var calledWith struct {
-			id    string
+			id    domain.ConversationID
 			title string
 		}
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id, title string) (*api.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
 				calledWith.id = id
 				calledWith.title = title
-				return &api.Conversation{ID: id, Title: title}, nil
+				return &domain.Conversation{ID: id, Title: title}, nil
 			},
 		}
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPatch,
+		entry := &db.CrudEntry{
+			Op:    db.OpPatch,
 			RowID: "conv-1",
 			Data: map[string]any{
 				"title": "Updated Title",
@@ -132,15 +133,15 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id, title string) (*api.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPatch,
+		entry := &db.CrudEntry{
+			Op:    db.OpPatch,
 			RowID: "conv-1",
 			Data:  map[string]any{},
 		}
@@ -154,10 +155,10 @@ func TestConversationHandler_Handle(t *testing.T) {
 	t.Run("DELETE deletes conversation", func(t *testing.T) {
 		t.Parallel()
 
-		var deletedID string
+		var deletedID domain.ConversationID
 
 		mock := &apitest.MockConversations{
-			DeleteFunc: func(ctx context.Context, id string) error {
+			DeleteFunc: func(ctx context.Context, id domain.ConversationID) error {
 				deletedID = id
 				return nil
 			},
@@ -165,8 +166,8 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpDelete,
+		entry := &db.CrudEntry{
+			Op:    db.OpDelete,
 			RowID: "conv-1",
 			Data:  map[string]any{},
 		}
@@ -185,15 +186,15 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			DeleteFunc: func(ctx context.Context, id string) error {
+			DeleteFunc: func(ctx context.Context, id domain.ConversationID) error {
 				return errors.New("network error")
 			},
 		}
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpDelete,
+		entry := &db.CrudEntry{
+			Op:    db.OpDelete,
 			RowID: "conv-1",
 			Data:  map[string]any{},
 		}
@@ -208,7 +209,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			DeleteFunc: func(ctx context.Context, id string) error {
+			DeleteFunc: func(ctx context.Context, id domain.ConversationID) error {
 				// Service layer returns wrapped ErrNotFound
 				return fmt.Errorf("delete conversation %s: %w", id, api.ErrNotFound)
 			},
@@ -216,8 +217,8 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpDelete,
+		entry := &db.CrudEntry{
+			Op:    db.OpDelete,
 			RowID: "conv-1",
 			Data:  map[string]any{},
 		}
@@ -232,7 +233,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID, title string) (*api.Conversation, error) {
+			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
 				// Service layer returns wrapped ErrAlreadyExists
 				return nil, fmt.Errorf("create conversation %s: %w", id, api.ErrAlreadyExists)
 			},
@@ -240,8 +241,8 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		h := newConversationHandler(mock, logtest.New(t))
 
-		entry := &powersync.CrudEntry{
-			Op:    powersync.OpPut,
+		entry := &db.CrudEntry{
+			Op:    db.OpPut,
 			RowID: uuid.New().String(),
 			Data: map[string]any{
 				"workspace_id": "ws-1",
@@ -258,9 +259,9 @@ func TestConversationHandler_Handle(t *testing.T) {
 	t.Run("unknown op returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		h := newConversationHandler(&apitest.MockConversations{}, logtest.New(t))
+		h := newConversationHandler(apitest.NewMockConversations(), logtest.New(t))
 
-		entry := &powersync.CrudEntry{
+		entry := &db.CrudEntry{
 			Op:    "UNKNOWN",
 			RowID: "conv-1",
 			Data:  map[string]any{},

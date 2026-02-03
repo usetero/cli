@@ -7,8 +7,8 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/pkg/client"
 )
 
 func TestDatadogAccountService_HasAccount(t *testing.T) {
@@ -16,17 +16,17 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 	t.Run("returns true when datadog account exists", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
-				return &client.GetAccountResponse{
-					Accounts: client.GetAccountAccountsAccountConnection{
-						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
+				return &gen.GetAccountResponse{
+					Accounts: gen.GetAccountAccountsAccountConnection{
+						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
-									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
 										Id:   "dd-123",
 										Name: "Production DD",
-										Site: client.DatadogAccountSiteUs1,
+										Site: gen.DatadogAccountSiteUs1,
 									},
 								},
 							},
@@ -50,15 +50,15 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 	t.Run("returns false when datadog account is empty", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
-				return &client.GetAccountResponse{
-					Accounts: client.GetAccountAccountsAccountConnection{
-						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
+				return &gen.GetAccountResponse{
+					Accounts: gen.GetAccountAccountsAccountConnection{
+						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
 									// Empty DatadogAccount - zero value has empty Id
-									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
 								},
 							},
 						},
@@ -81,10 +81,10 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 	t.Run("returns false when no account found", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
-				return &client.GetAccountResponse{
-					Accounts: client.GetAccountAccountsAccountConnection{
-						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{},
+			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
+				return &gen.GetAccountResponse{
+					Accounts: gen.GetAccountAccountsAccountConnection{
+						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{},
 					},
 				}, nil
 			},
@@ -107,17 +107,17 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 	t.Run("returns datadog account when exists", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
-				return &client.GetAccountResponse{
-					Accounts: client.GetAccountAccountsAccountConnection{
-						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
+				return &gen.GetAccountResponse{
+					Accounts: gen.GetAccountAccountsAccountConnection{
+						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
-									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
 										Id:   "dd-123",
 										Name: "Production DD",
-										Site: client.DatadogAccountSiteUs1,
+										Site: gen.DatadogAccountSiteUs1,
 									},
 								},
 							},
@@ -150,14 +150,14 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 	t.Run("returns nil when no datadog account", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetAccountFunc: func(ctx context.Context, accountID string) (*client.GetAccountResponse, error) {
-				return &client.GetAccountResponse{
-					Accounts: client.GetAccountAccountsAccountConnection{
-						Edges: []client.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
+				return &gen.GetAccountResponse{
+					Accounts: gen.GetAccountAccountsAccountConnection{
+						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id:             "acc-1",
-									DatadogAccount: client.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
 								},
 							},
 						},
@@ -183,9 +183,9 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	t.Run("returns true for valid key", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
-				return &client.ValidateDatadogApiKeyResponse{
-					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input gen.ValidateDatadogApiKeyInput) (*gen.ValidateDatadogApiKeyResponse, error) {
+				return &gen.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: gen.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
 						Valid: true,
 					},
 				}, nil
@@ -209,9 +209,9 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	t.Run("returns false with error message for invalid key", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
-				return &client.ValidateDatadogApiKeyResponse{
-					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input gen.ValidateDatadogApiKeyInput) (*gen.ValidateDatadogApiKeyResponse, error) {
+				return &gen.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: gen.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
 						Valid: false,
 						Error: "API key not found",
 					},
@@ -236,9 +236,9 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	t.Run("returns default error message when none provided", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
-				return &client.ValidateDatadogApiKeyResponse{
-					ValidateDatadogApiKey: client.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input gen.ValidateDatadogApiKeyInput) (*gen.ValidateDatadogApiKeyResponse, error) {
+				return &gen.ValidateDatadogApiKeyResponse{
+					ValidateDatadogApiKey: gen.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
 						Valid: false,
 						Error: "",
 					},
@@ -263,7 +263,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			ValidateDatadogApiKeyFunc: func(ctx context.Context, input client.ValidateDatadogApiKeyInput) (*client.ValidateDatadogApiKeyResponse, error) {
+			ValidateDatadogApiKeyFunc: func(ctx context.Context, input gen.ValidateDatadogApiKeyInput) (*gen.ValidateDatadogApiKeyResponse, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -282,15 +282,15 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 	t.Run("returns status with percent complete", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
-				return &client.GetDatadogAccountStatusResponse{
-					DatadogAccounts: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
-						Edges: []client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
+			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
+				return &gen.GetDatadogAccountStatusResponse{
+					DatadogAccounts: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
+						Edges: []gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
 							{
-								Node: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
+								Node: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
 									Id: "dd-123",
-									Status: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus{
-										LogStatus:            client.DatadogAccountStatusLogStatusAnalyzing,
+									Status: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus{
+										LogStatus:            gen.DatadogAccountStatusLogStatusAnalyzing,
 										LogPercentComplete:   75.5,
 										LogServiceCount:      10,
 										LogReadyServices:     7,
@@ -331,10 +331,10 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 	t.Run("returns nil when no datadog account found", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
-				return &client.GetDatadogAccountStatusResponse{
-					DatadogAccounts: client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
-						Edges: []client.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{},
+			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
+				return &gen.GetDatadogAccountStatusResponse{
+					DatadogAccounts: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
+						Edges: []gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{},
 					},
 				}, nil
 			},
@@ -354,7 +354,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*client.GetDatadogAccountStatusResponse, error) {
+			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
 				return nil, errors.New("network error")
 			},
 		}

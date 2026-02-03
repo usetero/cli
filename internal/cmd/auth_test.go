@@ -69,8 +69,7 @@ func TestPromptOrgSelection_Validation(t *testing.T) {
 
 func TestFetchOrganizations(t *testing.T) {
 	t.Parallel()
-	// fetchOrganizations is a thin wrapper around the GraphQL client.
-	// Testing it would require mocking the entire GraphQL client,
+	// fetchOrganizations is a thin wrapper around the API services.
+	// Testing it would require mocking the entire API client,
 	// which is overkill for a simple data transformation.
-	// The GraphQL client itself is tested in pkg/client.
 }

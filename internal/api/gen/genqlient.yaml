@@ -1,0 +1,11 @@
+# genqlient config - https://github.com/Khan/genqlient/blob/main/docs/genqlient.yaml
+schema: schema.graphql
+operations:
+  - queries/*.graphql
+generated: generated.go
+package: gen
+bindings:
+  Time:
+    type: time.Time
+  Map:
+    type: map[string]any

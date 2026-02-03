@@ -4,13 +4,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api/gen"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/pkg/client"
 )
 
 // Organizations provides access to organizations.
 type Organizations interface {
-	List(ctx context.Context) ([]Organization, error)
+	List(ctx context.Context) ([]domain.Organization, error)
 	Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error)
 }
 
@@ -31,22 +32,15 @@ func NewOrganizationService(client Client, logger log.Logger) *OrganizationServi
 	}
 }
 
-// Organization is the domain model for an organization.
-type Organization struct {
-	ID                   string
-	Name                 string
-	WorkosOrganizationID string
-}
-
 // OrganizationBootstrapResult contains the organization, account, and workspace created during bootstrap.
 type OrganizationBootstrapResult struct {
-	Organization *Organization
-	Account      *Account
-	Workspace    *Workspace
+	Organization *domain.Organization
+	Account      *domain.Account
+	Workspace    *domain.Workspace
 }
 
 // List fetches all organizations for the user.
-func (s *OrganizationService) List(ctx context.Context) ([]Organization, error) {
+func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, error) {
 	s.logger.Debug("fetching organizations from API")
 	resp, err := s.client.ListOrganizations(ctx)
 	if err != nil {
@@ -55,12 +49,11 @@ func (s *OrganizationService) List(ctx context.Context) ([]Organization, error) 
 	}
 
 	// Convert GraphQL response to domain model
-	orgs := make([]Organization, len(resp.Organizations.Edges))
+	orgs := make([]domain.Organization, len(resp.Organizations.Edges))
 	for i, edge := range resp.Organizations.Edges {
-		orgs[i] = Organization{
-			ID:                   edge.Node.Id,
-			Name:                 edge.Node.Name,
-			WorkosOrganizationID: edge.Node.WorkosOrganizationID,
+		orgs[i] = domain.Organization{
+			ID:   domain.OrganizationID(edge.Node.Id),
+			Name: edge.Node.Name,
 		}
 	}
 
@@ -71,7 +64,7 @@ func (s *OrganizationService) List(ctx context.Context) ([]Organization, error) 
 // Create creates a new organization with bootstrapped account and workspace.
 func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error) {
 	s.logger.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
-	input := client.CreateOrganizationInput{
+	input := gen.CreateOrganizationInput{
 		Id:   id.String(),
 		Name: name,
 	}
@@ -82,19 +75,19 @@ func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name str
 		return nil, err
 	}
 
-	org := &Organization{
-		ID:                   resp.CreateOrganizationAndBootstrap.Organization.Id,
+	org := &domain.Organization{
+		ID:                   domain.OrganizationID(resp.CreateOrganizationAndBootstrap.Organization.Id),
 		Name:                 resp.CreateOrganizationAndBootstrap.Organization.Name,
-		WorkosOrganizationID: resp.CreateOrganizationAndBootstrap.Organization.WorkosOrganizationID,
+		WorkosOrganizationID: domain.WorkosOrganizationID(resp.CreateOrganizationAndBootstrap.Organization.WorkosOrganizationID),
 	}
 
-	account := &Account{
-		ID:   resp.CreateOrganizationAndBootstrap.Account.Id,
+	account := &domain.Account{
+		ID:   domain.AccountID(resp.CreateOrganizationAndBootstrap.Account.Id),
 		Name: resp.CreateOrganizationAndBootstrap.Account.Name,
 	}
 
-	workspace := &Workspace{
-		ID:   resp.CreateOrganizationAndBootstrap.Workspace.Id,
+	workspace := &domain.Workspace{
+		ID:   domain.WorkspaceID(resp.CreateOrganizationAndBootstrap.Workspace.Id),
 		Name: resp.CreateOrganizationAndBootstrap.Workspace.Name,
 	}
 
