@@ -20,9 +20,9 @@ func TestAccountService_List(t *testing.T) {
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
 				return &gen.ListAccountsResponse{
 					Accounts: gen.ListAccountsAccountsAccountConnection{
-						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
-							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
-							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
+						Edges: []*gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
+							{Node: &gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
+							{Node: &gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
 						},
 					},
 				}, nil
@@ -52,7 +52,7 @@ func TestAccountService_List(t *testing.T) {
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
 				return &gen.ListAccountsResponse{
 					Accounts: gen.ListAccountsAccountsAccountConnection{
-						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
+						Edges: []*gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
 					},
 				}, nil
 			},

@@ -40,9 +40,9 @@ func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspac
 	s.logger.Debug("creating conversation via API", "id", id.String(), "workspaceID", workspaceID.String(), "title", title)
 
 	input := gen.CreateConversationInput{
-		Id:          id.String(),
+		Id:          ptr(id.String()),
 		WorkspaceID: workspaceID.String(),
-		Title:       title,
+		Title:       ptr(title),
 	}
 
 	resp, err := s.client.CreateConversation(ctx, input)
@@ -69,7 +69,7 @@ func (s *ConversationService) Update(ctx context.Context, id domain.Conversation
 	s.logger.Debug("updating conversation via API", "id", id.String(), "title", title)
 
 	input := gen.UpdateConversationInput{
-		Title: title,
+		Title: ptr(title),
 	}
 
 	resp, err := s.client.UpdateConversation(ctx, id.String(), input)
@@ -83,7 +83,7 @@ func (s *ConversationService) Update(ctx context.Context, id domain.Conversation
 
 	conversation := &domain.Conversation{
 		ID:    domain.ConversationID(resp.UpdateConversation.Id),
-		Title: resp.UpdateConversation.Title,
+		Title: deref(resp.UpdateConversation.Title),
 	}
 
 	s.logger.Debug("updated conversation via API", "id", conversation.ID)

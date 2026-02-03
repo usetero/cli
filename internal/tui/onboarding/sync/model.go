@@ -13,6 +13,7 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tui/components/progress"
 	"github.com/usetero/cli/internal/tui/keymap"
 	"github.com/usetero/cli/internal/tui/onboarding/step"
 )
@@ -133,6 +134,16 @@ func (m Model) View() string {
 	case *powersync.Syncing:
 		statusLine := m.spinner.View() + " " + themeStyles.Body.Render(s.Message)
 		parts := []string{title, "", statusLine}
+
+		// Show progress bar if we have progress data
+		if s.Progress != nil && s.Progress.Total > 0 {
+			pct := float64(s.Progress.Downloaded) / float64(s.Progress.Total)
+			prog := progress.New(m.theme, 50)
+			progressBar := prog.ViewAs(pct)
+
+			countText := fmt.Sprintf("%d / %d rows", s.Progress.Downloaded, s.Progress.Total)
+			parts = append(parts, "", progressBar, "", themeStyles.Help.Render(countText))
+		}
 
 		// Show warning as secondary line if present
 		if s.Warning != "" {

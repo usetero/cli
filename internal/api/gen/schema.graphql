@@ -289,8 +289,8 @@ type ConversationContext implements Node {
   """Conversation this context belongs to"""
   conversationID: ID!
 
-  """Type of the context entity: service, log_event, workspace, etc."""
-  entityType: String!
+  """Type of the context entity"""
+  entityType: ConversationContextEntityType!
 
   """ID of the context entity"""
   entityID: UUID!
@@ -330,6 +330,12 @@ type ConversationContextEdge {
 
   """A cursor for use in pagination."""
   cursor: Cursor!
+}
+
+"""ConversationContextEntityType is enum for the field entity_type"""
+enum ConversationContextEntityType {
+  service
+  log_event
 }
 
 """Ordering options for ConversationContext connections"""
@@ -382,19 +388,10 @@ input ConversationContextWhereInput {
   conversationIDNotIn: [ID!]
 
   """entity_type field predicates"""
-  entityType: String
-  entityTypeNEQ: String
-  entityTypeIn: [String!]
-  entityTypeNotIn: [String!]
-  entityTypeGT: String
-  entityTypeGTE: String
-  entityTypeLT: String
-  entityTypeLTE: String
-  entityTypeContains: String
-  entityTypeHasPrefix: String
-  entityTypeHasSuffix: String
-  entityTypeEqualFold: String
-  entityTypeContainsFold: String
+  entityType: ConversationContextEntityType
+  entityTypeNEQ: ConversationContextEntityType
+  entityTypeIn: [ConversationContextEntityType!]
+  entityTypeNotIn: [ConversationContextEntityType!]
 
   """entity_id field predicates"""
   entityID: UUID
@@ -3196,10 +3193,10 @@ type ToolResult {
   """Whether the tool execution resulted in an error."""
   isError: Boolean
 
-  """Error message if isError is true."""
+  """Human-readable error message when isError is true."""
   error: String
 
-  """The result content (JSON object)."""
+  """Structured result data (JSON object)."""
   content: Map
 }
 
@@ -3209,12 +3206,12 @@ input ToolResultInput {
   toolUseId: String!
 
   """Whether the tool execution resulted in an error."""
-  isError: Boolean
+  isError: Boolean!
 
-  """Error message if isError is true."""
+  """Human-readable error message when isError is true."""
   error: String
 
-  """The result content (JSON object)."""
+  """Structured result data (JSON object)."""
   content: Map
 }
 

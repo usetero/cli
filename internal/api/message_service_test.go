@@ -42,8 +42,8 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			t.Fatalf("CreateMessage() error = %v", err)
 		}
 
-		if captured.Id != "msg-123" {
-			t.Errorf("Id = %q, want %q", captured.Id, "msg-123")
+		if captured.Id == nil || *captured.Id != "msg-123" {
+			t.Errorf("Id = %v, want %q", captured.Id, "msg-123")
 		}
 		if captured.ConversationID != "conv-456" {
 			t.Errorf("ConversationID = %q, want %q", captured.ConversationID, "conv-456")
@@ -94,10 +94,10 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		if captured.Role != gen.MessageRoleAssistant {
 			t.Errorf("Role = %v, want %v", captured.Role, gen.MessageRoleAssistant)
 		}
-		if captured.Model != "claude-3" {
-			t.Errorf("Model = %q, want %q", captured.Model, "claude-3")
+		if captured.Model == nil || *captured.Model != "claude-3" {
+			t.Errorf("Model = %v, want %q", captured.Model, "claude-3")
 		}
-		if captured.StopReason != gen.MessageStopReasonEndTurn {
+		if captured.StopReason == nil || *captured.StopReason != gen.MessageStopReasonEndTurn {
 			t.Errorf("StopReason = %v, want %v", captured.StopReason, gen.MessageStopReasonEndTurn)
 		}
 	})
@@ -311,9 +311,12 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		if block.ToolResult.ToolUseId != "tool-1" {
 			t.Errorf("ToolResult.ToolUseId = %q, want %q", block.ToolResult.ToolUseId, "tool-1")
 		}
-		cols, ok := block.ToolResult.Content["columns"].([]any)
+		if block.ToolResult.Content == nil {
+			t.Fatal("ToolResult.Content is nil")
+		}
+		cols, ok := (*block.ToolResult.Content)["columns"].([]any)
 		if !ok || len(cols) != 2 {
-			t.Errorf("ToolResult.Content[columns] = %v, want [id, name]", block.ToolResult.Content["columns"])
+			t.Errorf("ToolResult.Content[columns] = %v, want [id, name]", (*block.ToolResult.Content)["columns"])
 		}
 	})
 
@@ -358,8 +361,8 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		if !block.ToolResult.IsError {
 			t.Error("ToolResult.IsError = false, want true")
 		}
-		if block.ToolResult.Error != "something went wrong" {
-			t.Errorf("ToolResult.Error = %q, want %q", block.ToolResult.Error, "something went wrong")
+		if block.ToolResult.Error == nil || *block.ToolResult.Error != "something went wrong" {
+			t.Errorf("ToolResult.Error = %v, want %q", block.ToolResult.Error, "something went wrong")
 		}
 	})
 }

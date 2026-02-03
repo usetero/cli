@@ -52,8 +52,9 @@ func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, 
 	orgs := make([]domain.Organization, len(resp.Organizations.Edges))
 	for i, edge := range resp.Organizations.Edges {
 		orgs[i] = domain.Organization{
-			ID:   domain.OrganizationID(edge.Node.Id),
-			Name: edge.Node.Name,
+			ID:                   domain.OrganizationID(edge.Node.Id),
+			Name:                 edge.Node.Name,
+			WorkosOrganizationID: domain.WorkosOrganizationID(edge.Node.WorkosOrganizationID),
 		}
 	}
 
@@ -65,7 +66,7 @@ func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, 
 func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error) {
 	s.logger.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
 	input := gen.CreateOrganizationInput{
-		Id:   id.String(),
+		Id:   ptr(id.String()),
 		Name: name,
 	}
 

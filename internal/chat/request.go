@@ -8,4 +8,5 @@ type Request struct {
 	ConversationID string                 `json:"conversation_id"`
 	Messages       []domain.Message       `json:"messages"`
 	Context        []domain.ContextEntity `json:"context,omitempty"`
+	Tools          []Tool                 `json:"tools"`
 }

@@ -83,10 +83,9 @@ func (s *DatadogAccountService) HasAccount(ctx context.Context, accountID string
 	}
 
 	// Check if we found an account and if it has a datadogAccount
-	// When null in GraphQL, genqlient returns empty struct with empty Id
 	if len(resp.Accounts.Edges) > 0 {
 		account := resp.Accounts.Edges[0].Node
-		hasDatadog := account.DatadogAccount.Id != ""
+		hasDatadog := account.DatadogAccount != nil && account.DatadogAccount.Id != ""
 		s.logger.Debug("checked for datadog account via API", "hasDatadog", hasDatadog)
 		return hasDatadog, nil
 	}
@@ -107,7 +106,7 @@ func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID string
 	// Check if we found an account and if it has a datadogAccount
 	if len(resp.Accounts.Edges) > 0 {
 		account := resp.Accounts.Edges[0].Node
-		if account.DatadogAccount.Id != "" {
+		if account.DatadogAccount != nil && account.DatadogAccount.Id != "" {
 			ddAccount := &DatadogAccount{
 				ID:   account.DatadogAccount.Id,
 				Name: account.DatadogAccount.Name,
@@ -141,8 +140,8 @@ func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site
 
 	if !resp.ValidateDatadogApiKey.Valid {
 		errorMsg := "Invalid API key"
-		if resp.ValidateDatadogApiKey.Error != "" {
-			errorMsg = resp.ValidateDatadogApiKey.Error
+		if resp.ValidateDatadogApiKey.Error != nil && *resp.ValidateDatadogApiKey.Error != "" {
+			errorMsg = *resp.ValidateDatadogApiKey.Error
 		}
 		s.logger.Debug("datadog API key is invalid", "error", errorMsg)
 		return false, errorMsg, nil
@@ -160,7 +159,7 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, id uuid.UUID,
 	s.logger.Debug("creating datadog account with credentials via API", "id", id.String(), "accountID", accountID, "site", site)
 	input := gen.CreateDatadogAccountWithCredentialsInput{
 		Attributes: gen.CreateDatadogAccountInput{
-			Id:        id.String(),
+			Id:        ptr(id.String()),
 			AccountID: accountID,
 			Name:      name,
 			Site:      gen.DatadogAccountSite(site), // US1, US5, EU1, etc.
@@ -205,9 +204,9 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 
 	result := &DatadogAccountStatus{
 		Status:              DatadogAccountStatusState(statusNode.LogStatus),
-		PercentComplete:     statusNode.LogPercentComplete,
-		ServiceLogVolume:    statusNode.LogServiceVolumeInWindow,
-		DiscoveredLogVolume: statusNode.LogDiscoveredVolumeInWindow,
+		PercentComplete:     deref(statusNode.LogPercentComplete),
+		ServiceLogVolume:    deref(statusNode.LogServiceVolumeInWindow),
+		DiscoveredLogVolume: deref(statusNode.LogDiscoveredVolumeInWindow),
 		ServiceCount:        statusNode.LogServiceCount,
 		ActiveServices:      statusNode.LogActiveServices,
 		ReadyServices:       statusNode.LogReadyServices,

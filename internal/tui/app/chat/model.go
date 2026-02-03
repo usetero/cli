@@ -12,6 +12,9 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tui/app/messages"
+	"github.com/usetero/cli/internal/tui/app/tools"
+	"github.com/usetero/cli/internal/tui/app/tools/query"
+	"github.com/usetero/cli/internal/tui/components/thinking"
 )
 
 // eventMsg wraps a streaming event from the Chat API.
@@ -50,12 +53,16 @@ type Model struct {
 	accountID   domain.AccountID
 	workspaceID domain.WorkspaceID
 
+	// Tools (global + view-specific, merged on construction)
+	tools tools.Tools
+
 	// Conversation state
 	conversationID domain.ConversationID
 	messages       []domain.Message
 
 	// Streaming state
 	streaming *chat.Accumulator
+	thinking  thinking.Model
 	eventCh   chan tea.Msg
 
 	width  int
@@ -63,8 +70,8 @@ type Model struct {
 }
 
 // New creates a new chat model.
-func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client chat.Client, accountID domain.AccountID, workspaceID domain.WorkspaceID, logger log.Logger) Model {
-	return Model{
+func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client chat.Client, accountID domain.AccountID, workspaceID domain.WorkspaceID, globalTools tools.Tools, logger log.Logger) Model {
+	m := Model{
 		ctx:         ctx,
 		theme:       theme,
 		db:          db,
@@ -73,6 +80,50 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client ch
 		accountID:   accountID,
 		workspaceID: workspaceID,
 	}
+	m.tools = globalTools.Merge(m.viewTools())
+	return m
+}
+
+// viewTools returns the tools specific to the chat view.
+func (m Model) viewTools() tools.Tools {
+	return tools.Tools{
+		query.Tool{QueryFunc: m.executeQuery},
+	}
+}
+
+// executeQuery runs a read-only SQL query against the local database.
+func (m Model) executeQuery(sql string) ([]map[string]any, error) {
+	rows, err := m.db.DB().Query(m.ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []map[string]any
+	for rows.Next() {
+		values := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, err
+		}
+
+		row := make(map[string]any, len(cols))
+		for i, col := range cols {
+			row[col] = values[i]
+		}
+		results = append(results, row)
+	}
+
+	return results, rows.Err()
 }
 
 // Init initializes the chat model.
@@ -85,6 +136,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case thinking.TickMsg:
+		// Forward ticks while streaming with no content yet
+		if m.streaming != nil && len(m.streaming.Blocks()) == 0 {
+			var cmd tea.Cmd
+			m.thinking, cmd = m.thinking.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+		return m, tea.Batch(cmds...)
+
 	case messages.SubmitMsg:
 		return m.handleSubmit(msg.Text)
 
@@ -192,9 +254,21 @@ func (m Model) renderStreamingMessage() string {
 		return ""
 	}
 
+	colors := m.theme.Colors
+	blocks := m.streaming.Blocks()
+
+	// Show thinking animation while waiting for content
+	if len(blocks) == 0 {
+		label := lipgloss.NewStyle().
+			Foreground(colors.Brand.GradientEnd).
+			Bold(true).
+			Render("Tero")
+		return lipgloss.JoinVertical(lipgloss.Left, label, m.thinking.View())
+	}
+
 	msg := domain.Message{
 		Role:    domain.RoleAssistant,
-		Content: m.streaming.Blocks(),
+		Content: blocks,
 		Model:   m.streaming.Model(),
 	}
 
@@ -265,17 +339,20 @@ func (m Model) handleSubmit(text string) (Model, tea.Cmd) {
 	// Start streaming
 	m.streaming = chat.NewAccumulator()
 
+	// Start thinking animation
+	m.thinking = thinking.New(m.theme, "Thinking")
+
 	// Create channel for events
 	m.eventCh = make(chan tea.Msg, 100)
 
 	// Start the streaming goroutine
-	go m.streamChat(ctx, db, client, accountID, convID, userMsg, m.eventCh)
+	go m.streamChat(ctx, db, client, accountID, convID, userMsg, m.tools, m.eventCh)
 
-	return m, m.waitForNextEvent()
+	return m, tea.Batch(m.waitForNextEvent(), m.thinking.Init())
 }
 
 // streamChat runs in a goroutine and sends events to the channel.
-func (m Model) streamChat(ctx context.Context, db sqlite.Database, client chat.Client, accountID domain.AccountID, convID domain.ConversationID, userMsg domain.Message, eventCh chan<- tea.Msg) {
+func (m Model) streamChat(ctx context.Context, db sqlite.Database, client chat.Client, accountID domain.AccountID, convID domain.ConversationID, userMsg domain.Message, t tools.Tools, eventCh chan<- tea.Msg) {
 	defer close(eventCh)
 
 	// Persist user message to SQLite
@@ -285,10 +362,11 @@ func (m Model) streamChat(ctx context.Context, db sqlite.Database, client chat.C
 		return
 	}
 
-	// Build request with full message history
+	// Build request with full message history and tools
 	req := chat.Request{
 		ConversationID: convID.String(),
 		Messages:       m.messages,
+		Tools:          t.Definitions(),
 	}
 
 	// Stream the response

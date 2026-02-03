@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	appchat "github.com/usetero/cli/internal/tui/app/chat"
 	"github.com/usetero/cli/internal/tui/app/messages"
+	"github.com/usetero/cli/internal/tui/app/tools"
 )
 
 // Model is the app shell.
@@ -56,7 +57,7 @@ func New(ctx context.Context, theme *styles.Theme, db sqlite.Database, client ch
 		db:         db,
 		logger:     logger,
 		commandBar: NewCommandBar(theme),
-		chat:       appchat.New(ctx, theme, db, client, account.ID, workspace.ID, logger),
+		chat:       appchat.New(ctx, theme, db, client, account.ID, workspace.ID, tools.All(), logger),
 	}
 }
 

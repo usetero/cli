@@ -81,7 +81,7 @@ func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*
 func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error) {
 	s.logger.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
 	input := gen.CreateAccountInput{
-		Id:             id.String(),
+		Id:             ptr(id.String()),
 		OrganizationID: organizationID.String(),
 		Name:           name,
 	}

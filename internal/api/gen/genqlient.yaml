@@ -4,6 +4,7 @@ operations:
   - queries/*.graphql
 generated: generated.go
 package: gen
+optional: pointer
 bindings:
   Time:
     type: time.Time

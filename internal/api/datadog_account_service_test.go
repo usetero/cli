@@ -11,6 +11,8 @@ import (
 	"github.com/usetero/cli/internal/log/logtest"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func TestDatadogAccountService_HasAccount(t *testing.T) {
 	t.Parallel()
 	t.Run("returns true when datadog account exists", func(t *testing.T) {
@@ -19,11 +21,11 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
 				return &gen.GetAccountResponse{
 					Accounts: gen.GetAccountAccountsAccountConnection{
-						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+						Edges: []*gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
-									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+									DatadogAccount: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
 										Id:   "dd-123",
 										Name: "Production DD",
 										Site: gen.DatadogAccountSiteUs1,
@@ -53,12 +55,12 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
 				return &gen.GetAccountResponse{
 					Accounts: gen.GetAccountAccountsAccountConnection{
-						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+						Edges: []*gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
-									// Empty DatadogAccount - zero value has empty Id
-									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+									// Empty DatadogAccount - nil pointer
+									DatadogAccount: nil,
 								},
 							},
 						},
@@ -84,7 +86,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
 				return &gen.GetAccountResponse{
 					Accounts: gen.GetAccountAccountsAccountConnection{
-						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{},
+						Edges: []*gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{},
 					},
 				}, nil
 			},
@@ -110,11 +112,11 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
 				return &gen.GetAccountResponse{
 					Accounts: gen.GetAccountAccountsAccountConnection{
-						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+						Edges: []*gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id: "acc-1",
-									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
+									DatadogAccount: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{
 										Id:   "dd-123",
 										Name: "Production DD",
 										Site: gen.DatadogAccountSiteUs1,
@@ -153,11 +155,11 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			GetAccountFunc: func(ctx context.Context, accountID string) (*gen.GetAccountResponse, error) {
 				return &gen.GetAccountResponse{
 					Accounts: gen.GetAccountAccountsAccountConnection{
-						Edges: []gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
+						Edges: []*gen.GetAccountAccountsAccountConnectionEdgesAccountEdge{
 							{
-								Node: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
+								Node: &gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount{
 									Id:             "acc-1",
-									DatadogAccount: gen.GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccount{},
+									DatadogAccount: nil,
 								},
 							},
 						},
@@ -208,12 +210,13 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 
 	t.Run("returns false with error message for invalid key", func(t *testing.T) {
 		t.Parallel()
+		errMsg := "API key not found"
 		mockClient := &apitest.MockClient{
 			ValidateDatadogApiKeyFunc: func(ctx context.Context, input gen.ValidateDatadogApiKeyInput) (*gen.ValidateDatadogApiKeyResponse, error) {
 				return &gen.ValidateDatadogApiKeyResponse{
 					ValidateDatadogApiKey: gen.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
 						Valid: false,
-						Error: "API key not found",
+						Error: &errMsg,
 					},
 				}, nil
 			},
@@ -240,7 +243,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 				return &gen.ValidateDatadogApiKeyResponse{
 					ValidateDatadogApiKey: gen.ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult{
 						Valid: false,
-						Error: "",
+						Error: nil,
 					},
 				}, nil
 			},
@@ -285,13 +288,13 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
 				return &gen.GetDatadogAccountStatusResponse{
 					DatadogAccounts: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
-						Edges: []gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
+						Edges: []*gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{
 							{
-								Node: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
+								Node: &gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
 									Id: "dd-123",
 									Status: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus{
 										LogStatus:            gen.DatadogAccountStatusLogStatusAnalyzing,
-										LogPercentComplete:   75.5,
+										LogPercentComplete:   ptr(75.5),
 										LogServiceCount:      10,
 										LogReadyServices:     7,
 										LogAnalyzingServices: 2,
@@ -334,7 +337,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
 				return &gen.GetDatadogAccountStatusResponse{
 					DatadogAccounts: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection{
-						Edges: []gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{},
+						Edges: []*gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge{},
 					},
 				}, nil
 			},

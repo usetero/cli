@@ -48,11 +48,11 @@ func (s *MessageService) CreateMessage(ctx context.Context, msg *domain.Message)
 	}
 
 	input := gen.CreateMessageInput{
-		Id:             msg.ID.String(),
+		Id:             ptr(msg.ID.String()),
 		ConversationID: msg.ConversationID.String(),
 		Role:           toMessageRole(msg.Role),
 		Content:        content,
-		Model:          msg.Model,
+		Model:          ptr(msg.Model),
 		StopReason:     toStopReason(msg.StopReason),
 	}
 
@@ -75,14 +75,14 @@ func toMessageRole(role domain.Role) gen.MessageRole {
 	}
 }
 
-func toStopReason(reason string) gen.MessageStopReason {
+func toStopReason(reason string) *gen.MessageStopReason {
 	switch reason {
 	case "end_turn":
-		return gen.MessageStopReasonEndTurn
+		return ptr(gen.MessageStopReasonEndTurn)
 	case "tool_use":
-		return gen.MessageStopReasonToolUse
+		return ptr(gen.MessageStopReasonToolUse)
 	default:
-		return ""
+		return nil // Don't send stopReason for user messages
 	}
 }
 
@@ -105,7 +105,7 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 	case domain.BlockTypeText:
 		return gen.ContentBlockInput{
 			Type: gen.ContentBlockTypeText,
-			Text: gen.TextBlockInput{
+			Text: &gen.TextBlockInput{
 				Content: block.Text.Content,
 			},
 		}, nil
@@ -113,7 +113,7 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 	case domain.BlockTypeThinking:
 		return gen.ContentBlockInput{
 			Type: gen.ContentBlockTypeThinking,
-			Thinking: gen.ThinkingBlockInput{
+			Thinking: &gen.ThinkingBlockInput{
 				Content: block.Thinking.Content,
 			},
 		}, nil
@@ -125,7 +125,7 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 		}
 		return gen.ContentBlockInput{
 			Type: gen.ContentBlockTypeToolUse,
-			ToolUse: gen.ToolUseInput{
+			ToolUse: &gen.ToolUseInput{
 				Id:    block.ToolUse.ID,
 				Name:  string(block.ToolUse.Name),
 				Input: input,
@@ -137,14 +137,17 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 		if err != nil {
 			return gen.ContentBlockInput{}, fmt.Errorf("tool_result block: %w", err)
 		}
+		toolResult := &gen.ToolResultInput{
+			ToolUseId: block.ToolResult.ToolUseID,
+			IsError:   block.ToolResult.IsError,
+			Content:   content,
+		}
+		if block.ToolResult.Error != "" {
+			toolResult.Error = ptr(block.ToolResult.Error)
+		}
 		return gen.ContentBlockInput{
-			Type: gen.ContentBlockTypeToolResult,
-			ToolResult: gen.ToolResultInput{
-				ToolUseId: block.ToolResult.ToolUseID,
-				IsError:   block.ToolResult.IsError,
-				Error:     block.ToolResult.Error,
-				Content:   content,
-			},
+			Type:       gen.ContentBlockTypeToolResult,
+			ToolResult: toolResult,
 		}, nil
 
 	case domain.BlockTypeTextDelta,
@@ -221,27 +224,29 @@ func toToolInput(use *tool.Use) (map[string]any, error) {
 	return nil, fmt.Errorf("unknown tool: %s", use.Name)
 }
 
-func toToolResultContent(result *tool.Result) (map[string]any, error) {
-	// Tool results can be empty (e.g., for client-executed tools like ShowMetric)
-	// Only return error if we have a result type we don't recognize
-
+func toToolResultContent(result *tool.Result) (*map[string]any, error) {
 	if result.AddContext != nil {
-		return structToMap(result.AddContext)
+		m, err := structToMap(result.AddContext)
+		return &m, err
 	}
 	if result.RemoveContext != nil {
-		return structToMap(result.RemoveContext)
+		m, err := structToMap(result.RemoveContext)
+		return &m, err
 	}
 	if result.Query != nil {
-		return structToMap(result.Query)
+		m, err := structToMap(result.Query)
+		return &m, err
 	}
 	if result.ApprovePolicy != nil {
-		return structToMap(result.ApprovePolicy)
+		m, err := structToMap(result.ApprovePolicy)
+		return &m, err
 	}
 	if result.DismissPolicy != nil {
-		return structToMap(result.DismissPolicy)
+		m, err := structToMap(result.DismissPolicy)
+		return &m, err
 	}
 
-	// No typed result - this is OK for client-executed tools or error results
+	// No typed result - this is OK for client-executed tools
 	return nil, nil
 }
 
