@@ -35,11 +35,13 @@ var (
 
 // New creates a new user message model.
 func New(theme *styles.Theme, logger log.Logger, message domain.Message) *Model {
+	h := highlight.NewItem()
+	h.SetHighlighter(highlight.SelectionHighlighter(theme.Colors.SelectionBg, theme.Colors.SelectionFg))
 	return &Model{
 		theme:     theme,
 		logger:    logger,
 		message:   message,
-		highlight: highlight.NewItem(),
+		highlight: h,
 	}
 }
 

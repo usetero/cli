@@ -34,35 +34,35 @@ type DatadogAccount struct {
 }
 
 type DatadogAccountStatusesCache struct {
-	ID                     *string
-	AccountID              *string
-	DatadogAccountID       *string
-	LogActiveServices      *int64
-	LogAnalyzedCount       *int64
-	LogAnalyzingCount      *int64
-	LogAnalyzingServices   *int64
-	LogBrokenServices      *int64
-	LogDisabledServices    *int64
-	LogDiscoveredVolume    *string
-	LogDiscoveringCount    *int64
-	LogDiscoveringServices *int64
-	LogError               *string
-	LogErrorAt             *string
-	LogEventCount          *int64
-	LogInactiveServices    *int64
-	LogPercentComplete     *float64
-	LogReadyServices       *int64
-	LogSavedCount          *int64
-	LogServiceCount        *int64
-	LogServiceVolume       *string
-	LogStaleServices       *int64
-	LogStatus              *string
-	LogValuableCount       *int64
-	LogWarning             *string
-	LogWarningAt           *string
-	LogWasteCount          *int64
-	ReadyForUse            *int64
-	RefreshedAt            *string
+	ID                          *string
+	AccountID                   *string
+	DatadogAccountID            *string
+	LogActiveServices           *int64
+	LogAnalyzedCount            *int64
+	LogAnalyzingCount           *int64
+	LogAnalyzingServices        *int64
+	LogBrokenServices           *int64
+	LogDisabledServices         *int64
+	LogDiscoveredVolumeInWindow *int64
+	LogDiscoveringCount         *int64
+	LogDiscoveringServices      *int64
+	LogError                    *string
+	LogErrorAt                  *string
+	LogEventCount               *int64
+	LogInactiveServices         *int64
+	LogPercentComplete          *float64
+	LogReadyServices            *int64
+	LogSavedCount               *int64
+	LogServiceCount             *int64
+	LogServiceVolumeInWindow    *int64
+	LogStaleServices            *int64
+	LogStatus                   *string
+	LogValuableCount            *int64
+	LogWarning                  *string
+	LogWarningAt                *string
+	LogWasteCount               *int64
+	ReadyForUse                 *int64
+	RefreshedAt                 *string
 }
 
 type DatadogLogIndex struct {
@@ -122,35 +122,35 @@ type LogEventPolicy struct {
 }
 
 type LogEventPolicyStatusesCache struct {
-	ID          *string
-	AccountID   *string
-	ApprovedAt  *string
-	BytesSaved  *string
-	Category    *string
-	DismissedAt *string
-	LogEventID  *string
-	PolicyID    *string
-	RefreshedAt *string
-	Status      *string
-	VolumeSaved *string
-	WorkspaceID *string
+	ID                 *string
+	AccountID          *string
+	ApprovedAt         *string
+	BytesSavedPerHour  *float64
+	Category           *string
+	DismissedAt        *string
+	LogEventID         *string
+	PolicyID           *string
+	RefreshedAt        *string
+	Status             *string
+	VolumeSavedPerHour *float64
+	WorkspaceID        *string
 }
 
 type LogEventStatusesCache struct {
-	ID               *string
-	AccountID        *string
-	BytesAfter       *string
-	BytesBefore      *string
-	DatadogAccountID *string
-	Error            *string
-	HasBeenAnalyzed  *int64
-	HasVolumes       *int64
-	LogEventID       *string
-	RefreshedAt      *string
-	ServiceID        *string
-	Status           *string
-	VolumeAfter      *string
-	VolumeBefore     *string
+	ID                  *string
+	AccountID           *string
+	BytesPerHourAfter   *float64
+	BytesPerHourBefore  *float64
+	DatadogAccountID    *string
+	Error               *string
+	HasBeenAnalyzed     *int64
+	HasVolumes          *int64
+	LogEventID          *string
+	RefreshedAt         *string
+	ServiceID           *string
+	Status              *string
+	VolumePerHourAfter  *float64
+	VolumePerHourBefore *float64
 }
 
 type LogEventVolume struct {
@@ -158,7 +158,7 @@ type LogEventVolume struct {
 	AccountID         *string
 	AttributeAvgBytes *string
 	AvgBytes          *float64
-	Count             *string
+	CountPerHour      *float64
 	CreatedAt         *string
 	DatadogLogIndexID *string
 	EdgeInstanceID    *string
@@ -196,33 +196,33 @@ type ServiceLogVolume struct {
 	ServiceID        *string
 	Timestamp        *string
 	UpdatedAt        *string
-	Volume           *string
+	VolumePerHour    *int64
 }
 
 type ServiceStatusesCache struct {
-	ID                  *string
-	AccountID           *string
-	DatadogAccountID    *string
-	LogAnalyzingCount   *int64
-	LogBytesAfter       *string
-	LogBytesBefore      *string
-	LogDiscoveredVolume *string
-	LogDiscoveringCount *int64
-	LogError            *string
-	LogErrorAt          *string
-	LogEventCount       *int64
-	LogPercentComplete  *float64
-	LogSavedCount       *int64
-	LogServiceVolume    *string
-	LogStatus           *string
-	LogValuableCount    *int64
-	LogVolumeAfter      *string
-	LogVolumeBefore     *string
-	LogWarning          *string
-	LogWarningAt        *string
-	LogWasteCount       *int64
-	RefreshedAt         *string
-	ServiceID           *string
+	ID                          *string
+	AccountID                   *string
+	DatadogAccountID            *string
+	LogAnalyzingCount           *int64
+	LogBytesPerHourAfter        *float64
+	LogBytesPerHourBefore       *float64
+	LogDiscoveredVolumeInWindow *int64
+	LogDiscoveringCount         *int64
+	LogError                    *string
+	LogErrorAt                  *string
+	LogEventCount               *int64
+	LogPercentComplete          *float64
+	LogSavedCount               *int64
+	LogServiceVolumeInWindow    *int64
+	LogStatus                   *string
+	LogValuableCount            *int64
+	LogVolumePerHourAfter       *float64
+	LogVolumePerHourBefore      *float64
+	LogWarning                  *string
+	LogWarningAt                *string
+	LogWasteCount               *int64
+	RefreshedAt                 *string
+	ServiceID                   *string
 }
 
 type Team struct {

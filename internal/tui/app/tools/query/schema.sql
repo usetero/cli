@@ -46,7 +46,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_analyzing_services INTEGER, -- Services with ANALYZING status
     log_broken_services INTEGER, -- Services with BROKEN status
     log_disabled_services INTEGER, -- Services with DISABLED status
-    log_discovered_volume TEXT,
+    log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the rolling 7-day window across all active services
     log_discovering_count INTEGER, -- Log events with DISCOVERING status
     log_discovering_services INTEGER, -- Services with DISCOVERING status
     log_error TEXT, -- Most recent error message from any broken service or account-level discovery
@@ -57,7 +57,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_ready_services INTEGER, -- Services with READY status
     log_saved_count INTEGER, -- Log events with SAVED status (policy approved)
     log_service_count INTEGER, -- Total number of services
-    log_service_volume TEXT,
+    log_service_volume_in_window INTEGER, -- Total service log volume in the rolling 7-day window across all active services
     log_stale_services INTEGER, -- Services with STALE status
     log_status TEXT, -- Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
     log_valuable_count INTEGER, -- Log events with VALUABLE status (analyzed, no issues)
@@ -124,22 +124,22 @@ CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
     approved_at TEXT, -- When the policy was approved (anchor for savings calculation)
-    bytes_saved TEXT,
+    bytes_saved_per_hour REAL, -- Estimated bytes saved per hour (from dropped events or trimmed attributes)
     category TEXT, -- Policy category (e.g., health_checks, duplicate_fields, instrumentation_bloat)
     dismissed_at TEXT, -- When the policy was dismissed
     log_event_id TEXT, -- The log event this policy applies to
     policy_id TEXT, -- The policy this status belongs to
     refreshed_at TEXT,
     status TEXT, -- WASTE: found waste waiting for action, SAVED: user approved, DISMISSED: user rejected
-    volume_saved TEXT,
+    volume_saved_per_hour REAL, -- Estimated events saved per hour (non-zero for volume-based policies like health_checks)
     workspace_id TEXT -- The workspace that owns this policy
 );
 
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
-    bytes_after TEXT,
-    bytes_before TEXT,
+    bytes_per_hour_after REAL, -- Bytes/hour in recent 7-day window (only when SAVED)
+    bytes_per_hour_before REAL, -- Bytes/hour in 7-day window before first policy approval (only when SAVED)
     datadog_account_id TEXT, -- The Datadog account performing discovery
     error TEXT, -- Error message if status is BROKEN (5+ consecutive discovery failures)
     has_been_analyzed INTEGER, -- Whether this log event has been analyzed for quality issues
@@ -148,8 +148,8 @@ CREATE TABLE log_event_statuses_cache (
     refreshed_at TEXT,
     service_id TEXT, -- Service ID (denormalized from log_event)
     status TEXT, -- Unified status: BROKEN > SAVED > VALUABLE > WASTE > ANALYZING > DISCOVERING
-    volume_after TEXT,
-    volume_before TEXT
+    volume_per_hour_after REAL, -- Events/hour in recent 7-day window (only when SAVED)
+    volume_per_hour_before REAL -- Events/hour in 7-day window before first policy approval (only when SAVED)
 );
 
 CREATE TABLE log_event_volumes (
@@ -157,7 +157,7 @@ CREATE TABLE log_event_volumes (
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
     attribute_avg_bytes TEXT, -- Average bytes per attribute name, estimated from sampled logs
     avg_bytes REAL, -- Average bytes per log in this hour bucket, estimated from sampled logs
-    count TEXT,
+    count_per_hour REAL, -- Number of logs observed during this hour
     created_at TEXT, -- When this volume record was created
     datadog_log_index_id TEXT, -- The Datadog log index where this volume was observed
     edge_instance_id TEXT, -- The edge instance where this volume was observed
@@ -197,7 +197,7 @@ CREATE TABLE service_log_volumes (
     service_id TEXT, -- The service this volume tracking belongs to
     timestamp TEXT, -- Hour boundary for this volume bucket (truncated to hour)
     updated_at TEXT, -- When this volume record was last updated
-    volume TEXT
+    volume_per_hour INTEGER -- Log volume for this service during this hour
 );
 
 CREATE TABLE service_statuses_cache (
@@ -205,20 +205,20 @@ CREATE TABLE service_statuses_cache (
     account_id TEXT, -- Account ID (denormalized from service)
     datadog_account_id TEXT, -- The Datadog account performing discovery
     log_analyzing_count INTEGER, -- Number of log events with ANALYZING status
-    log_bytes_after TEXT,
-    log_bytes_before TEXT,
-    log_discovered_volume TEXT,
+    log_bytes_per_hour_after REAL, -- Total bytes/hour in recent window (sum across SAVED log events)
+    log_bytes_per_hour_before REAL, -- Total bytes/hour before first policy approval (sum across SAVED log events)
+    log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the rolling 7-day window
     log_discovering_count INTEGER, -- Number of log events with DISCOVERING status
     log_error TEXT, -- Error message if log_status is BROKEN
     log_error_at TEXT, -- When the error occurred
     log_event_count INTEGER, -- Total number of log events discovered for this service
     log_percent_complete REAL, -- Coverage percentage (discovered_volume / service_volume * 100)
     log_saved_count INTEGER, -- Number of log events with SAVED status (policy approved)
-    log_service_volume TEXT,
+    log_service_volume_in_window INTEGER, -- Total service log volume in the rolling 7-day window
     log_status TEXT, -- Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
     log_valuable_count INTEGER, -- Number of log events with VALUABLE status (analyzed, no issues)
-    log_volume_after TEXT,
-    log_volume_before TEXT,
+    log_volume_per_hour_after REAL, -- Total events/hour in recent window (sum across SAVED log events)
+    log_volume_per_hour_before REAL, -- Total events/hour before first policy approval (sum across SAVED log events)
     log_warning TEXT, -- Warning message (e.g., rate limit) - informational, does not affect status
     log_warning_at TEXT, -- When the warning occurred
     log_waste_count INTEGER, -- Number of log events with WASTE status (issues found, pending action)

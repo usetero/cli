@@ -49,10 +49,11 @@ tasks:
       - go run github.com/Khan/genqlient
 
   generate:schema:
-    desc: Generate PowerSync and SQLite schema (requires doppler)
+    desc: Generate PowerSync and SQLite schema (uses local control plane)
     cmds:
-      - doppler run -- go generate ./internal/powersync
-      - doppler run -- go generate ./internal/sqlite
+      - go generate ./internal/powersync
+      - go generate ./internal/sqlite
+      - go generate ./internal/tui/app/tools/query
 
   # ===========================================================================
   # Build

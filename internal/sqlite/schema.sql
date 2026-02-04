@@ -31,7 +31,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_analyzing_services INTEGER,
     log_broken_services INTEGER,
     log_disabled_services INTEGER,
-    log_discovered_volume TEXT,
+    log_discovered_volume_in_window INTEGER,
     log_discovering_count INTEGER,
     log_discovering_services INTEGER,
     log_error TEXT,
@@ -42,7 +42,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_ready_services INTEGER,
     log_saved_count INTEGER,
     log_service_count INTEGER,
-    log_service_volume TEXT,
+    log_service_volume_in_window INTEGER,
     log_stale_services INTEGER,
     log_status TEXT,
     log_valuable_count INTEGER,
@@ -109,22 +109,22 @@ CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT,
     approved_at TEXT,
-    bytes_saved TEXT,
+    bytes_saved_per_hour REAL,
     category TEXT,
     dismissed_at TEXT,
     log_event_id TEXT,
     policy_id TEXT,
     refreshed_at TEXT,
     status TEXT,
-    volume_saved TEXT,
+    volume_saved_per_hour REAL,
     workspace_id TEXT
 );
 
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT,
-    bytes_after TEXT,
-    bytes_before TEXT,
+    bytes_per_hour_after REAL,
+    bytes_per_hour_before REAL,
     datadog_account_id TEXT,
     error TEXT,
     has_been_analyzed INTEGER,
@@ -133,8 +133,8 @@ CREATE TABLE log_event_statuses_cache (
     refreshed_at TEXT,
     service_id TEXT,
     status TEXT,
-    volume_after TEXT,
-    volume_before TEXT
+    volume_per_hour_after REAL,
+    volume_per_hour_before REAL
 );
 
 CREATE TABLE log_event_volumes (
@@ -142,7 +142,7 @@ CREATE TABLE log_event_volumes (
     account_id TEXT,
     attribute_avg_bytes TEXT,
     avg_bytes REAL,
-    count TEXT,
+    count_per_hour REAL,
     created_at TEXT,
     datadog_log_index_id TEXT,
     edge_instance_id TEXT,
@@ -182,7 +182,7 @@ CREATE TABLE service_log_volumes (
     service_id TEXT,
     timestamp TEXT,
     updated_at TEXT,
-    volume TEXT
+    volume_per_hour INTEGER
 );
 
 CREATE TABLE service_statuses_cache (
@@ -190,20 +190,20 @@ CREATE TABLE service_statuses_cache (
     account_id TEXT,
     datadog_account_id TEXT,
     log_analyzing_count INTEGER,
-    log_bytes_after TEXT,
-    log_bytes_before TEXT,
-    log_discovered_volume TEXT,
+    log_bytes_per_hour_after REAL,
+    log_bytes_per_hour_before REAL,
+    log_discovered_volume_in_window INTEGER,
     log_discovering_count INTEGER,
     log_error TEXT,
     log_error_at TEXT,
     log_event_count INTEGER,
     log_percent_complete REAL,
     log_saved_count INTEGER,
-    log_service_volume TEXT,
+    log_service_volume_in_window INTEGER,
     log_status TEXT,
     log_valuable_count INTEGER,
-    log_volume_after TEXT,
-    log_volume_before TEXT,
+    log_volume_per_hour_after REAL,
+    log_volume_per_hour_before REAL,
     log_warning TEXT,
     log_warning_at TEXT,
     log_waste_count INTEGER,

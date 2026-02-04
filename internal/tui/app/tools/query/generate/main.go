@@ -41,7 +41,7 @@ func run() error {
 	}
 	repoRoot := findRepoRoot(cwd)
 	sqlitePath := filepath.Join(repoRoot, "internal/sqlite/schema.sql")
-	outputPath := filepath.Join(filepath.Dir(cwd), "schema.sql")
+	outputPath := filepath.Join(cwd, "schema.sql")
 
 	// Read SQLite schema (source of truth)
 	schema, err := os.ReadFile(sqlitePath)

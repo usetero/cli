@@ -179,6 +179,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.commandBar, cmd = m.commandBar.Update(keyMsg)
 		}
 		cmds = append(cmds, cmd)
+	} else if mouseMsg, ok := msg.(tea.MouseMsg); ok {
+		// Translate mouse coordinates for the messages list
+		// The list is inside base layout which has padding
+		translated := m.translateMouseForList(mouseMsg)
+		m.list, cmd = m.list.Update(translated)
+		cmds = append(cmds, cmd)
 	} else {
 		m.list, cmd = m.list.Update(msg)
 		cmds = append(cmds, cmd)
@@ -532,4 +538,29 @@ func (m Model) SetConversation(conversationID domain.ConversationID) (Model, tea
 // IsStreaming returns true if currently receiving a response.
 func (m Model) IsStreaming() bool {
 	return m.state == StateStreaming
+}
+
+// translateMouseForList adjusts mouse coordinates for the messages list.
+// The list is inside the base layout which adds padding.
+func (m Model) translateMouseForList(msg tea.MouseMsg) tea.Msg {
+	switch msg := msg.(type) {
+	case tea.MouseClickMsg:
+		msg.X -= base.HorizontalPadding
+		msg.Y -= base.VerticalPadding
+		return msg
+	case tea.MouseMotionMsg:
+		msg.X -= base.HorizontalPadding
+		msg.Y -= base.VerticalPadding
+		return msg
+	case tea.MouseReleaseMsg:
+		msg.X -= base.HorizontalPadding
+		msg.Y -= base.VerticalPadding
+		return msg
+	case tea.MouseWheelMsg:
+		msg.X -= base.HorizontalPadding
+		msg.Y -= base.VerticalPadding
+		return msg
+	default:
+		return msg
+	}
 }

@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	horizontalPadding = 1
-	verticalPadding   = 1
-	footerSpacing     = 1
+	// HorizontalPadding is the left/right padding applied to content.
+	HorizontalPadding = 1
+	// VerticalPadding is the top/bottom padding applied to content.
+	VerticalPadding = 1
+	footerSpacing   = 1
 )
 
 // Model is the foundation layout with padding and footer.
@@ -37,7 +39,7 @@ func New(theme *styles.Theme, logger log.Logger) Model {
 func (m Model) SetSize(width, height int) Model {
 	m.width = width
 	m.height = height
-	innerWidth := width - (horizontalPadding * 2)
+	innerWidth := width - (HorizontalPadding * 2)
 	m.footer = m.footer.SetWidth(innerWidth)
 	return m
 }
@@ -67,9 +69,9 @@ func (m Model) ContentSize() (int, int) {
 		return 0, 0
 	}
 
-	contentWidth := m.width - (horizontalPadding * 2)
+	contentWidth := m.width - (HorizontalPadding * 2)
 	footerHeight := m.footer.Height()
-	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+	contentHeight := m.height - (VerticalPadding * 2) - footerHeight - footerSpacing
 
 	return contentWidth, contentHeight
 }
@@ -80,10 +82,10 @@ func (m Model) Render(content string) string {
 		return ""
 	}
 
-	innerWidth := m.width - (horizontalPadding * 2)
+	innerWidth := m.width - (HorizontalPadding * 2)
 	footerView := m.footer.View()
 	footerHeight := lipgloss.Height(footerView)
-	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+	contentHeight := m.height - (VerticalPadding * 2) - footerHeight - footerSpacing
 
 	contentStyle := lipgloss.NewStyle().
 		Width(innerWidth).
@@ -98,6 +100,6 @@ func (m Model) Render(content string) string {
 	)
 
 	return lipgloss.NewStyle().
-		Padding(verticalPadding, horizontalPadding).
+		Padding(VerticalPadding, HorizontalPadding).
 		Render(innerView)
 }

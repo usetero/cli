@@ -43,9 +43,9 @@ func run() error {
 		return fmt.Errorf("fetch schema: %w", err)
 	}
 
-	// Write schema.json to the powersync package directory (where go generate runs from)
+	// Write schema.json to the extension directory (where it's embedded from)
 	outputDir := mustGetwd()
-	schemaPath := filepath.Join(outputDir, "schema.json")
+	schemaPath := filepath.Join(outputDir, "extension", "schema.json")
 	if err := os.WriteFile(schemaPath, []byte(schemaJSON), 0o644); err != nil {
 		return fmt.Errorf("write schema.json: %w", err)
 	}

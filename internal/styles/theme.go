@@ -45,8 +45,10 @@ type Colors struct {
 	Input InputSurface // Input fields
 
 	// Brand
-	Brand  BrandColors // Logo gradient, header diagonals
-	Accent color.Color // Interactive: links, selections, focus rings
+	Brand       BrandColors // Logo gradient, header diagonals
+	Accent      color.Color // Interactive: links, selections, focus rings
+	SelectionBg color.Color // Text selection background
+	SelectionFg color.Color // Text selection foreground
 
 	// Borders
 	BorderDefault color.Color // Dividers, separators
@@ -112,7 +114,9 @@ func buildColors(p Palette, isDark bool) *Colors {
 				GradientStart: MustHex(p.Brand[S300]),  // Emerald-300 (bright)
 				GradientEnd:   MustHex(p.Accent[S600]), // Cyan-600 (darker)
 			},
-			Accent: MustHex(p.Brand[S300]), // Emerald-300
+			Accent:      MustHex(p.Brand[S300]),  // Emerald-300
+			SelectionBg: MustHex(p.Brand[S600]),  // Emerald-600
+			SelectionFg: MustHex(p.Neutral[S50]), // White
 
 			BorderDefault: MustHex(p.Neutral[S600]),
 
@@ -157,7 +161,9 @@ func buildColors(p Palette, isDark bool) *Colors {
 			GradientStart: MustHex(p.Brand[S600]),  // Emerald-600
 			GradientEnd:   MustHex(p.Accent[S800]), // Cyan-800 (darker for light bg)
 		},
-		Accent: MustHex(p.Brand[S600]), // Emerald-600
+		Accent:      MustHex(p.Brand[S600]),   // Emerald-600
+		SelectionBg: MustHex(p.Brand[S500]),   // Emerald-500
+		SelectionFg: MustHex(p.Neutral[S950]), // Near black
 
 		BorderDefault: MustHex(p.Neutral[S300]),
 

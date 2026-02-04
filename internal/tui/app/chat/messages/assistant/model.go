@@ -50,12 +50,14 @@ var (
 // New creates a new assistant message model.
 // Tool models are created immediately from message content.
 func New(theme *styles.Theme, logger log.Logger, message domain.Message, executors apptools.Tools) *Model {
+	h := highlight.NewItem()
+	h.SetHighlighter(highlight.SelectionHighlighter(theme.Colors.SelectionBg, theme.Colors.SelectionFg))
 	m := &Model{
 		theme:     theme,
 		logger:    logger,
 		message:   message,
 		executors: executors,
-		highlight: highlight.NewItem(),
+		highlight: h,
 	}
 	m.toolModels = m.createToolModels()
 	return m

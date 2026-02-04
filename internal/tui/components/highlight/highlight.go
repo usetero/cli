@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"image"
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -18,6 +19,18 @@ var DefaultHighlighter Highlighter = func(x, y int, c *uv.Cell) *uv.Cell {
 	}
 	c.Style.Attrs |= uv.AttrReverse
 	return c
+}
+
+// SelectionHighlighter creates a highlighter using selection colors.
+func SelectionHighlighter(bg, fg color.Color) Highlighter {
+	return func(x, y int, c *uv.Cell) *uv.Cell {
+		if c == nil {
+			return c
+		}
+		c.Style.Bg = bg
+		c.Style.Fg = fg
+		return c
+	}
 }
 
 // Highlight applies highlighting to a region of rendered ANSI content.
