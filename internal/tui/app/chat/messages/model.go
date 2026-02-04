@@ -3,10 +3,10 @@ package messages
 import (
 	"strings"
 
-	"github.com/usetero/cli/internal/log"
-
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tui/components/thinking"
 )
 
 // Model is a scrollable, focusable list of message items.
@@ -41,6 +41,10 @@ type Model struct {
 	mouseDragIdx int  // Current item index during drag
 	mouseDragX   int  // Current column during drag
 	mouseDragY   int  // Current line within item during drag
+
+	// Thinking indicator
+	thinking     thinking.Model
+	showThinking bool
 }
 
 // New creates a new message list model.
@@ -60,17 +64,26 @@ func (m Model) Init() tea.Cmd {
 
 // Update handles messages.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	// Forward to thinking indicator if active
+	if m.showThinking {
+		var cmd tea.Cmd
+		m.thinking, cmd = m.thinking.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
 	switch msg := msg.(type) {
 	case tea.MouseClickMsg:
 		m, _ = m.handleMouseDown(msg.X, msg.Y)
-		return m, nil
 
 	case tea.MouseMotionMsg:
 		m = m.handleMouseDrag(msg.X, msg.Y)
-		return m, nil
 
 	case tea.MouseReleaseMsg:
-		return m.handleMouseUp(msg.X, msg.Y)
+		var cmd tea.Cmd
+		m, cmd = m.handleMouseUp(msg.X, msg.Y)
+		cmds = append(cmds, cmd)
 
 	case tea.MouseWheelMsg:
 		switch msg.Button {
@@ -79,11 +92,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case tea.MouseWheelDown:
 			m = m.scrollDown(3)
 		}
-		return m, nil
 
 	case tea.KeyPressMsg:
 		if !m.focused {
-			return m, nil
+			return m, tea.Batch(cmds...)
 		}
 
 		switch msg.String() {
@@ -115,18 +127,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.HasHighlight() {
 				content := m.HighlightContent()
 				m = m.ClearHighlight()
-				return m, tea.SetClipboard(content)
+				cmds = append(cmds, tea.SetClipboard(content))
+				return m, tea.Batch(cmds...)
 			}
 			if m.selectedIdx >= 0 && m.selectedIdx < len(m.items) {
 				if cp, ok := m.items[m.selectedIdx].(Copyable); ok {
-					return m, tea.SetClipboard(cp.CopyableContent())
+					cmds = append(cmds, tea.SetClipboard(cp.CopyableContent()))
+					return m, tea.Batch(cmds...)
 				}
 			}
 		case "esc":
 			// Clear highlight on escape
 			if m.HasHighlight() {
 				m = m.ClearHighlight()
-				return m, nil
 			}
 		}
 
@@ -134,16 +147,21 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.selectedIdx >= 0 && m.selectedIdx < len(m.items) {
 			var cmd tea.Cmd
 			m.items[m.selectedIdx], cmd = m.items[m.selectedIdx].Update(msg)
-			return m, cmd
+			cmds = append(cmds, cmd)
 		}
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 // View renders the visible portion of the message list.
 func (m Model) View() string {
-	if m.width == 0 || m.height == 0 || len(m.items) == 0 {
+	if m.width == 0 || m.height == 0 {
+		return ""
+	}
+
+	// Nothing to show
+	if len(m.items) == 0 && !m.showThinking {
 		return ""
 	}
 
@@ -186,6 +204,27 @@ func (m Model) View() string {
 		}
 
 		currentIdx++
+	}
+
+	// Render thinking indicator after items
+	if m.showThinking && remainingHeight > 0 {
+		// Add gap before thinking if we have items
+		if len(m.items) > 0 && m.gap > 0 {
+			for i := 0; i < m.gap && remainingHeight > 0; i++ {
+				lines = append(lines, "")
+				remainingHeight--
+			}
+		}
+
+		thinkingView := m.renderThinking()
+		thinkingLines := strings.Split(thinkingView, "\n")
+		for _, line := range thinkingLines {
+			if remainingHeight <= 0 {
+				break
+			}
+			lines = append(lines, line)
+			remainingHeight--
+		}
 	}
 
 	// Pad to fill height

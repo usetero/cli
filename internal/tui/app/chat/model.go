@@ -259,15 +259,20 @@ func (m Model) handleSubmit(text string) (Model, tea.Cmd) {
 		m = m.updateLayout()
 	}
 
-	// Start streaming - Turn owns the thinking indicator
+	// Start streaming with thinking indicator
 	m.state = StateStreaming
+	var thinkingCmd tea.Cmd
+	m.list, thinkingCmd = m.list.StartThinking()
 	m.logger.Info("message sent")
 
-	return m, m.turn.Send(ctx, convID.String(), m.rawMessages, m.tools.Definitions())
+	return m, tea.Batch(thinkingCmd, m.turn.Send(ctx, convID.String(), m.rawMessages, m.tools.Definitions()))
 }
 
 // handleStreamDone processes when streaming completes.
 func (m Model) handleStreamDone(msg turn.StreamDoneMsg) (Model, tea.Cmd) {
+	// Stop thinking indicator
+	m.list = m.list.StopThinking()
+
 	if msg.Err != nil {
 		m.logger.Error("stream error", "error", msg.Err)
 		m.state = StateIdle
@@ -378,13 +383,15 @@ func (m Model) continueAfterTools() (Model, tea.Cmd) {
 	}
 	m.rawMessages = append(m.rawMessages, toolResultMsg)
 
-	// Continue streaming - Turn owns the thinking indicator
+	// Continue streaming with thinking indicator
 	m.state = StateStreaming
 	m.currentAssistant = nil
+	var thinkingCmd tea.Cmd
+	m.list, thinkingCmd = m.list.StartThinking()
 
 	m.logger.Info("continuing with tool results", "count", len(toolResults))
 
-	return m, m.turn.Send(m.ctx, m.conversationID.String(), m.rawMessages, m.tools.Definitions())
+	return m, tea.Batch(thinkingCmd, m.turn.Send(m.ctx, m.conversationID.String(), m.rawMessages, m.tools.Definitions()))
 }
 
 // rebuildList rebuilds the message list from raw messages.
@@ -453,33 +460,13 @@ func (m Model) View() string {
 	}
 
 	// Has messages
-	var messagesView string
-	if m.turn.IsActive() {
-		// Show Turn's view (thinking indicator) while streaming
-		listView := m.list.View()
-		turnView := m.renderTurnView()
-		messagesView = lipgloss.JoinVertical(lipgloss.Left, listView, turnView)
-	} else {
-		messagesView = m.list.View()
-	}
-
 	commandBarView := m.commandBar.View()
-	mainContent := lipgloss.JoinVertical(lipgloss.Left, messagesView, commandBarView)
+	mainContent := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), commandBarView)
 
 	sidebarView := m.sidebar.View()
 	composedContent := lipgloss.JoinHorizontal(lipgloss.Top, mainContent, " ", sidebarView)
 
 	return m.baseLayout.Render(composedContent)
-}
-
-// renderTurnView renders the Turn's view with label.
-func (m Model) renderTurnView() string {
-	colors := m.theme.Colors
-	label := lipgloss.NewStyle().
-		Foreground(colors.Brand.GradientEnd).
-		Bold(true).
-		Render("Tero")
-	return lipgloss.JoinVertical(lipgloss.Left, label, m.turn.View())
 }
 
 // SetSize returns a new Model with the given dimensions.
