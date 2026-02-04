@@ -64,18 +64,29 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update handles messages.
+// Rule: return early ONLY if this model is the sole consumer of the message.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	var cmd tea.Cmd
 
-	// Update layout (catches ErrorMsg)
-	var layoutCmd tea.Cmd
-	m.layout, layoutCmd = m.layout.Update(msg)
-	cmds = append(cmds, layoutCmd)
+	// Handle messages we care about
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.layout = m.layout.SetSize(msg.Width, msg.Height)
+		contentWidth, contentHeight := m.layout.ContentSize()
+		m.flow = m.flow.SetSize(contentWidth, contentHeight)
+		m.ready = true // children also need this
+	}
 
-	// Update flow
-	var flowCmd tea.Cmd
-	m.flow, flowCmd = m.flow.Update(msg)
-	cmds = append(cmds, flowCmd)
+	// Forward to children
+
+	m.layout, cmd = m.layout.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.flow, cmd = m.flow.Update(msg)
+	cmds = append(cmds, cmd)
 
 	// If flow "completed" at workspace step, inject the sync step
 	if m.flow.IsComplete() && !m.syncStepDone {

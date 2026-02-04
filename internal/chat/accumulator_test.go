@@ -1,174 +1,106 @@
 package chat
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/usetero/cli/internal/domain"
 )
 
-func TestAccumulator_TextDeltas(t *testing.T) {
+func TestAccumulator(t *testing.T) {
 	t.Parallel()
 
-	acc := NewAccumulator()
+	t.Run("accumulates text deltas into single block", func(t *testing.T) {
+		t.Parallel()
 
-	// Stream: MessageStart, TextDelta, TextDelta, TextDelta, MessageStop, Done
-	acc.Handle(Event{Block: domain.Block{
-		Type:         domain.BlockTypeMessageStart,
-		MessageStart: &domain.MessageStart{Model: "claude-3"},
-	}})
+		acc := newAccumulator()
 
-	// First delta
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeTextDelta,
-		Text: &domain.TextBlock{Content: "Hello"},
-	}})
+		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
+		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: "Hello"}})
+		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: " world"}})
+		acc.handle(event{Type: EventTypeContentBlockStop})
+		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "end_turn"}})
+		acc.handle(event{Done: true})
 
-	blocks := acc.Blocks()
-	if len(blocks) != 1 {
-		t.Fatalf("expected 1 block, got %d", len(blocks))
-	}
-	if blocks[0].Text.Content != "Hello" {
-		t.Errorf("expected 'Hello', got %q", blocks[0].Text.Content)
-	}
+		if !acc.isDone() {
+			t.Error("expected isDone")
+		}
 
-	// Second delta
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeTextDelta,
-		Text: &domain.TextBlock{Content: " world"},
-	}})
+		msg := acc.message()
+		if msg.Model != "claude-3" {
+			t.Errorf("model = %q, want claude-3", msg.Model)
+		}
+		if msg.StopReason != "end_turn" {
+			t.Errorf("stop_reason = %q, want end_turn", msg.StopReason)
+		}
 
-	blocks = acc.Blocks()
-	if len(blocks) != 1 {
-		t.Fatalf("expected 1 block, got %d", len(blocks))
-	}
-	if blocks[0].Text.Content != "Hello world" {
-		t.Errorf("expected 'Hello world', got %q", blocks[0].Text.Content)
-	}
+		if len(msg.Content) != 1 {
+			t.Fatalf("expected 1 block, got %d", len(msg.Content))
+		}
+		if msg.Content[0].Type != domain.BlockTypeText {
+			t.Errorf("type = %s, want text", msg.Content[0].Type)
+		}
+		if msg.Content[0].Text.Content != "Hello world" {
+			t.Errorf("content = %q, want 'Hello world'", msg.Content[0].Text.Content)
+		}
+	})
 
-	// MessageStop
-	acc.Handle(Event{Block: domain.Block{
-		Type:        domain.BlockTypeMessageStop,
-		MessageStop: &domain.MessageStop{StopReason: "end_turn"},
-	}})
+	t.Run("accumulates tool_input_delta and finalizes on content_block_stop", func(t *testing.T) {
+		t.Parallel()
 
-	// Done
-	acc.Handle(Event{Done: true})
+		acc := newAccumulator()
 
-	if !acc.Done() {
-		t.Error("expected Done() to be true")
-	}
-	if acc.Model() != "claude-3" {
-		t.Errorf("expected model 'claude-3', got %q", acc.Model())
-	}
-	if acc.StopReason() != "end_turn" {
-		t.Errorf("expected stop_reason 'end_turn', got %q", acc.StopReason())
-	}
+		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
+		// tool_use starts with ID + name, no input
+		acc.handle(event{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}})
+		// input streams as deltas
+		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `{"sql"`})
+		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `: "SELECT 1"}`})
+		// content_block_stop finalizes
+		acc.handle(event{Type: EventTypeContentBlockStop})
+		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use"}})
+		acc.handle(event{Done: true})
 
-	blocks = acc.Blocks()
-	if len(blocks) != 1 {
-		t.Fatalf("expected 1 block, got %d", len(blocks))
-	}
-	if blocks[0].Type != domain.BlockTypeText {
-		t.Errorf("expected text block, got %s", blocks[0].Type)
-	}
-}
+		msg := acc.message()
+		if len(msg.Content) != 1 {
+			t.Fatalf("expected 1 block, got %d", len(msg.Content))
+		}
+		if msg.Content[0].Type != domain.BlockTypeToolUse {
+			t.Errorf("type = %s, want tool_use", msg.Content[0].Type)
+		}
+		if msg.Content[0].ToolUse.ID != "tool-1" {
+			t.Errorf("id = %s, want tool-1", msg.Content[0].ToolUse.ID)
+		}
+		if msg.Content[0].ToolUse.Name != "query" {
+			t.Errorf("name = %s, want query", msg.Content[0].ToolUse.Name)
+		}
+		if string(msg.Content[0].ToolUse.Input) != `{"sql": "SELECT 1"}` {
+			t.Errorf("input = %s, want {\"sql\": \"SELECT 1\"}", string(msg.Content[0].ToolUse.Input))
+		}
+	})
 
-func TestAccumulator_MixedBlocks(t *testing.T) {
-	t.Parallel()
+	t.Run("handles text then tool in sequence", func(t *testing.T) {
+		t.Parallel()
 
-	acc := NewAccumulator()
+		acc := newAccumulator()
 
-	// Thinking first
-	acc.Handle(Event{Block: domain.Block{
-		Type:     domain.BlockTypeThinkingDelta,
-		Thinking: &domain.Thinking{Content: "Let me think..."},
-	}})
+		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
+		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: "Let me check"}})
+		acc.handle(event{Type: EventTypeContentBlockStop})
+		acc.handle(event{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}})
+		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `{}`})
+		acc.handle(event{Type: EventTypeContentBlockStop})
+		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use"}})
+		acc.handle(event{Done: true})
 
-	// Then text
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeTextDelta,
-		Text: &domain.TextBlock{Content: "Here's my answer"},
-	}})
-
-	blocks := acc.Blocks()
-	if len(blocks) != 2 {
-		t.Fatalf("expected 2 blocks, got %d", len(blocks))
-	}
-
-	if blocks[0].Type != domain.BlockTypeThinking {
-		t.Errorf("expected thinking block first, got %s", blocks[0].Type)
-	}
-	if blocks[0].Thinking.Content != "Let me think..." {
-		t.Errorf("unexpected thinking content: %q", blocks[0].Thinking.Content)
-	}
-
-	if blocks[1].Type != domain.BlockTypeText {
-		t.Errorf("expected text block second, got %s", blocks[1].Type)
-	}
-	if blocks[1].Text.Content != "Here's my answer" {
-		t.Errorf("unexpected text content: %q", blocks[1].Text.Content)
-	}
-}
-
-func TestAccumulator_ToolUse(t *testing.T) {
-	t.Parallel()
-
-	acc := NewAccumulator()
-
-	// Text first
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeTextDelta,
-		Text: &domain.TextBlock{Content: "Let me check that"},
-	}})
-
-	// Tool use (comes as complete block)
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeToolUse,
-		ToolUse: &domain.ToolUse{
-			ID:    "tool-1",
-			Name:  "query",
-			Input: json.RawMessage(`{"limit": 10}`),
-		},
-	}})
-
-	blocks := acc.Blocks()
-	if len(blocks) != 2 {
-		t.Fatalf("expected 2 blocks, got %d", len(blocks))
-	}
-
-	if blocks[0].Type != domain.BlockTypeText {
-		t.Errorf("expected text block first, got %s", blocks[0].Type)
-	}
-	if blocks[1].Type != domain.BlockTypeToolUse {
-		t.Errorf("expected tool_use block second, got %s", blocks[1].Type)
-	}
-}
-
-func TestAccumulator_Reset(t *testing.T) {
-	t.Parallel()
-
-	acc := NewAccumulator()
-
-	acc.Handle(Event{Block: domain.Block{
-		Type:         domain.BlockTypeMessageStart,
-		MessageStart: &domain.MessageStart{Model: "claude-3"},
-	}})
-	acc.Handle(Event{Block: domain.Block{
-		Type: domain.BlockTypeTextDelta,
-		Text: &domain.TextBlock{Content: "Hello"},
-	}})
-	acc.Handle(Event{Done: true})
-
-	acc.Reset()
-
-	if acc.Done() {
-		t.Error("expected Done() to be false after Reset")
-	}
-	if acc.Model() != "" {
-		t.Errorf("expected empty model after Reset, got %q", acc.Model())
-	}
-	if len(acc.Blocks()) != 0 {
-		t.Errorf("expected no blocks after Reset, got %d", len(acc.Blocks()))
-	}
+		msg := acc.message()
+		if len(msg.Content) != 2 {
+			t.Fatalf("expected 2 blocks, got %d", len(msg.Content))
+		}
+		if msg.Content[0].Type != domain.BlockTypeText {
+			t.Errorf("block 0: type = %s, want text", msg.Content[0].Type)
+		}
+		if msg.Content[1].Type != domain.BlockTypeToolUse {
+			t.Errorf("block 1: type = %s, want tool_use", msg.Content[1].Type)
+		}
+	})
 }

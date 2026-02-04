@@ -1,25 +1,32 @@
-package app
+package commandbar
 
 import (
 	"strings"
+
+	"github.com/usetero/cli/internal/log"
 
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tui/app/messages"
 	"github.com/usetero/cli/internal/tui/cursor"
 )
 
-// CommandBar is the input component for chat.
-type CommandBar struct {
+// SubmitMsg is sent when the user submits text input.
+type SubmitMsg struct {
+	Text string
+}
+
+// Model is the input component for chat.
+type Model struct {
 	theme    *styles.Theme
+	logger   log.Logger
 	textarea textarea.Model
 	width    int
 }
 
-// NewCommandBar creates a new command bar.
-func NewCommandBar(theme *styles.Theme) CommandBar {
+// New creates a new command bar model.
+func New(theme *styles.Theme, logger log.Logger) Model {
 	colors := theme.Colors
 
 	ta := textarea.New()
@@ -53,19 +60,26 @@ func NewCommandBar(theme *styles.Theme) CommandBar {
 
 	ta.SetPromptFunc(4, func(info textarea.PromptInfo) string {
 		if info.LineNumber == 0 {
-			return "> "
+			if info.Focused {
+				return "  > "
+			}
+			return "::: "
 		}
-		return "  "
+		if info.Focused {
+			return lipgloss.NewStyle().Foreground(colors.Accent).Render("::: ")
+		}
+		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render("::: ")
 	})
 
-	return CommandBar{
+	return Model{
 		theme:    theme,
+		logger:   logger,
 		textarea: ta,
 	}
 }
 
 // Init initializes the command bar.
-func (m CommandBar) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.textarea.Focus(),
 		textarea.Blink,
@@ -73,7 +87,7 @@ func (m CommandBar) Init() tea.Cmd {
 }
 
 // Update handles messages.
-func (m CommandBar) Update(msg tea.Msg) (CommandBar, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		// Shift+enter for newline
@@ -86,7 +100,7 @@ func (m CommandBar) Update(msg tea.Msg) (CommandBar, tea.Cmd) {
 			text := strings.TrimSpace(m.textarea.Value())
 			if text != "" {
 				m.textarea.Reset()
-				return m, func() tea.Msg { return messages.SubmitMsg{Text: text} }
+				return m, func() tea.Msg { return SubmitMsg{Text: text} }
 			}
 			return m, nil
 		}
@@ -98,7 +112,7 @@ func (m CommandBar) Update(msg tea.Msg) (CommandBar, tea.Cmd) {
 }
 
 // View renders the command bar.
-func (m CommandBar) View() string {
+func (m Model) View() string {
 	if m.width == 0 {
 		return ""
 	}
@@ -116,19 +130,19 @@ func (m CommandBar) View() string {
 		Render(view)
 }
 
-// SetWidth returns a new CommandBar with the given width.
-func (m CommandBar) SetWidth(width int) CommandBar {
+// SetWidth returns a new Model with the given width.
+func (m Model) SetWidth(width int) Model {
 	m.width = width
 	m.textarea.SetWidth(width)
 	return m
 }
 
 // Height returns the height of the command bar.
-func (m CommandBar) Height() int {
+func (m Model) Height() int {
 	return 5 // 3 lines + 2 padding
 }
 
 // Focus focuses the command bar.
-func (m CommandBar) Focus() tea.Cmd {
+func (m Model) Focus() tea.Cmd {
 	return m.textarea.Focus()
 }

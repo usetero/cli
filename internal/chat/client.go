@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -34,10 +35,14 @@ type HTTPDoer interface {
 }
 
 // Client sends messages to the Chat API and streams responses.
-// This interface allows services to be tested without real API calls.
 type Client interface {
-	Send(ctx context.Context, req Request, handler Handler) error
-	SetAccountID(accountID string)
+	// Stream sends the conversation to the Chat API and streams the response.
+	// The onMessage callback is called each time the message is updated with new content.
+	// The returned *domain.Message grows as content streams in.
+	Stream(ctx context.Context, req Request, onMessage func(*domain.Message)) error
+
+	// SetAccountID sets the account ID for requests.
+	SetAccountID(accountID domain.AccountID)
 }
 
 // client is the concrete implementation of Client.
@@ -45,7 +50,7 @@ type client struct {
 	endpoint   string
 	httpClient HTTPDoer
 	auth       auth.Auth
-	accountID  string
+	accountID  domain.AccountID
 	logger     log.Logger
 }
 
@@ -81,22 +86,13 @@ func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDo
 }
 
 // SetAccountID sets the account ID for requests.
-func (c *client) SetAccountID(accountID string) {
+func (c *client) SetAccountID(accountID domain.AccountID) {
 	c.accountID = accountID
 }
 
-// Handler is called for each event in the response stream.
-type Handler func(Event) error
-
-// Send sends the conversation to the Chat API and streams the response.
-//
-// The handler is called for each event:
-//   - MessageStart: contains model info
-//   - TextDelta, ThinkingDelta, ToolInputDelta: streaming content
-//   - ToolUse: complete tool call
-//   - MessageStop: contains stop_reason, signals end of response
-//   - Done: stream complete (after MessageStop)
-func (c *client) Send(ctx context.Context, req Request, handler Handler) error {
+// Stream sends the conversation to the Chat API and streams the response.
+// The onMessage callback is called each time the message is updated with new content.
+func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain.Message)) error {
 	c.logger.Debug("sending to chat API",
 		log.String("conversation_id", req.ConversationID),
 		log.Int("message_count", len(req.Messages)),
@@ -138,7 +134,16 @@ func (c *client) Send(ctx context.Context, req Request, handler Handler) error {
 		return fmt.Errorf("expected text/event-stream, got %s: %s", contentType, string(body))
 	}
 
-	return readStream(resp.Body, handler)
+	// Use internal accumulator to build the message from events
+	acc := newAccumulator()
+
+	return readStream(resp.Body, func(e event) error {
+		acc.handle(e)
+		if onMessage != nil {
+			onMessage(acc.message())
+		}
+		return nil
+	})
 }
 
 func (c *client) setHeaders(req *http.Request, token string) {
@@ -146,6 +151,6 @@ func (c *client) setHeaders(req *http.Request, token string) {
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+token)
 	if c.accountID != "" {
-		req.Header.Set("X-Account-ID", c.accountID)
+		req.Header.Set("X-Account-ID", c.accountID.String())
 	}
 }

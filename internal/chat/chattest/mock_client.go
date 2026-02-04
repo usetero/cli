@@ -4,24 +4,25 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // MockClient is a mock implementation of chat.Client for testing.
 type MockClient struct {
-	SendFunc       func(ctx context.Context, req chat.Request, handler chat.Handler) error
-	SetAccountFunc func(accountID string)
+	StreamFunc     func(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) error
+	SetAccountFunc func(accountID domain.AccountID)
 }
 
 var _ chat.Client = (*MockClient)(nil)
 
-func (m *MockClient) Send(ctx context.Context, req chat.Request, handler chat.Handler) error {
-	if m.SendFunc != nil {
-		return m.SendFunc(ctx, req, handler)
+func (m *MockClient) Stream(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) error {
+	if m.StreamFunc != nil {
+		return m.StreamFunc(ctx, req, onMessage)
 	}
 	return nil
 }
 
-func (m *MockClient) SetAccountID(accountID string) {
+func (m *MockClient) SetAccountID(accountID domain.AccountID) {
 	if m.SetAccountFunc != nil {
 		m.SetAccountFunc(accountID)
 	}

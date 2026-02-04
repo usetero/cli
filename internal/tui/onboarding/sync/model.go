@@ -137,7 +137,7 @@ func (m Model) View() string {
 
 		// Show progress bar if we have progress data
 		if s.Progress != nil && s.Progress.Total > 0 {
-			pct := float64(s.Progress.Downloaded) / float64(s.Progress.Total)
+			pct := float64(s.Progress.Downloaded) / float64(s.Progress.Total) * 100
 			prog := progress.New(m.theme, 50)
 			progressBar := prog.ViewAs(pct)
 

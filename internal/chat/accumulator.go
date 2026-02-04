@@ -2,66 +2,122 @@ package chat
 
 import "github.com/usetero/cli/internal/domain"
 
-// Accumulator builds blocks from a stream of events.
+// accumulator builds a domain.Message from a stream of protocol events.
 // It handles delta events by accumulating them into complete blocks.
-type Accumulator struct {
+//
+// Protocol:
+//   - text_delta* → content_block_stop
+//   - thinking_delta* → content_block_stop
+//   - tool_use → tool_input_delta* → content_block_stop
+//   - message_stop (always last)
+type accumulator struct {
 	model      string
 	stopReason string
 	blocks     []domain.Block // completed blocks
-	current    *domain.Block  // block being built from deltas
+	current    *domain.Block  // text/thinking block being built from deltas
 	done       bool
+
+	// Tool accumulation - tool_use starts it, deltas build input, content_block_stop finalizes
+	currentTool *toolAccumulator
 }
 
-// NewAccumulator creates a new accumulator.
-func NewAccumulator() *Accumulator {
-	return &Accumulator{}
+type toolAccumulator struct {
+	id    string
+	name  string
+	input []byte
 }
 
-// Handle processes a single event from the stream.
-func (a *Accumulator) Handle(event Event) {
-	if event.Done {
+// newAccumulator creates a new accumulator.
+func newAccumulator() *accumulator {
+	return &accumulator{}
+}
+
+// handle processes a single event from the stream.
+func (a *accumulator) handle(e event) {
+	if e.Done {
 		a.finalizeCurrent()
 		a.done = true
 		return
 	}
 
-	switch event.Type {
-	case domain.BlockTypeMessageStart:
-		if event.MessageStart != nil {
-			a.model = event.MessageStart.Model
+	switch e.Type {
+	case EventTypeMessageStart:
+		if e.MessageStart != nil {
+			a.model = e.MessageStart.Model
 		}
 
-	case domain.BlockTypeMessageStop:
-		if event.MessageStop != nil {
-			a.stopReason = event.MessageStop.StopReason
+	case EventTypeMessageStop:
+		if e.MessageStop != nil {
+			a.stopReason = e.MessageStop.StopReason
 		}
 		a.finalizeCurrent()
 
-	case domain.BlockTypeTextDelta:
-		a.handleTextDelta(event)
+	case EventTypeTextDelta:
+		a.handleTextDelta(e)
 
-	case domain.BlockTypeThinkingDelta:
-		a.handleThinkingDelta(event)
+	case EventTypeThinkingDelta:
+		a.handleThinkingDelta(e)
 
-	case domain.BlockTypeToolUse:
+	case EventTypeToolUse:
 		a.finalizeCurrent()
-		a.blocks = append(a.blocks, event.Block)
+		if e.ToolUse == nil {
+			return
+		}
+		// Start accumulating a new tool
+		a.currentTool = &toolAccumulator{
+			id:   e.ToolUse.ID,
+			name: e.ToolUse.Name,
+		}
 
-	case domain.BlockTypeToolInputDelta:
-		// Tool input deltas are handled by the ToolUse block itself
-		// For now we ignore these - tool_use comes as a complete block
+	case EventTypeToolInputDelta:
+		// Append to current tool's input buffer
+		if a.currentTool != nil {
+			a.currentTool.input = append(a.currentTool.input, e.ToolInputDelta...)
+		}
 
-	case domain.BlockTypeText, domain.BlockTypeThinking, domain.BlockTypeToolResult:
+	case EventTypeContentBlockStop:
+		// Finalize whatever block is in progress
+		a.finalizeCurrent()
+		a.finalizeCurrentTool()
+
+	case EventTypeText, EventTypeThinking, EventTypeToolResult:
 		// Complete blocks - just append
 		a.finalizeCurrent()
-		a.blocks = append(a.blocks, event.Block)
+		a.blocks = append(a.blocks, a.eventToBlock(e))
 	}
 }
 
-func (a *Accumulator) handleTextDelta(event Event) {
+// eventToBlock converts a complete block event to a domain.Block.
+func (a *accumulator) eventToBlock(e event) domain.Block {
+	switch e.Type {
+	case EventTypeText:
+		content := ""
+		if e.Text != nil {
+			content = e.Text.Content
+		}
+		return domain.Block{
+			Type: domain.BlockTypeText,
+			Text: &domain.TextBlock{Content: content},
+		}
+	case EventTypeThinking:
+		content := ""
+		if e.Thinking != nil {
+			content = e.Thinking.Content
+		}
+		return domain.Block{
+			Type:     domain.BlockTypeThinking,
+			Thinking: &domain.Thinking{Content: content},
+		}
+	default:
+		// Unknown type - return empty block
+		return domain.Block{}
+	}
+}
+
+func (a *accumulator) handleTextDelta(e event) {
 	delta := ""
-	if event.Text != nil {
-		delta = event.Text.Content
+	if e.Text != nil {
+		delta = e.Text.Content
 	}
 
 	if a.current == nil || a.current.Type != domain.BlockTypeText {
@@ -75,10 +131,10 @@ func (a *Accumulator) handleTextDelta(event Event) {
 	}
 }
 
-func (a *Accumulator) handleThinkingDelta(event Event) {
+func (a *accumulator) handleThinkingDelta(e event) {
 	delta := ""
-	if event.Thinking != nil {
-		delta = event.Thinking.Content
+	if e.Thinking != nil {
+		delta = e.Thinking.Content
 	}
 
 	if a.current == nil || a.current.Type != domain.BlockTypeThinking {
@@ -92,41 +148,60 @@ func (a *Accumulator) handleThinkingDelta(event Event) {
 	}
 }
 
-func (a *Accumulator) finalizeCurrent() {
+func (a *accumulator) finalizeCurrent() {
 	if a.current != nil {
 		a.blocks = append(a.blocks, *a.current)
 		a.current = nil
 	}
 }
 
-// Blocks returns all blocks for rendering - completed plus any in-progress block.
-func (a *Accumulator) Blocks() []domain.Block {
-	if a.current == nil {
-		return a.blocks
+func (a *accumulator) finalizeCurrentTool() {
+	if a.currentTool != nil {
+		a.blocks = append(a.blocks, domain.Block{
+			Type: domain.BlockTypeToolUse,
+			ToolUse: &domain.ToolUse{
+				ID:    a.currentTool.id,
+				Name:  a.currentTool.name,
+				Input: a.currentTool.input,
+			},
+		})
+		a.currentTool = nil
 	}
-	return append(a.blocks, *a.current)
 }
 
-// Model returns the model name from MessageStart.
-func (a *Accumulator) Model() string {
-	return a.model
+// message returns the current state of the message being built.
+// This includes completed blocks plus any in-progress block.
+func (a *accumulator) message() *domain.Message {
+	// Build content: completed blocks + in-progress
+	content := make([]domain.Block, len(a.blocks))
+	copy(content, a.blocks)
+
+	// Add any in-progress text/thinking block
+	if a.current != nil {
+		content = append(content, *a.current)
+	}
+
+	// Add any in-progress tool (for live rendering before content_block_stop)
+	if a.currentTool != nil {
+		content = append(content, domain.Block{
+			Type: domain.BlockTypeToolUse,
+			ToolUse: &domain.ToolUse{
+				ID:    a.currentTool.id,
+				Name:  a.currentTool.name,
+				Input: a.currentTool.input,
+			},
+		})
+	}
+
+	return &domain.Message{
+		Role:       domain.RoleAssistant,
+		Content:    content,
+		Model:      a.model,
+		StopReason: a.stopReason,
+	}
 }
 
-// StopReason returns the stop reason from MessageStop.
-func (a *Accumulator) StopReason() string {
-	return a.stopReason
-}
-
-// Done returns true when the stream is complete.
-func (a *Accumulator) Done() bool {
+// isDone returns true when the stream is complete.
+func (a *accumulator) isDone() bool {
 	return a.done
-}
-
-// Reset clears the accumulator for reuse.
-func (a *Accumulator) Reset() {
-	a.model = ""
-	a.stopReason = ""
-	a.blocks = nil
-	a.current = nil
-	a.done = false
 }

@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"github.com/usetero/cli/internal/domain"
 )
 
 func TestReadStream(t *testing.T) {
@@ -17,8 +15,8 @@ func TestReadStream(t *testing.T) {
 		stream := `data: {"type":"text_delta","text":{"content":"Hello"}}
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -31,8 +29,8 @@ data: [DONE]
 			t.Fatalf("got %d events, want 2", len(events))
 		}
 
-		if events[0].Type != domain.BlockTypeTextDelta {
-			t.Errorf("Type = %q, want %q", events[0].Type, domain.BlockTypeTextDelta)
+		if events[0].Type != EventTypeTextDelta {
+			t.Errorf("Type = %q, want %q", events[0].Type, EventTypeTextDelta)
 		}
 		if events[0].Text == nil || events[0].Text.Content != "Hello" {
 			t.Errorf("Text.Content = %v, want 'Hello'", events[0].Text)
@@ -48,8 +46,8 @@ data: [DONE]
 		stream := `data: {"type":"thinking_delta","thinking":{"content":"Let me think..."}}
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -58,8 +56,8 @@ data: [DONE]
 			t.Fatalf("readStream() error = %v", err)
 		}
 
-		if events[0].Type != domain.BlockTypeThinkingDelta {
-			t.Errorf("Type = %q, want %q", events[0].Type, domain.BlockTypeThinkingDelta)
+		if events[0].Type != EventTypeThinkingDelta {
+			t.Errorf("Type = %q, want %q", events[0].Type, EventTypeThinkingDelta)
 		}
 		if events[0].Thinking == nil || events[0].Thinking.Content != "Let me think..." {
 			t.Errorf("Thinking.Content = %v, want 'Let me think...'", events[0].Thinking)
@@ -72,8 +70,8 @@ data: [DONE]
 		stream := `data: {"type":"message_start","message_start":{"model":"claude-3"}}
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -82,8 +80,8 @@ data: [DONE]
 			t.Fatalf("readStream() error = %v", err)
 		}
 
-		if events[0].Type != domain.BlockTypeMessageStart {
-			t.Errorf("Type = %q, want %q", events[0].Type, domain.BlockTypeMessageStart)
+		if events[0].Type != EventTypeMessageStart {
+			t.Errorf("Type = %q, want %q", events[0].Type, EventTypeMessageStart)
 		}
 		if events[0].MessageStart == nil || events[0].MessageStart.Model != "claude-3" {
 			t.Errorf("MessageStart.Model = %v, want 'claude-3'", events[0].MessageStart)
@@ -96,8 +94,8 @@ data: [DONE]
 		stream := `data: {"type":"message_stop","message_stop":{"stop_reason":"end_turn"}}
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -106,8 +104,8 @@ data: [DONE]
 			t.Fatalf("readStream() error = %v", err)
 		}
 
-		if events[0].Type != domain.BlockTypeMessageStop {
-			t.Errorf("Type = %q, want %q", events[0].Type, domain.BlockTypeMessageStop)
+		if events[0].Type != EventTypeMessageStop {
+			t.Errorf("Type = %q, want %q", events[0].Type, EventTypeMessageStop)
 		}
 		if events[0].MessageStop == nil || events[0].MessageStop.StopReason != "end_turn" {
 			t.Errorf("MessageStop.StopReason = %v, want 'end_turn'", events[0].MessageStop)
@@ -120,8 +118,8 @@ data: [DONE]
 		stream := `data: {"type":"tool_use","tool_use":{"id":"tool-1","name":"get_weather"}}
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -130,8 +128,8 @@ data: [DONE]
 			t.Fatalf("readStream() error = %v", err)
 		}
 
-		if events[0].Type != domain.BlockTypeToolUse {
-			t.Errorf("Type = %q, want %q", events[0].Type, domain.BlockTypeToolUse)
+		if events[0].Type != EventTypeToolUse {
+			t.Errorf("Type = %q, want %q", events[0].Type, EventTypeToolUse)
 		}
 		if events[0].ToolUse == nil || events[0].ToolUse.Name != "get_weather" {
 			t.Errorf("ToolUse.Name = %v, want 'get_weather'", events[0].ToolUse)
@@ -148,8 +146,8 @@ data: {"type":"text_delta","text":{"content":"Hi"}}
 : another comment
 data: [DONE]
 `
-		var events []Event
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			events = append(events, e)
 			return nil
 		})
@@ -168,7 +166,7 @@ data: [DONE]
 
 		stream := `data: {invalid json}
 `
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			return nil
 		})
 
@@ -190,7 +188,7 @@ data: [DONE]
 `
 		handlerErr := errors.New("stop")
 		callCount := 0
-		err := readStream(strings.NewReader(stream), func(e Event) error {
+		err := readStream(strings.NewReader(stream), func(e event) error {
 			callCount++
 			if callCount == 2 {
 				return handlerErr

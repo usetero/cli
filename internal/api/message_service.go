@@ -149,16 +149,9 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 			ToolResult: toolResult,
 		}, nil
 
-	case domain.BlockTypeTextDelta,
-		domain.BlockTypeThinkingDelta,
-		domain.BlockTypeToolInputDelta,
-		domain.BlockTypeMessageStart,
-		domain.BlockTypeMessageStop:
-		// These are streaming-only types that should never be persisted
-		return gen.ContentBlockInput{}, fmt.Errorf("cannot persist streaming block type: %s", block.Type)
+	default:
+		return gen.ContentBlockInput{}, fmt.Errorf("unknown block type: %s", block.Type)
 	}
-
-	return gen.ContentBlockInput{}, fmt.Errorf("unknown block type: %s", block.Type)
 }
 
 func rawJSONToMap(data json.RawMessage) (map[string]any, error) {

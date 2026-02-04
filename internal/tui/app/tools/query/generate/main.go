@@ -11,6 +11,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -95,6 +96,6 @@ func getSQLiteVersion() (string, error) {
 	defer db.Close()
 
 	var version string
-	err = db.QueryRow("SELECT sqlite_version()").Scan(&version)
+	err = db.QueryRowContext(context.Background(), "SELECT sqlite_version()").Scan(&version)
 	return version, err
 }

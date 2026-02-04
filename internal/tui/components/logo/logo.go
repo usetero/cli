@@ -28,3 +28,8 @@ func Render(o Opts) string {
 
 	return strings.TrimSpace(b.String())
 }
+
+// RenderSmall renders a compact single-line version for narrow spaces.
+func RenderSmall(o Opts) string {
+	return styles.ApplyForegroundGrad("tero", o.TitleColorA, o.TitleColorB)
+}

@@ -22,7 +22,7 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.doFunc(req)
 }
 
-func TestClient_Send(t *testing.T) {
+func TestClient_Stream(t *testing.T) {
 	t.Parallel()
 
 	t.Run("sends request with correct headers", func(t *testing.T) {
@@ -49,13 +49,13 @@ func TestClient_Send(t *testing.T) {
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 		client.SetAccountID("acc-123")
 
-		err := client.Send(context.Background(), chat.Request{
+		err := client.Stream(context.Background(), chat.Request{
 			ConversationID: "conv-1",
 			Messages:       []domain.Message{},
-		}, func(e chat.Event) error { return nil })
+		}, func(msg *domain.Message) {})
 
 		if err != nil {
-			t.Fatalf("Send() error = %v", err)
+			t.Fatalf("Stream() error = %v", err)
 		}
 
 		if capturedReq.Header.Get("Authorization") != "Bearer test-token" {
@@ -95,9 +95,9 @@ func TestClient_Send(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com/", mockAuth, httpClient, logtest.New(t))
 
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error { return nil })
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err != nil {
-			t.Fatalf("Send() error = %v", err)
+			t.Fatalf("Stream() error = %v", err)
 		}
 
 		want := "https://api.example.com/api/chat/v1/messages"
@@ -124,9 +124,9 @@ func TestClient_Send(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error { return nil })
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
-			t.Fatal("Send() expected error, got nil")
+			t.Fatal("Stream() expected error, got nil")
 		}
 		if !strings.Contains(err.Error(), "access token") {
 			t.Errorf("error = %q, want to contain 'access token'", err.Error())
@@ -150,9 +150,9 @@ func TestClient_Send(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error { return nil })
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
-			t.Fatal("Send() expected error, got nil")
+			t.Fatal("Stream() expected error, got nil")
 		}
 		if !strings.Contains(err.Error(), "connection refused") {
 			t.Errorf("error = %q, want to contain 'connection refused'", err.Error())
@@ -179,9 +179,9 @@ func TestClient_Send(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error { return nil })
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
-			t.Fatal("Send() expected error, got nil")
+			t.Fatal("Stream() expected error, got nil")
 		}
 		if !strings.Contains(err.Error(), "401") {
 			t.Errorf("error = %q, want to contain '401'", err.Error())
@@ -209,21 +209,22 @@ func TestClient_Send(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error { return nil })
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
-			t.Fatal("Send() expected error, got nil")
+			t.Fatal("Stream() expected error, got nil")
 		}
 		if !strings.Contains(err.Error(), "text/event-stream") {
 			t.Errorf("error = %q, want to mention expected content type", err.Error())
 		}
 	})
 
-	t.Run("streams events to handler", func(t *testing.T) {
+	t.Run("builds message from stream and calls onMessage", func(t *testing.T) {
 		t.Parallel()
 
 		stream := `data: {"type":"message_start","message_start":{"model":"claude-3"}}
 data: {"type":"text_delta","text":{"content":"Hello"}}
 data: {"type":"text_delta","text":{"content":" world"}}
+data: {"type":"content_block_stop"}
 data: {"type":"message_stop","message_stop":{"stop_reason":"end_turn"}}
 data: [DONE]
 `
@@ -245,42 +246,50 @@ data: [DONE]
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		var events []chat.Event
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error {
-			events = append(events, e)
-			return nil
+		var messages []*domain.Message
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+			// Make a copy since the message is built incrementally
+			msgCopy := *msg
+			messages = append(messages, &msgCopy)
 		})
 
 		if err != nil {
-			t.Fatalf("Send() error = %v", err)
+			t.Fatalf("Stream() error = %v", err)
 		}
 
-		if len(events) != 5 {
-			t.Fatalf("got %d events, want 5", len(events))
+		// Should have received multiple updates as the message was built
+		if len(messages) == 0 {
+			t.Fatal("expected at least one message callback")
 		}
 
-		if events[0].Type != domain.BlockTypeMessageStart {
-			t.Errorf("events[0].Type = %q, want %q", events[0].Type, domain.BlockTypeMessageStart)
+		// Last message should have the complete content
+		lastMsg := messages[len(messages)-1]
+		if lastMsg.Model != "claude-3" {
+			t.Errorf("Model = %q, want %q", lastMsg.Model, "claude-3")
 		}
-		if events[1].Type != domain.BlockTypeTextDelta {
-			t.Errorf("events[1].Type = %q, want %q", events[1].Type, domain.BlockTypeTextDelta)
+		if lastMsg.StopReason != "end_turn" {
+			t.Errorf("StopReason = %q, want %q", lastMsg.StopReason, "end_turn")
 		}
-		if events[1].Text.Content != "Hello" {
-			t.Errorf("events[1].Text.Content = %q, want %q", events[1].Text.Content, "Hello")
+		if len(lastMsg.Content) != 1 {
+			t.Fatalf("Content length = %d, want 1", len(lastMsg.Content))
 		}
-		if events[3].Type != domain.BlockTypeMessageStop {
-			t.Errorf("events[3].Type = %q, want %q", events[3].Type, domain.BlockTypeMessageStop)
+		if lastMsg.Content[0].Type != domain.BlockTypeText {
+			t.Errorf("Content[0].Type = %q, want %q", lastMsg.Content[0].Type, domain.BlockTypeText)
 		}
-		if !events[4].Done {
-			t.Error("events[4].Done = false, want true")
+		if lastMsg.Content[0].Text.Content != "Hello world" {
+			t.Errorf("Content[0].Text.Content = %q, want %q", lastMsg.Content[0].Text.Content, "Hello world")
 		}
 	})
 
-	t.Run("stops on handler error", func(t *testing.T) {
+	t.Run("accumulates tool use with input deltas", func(t *testing.T) {
 		t.Parallel()
 
-		stream := `data: {"type":"text_delta","text":{"content":"Hello"}}
-data: {"type":"text_delta","text":{"content":" world"}}
+		stream := `data: {"type":"message_start","message_start":{"model":"claude-3"}}
+data: {"type":"tool_use","tool_use":{"id":"tool-1","name":"query"}}
+data: {"type":"tool_input_delta","tool_input_delta":"{\"sql\":"}
+data: {"type":"tool_input_delta","tool_input_delta":" \"SELECT 1\"}"}
+data: {"type":"content_block_stop"}
+data: {"type":"message_stop","message_stop":{"stop_reason":"tool_use"}}
 data: [DONE]
 `
 		httpClient := &mockHTTPClient{
@@ -301,18 +310,33 @@ data: [DONE]
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
 
-		handlerErr := errors.New("handler failed")
-		callCount := 0
-		err := client.Send(context.Background(), chat.Request{}, func(e chat.Event) error {
-			callCount++
-			return handlerErr
+		var lastMessage *domain.Message
+		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+			lastMessage = msg
 		})
 
-		if !errors.Is(err, handlerErr) {
-			t.Errorf("Send() error = %v, want %v", err, handlerErr)
+		if err != nil {
+			t.Fatalf("Stream() error = %v", err)
 		}
-		if callCount != 1 {
-			t.Errorf("handler called %d times, want 1", callCount)
+
+		if lastMessage == nil {
+			t.Fatal("expected message")
+		}
+		if len(lastMessage.Content) != 1 {
+			t.Fatalf("Content length = %d, want 1", len(lastMessage.Content))
+		}
+		if lastMessage.Content[0].Type != domain.BlockTypeToolUse {
+			t.Errorf("Content[0].Type = %q, want %q", lastMessage.Content[0].Type, domain.BlockTypeToolUse)
+		}
+		if lastMessage.Content[0].ToolUse.ID != "tool-1" {
+			t.Errorf("ToolUse.ID = %q, want %q", lastMessage.Content[0].ToolUse.ID, "tool-1")
+		}
+		if lastMessage.Content[0].ToolUse.Name != "query" {
+			t.Errorf("ToolUse.Name = %q, want %q", lastMessage.Content[0].ToolUse.Name, "query")
+		}
+		expectedInput := `{"sql": "SELECT 1"}`
+		if string(lastMessage.Content[0].ToolUse.Input) != expectedInput {
+			t.Errorf("ToolUse.Input = %q, want %q", string(lastMessage.Content[0].ToolUse.Input), expectedInput)
 		}
 	})
 }

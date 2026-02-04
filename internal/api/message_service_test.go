@@ -155,44 +155,30 @@ func TestMessageService_CreateMessage(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects streaming block types", func(t *testing.T) {
+	t.Run("rejects unknown block types", func(t *testing.T) {
 		t.Parallel()
 
-		streamingTypes := []domain.BlockType{
-			domain.BlockTypeTextDelta,
-			domain.BlockTypeThinkingDelta,
-			domain.BlockTypeToolInputDelta,
-			domain.BlockTypeMessageStart,
-			domain.BlockTypeMessageStop,
+		mockClient := &apitest.MockClient{
+			CreateMessageFunc: func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error) {
+				t.Error("CreateMessage should not be called")
+				return &gen.CreateMessageResponse{}, nil
+			},
 		}
 
-		for _, blockType := range streamingTypes {
-			t.Run(string(blockType), func(t *testing.T) {
-				t.Parallel()
+		svc := api.NewMessageService(mockClient, logtest.New(t))
 
-				mockClient := &apitest.MockClient{
-					CreateMessageFunc: func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error) {
-						t.Error("CreateMessage should not be called")
-						return &gen.CreateMessageResponse{}, nil
-					},
-				}
+		msg := &domain.Message{
+			ID:             "msg-123",
+			ConversationID: "conv-456",
+			Role:           domain.RoleAssistant,
+			Content: []domain.Block{
+				{Type: "unknown_type"},
+			},
+		}
 
-				svc := api.NewMessageService(mockClient, logtest.New(t))
-
-				msg := &domain.Message{
-					ID:             "msg-123",
-					ConversationID: "conv-456",
-					Role:           domain.RoleAssistant,
-					Content: []domain.Block{
-						{Type: blockType},
-					},
-				}
-
-				err := svc.CreateMessage(context.Background(), msg)
-				if err == nil {
-					t.Fatalf("CreateMessage() expected error for streaming block type %s, got nil", blockType)
-				}
-			})
+		err := svc.CreateMessage(context.Background(), msg)
+		if err == nil {
+			t.Fatal("CreateMessage() expected error for unknown block type, got nil")
 		}
 	})
 

@@ -12,6 +12,9 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 )
 
+// Name is the tool name used in definitions and lookups.
+const Name = "query"
+
 //go:embed schema.sql
 var schema string
 
@@ -22,7 +25,7 @@ type Tool struct {
 
 func (t Tool) Definition() chat.Tool {
 	return chat.Tool{
-		Name: "query",
+		Name: Name,
 		Description: fmt.Sprintf(`Execute a READ-ONLY SQL query against the local SQLite catalog.
 
 The catalog contains telemetry data synced from the Tero control plane, scoped to the user's account.
@@ -36,16 +39,15 @@ Guidelines:
 - Join on id/foreign key columns (all UUIDs stored as TEXT)
 - Timestamps are ISO 8601 strings
 - Use LIKE for pattern matching, not regex`, schema),
-		InputSchema: chat.Schema{
-			Type: "object",
-			Properties: map[string]chat.Property{
+		InputSchema: chat.NewObjectSchema(
+			map[string]chat.Property{
 				"sql": {
 					Type:        "string",
 					Description: "The SQL query to execute",
 				},
 			},
-			Required: []string{"sql"},
-		},
+			[]string{"sql"},
+		),
 	}
 }
 
@@ -66,7 +68,11 @@ func (t Tool) Execute(input json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		// Reset query_only before returning connection to pool
+		_, _ = conn.ExecContext(ctx, "PRAGMA query_only = OFF")
+		conn.Close()
+	}()
 
 	// PRAGMA query_only prevents any writes on this connection
 	if _, err := conn.ExecContext(ctx, "PRAGMA query_only = ON"); err != nil {

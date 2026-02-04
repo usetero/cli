@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	productionEndpoint          = "https://api.usetero.com/graphql"
+	productionEndpoint          = "https://api.usetero.com"
 	productionPowerSyncEndpoint = "https://powersync.usetero.com"
 	productionChatEndpoint      = "https://chat.usetero.com"
 )

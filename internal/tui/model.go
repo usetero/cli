@@ -119,58 +119,34 @@ func (m Model) Init() tea.Cmd {
 }
 
 // Update handles messages and returns the updated Model.
+// Rule: return early ONLY if this model is the sole consumer of the message.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	var cmd tea.Cmd
 
+	// Handle messages we care about
 	switch msg := msg.(type) {
+	case accountselect.AccountSelectedMsg:
+		return m.handleAccountSelected(msg) // sole consumer
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keymap.Quit) || key.Matches(msg, keymap.Exit) {
 			m.logger.Info("user quit", "key", msg.String())
 			m.shutdown()
-			return m, tea.Quit
+			return m, tea.Quit // sole consumer
 		}
-
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.height = msg.Height
-		if m.inApp {
-			m.app, _ = m.app.Update(msg)
-		} else {
-			m.onboarding = m.onboarding.SetSize(msg.Width, msg.Height)
-		}
-		return m, nil
-
-	case accountselect.AccountSelectedMsg:
-		m.org = msg.Organization
-		m.account = msg.Account
-		m.logger.Info("account selected", "accountID", msg.Account.ID)
-
-		if err := m.openDatabase(msg.Account.ID.String()); err != nil {
-			m.logger.Error("failed to open database", "error", err)
-			m.err = err
-			return m, nil
-		}
-
-		if err := m.startSync(msg.Account.ID.String()); err != nil {
-			m.logger.Error("failed to start sync", "error", err)
-			m.err = err
-			return m, nil
-		}
+		m.height = msg.Height // children also need this
 	}
 
-	// Route to current mode
+	// Forward to active child
+
 	if m.inApp {
-		var cmd tea.Cmd
 		m.app, cmd = m.app.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		cmds = append(cmds, cmd)
 	} else {
-		var cmd tea.Cmd
 		m.onboarding, cmd = m.onboarding.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		cmds = append(cmds, cmd)
 
 		// Check if onboarding completed
 		if m.onboarding.IsComplete() {
@@ -181,6 +157,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+// handleAccountSelected processes account selection from onboarding.
+func (m Model) handleAccountSelected(msg accountselect.AccountSelectedMsg) (tea.Model, tea.Cmd) {
+	m.org = msg.Organization
+	m.account = msg.Account
+	m.logger.Info("account selected", "accountID", msg.Account.ID)
+
+	if err := m.openDatabase(msg.Account.ID.String()); err != nil {
+		m.logger.Error("failed to open database", "error", err)
+		m.err = err
+		return m, nil
+	}
+
+	if err := m.startSync(msg.Account.ID.String()); err != nil {
+		m.logger.Error("failed to start sync", "error", err)
+		m.err = err
+		return m, nil
+	}
+
+	return m, nil
 }
 
 // transitionToApp creates the app and switches to app mode.
@@ -226,7 +223,7 @@ func (m *Model) startSync(accountID string) error {
 	m.logger.Info("syncer started", "accountID", accountID)
 
 	// Set account ID on chat client
-	m.chatClient.SetAccountID(accountID)
+	m.chatClient.SetAccountID(domain.AccountID(accountID))
 
 	// Create API services with account scope
 	services := api.NewServices(m.cfg.APIEndpoint+"/graphql", m.authService, m.logger)
@@ -256,6 +253,7 @@ func (m Model) View() tea.View {
 		return tea.View{
 			BackgroundColor: colors.Page.Bg,
 			AltScreen:       true,
+			MouseMode:       tea.MouseModeCellMotion,
 			Content: lipgloss.NewStyle().
 				Width(m.width).
 				Height(m.height).
@@ -287,6 +285,7 @@ func (m Model) View() tea.View {
 	return tea.View{
 		BackgroundColor: colors.Page.Bg,
 		AltScreen:       true,
+		MouseMode:       tea.MouseModeCellMotion,
 		Content:         cleanView,
 		Cursor:          cur,
 	}

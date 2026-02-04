@@ -11,8 +11,11 @@ import (
 // streamDone is the SSE sentinel value indicating the stream is complete.
 const streamDone = "[DONE]"
 
+// eventHandler is called for each event in the response stream.
+type eventHandler func(event) error
+
 // readStream reads SSE events from the reader and calls the handler for each.
-func readStream(r io.Reader, handler Handler) error {
+func readStream(r io.Reader, handler eventHandler) error {
 	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {
@@ -32,16 +35,21 @@ func readStream(r io.Reader, handler Handler) error {
 
 		// Stream complete
 		if data == streamDone {
-			return handler(Event{Done: true})
+			return handler(event{Done: true})
 		}
 
 		// Parse event
-		var event Event
-		if err := json.Unmarshal([]byte(data), &event); err != nil {
+		var e event
+		if err := json.Unmarshal([]byte(data), &e); err != nil {
 			return fmt.Errorf("parse event: %w", err)
 		}
 
-		if err := handler(event); err != nil {
+		// Reject empty/unknown event types
+		if e.Type == "" && !e.Done {
+			return fmt.Errorf("received empty event type, raw data: %s", data)
+		}
+
+		if err := handler(e); err != nil {
 			return err
 		}
 	}

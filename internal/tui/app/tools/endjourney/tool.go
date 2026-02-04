@@ -6,16 +6,17 @@ import (
 	"github.com/usetero/cli/internal/chat"
 )
 
+// Name is the tool name used in definitions and lookups.
+const Name = "end_journey"
+
 // Tool completes the current workflow.
 type Tool struct{}
 
 func (Tool) Definition() chat.Tool {
 	return chat.Tool{
-		Name:        "end_journey",
+		Name:        Name,
 		Description: "Complete the current journey workflow",
-		InputSchema: chat.Schema{
-			Type: "object",
-		},
+		InputSchema: chat.NewObjectSchema(nil, nil),
 	}
 }
 

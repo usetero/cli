@@ -5,46 +5,61 @@ import (
 
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/tui/app/tools/endjourney"
+	"github.com/usetero/cli/internal/tui/app/tools/query"
 	"github.com/usetero/cli/internal/tui/app/tools/startjourney"
 )
 
-// Tool defines a tool the AI can call.
-type Tool interface {
-	Definition() chat.Tool
-	Execute(input json.RawMessage) (any, error)
+// Tools holds the global tools available everywhere.
+type Tools struct {
+	StartJourney *startjourney.Tool
+	EndJourney   *endjourney.Tool
+	Query        *query.Tool
 }
 
-// Tools is a collection of tools.
-type Tools []Tool
-
-// Definitions returns chat.Tool definitions for the request.
+// Definitions returns chat.Tool definitions for the API request.
 func (t Tools) Definitions() []chat.Tool {
-	defs := make([]chat.Tool, len(t))
-	for i, tool := range t {
-		defs[i] = tool.Definition()
+	var defs []chat.Tool
+	if t.StartJourney != nil {
+		defs = append(defs, t.StartJourney.Definition())
+	}
+	if t.EndJourney != nil {
+		defs = append(defs, t.EndJourney.Definition())
+	}
+	if t.Query != nil {
+		defs = append(defs, t.Query.Definition())
 	}
 	return defs
 }
 
-// Merge combines two tool sets.
-func (t Tools) Merge(other Tools) Tools {
-	return append(t, other...)
-}
-
-// Get returns a tool by name, or nil if not found.
-func (t Tools) Get(name string) Tool {
-	for _, tool := range t {
-		if tool.Definition().Name == name {
-			return tool
+// Execute runs a tool by name and returns the result.
+// Returns nil, nil if tool not found.
+func (t Tools) Execute(name string, input json.RawMessage) (any, error) {
+	switch name {
+	case startjourney.Name:
+		if t.StartJourney != nil {
+			return t.StartJourney.Execute(input)
+		}
+	case endjourney.Name:
+		if t.EndJourney != nil {
+			return t.EndJourney.Execute(input)
+		}
+	case query.Name:
+		if t.Query != nil {
+			return t.Query.Execute(input)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-// All returns all global tools.
-func All() Tools {
-	return Tools{
-		startjourney.Tool{},
-		endjourney.Tool{},
+// Has returns true if a tool is available by name.
+func (t Tools) Has(name string) bool {
+	switch name {
+	case startjourney.Name:
+		return t.StartJourney != nil
+	case endjourney.Name:
+		return t.EndJourney != nil
+	case query.Name:
+		return t.Query != nil
 	}
+	return false
 }

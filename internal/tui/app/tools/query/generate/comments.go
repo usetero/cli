@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -17,7 +18,7 @@ func fetchComments(dbURL string) (map[string]string, error) {
 	defer db.Close()
 
 	// Query column comments from Postgres system catalogs
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(context.Background(), `
 		SELECT
 			c.relname AS table_name,
 			a.attname AS column_name,
