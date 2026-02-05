@@ -19,6 +19,7 @@ const (
 // Block is one element in a message's content array.
 // Exactly one of the typed fields is populated, determined by Type.
 type Block struct {
+	Index      int         `json:"index"`
 	Type       BlockType   `json:"type"`
 	Text       *TextBlock  `json:"text,omitempty"`
 	Thinking   *Thinking   `json:"thinking,omitempty"`
@@ -71,4 +72,16 @@ func NewTextBlock(content string) Block {
 // EncodeText is a convenience function to encode a single text block.
 func EncodeText(content string) (string, error) {
 	return EncodeBlocks([]Block{NewTextBlock(content)})
+}
+
+// EncodeToolResults encodes tool results as blocks for storage.
+func EncodeToolResults(results []ToolResult) (string, error) {
+	blocks := make([]Block, len(results))
+	for i, r := range results {
+		blocks[i] = Block{
+			Type:       BlockTypeToolResult,
+			ToolResult: &r,
+		}
+	}
+	return EncodeBlocks(blocks)
 }

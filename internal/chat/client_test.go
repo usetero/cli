@@ -46,7 +46,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 		client.SetAccountID("acc-123")
 
 		err := client.Stream(context.Background(), chat.Request{
@@ -93,7 +93,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com/", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com/", mockAuth, httpClient, logtest.New(t), nil)
 
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err != nil {
@@ -122,7 +122,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
@@ -148,7 +148,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
@@ -177,7 +177,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
@@ -207,7 +207,7 @@ func TestClient_Stream(t *testing.T) {
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
@@ -244,7 +244,7 @@ data: [DONE]
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		var messages []*domain.Message
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
@@ -308,7 +308,7 @@ data: [DONE]
 			},
 		}
 
-		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t))
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.New(t), nil)
 
 		var lastMessage *domain.Message
 		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {

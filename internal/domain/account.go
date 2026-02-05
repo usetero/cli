@@ -15,3 +15,6 @@ type Account struct {
 	ID   AccountID `json:"id"`
 	Name string    `json:"name"`
 }
+
+// FilterValue returns the string used for filtering/searching.
+func (a Account) FilterValue() string { return a.Name }

@@ -87,6 +87,110 @@ logger.Debug("using cached preferences", slog.String("orgID", id))
 
 **Don't log function entry/exit.** "Entering selectOrg" and "Exiting selectOrg" add no value. Just log the meaningful event: "Organization selected."
 
+## Bubbletea Models
+
+Bubbletea uses message-driven architecture. Messages flow through the tree, and models react to them. This creates a unique logging challenge: you need to see the story of what messages arrived and what happened, without drowning in noise from constant UI messages (blinks, key presses, window resizes).
+
+### What to Log
+
+**INFO level** - Key state transitions and user actions:
+
+```go
+logger.Info("user submitted input", "text_length", len(text))
+logger.Info("conversation created", "id", convID)
+logger.Info("turn started", "conversation_id", convID, "user_message_id", msgID)
+logger.Info("stream completed", "message_id", msgID, "stop_reason", reason)
+logger.Info("assistant message persisted", "id", msgID)
+```
+
+**DEBUG level** - Message receipt for domain-meaningful messages:
+
+```go
+logger.Debug("received UserSubmittedInput")
+logger.Debug("received streamUpdateMsg", "done", update.done)
+logger.Debug("received TurnStarted", "user_message_id", msg.UserMessageID)
+```
+
+### What Not to Log
+
+Don't log receipt of routine UI messages:
+- `tea.WindowSizeMsg` - happens on every resize
+- `tea.KeyPressMsg` - happens on every keystroke  
+- `textarea.BlinkMsg` - happens constantly for cursor blink
+- `tea.MouseMsg` - happens on every mouse movement
+
+These would create massive noise. Only log them if something exceptional happens (e.g., an error handling a resize).
+
+### The Pattern
+
+Every model that handles domain messages gets a logger. The logger is passed through `New()` and stored on the model:
+
+```go
+type Model struct {
+    logger log.Logger
+    // ... other fields
+}
+
+func New(logger log.Logger, /* other params */) *Model {
+    return &Model{
+        logger: logger.With("component", "chat"),
+        // ...
+    }
+}
+```
+
+In `Update()`, log when you handle domain-meaningful messages:
+
+```go
+func (m *Model) Update(msg tea.Msg) tea.Cmd {
+    var cmds []tea.Cmd
+
+    switch msg := msg.(type) {
+    case msgs.UserSubmittedInput:
+        m.logger.Info("user submitted input", "text_length", len(msg.Text))
+        cmds = append(cmds, m.handleUserInput(msg.Text))
+
+    case userMessagePersisted:
+        m.logger.Debug("received userMessagePersisted", "message_id", msg.messageID)
+        cmds = append(cmds, m.handlePersistedMessage(msg))
+    }
+
+    // Always forward to children
+    cmds = append(cmds, m.commandBar.Update(msg))
+    cmds = append(cmds, m.messageList.Update(msg))
+
+    return tea.Batch(cmds...)
+}
+```
+
+### Debugging Message Flow
+
+When something isn't working, DEBUG logs should show you exactly where messages stop flowing:
+
+```
+DEBUG received UserSubmittedInput
+INFO  user submitted input text_length=5
+DEBUG creating conversation
+INFO  conversation created id=abc-123
+DEBUG received conversationCreated
+DEBUG persisting user message
+DEBUG received userMessagePersisted message_id=def-456
+INFO  turn started conversation_id=abc-123 user_message_id=def-456
+DEBUG starting stream
+DEBUG received streamUpdateMsg done=false
+DEBUG received streamUpdateMsg done=false
+DEBUG received streamUpdateMsg done=true
+INFO  stream completed message_id=ghi-789 stop_reason=end_turn
+```
+
+If the stream never completes, you'd see the last `streamUpdateMsg` and know exactly where to look.
+
+### Leaf vs Parent Models
+
+**Parent models** (chat, messagelist, turn) log message receipt and forward to children. They tell the orchestration story.
+
+**Leaf models** (user, assistant, blocks) log their own state changes but don't need to log message forwarding since they have no children.
+
 ## Auditing a File
 
 When reviewing a file for logging quality:

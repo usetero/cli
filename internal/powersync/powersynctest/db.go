@@ -24,5 +24,5 @@ func NewSyncerWithMockClient(endpoint string, tokenRefresher powersync.TokenRefr
 }
 
 func discardLogger() log.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
+	return log.Wrap(slog.New(slog.NewTextHandler(io.Discard, nil)))
 }

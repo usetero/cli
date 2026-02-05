@@ -15,3 +15,6 @@ type Workspace struct {
 	ID   WorkspaceID `json:"id"`
 	Name string      `json:"name"`
 }
+
+// FilterValue returns the string used for filtering/searching.
+func (w Workspace) FilterValue() string { return w.Name }

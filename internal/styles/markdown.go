@@ -19,12 +19,25 @@ func colorToHex(c color.Color) string {
 	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
 }
 
-// MarkdownRenderer creates a glamour renderer configured with theme colors.
+// cachedRenderer holds a cached glamour renderer for a specific width.
+type cachedRenderer struct {
+	renderer *glamour.TermRenderer
+	width    int
+}
+
+var rendererCache *cachedRenderer
+
+// MarkdownRenderer returns a glamour renderer configured with theme colors.
+// The renderer is cached and reused for the same width.
 func MarkdownRenderer(theme *Theme, width int) *glamour.TermRenderer {
+	if rendererCache != nil && rendererCache.width == width {
+		return rendererCache.renderer
+	}
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithStyles(markdownStyle(theme.Colors)),
 		glamour.WithWordWrap(width),
 	)
+	rendererCache = &cachedRenderer{renderer: r, width: width}
 	return r
 }
 

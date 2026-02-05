@@ -21,3 +21,6 @@ type Organization struct {
 	Name                 string               `json:"name"`
 	WorkosOrganizationID WorkosOrganizationID `json:"workos_organization_id,omitempty"`
 }
+
+// FilterValue returns the string used for filtering/searching.
+func (o Organization) FilterValue() string { return o.Name }

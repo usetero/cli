@@ -16,12 +16,14 @@ type accumulator struct {
 	blocks     []domain.Block // completed blocks
 	current    *domain.Block  // text/thinking block being built from deltas
 	done       bool
+	nextIndex  int // next block index to assign
 
 	// Tool accumulation - tool_use starts it, deltas build input, content_block_stop finalizes
 	currentTool *toolAccumulator
 }
 
 type toolAccumulator struct {
+	index int
 	id    string
 	name  string
 	input []byte
@@ -65,9 +67,11 @@ func (a *accumulator) handle(e event) {
 		}
 		// Start accumulating a new tool
 		a.currentTool = &toolAccumulator{
-			id:   e.ToolUse.ID,
-			name: e.ToolUse.Name,
+			index: a.nextIndex,
+			id:    e.ToolUse.ID,
+			name:  e.ToolUse.Name,
 		}
+		a.nextIndex++
 
 	case EventTypeToolInputDelta:
 		// Append to current tool's input buffer
@@ -123,9 +127,11 @@ func (a *accumulator) handleTextDelta(e event) {
 	if a.current == nil || a.current.Type != domain.BlockTypeText {
 		a.finalizeCurrent()
 		a.current = &domain.Block{
-			Type: domain.BlockTypeText,
-			Text: &domain.TextBlock{Content: delta},
+			Index: a.nextIndex,
+			Type:  domain.BlockTypeText,
+			Text:  &domain.TextBlock{Content: delta},
 		}
+		a.nextIndex++
 	} else {
 		a.current.Text.Content += delta
 	}
@@ -140,9 +146,11 @@ func (a *accumulator) handleThinkingDelta(e event) {
 	if a.current == nil || a.current.Type != domain.BlockTypeThinking {
 		a.finalizeCurrent()
 		a.current = &domain.Block{
+			Index:    a.nextIndex,
 			Type:     domain.BlockTypeThinking,
 			Thinking: &domain.Thinking{Content: delta},
 		}
+		a.nextIndex++
 	} else {
 		a.current.Thinking.Content += delta
 	}
@@ -158,11 +166,13 @@ func (a *accumulator) finalizeCurrent() {
 func (a *accumulator) finalizeCurrentTool() {
 	if a.currentTool != nil {
 		a.blocks = append(a.blocks, domain.Block{
-			Type: domain.BlockTypeToolUse,
+			Index: a.currentTool.index,
+			Type:  domain.BlockTypeToolUse,
 			ToolUse: &domain.ToolUse{
-				ID:    a.currentTool.id,
-				Name:  a.currentTool.name,
-				Input: a.currentTool.input,
+				ID:            a.currentTool.id,
+				Name:          a.currentTool.name,
+				Input:         a.currentTool.input,
+				InputComplete: true,
 			},
 		})
 		a.currentTool = nil
@@ -184,7 +194,8 @@ func (a *accumulator) message() *domain.Message {
 	// Add any in-progress tool (for live rendering before content_block_stop)
 	if a.currentTool != nil {
 		content = append(content, domain.Block{
-			Type: domain.BlockTypeToolUse,
+			Index: a.currentTool.index,
+			Type:  domain.BlockTypeToolUse,
 			ToolUse: &domain.ToolUse{
 				ID:    a.currentTool.id,
 				Name:  a.currentTool.name,

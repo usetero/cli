@@ -204,7 +204,10 @@ func TestMessageService_CreateMessage(t *testing.T) {
 					Type: domain.BlockTypeToolResult,
 					ToolResult: &domain.ToolResult{
 						ToolUseID: "tool-1",
-						Content:   json.RawMessage(`{"columns": ["id", "name"], "rows": [["1", "foo"]]}`),
+						Content: map[string]any{
+							"columns": []any{"id", "name"},
+							"rows":    []any{[]any{"1", "foo"}},
+						},
 					},
 				},
 			},

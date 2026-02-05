@@ -132,9 +132,9 @@ func toContentBlockInput(block domain.Block) (gen.ContentBlockInput, error) {
 		}, nil
 
 	case domain.BlockTypeToolResult:
-		content, err := rawJSONToMapPtr(block.ToolResult.Content)
-		if err != nil {
-			return gen.ContentBlockInput{}, fmt.Errorf("tool_result block: %w", err)
+		var content *map[string]any
+		if block.ToolResult.Content != nil {
+			content = &block.ToolResult.Content
 		}
 		toolResult := &gen.ToolResultInput{
 			ToolUseId: block.ToolResult.ToolUseID,

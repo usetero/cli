@@ -47,20 +47,22 @@ type Client interface {
 
 // client is the concrete implementation of Client.
 type client struct {
-	endpoint   string
-	httpClient HTTPDoer
-	auth       auth.Auth
-	accountID  domain.AccountID
-	logger     log.Logger
+	endpoint    string
+	httpClient  HTTPDoer
+	auth        auth.Auth
+	accountID   domain.AccountID
+	logger      log.Logger
+	globalTools []Tool
 }
 
 // Ensure client implements Client.
 var _ Client = (*client)(nil)
 
 // NewClient creates a new Chat API client.
+// - globalTools are included in every request automatically
 // - Retries transient errors (connection reset, 502/503/504) up to 3 times with backoff
 // - Gets a fresh token via auth.GetAccessToken before each request
-func NewClient(endpoint string, authService auth.Auth, logger log.Logger) Client {
+func NewClient(endpoint string, authService auth.Auth, logger log.Logger, globalTools []Tool) Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = retryMax
 	retryClient.RetryWaitMin = retryWaitMin
@@ -68,20 +70,22 @@ func NewClient(endpoint string, authService auth.Auth, logger log.Logger) Client
 	retryClient.Logger = nil
 
 	return &client{
-		endpoint:   strings.TrimSuffix(endpoint, "/"),
-		httpClient: retryClient.StandardClient(),
-		auth:       authService,
-		logger:     logger,
+		endpoint:    strings.TrimSuffix(endpoint, "/"),
+		httpClient:  retryClient.StandardClient(),
+		auth:        authService,
+		logger:      logger,
+		globalTools: globalTools,
 	}
 }
 
 // NewClientWithHTTP creates a new Chat API client with a custom HTTP client (for testing).
-func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDoer, logger log.Logger) Client {
+func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDoer, logger log.Logger, globalTools []Tool) Client {
 	return &client{
-		endpoint:   strings.TrimSuffix(endpoint, "/"),
-		httpClient: httpClient,
-		auth:       authService,
-		logger:     logger,
+		endpoint:    strings.TrimSuffix(endpoint, "/"),
+		httpClient:  httpClient,
+		auth:        authService,
+		logger:      logger,
+		globalTools: globalTools,
 	}
 }
 
@@ -92,11 +96,17 @@ func (c *client) SetAccountID(accountID domain.AccountID) {
 
 // Stream sends the conversation to the Chat API and streams the response.
 // The onMessage callback is called each time the message is updated with new content.
+// Global tools are automatically merged with any request-specific tools.
 func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain.Message)) error {
+	// Merge global tools with request-specific tools
+	allTools := append(c.globalTools, req.Tools...)
+	req.Tools = allTools
+
 	c.logger.Debug("sending to chat API",
 		log.String("conversation_id", req.ConversationID),
 		log.Int("message_count", len(req.Messages)),
 		log.Int("context_count", len(req.Context)),
+		log.Int("tool_count", len(req.Tools)),
 	)
 
 	// Get fresh token for this request

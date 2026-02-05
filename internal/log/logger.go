@@ -25,6 +25,7 @@ type Logger interface {
 	Info(msg string, args ...any)
 	Warn(msg string, args ...any)
 	Error(msg string, args ...any)
+	With(args ...any) Logger
 }
 
 // Level re-exports slog.Level for callers.
@@ -37,6 +38,20 @@ const (
 	LevelWarn  = slog.LevelWarn
 	LevelError = slog.LevelError
 )
+
+// logger wraps slog.Logger to implement our Logger interface.
+type logger struct {
+	*slog.Logger
+}
+
+func (l *logger) With(args ...any) Logger {
+	return &logger{l.Logger.With(args...)}
+}
+
+// Wrap wraps a *slog.Logger to implement the Logger interface.
+func Wrap(l *slog.Logger) Logger {
+	return &logger{l}
+}
 
 // New creates a new logger that writes to /tmp/tero.log
 // Appends to existing log file, with a clear session separator.
@@ -52,7 +67,7 @@ func New(level Level) Logger {
 	_, _ = logFile.WriteString("SESSION START\n")
 	_, _ = logFile.WriteString("================================================================================\n")
 
-	return slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
+	return &logger{slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: level,
-	}))
+	}))}
 }

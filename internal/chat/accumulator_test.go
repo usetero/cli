@@ -36,6 +36,9 @@ func TestAccumulator(t *testing.T) {
 		if len(msg.Content) != 1 {
 			t.Fatalf("expected 1 block, got %d", len(msg.Content))
 		}
+		if msg.Content[0].Index != 0 {
+			t.Errorf("index = %d, want 0", msg.Content[0].Index)
+		}
 		if msg.Content[0].Type != domain.BlockTypeText {
 			t.Errorf("type = %s, want text", msg.Content[0].Type)
 		}
@@ -63,6 +66,9 @@ func TestAccumulator(t *testing.T) {
 		msg := acc.message()
 		if len(msg.Content) != 1 {
 			t.Fatalf("expected 1 block, got %d", len(msg.Content))
+		}
+		if msg.Content[0].Index != 0 {
+			t.Errorf("index = %d, want 0", msg.Content[0].Index)
 		}
 		if msg.Content[0].Type != domain.BlockTypeToolUse {
 			t.Errorf("type = %s, want tool_use", msg.Content[0].Type)
@@ -96,8 +102,14 @@ func TestAccumulator(t *testing.T) {
 		if len(msg.Content) != 2 {
 			t.Fatalf("expected 2 blocks, got %d", len(msg.Content))
 		}
+		if msg.Content[0].Index != 0 {
+			t.Errorf("block 0: index = %d, want 0", msg.Content[0].Index)
+		}
 		if msg.Content[0].Type != domain.BlockTypeText {
 			t.Errorf("block 0: type = %s, want text", msg.Content[0].Type)
+		}
+		if msg.Content[1].Index != 1 {
+			t.Errorf("block 1: index = %d, want 1", msg.Content[1].Index)
 		}
 		if msg.Content[1].Type != domain.BlockTypeToolUse {
 			t.Errorf("block 1: type = %s, want tool_use", msg.Content[1].Type)

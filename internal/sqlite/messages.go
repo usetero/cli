@@ -12,6 +12,7 @@ import (
 type Messages interface {
 	Get(ctx context.Context, id domain.MessageID) (*domain.Message, error)
 	CreateUserMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, text string) (domain.MessageID, error)
+	CreateToolResultMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, results []domain.ToolResult) (domain.MessageID, error)
 	CreateAssistantMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, model string) (domain.MessageID, error)
 	UpdateContent(ctx context.Context, id domain.MessageID, content string) error
 	UpdateMeta(ctx context.Context, id domain.MessageID, model, stopReason string) error
@@ -58,6 +59,35 @@ func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID domain.A
 	})
 	if err != nil {
 		return "", WrapSQLiteError(err, "insert user message")
+	}
+
+	return msgID, nil
+}
+
+// CreateToolResultMessage creates a user message containing tool results.
+func (m *messagesImpl) CreateToolResultMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, results []domain.ToolResult) (domain.MessageID, error) {
+	msgID := domain.NewMessageID()
+	msgIDStr := msgID.String()
+	accountIDStr := accountID.String()
+	convIDStr := conversationID.String()
+	now := time.Now().UTC().Format(time.RFC3339)
+	role := string(domain.RoleUser)
+
+	content, err := domain.EncodeToolResults(results)
+	if err != nil {
+		return "", err
+	}
+
+	err = m.queries.InsertMessage(ctx, gen.InsertMessageParams{
+		ID:             &msgIDStr,
+		AccountID:      &accountIDStr,
+		ConversationID: &convIDStr,
+		Content:        &content,
+		CreatedAt:      &now,
+		Role:           &role,
+	})
+	if err != nil {
+		return "", WrapSQLiteError(err, "insert tool result message")
 	}
 
 	return msgID, nil
