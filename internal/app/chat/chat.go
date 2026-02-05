@@ -11,6 +11,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/sidebar"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -193,7 +194,7 @@ func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 		)
 		if err != nil {
 			m.scope.Error("failed to create conversation", "error", err)
-			return nil
+			return appmsg.Error{Message: "Failed to create conversation", Err: err}
 		}
 
 		return conversationCreated{
@@ -236,13 +237,13 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 		}
 		if err != nil {
 			m.scope.Error("failed to create user message", "error", err)
-			return nil
+			return appmsg.Error{Message: "Failed to save message", Err: err}
 		}
 
 		messages, err := m.db.Messages().List(ctx, m.conversationID)
 		if err != nil {
 			m.scope.Error("failed to load messages", "error", err)
-			return nil
+			return appmsg.Error{Message: "Failed to load messages", Err: err}
 		}
 
 		return userMessagePersisted{

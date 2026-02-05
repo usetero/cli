@@ -10,6 +10,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -101,7 +102,7 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("discovery status check failed", "error", msg.err)
 			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Failed to check discovery status", msg.err, false)
 		}
 		m.status = msg.status
 

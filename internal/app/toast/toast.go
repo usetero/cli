@@ -1,0 +1,160 @@
+// Package toast provides a toast notification component for the app.
+package toast
+
+import (
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/styles"
+)
+
+// DefaultTTL is how long a toast shows before auto-dismissing.
+const DefaultTTL = 5 * time.Second
+
+// toastType represents the kind of toast being displayed.
+type toastType int
+
+const (
+	toastError toastType = iota
+	toastWarning
+	toastSuccess
+	toastInfo
+)
+
+// clearMsg dismisses the current toast.
+type clearMsg struct{}
+
+// toast holds the current toast state.
+type toast struct {
+	typ     toastType
+	content string
+	sticky  bool
+}
+
+// Model holds the toast state and renders it.
+type Model struct {
+	theme   *styles.Theme
+	current *toast
+	width   int
+}
+
+// New creates a new toast model.
+func New(theme *styles.Theme) *Model {
+	return &Model{
+		theme: theme,
+	}
+}
+
+// SetWidth sets the available width for rendering.
+func (m *Model) SetWidth(width int) {
+	m.width = width
+}
+
+// Update handles messages.
+func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	switch msg := msg.(type) {
+	case msgs.Error:
+		return m.show(toast{typ: toastError, content: msg.Message, sticky: msg.Sticky})
+	case msgs.Warning:
+		return m.show(toast{typ: toastWarning, content: msg.Message, sticky: msg.Sticky})
+	case msgs.Success:
+		return m.show(toast{typ: toastSuccess, content: msg.Message})
+	case msgs.Info:
+		return m.show(toast{typ: toastInfo, content: msg.Message})
+	case clearMsg:
+		m.current = nil
+		return nil
+	}
+	return nil
+}
+
+// show displays a toast. Returns a command to auto-clear if not sticky.
+func (m *Model) show(t toast) tea.Cmd {
+	m.current = &t
+	if t.sticky {
+		return nil
+	}
+	return clearAfter(DefaultTTL)
+}
+
+// View renders the toast. Returns empty string if no toast.
+func (m *Model) View() string {
+	if m.current == nil {
+		return ""
+	}
+
+	colors := m.theme.Colors
+	var labelStyle, msgStyle lipgloss.Style
+	var label string
+
+	switch m.current.typ {
+	case toastError:
+		label = "ERROR"
+		labelStyle = lipgloss.NewStyle().
+			Background(colors.Error.Bg).
+			Foreground(colors.Error.Fg).
+			Padding(0, 1).
+			Bold(true)
+		msgStyle = lipgloss.NewStyle().
+			Background(colors.Error.Bg).
+			Foreground(colors.Page.Text).
+			Padding(0, 1)
+	case toastWarning:
+		label = "WARNING"
+		labelStyle = lipgloss.NewStyle().
+			Background(colors.Warning.Bg).
+			Foreground(colors.Warning.Fg).
+			Padding(0, 1).
+			Bold(true)
+		msgStyle = lipgloss.NewStyle().
+			Background(colors.Warning.Bg).
+			Foreground(colors.Page.Text).
+			Padding(0, 1)
+	case toastSuccess:
+		label = "OK"
+		labelStyle = lipgloss.NewStyle().
+			Background(colors.Success.Bg).
+			Foreground(colors.Success.Fg).
+			Padding(0, 1).
+			Bold(true)
+		msgStyle = lipgloss.NewStyle().
+			Background(colors.Success.Bg).
+			Foreground(colors.Page.Text).
+			Padding(0, 1)
+	case toastInfo:
+		label = "INFO"
+		labelStyle = lipgloss.NewStyle().
+			Background(colors.Panel.Bg).
+			Foreground(colors.Accent).
+			Padding(0, 1).
+			Bold(true)
+		msgStyle = lipgloss.NewStyle().
+			Background(colors.Panel.Bg).
+			Foreground(colors.Page.Text).
+			Padding(0, 1)
+	}
+
+	labelText := labelStyle.Render(label)
+	labelWidth := lipgloss.Width(labelText)
+
+	msgWidth := m.width - labelWidth
+	if msgWidth < 0 {
+		msgWidth = 0
+	}
+
+	content := ansi.Truncate(m.current.content, msgWidth-2, "…") // -2 for padding
+	msgText := msgStyle.Width(msgWidth).Render(content)
+
+	return labelText + msgText
+}
+
+// clearAfter returns a command that sends clearMsg after the duration.
+func clearAfter(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg {
+		return clearMsg{}
+	})
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -259,7 +260,7 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	if update.err != nil {
 		m.scope.Error("stream error", "error", update.err)
 		m.state = StateComplete
-		return nil
+		return appmsg.ErrorCmd("Failed to get response", update.err, false)
 	}
 
 	if update.message == nil {

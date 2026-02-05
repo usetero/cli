@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -91,31 +92,35 @@ func (m *SelectModel) loadWorkspaces() tea.Cmd {
 func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case remotelist.LoadResult:
-		if msg.Err == nil {
-			m.workspaces = make([]domain.Workspace, len(msg.Items))
-			for i, item := range msg.Items {
-				m.workspaces[i] = item.(domain.Workspace)
-			}
-
-			// Check for saved preference
-			prefID := m.prefs.GetDefaultWorkspaceID()
-			if prefID != "" {
-				for _, ws := range m.workspaces {
-					if ws.ID == prefID {
-						m.scope.Info("workspace restored from preference", slog.String("workspace_id", string(ws.ID)))
-						return m.emitSelected(ws)
-					}
-				}
-			}
-
-			// Auto-select if only one
-			if len(m.workspaces) == 1 {
-				ws := m.workspaces[0]
-				_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
-				m.scope.Info("workspace auto-selected", slog.String("workspace_id", string(ws.ID)))
-				return m.emitSelected(ws)
+		if msg.Err != nil {
+			return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load workspaces", msg.Err, false))
+		}
+		m.workspaces = make([]domain.Workspace, len(msg.Items))
+		for i, item := range msg.Items {
+			if ws, ok := item.(domain.Workspace); ok {
+				m.workspaces[i] = ws
 			}
 		}
+
+		// Check for saved preference
+		prefID := m.prefs.GetDefaultWorkspaceID()
+		if prefID != "" {
+			for _, ws := range m.workspaces {
+				if ws.ID == prefID {
+					m.scope.Info("workspace restored from preference", slog.String("workspace_id", string(ws.ID)))
+					return m.emitSelected(ws)
+				}
+			}
+		}
+
+		// Auto-select if only one
+		if len(m.workspaces) == 1 {
+			ws := m.workspaces[0]
+			_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
+			m.scope.Info("workspace auto-selected", slog.String("workspace_id", string(ws.ID)))
+			return m.emitSelected(ws)
+		}
+
 		return m.list.Update(msg)
 
 	case tea.KeyPressMsg:
@@ -125,10 +130,11 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			if item := m.list.SelectedItem(); item != nil {
-				ws := item.(domain.Workspace)
-				_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
-				m.scope.Info("workspace selected", slog.String("workspace_id", string(ws.ID)))
-				return m.emitSelected(ws)
+				if ws, ok := item.(domain.Workspace); ok {
+					_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
+					m.scope.Info("workspace selected", slog.String("workspace_id", string(ws.ID)))
+					return m.emitSelected(ws)
+				}
 			}
 		case "r":
 			if m.list.HasError() {

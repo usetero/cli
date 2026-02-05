@@ -12,8 +12,10 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app/chat"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
 	chatclient "github.com/usetero/cli/internal/chat"
 	chattools "github.com/usetero/cli/internal/chat/tools"
@@ -25,7 +27,6 @@ import (
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/footer"
 	"github.com/usetero/cli/internal/tea/cursor"
 	"github.com/usetero/cli/internal/tea/keymap"
 	"github.com/usetero/cli/internal/upload"
@@ -68,7 +69,7 @@ type Model struct {
 	toolRegistry *chattools.Registry
 
 	// Components
-	footer     *footer.Model
+	toast      *toast.Model
 	onboarding *onboarding.Model
 	chat       *chat.Model
 	state      state
@@ -122,7 +123,7 @@ func New(
 		authService: authService,
 		syncer:      syncer,
 		services:    services,
-		footer:      footer.New(theme),
+		toast:       toast.New(theme),
 		onboarding:  onboarding.New(ctx, theme, services, prefs, authService, syncer, scope),
 		state:       stateOnboarding,
 	}
@@ -139,7 +140,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.footer.SetWidth(msg.Width - (horizontalPadding * 2))
+		m.toast.SetWidth(msg.Width - (horizontalPadding * 2))
 		contentWidth, contentHeight := m.contentSize()
 		if m.state == stateOnboarding && m.onboarding != nil {
 			m.onboarding.SetSize(contentWidth, contentHeight)
@@ -155,20 +156,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case msgs.AccountSelected:
+	case onboardingmsg.AccountSelected:
 		// Open database and start syncer when account is selected
 		m.scope.Info("account selected", "account_id", msg.Account.ID.String())
 
 		if err := m.openDatabase(msg.Account.ID.String()); err != nil {
 			m.scope.Error("failed to open database", "error", err)
-			// TODO: show error to user
-			return m, nil
+			return m, appmsg.ErrorCmd("Failed to open database", err, true)
 		}
 
 		if err := m.startSync(msg.Account.ID.String()); err != nil {
 			m.scope.Error("failed to start sync", "error", err)
-			// TODO: show error to user
-			return m, nil
+			return m, appmsg.ErrorCmd("Failed to start sync", err, true)
 		}
 
 		// Create tool registry with executors
@@ -189,7 +188,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case msgs.OnboardingComplete:
+	case onboardingmsg.OnboardingComplete:
 		m.state = stateChat
 		m.scope.Info("onboarding complete",
 			"org", msg.Org.Name,
@@ -211,27 +210,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.scope,
 		)
 
-		// Set keybindings from chat
-		m.footer.SetKeyBindings(m.chat.KeyBindings())
-
 		return m, m.chat.Init()
 	}
 
-	// Forward to current state
+	// Forward to current state and toast
+	var cmds []tea.Cmd
+
+	// Toast listens to all messages
+	if cmd := m.toast.Update(msg); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+
 	switch m.state {
 	case stateOnboarding:
 		if m.onboarding != nil {
-			cmd := m.onboarding.Update(msg)
-			return m, cmd
+			cmds = append(cmds, m.onboarding.Update(msg))
 		}
 	case stateChat:
 		if m.chat != nil {
-			cmd := m.chat.Update(msg)
-			return m, cmd
+			cmds = append(cmds, m.chat.Update(msg))
 		}
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 // openDatabase opens the SQLite database for the given account.
@@ -334,16 +335,28 @@ func (m *Model) View() tea.View {
 	}
 }
 
-// renderWithChrome wraps content with padding and footer.
+// renderWithChrome wraps content with padding and toast.
 func (m *Model) renderWithChrome(content string) string {
 	if m.width == 0 || m.height == 0 {
 		return ""
 	}
 
 	innerWidth := m.width - (horizontalPadding * 2)
-	footerView := m.footer.View()
-	footerHeight := lipgloss.Height(footerView)
-	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+	toastView := m.toast.View()
+	toastHeight := lipgloss.Height(toastView)
+	if toastHeight == 0 {
+		// No toast showing, no extra spacing needed
+		contentHeight := m.height - (verticalPadding * 2)
+		contentStyle := lipgloss.NewStyle().
+			Width(innerWidth).
+			Height(contentHeight)
+		return lipgloss.NewStyle().
+			Padding(verticalPadding, horizontalPadding).
+			Render(contentStyle.Render(content))
+	}
+
+	// Toast is showing - reserve space for it
+	contentHeight := m.height - (verticalPadding * 2) - toastHeight - footerSpacing
 
 	contentStyle := lipgloss.NewStyle().
 		Width(innerWidth).
@@ -354,7 +367,7 @@ func (m *Model) renderWithChrome(content string) string {
 		lipgloss.Top,
 		styledContent,
 		"",
-		footerView,
+		toastView,
 	)
 
 	return lipgloss.NewStyle().
@@ -363,13 +376,14 @@ func (m *Model) renderWithChrome(content string) string {
 }
 
 // contentSize returns the available space for content.
+// Note: This returns the size assuming no toast. When a toast appears,
+// renderWithChrome handles the adjustment dynamically.
 func (m *Model) contentSize() (int, int) {
 	if m.width == 0 || m.height == 0 {
 		return 0, 0
 	}
 	contentWidth := m.width - (horizontalPadding * 2)
-	footerHeight := m.footer.Height()
-	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+	contentHeight := m.height - (verticalPadding * 2)
 	return contentWidth, contentHeight
 }
 

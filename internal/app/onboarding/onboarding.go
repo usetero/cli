@@ -124,7 +124,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	// Role messages
 	case msgs.RoleSelected:
-		m.scope.Info("role selected", slog.String("role", string(msg.Role)))
+		m.scope.Info("role selected", slog.String("role", msg.Role))
 		return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.scope))
 
 	// Organization messages

@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -88,12 +89,14 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	case remotelist.LoadResult:
 		if msg.Err != nil {
 			m.scope.Error("failed to load accounts", "error", msg.Err)
-			return m.list.Update(msg)
+			return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load accounts", msg.Err, false))
 		}
 
 		m.accounts = make([]domain.Account, len(msg.Items))
 		for i, item := range msg.Items {
-			m.accounts[i] = item.(domain.Account)
+			if acc, ok := item.(domain.Account); ok {
+				m.accounts[i] = acc
+			}
 		}
 		m.scope.Info("accounts loaded", "count", len(m.accounts))
 
@@ -131,10 +134,11 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			if item := m.list.SelectedItem(); item != nil {
-				acc := item.(domain.Account)
-				_ = m.prefs.SetDefaultAccountID(acc.ID)
-				m.services.SetAccountID(acc.ID)
-				return m.emitSelected(acc)
+				if acc, ok := item.(domain.Account); ok {
+					_ = m.prefs.SetDefaultAccountID(acc.ID)
+					m.services.SetAccountID(acc.ID)
+					return m.emitSelected(acc)
+				}
 			}
 		case "n":
 			org := m.org

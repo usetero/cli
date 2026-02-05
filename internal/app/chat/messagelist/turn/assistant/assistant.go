@@ -129,6 +129,8 @@ func (m *Model) ensureBlocks(content []domain.Block) {
 			if b.ToolUse != nil {
 				m.blocks = append(m.blocks, m.newToolBlock(b.Index, b.ToolUse))
 			}
+		case domain.BlockTypeToolResult:
+			// Tool results are handled separately, not rendered as blocks
 		}
 	}
 }

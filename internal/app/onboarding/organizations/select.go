@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/domain"
@@ -108,12 +109,14 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	case remotelist.LoadResult:
 		if msg.Err != nil {
 			m.scope.Error("failed to load organizations", "error", msg.Err)
-			return m.list.Update(msg)
+			return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load organizations", msg.Err, false))
 		}
 
 		m.orgs = make([]domain.Organization, len(msg.Items))
 		for i, item := range msg.Items {
-			m.orgs[i] = item.(domain.Organization)
+			if org, ok := item.(domain.Organization); ok {
+				m.orgs[i] = org
+			}
 		}
 		m.scope.Info("organizations loaded", "count", len(m.orgs))
 
@@ -156,9 +159,10 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			if item := m.list.SelectedItem(); item != nil {
-				org := item.(domain.Organization)
-				_ = m.prefs.SetDefaultOrgID(org.ID)
-				return m.selectOrg(org)
+				if org, ok := item.(domain.Organization); ok {
+					_ = m.prefs.SetDefaultOrgID(org.ID)
+					return m.selectOrg(org)
+				}
 			}
 		case "n":
 			return func() tea.Msg { return msgs.NoOrgs{} }

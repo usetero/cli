@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -76,7 +77,7 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("datadog check failed", "error", msg.err)
 			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Failed to check Datadog status", msg.err, false)
 		}
 		if msg.hasDatadog {
 			m.scope.Info("datadog configured")

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -81,7 +82,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create organization", "error", msg.err)
 			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Failed to create organization", msg.err, false)
 		}
 		_ = m.prefs.SetDefaultOrgID(msg.result.Organization.ID)
 		org := *msg.result.Organization

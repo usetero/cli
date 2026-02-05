@@ -10,6 +10,7 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/pkg/browser"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
@@ -110,7 +111,7 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("device auth failed", "error", msg.err)
 			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Failed to start authentication", msg.err, false)
 		}
 		m.device = msg.deviceAuth
 		m.state = stateReady
@@ -130,7 +131,7 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 			m.scope.Error("authentication failed", "error", msg.err)
 			m.err = msg.err
 			m.state = stateReady
-			return nil
+			return appmsg.ErrorCmd("Authentication failed", msg.err, false)
 		}
 		m.state = stateComplete
 		m.scope.Info("user authenticated")

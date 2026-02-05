@@ -164,14 +164,3 @@ func rawJSONToMap(data json.RawMessage) (map[string]any, error) {
 	}
 	return m, nil
 }
-
-func rawJSONToMapPtr(data json.RawMessage) (*map[string]any, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-	return &m, nil
-}

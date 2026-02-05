@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
@@ -124,7 +125,7 @@ func (m *Model) execute() tea.Cmd {
 		m.err = fmt.Errorf("no executor")
 		m.state = tools.StateComplete
 		m.scope.Error("query failed", "error", m.err)
-		return m.fireCompleted()
+		return tea.Batch(m.fireCompleted(), appmsg.ErrorCmd("Query failed", m.err, false))
 	}
 
 	result, err := m.executor.Execute(json.RawMessage(m.input))
@@ -132,7 +133,7 @@ func (m *Model) execute() tea.Cmd {
 		m.err = err
 		m.state = tools.StateComplete
 		m.scope.Error("query failed", "error", err)
-		return m.fireCompleted()
+		return tea.Batch(m.fireCompleted(), appmsg.ErrorCmd("Query failed", err, false))
 	}
 
 	m.rows = result.Rows

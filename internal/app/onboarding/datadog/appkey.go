@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -93,7 +94,7 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create datadog account", "error", msg.err)
 			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Failed to create Datadog account", msg.err, false)
 		}
 		m.scope.Info("datadog account created", "id", msg.datadogAccountID)
 		ddAccountID := msg.datadogAccountID

@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
@@ -24,7 +25,6 @@ type CheckModel struct {
 	theme *styles.Theme
 	auth  auth.Auth
 	scope log.Scope
-	err   error
 }
 
 // NewCheck creates a new auth check step.
@@ -75,8 +75,7 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 	case checkResultMsg:
 		if msg.err != nil {
 			m.scope.Error("auth check failed", "error", msg.err)
-			m.err = msg.err
-			return nil
+			return appmsg.ErrorCmd("Authentication check failed", msg.err, false)
 		}
 		if msg.hasValidAuth {
 			m.scope.Info("auth valid")
@@ -92,9 +91,6 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the check UI.
 func (m *CheckModel) View() string {
-	if m.err != nil {
-		return m.theme.Styles.Error.Render("Error checking authentication")
-	}
 	return m.theme.Styles.Title.Render("Checking authentication...")
 }
 
