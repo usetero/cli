@@ -30,7 +30,7 @@ type DiscoveryModel struct {
 	ctx              context.Context
 	theme            *styles.Theme
 	services         api.APIServices
-	logger           log.Logger
+	scope            log.Scope
 	datadogAccountID domain.DatadogAccountID
 
 	spinner  spinner.Model
@@ -47,7 +47,7 @@ func NewDiscovery(
 	theme *styles.Theme,
 	datadogAccountID domain.DatadogAccountID,
 	services api.APIServices,
-	logger log.Logger,
+	scope log.Scope,
 ) *DiscoveryModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -58,9 +58,6 @@ func NewDiscovery(
 	if datadogAccountID == "" {
 		panic("datadogAccountID is empty")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
@@ -70,7 +67,7 @@ func NewDiscovery(
 		ctx:              ctx,
 		theme:            theme,
 		services:         services,
-		logger:           logger,
+		scope:            scope,
 		datadogAccountID: datadogAccountID,
 		spinner:          sp,
 		progress:         progress.New(theme, 50),
@@ -79,7 +76,7 @@ func NewDiscovery(
 
 // Init starts polling for status.
 func (m *DiscoveryModel) Init() tea.Cmd {
-	m.logger.Info("starting datadog discovery", "datadogAccountID", m.datadogAccountID)
+	m.scope.Info("starting datadog discovery", "datadogAccountID", m.datadogAccountID)
 	return tea.Batch(m.spinner.Tick, m.pollStatus())
 }
 
@@ -102,14 +99,14 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case statusMsg:
 		if msg.err != nil {
-			m.logger.Error("discovery status check failed", "error", msg.err)
+			m.scope.Error("discovery status check failed", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		m.status = msg.status
 
 		if msg.status.ReadyForUse {
-			m.logger.Info("datadog discovery complete", "services", msg.status.ServiceCount)
+			m.scope.Info("datadog discovery complete", "services", msg.status.ServiceCount)
 			return func() tea.Msg { return msgs.DatadogDiscoveryComplete{} }
 		}
 		return m.schedulePoll()
@@ -121,7 +118,7 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 
 	case tea.KeyPressMsg:
 		if msg.String() == "r" && m.err != nil {
-			m.logger.Debug("retrying discovery")
+			m.scope.Debug("retrying discovery")
 			m.err = nil
 			return m.Init()
 		}

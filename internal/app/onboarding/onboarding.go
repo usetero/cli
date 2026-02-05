@@ -9,7 +9,6 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/app/layouts/header"
 	"github.com/usetero/cli/internal/app/onboarding/accounts"
 	"github.com/usetero/cli/internal/app/onboarding/auth"
 	"github.com/usetero/cli/internal/app/onboarding/datadog"
@@ -24,6 +23,7 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/header"
 )
 
 // Model is the onboarding orchestrator.
@@ -35,8 +35,8 @@ type Model struct {
 	prefs    preferences.Preferences
 	auth     iauth.Auth
 	syncer   powersync.Syncer
-	logger   log.Logger
-	layout   *header.Model
+	scope    log.Scope
+	header   *header.Model
 
 	// Accumulated state from step completions
 	org       *domain.Organization
@@ -59,7 +59,7 @@ func New(
 	prefs preferences.Preferences,
 	authService iauth.Auth,
 	syncer powersync.Syncer,
-	logger log.Logger,
+	scope log.Scope,
 ) *Model {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -76,9 +76,9 @@ func New(
 	if syncer == nil {
 		panic("syncer is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
+	scope = scope.Child("onboarding")
+
 	return &Model{
 		ctx:      ctx,
 		theme:    theme,
@@ -86,15 +86,15 @@ func New(
 		prefs:    prefs,
 		auth:     authService,
 		syncer:   syncer,
-		logger:   logger,
-		layout:   header.New(theme),
+		scope:    scope,
+		header:   header.New(theme),
 	}
 }
 
 // Init starts the onboarding flow with auth check.
 func (m *Model) Init() tea.Cmd {
-	m.logger.Info("onboarding started")
-	return m.setStep(auth.NewCheck(m.ctx, m.theme, m.auth, m.logger))
+	m.scope.Info("onboarding started")
+	return m.setStep(auth.NewCheck(m.ctx, m.theme, m.auth, m.scope))
 }
 
 // Update handles messages and orchestrates step transitions.
@@ -103,98 +103,98 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.layout.SetSize(msg.Width, msg.Height)
+		m.header.SetWidth(msg.Width)
 		if m.step != nil {
-			contentWidth, contentHeight := m.layout.ContentSize()
+			contentWidth, contentHeight := m.contentSize()
 			m.step.SetSize(contentWidth, contentHeight)
 		}
 		return nil
 
 	// Auth messages
 	case msgs.AuthChecked:
-		m.logger.Debug("auth check complete", slog.Bool("needs_auth", msg.NeedsAuth))
+		m.scope.Debug("auth check complete", slog.Bool("needs_auth", msg.NeedsAuth))
 		if msg.NeedsAuth {
-			return m.setStep(auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.logger))
+			return m.setStep(auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.scope))
 		}
-		return m.setStep(role.New(m.theme, m.prefs, m.logger))
+		return m.setStep(role.New(m.theme, m.prefs, m.scope))
 
 	case msgs.Authenticated:
-		m.logger.Info("user authenticated")
-		return m.setStep(role.New(m.theme, m.prefs, m.logger))
+		m.scope.Info("user authenticated")
+		return m.setStep(role.New(m.theme, m.prefs, m.scope))
 
 	// Role messages
 	case msgs.RoleSelected:
-		m.logger.Info("role selected", slog.String("role", string(msg.Role)))
-		return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.logger))
+		m.scope.Info("role selected", slog.String("role", string(msg.Role)))
+		return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.scope))
 
 	// Organization messages
 	case msgs.OrgSelected:
-		m.logger.Info("organization selected", slog.String("org_id", msg.Org.ID.String()))
+		m.scope.Info("organization selected", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
-		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.logger))
+		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
 
 	case msgs.NoOrgs:
-		m.logger.Debug("no organizations found")
-		return m.setStep(organizations.NewCreate(m.ctx, m.theme, m.services, m.prefs, m.logger))
+		m.scope.Debug("no organizations found")
+		return m.setStep(organizations.NewCreate(m.ctx, m.theme, m.services, m.prefs, m.scope))
 
 	case msgs.OrgCreated:
-		m.logger.Info("organization created", slog.String("org_id", msg.Org.ID.String()))
+		m.scope.Info("organization created", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
-		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.logger))
+		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
 
 	// Account messages
 	case msgs.AccountSelected:
-		m.logger.Info("account selected", slog.String("account_id", msg.Account.ID.String()))
+		m.scope.Info("account selected", slog.String("account_id", msg.Account.ID.String()))
 		m.org = &msg.Org
 		m.account = &msg.Account
-		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.logger))
+		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.scope))
 
 	case msgs.NoAccounts:
-		m.logger.Debug("no accounts found")
-		return m.setStep(accounts.NewCreate(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.logger))
+		m.scope.Debug("no accounts found")
+		return m.setStep(accounts.NewCreate(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
 
 	case msgs.AccountCreated:
-		m.logger.Info("account created", slog.String("account_id", msg.Account.ID.String()))
+		m.scope.Info("account created", slog.String("account_id", msg.Account.ID.String()))
 		m.org = &msg.Org
 		m.account = &msg.Account
-		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.logger))
+		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.scope))
 
 	// Datadog messages
 	case msgs.DatadogReady:
-		m.logger.Debug("datadog ready")
-		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.logger))
+		m.scope.Debug("datadog ready")
+		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.scope))
 
 	case msgs.DatadogNeeded:
-		m.logger.Debug("datadog setup needed")
-		return m.setStep(datadog.NewRegion(m.theme, m.logger))
+		m.scope.Debug("datadog setup needed")
+		return m.setStep(datadog.NewRegion(m.theme, m.scope))
 
 	case msgs.DatadogRegionSelected:
-		m.logger.Info("datadog region selected", slog.String("site", string(msg.Site)))
+		m.scope.Info("datadog region selected", slog.String("site", string(msg.Site)))
 		m.ddSite = msg.Site
-		return m.setStep(datadog.NewAPIKey(m.ctx, m.theme, *m.account, m.ddSite, m.services, m.logger))
+		return m.setStep(datadog.NewAPIKey(m.ctx, m.theme, *m.account, m.ddSite, m.services, m.scope))
 
 	case msgs.DatadogAPIKeyEntered:
-		m.logger.Debug("datadog api key validated")
+		m.scope.Debug("datadog api key validated")
 		m.ddAPIKey = msg.APIKey
-		return m.setStep(datadog.NewAppKey(m.ctx, m.theme, *m.account, m.ddSite, m.ddAPIKey, m.services, m.logger))
+		return m.setStep(datadog.NewAppKey(m.ctx, m.theme, *m.account, m.ddSite, m.ddAPIKey, m.services, m.scope))
 
 	case msgs.DatadogAccountCreated:
-		m.logger.Info("datadog account created", slog.String("datadog_account_id", msg.DatadogAccountID.String()))
-		return m.setStep(datadog.NewDiscovery(m.ctx, m.theme, msg.DatadogAccountID, m.services, m.logger))
+		m.scope.Info("datadog account created", slog.String("datadog_account_id", msg.DatadogAccountID.String()))
+		return m.setStep(datadog.NewDiscovery(m.ctx, m.theme, msg.DatadogAccountID, m.services, m.scope))
 
 	case msgs.DatadogDiscoveryComplete:
-		m.logger.Info("datadog discovery complete")
-		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.logger))
+		m.scope.Info("datadog discovery complete")
+		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.scope))
 
 	// Workspace messages
 	case msgs.WorkspaceSelected:
-		m.logger.Info("workspace selected", slog.String("workspace_id", string(msg.Workspace.ID)))
+		m.scope.Info("workspace selected", slog.String("workspace_id", string(msg.Workspace.ID)))
 		m.workspace = &msg.Workspace
-		return m.setStep(sync.New(m.theme, m.syncer, m.logger))
+		return m.setStep(sync.New(m.theme, m.syncer, m.scope))
 
 	// Sync messages
 	case msgs.SyncComplete:
-		m.logger.Info("onboarding complete",
+		m.scope.Info("onboarding complete",
 			slog.String("org_id", m.org.ID.String()),
 			slog.String("account_id", m.account.ID.String()),
 			slog.String("workspace_id", string(m.workspace.ID)),
@@ -218,7 +218,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // setStep sets the current step and initializes it.
 func (m *Model) setStep(step Step) tea.Cmd {
 	m.step = step
-	contentWidth, contentHeight := m.layout.ContentSize()
+	contentWidth, contentHeight := m.contentSize()
 	m.step.SetSize(contentWidth, contentHeight)
 	return m.step.Init()
 }
@@ -229,8 +229,8 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	// Get content dimensions from layout
-	contentWidth, contentHeight := m.layout.ContentSize()
+	// Get content dimensions
+	contentWidth, contentHeight := m.contentSize()
 
 	// Get step content
 	stepContent := m.step.View()
@@ -242,17 +242,23 @@ func (m *Model) View() string {
 		AlignVertical(lipgloss.Bottom).
 		Render(stepContent)
 
-	// Wrap in layout
-	return m.layout.Render(content)
+	// Render header + content (app handles chrome)
+	return lipgloss.JoinVertical(lipgloss.Left, m.header.View(), content)
 }
 
 // SetSize updates the model's dimensions.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
-	m.layout.SetSize(width, height)
+	m.header.SetWidth(width)
 	if m.step != nil {
-		contentWidth, contentHeight := m.layout.ContentSize()
+		contentWidth, contentHeight := m.contentSize()
 		m.step.SetSize(contentWidth, contentHeight)
 	}
+}
+
+// contentSize returns the available size for step content.
+func (m *Model) contentSize() (int, int) {
+	headerHeight := m.header.Height()
+	return m.width, m.height - headerHeight
 }

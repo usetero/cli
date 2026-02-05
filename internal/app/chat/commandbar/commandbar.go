@@ -3,6 +3,7 @@ package commandbar
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -150,4 +151,12 @@ func (m *Model) Blur() {
 // Focused returns whether the textarea is focused.
 func (m *Model) Focused() bool {
 	return m.textarea.Focused()
+}
+
+// KeyBindings returns the key bindings for the command bar.
+func (m *Model) KeyBindings() []key.Binding {
+	return []key.Binding{
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "send")),
+		key.NewBinding(key.WithKeys("shift+enter"), key.WithHelp("shift+enter", "newline")),
+	}
 }

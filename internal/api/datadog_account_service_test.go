@@ -38,7 +38,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
 
 		if err != nil {
@@ -69,7 +69,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
 
 		if err != nil {
@@ -92,7 +92,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
 
 		if err != nil {
@@ -129,7 +129,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		account, err := svc.GetAccount(context.Background(), "acc-1")
 
 		if err != nil {
@@ -168,7 +168,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		account, err := svc.GetAccount(context.Background(), "acc-1")
 
 		if err != nil {
@@ -194,7 +194,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "api-key", "US1")
 
 		if err != nil {
@@ -222,7 +222,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
 
 		if err != nil {
@@ -249,7 +249,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
 
 		if err != nil {
@@ -271,7 +271,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		_, _, err := svc.ValidateAPIKey(context.Background(), "key", "US1")
 
 		if err == nil {
@@ -308,7 +308,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		status, err := svc.GetStatus(context.Background(), "dd-123")
 
 		if err != nil {
@@ -343,7 +343,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		status, err := svc.GetStatus(context.Background(), "dd-123")
 
 		if err != nil {
@@ -362,7 +362,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.New(t))
+		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		_, err := svc.GetStatus(context.Background(), "dd-123")
 
 		if err == nil {

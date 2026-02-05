@@ -15,26 +15,26 @@ type Workspaces interface {
 // WorkspaceService handles workspace-related API operations.
 type WorkspaceService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 // Ensure WorkspaceService implements Workspaces.
 var _ Workspaces = (*WorkspaceService)(nil)
 
 // NewWorkspaceService creates a new workspace service.
-func NewWorkspaceService(client Client, logger log.Logger) *WorkspaceService {
+func NewWorkspaceService(client Client, scope log.Scope) *WorkspaceService {
 	return &WorkspaceService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("workspaces"),
 	}
 }
 
 // List fetches all workspaces for an account.
 func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]domain.Workspace, error) {
-	s.logger.Debug("fetching workspaces from API", "accountID", accountID)
+	s.scope.Debug("fetching workspaces from API", "accountID", accountID)
 	resp, err := s.client.ListWorkspaces(ctx, accountID)
 	if err != nil {
-		s.logger.Error("failed to fetch workspaces", "error", err, "accountID", accountID)
+		s.scope.Error("failed to fetch workspaces", "error", err, "accountID", accountID)
 		return nil, err
 	}
 
@@ -47,6 +47,6 @@ func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]domain
 		}
 	}
 
-	s.logger.Debug("fetched workspaces from API", "count", len(workspaces))
+	s.scope.Debug("fetched workspaces from API", "count", len(workspaces))
 	return workspaces, nil
 }

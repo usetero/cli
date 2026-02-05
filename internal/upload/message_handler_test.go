@@ -36,7 +36,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newMessageHandler(mock, testDB, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,
@@ -88,7 +88,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newMessageHandler(mock, testDB, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPatch,
@@ -128,7 +128,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newMessageHandler(mock, testDB, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPatch,
@@ -177,7 +177,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newMessageHandler(mock, testDB, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPatch,
@@ -214,7 +214,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newMessageHandler(mock, testDB, logtest.New(t))
+		h := newMessageHandler(mock, testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,
@@ -236,7 +236,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		testDB := dbtest.OpenTestDB(t)
-		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.New(t))
+		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpDelete,
@@ -262,7 +262,7 @@ func TestMessageHandler_Handle(t *testing.T) {
 			t.Fatalf("insert message: %v", err)
 		}
 
-		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.New(t))
+		h := newMessageHandler(apitest.NewMockMessages(), testDB, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,

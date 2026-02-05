@@ -29,8 +29,8 @@ const (
 
 // Model represents a single user→assistant exchange.
 type Model struct {
-	theme  *styles.Theme
-	logger log.Logger
+	theme *styles.Theme
+	scope log.Scope
 
 	conversationID domain.ConversationID
 	accountID      domain.AccountID
@@ -82,13 +82,13 @@ func New(
 	db sqlite.DB,
 	chatClient chatclient.Client,
 	toolRegistry *chattools.Registry,
-	logger log.Logger,
+	scope log.Scope,
 ) *Model {
-	l := logger.With("component", "turn", "user_message_id", userMessageID)
-	assistantMsg := assistant.New(theme, "", width, toolRegistry, l)
+	scope = scope.Child("turn")
+	assistantMsg := assistant.New(theme, "", width, toolRegistry, scope)
 	return &Model{
 		theme:            theme,
-		logger:           l,
+		scope:            scope,
 		conversationID:   conversationID,
 		accountID:        accountID,
 		userMessage:      user.New(theme, userMessageID, input, width),
@@ -165,7 +165,7 @@ func errorResultFromErr(err error) *tools.ErrorResult {
 func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.Cmd {
 	// Collect results during streaming or awaiting - tools may complete before StreamCompleted
 	m.toolResults = append(m.toolResults, result)
-	m.logger.Info("tool completed", "tool_use_id", toolUseID, "collected", len(m.toolResults), "pending", m.pendingTools)
+	m.scope.Info("tool completed", "tool_use_id", toolUseID, "collected", len(m.toolResults), "pending", m.pendingTools)
 
 	// Only fire results once we're awaiting and have all of them
 	if m.state != StateAwaitingToolResults {
@@ -173,7 +173,7 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	}
 
 	if len(m.toolResults) >= m.pendingTools {
-		m.logger.Info("all tools completed")
+		m.scope.Info("all tools completed")
 		m.state = StateComplete
 		return m.fireToolResults()
 	}
@@ -202,7 +202,7 @@ func (m *Model) Height(width int) int {
 
 // StartStream begins streaming the assistant response.
 func (m *Model) StartStream(messages []domain.Message, chatContext []domain.ContextEntity) tea.Cmd {
-	m.logger.Debug("starting stream", "message_count", len(messages))
+	m.scope.Debug("starting stream", "message_count", len(messages))
 	m.state = StateStreaming
 
 	// Capture init command (starts thinking animation)
@@ -257,7 +257,7 @@ func (m *Model) UserMessageID() domain.MessageID {
 // handleStreamUpdate processes a stream update and fires messages.
 func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	if update.err != nil {
-		m.logger.Error("stream error", "error", update.err)
+		m.scope.Error("stream error", "error", update.err)
 		m.state = StateComplete
 		return nil
 	}
@@ -274,15 +274,15 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	}
 
 	if update.done {
-		m.logger.Info("stream completed", "stop_reason", update.message.StopReason)
+		m.scope.Info("stream completed", "stop_reason", update.message.StopReason)
 
 		if update.message.StopReason == "tool_use" {
 			m.pendingTools = countToolUseBlocks(update.message.Content)
-			m.logger.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
+			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
 
 			// Check if tools already completed during streaming
 			if len(m.toolResults) >= m.pendingTools {
-				m.logger.Info("all tools already completed")
+				m.scope.Info("all tools already completed")
 				m.state = StateComplete
 				return tea.Batch(
 					func() tea.Msg {
@@ -365,27 +365,27 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 			msg.Model,
 		)
 		if err != nil {
-			m.logger.Error("failed to create assistant message", "error", err)
+			m.scope.Error("failed to create assistant message", "error", err)
 			return nil
 		}
 
 		content, err := domain.EncodeBlocks(msg.Content)
 		if err != nil {
-			m.logger.Error("failed to encode blocks", "error", err)
+			m.scope.Error("failed to encode blocks", "error", err)
 			return nil
 		}
 
 		if err := m.db.Messages().UpdateContent(ctx, msgID, content); err != nil {
-			m.logger.Error("failed to update content", "error", err)
+			m.scope.Error("failed to update content", "error", err)
 			return nil
 		}
 
 		if err := m.db.Messages().UpdateMeta(ctx, msgID, msg.Model, msg.StopReason); err != nil {
-			m.logger.Error("failed to update meta", "error", err)
+			m.scope.Error("failed to update meta", "error", err)
 			return nil
 		}
 
-		m.logger.Info("assistant message persisted", "message_id", msgID)
+		m.scope.Info("assistant message persisted", "message_id", msgID)
 		return msgs.AssistantMessageCreated{MessageID: msgID}
 	}
 }

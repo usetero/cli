@@ -10,10 +10,7 @@ import (
 	"github.com/usetero/cli/internal/tea/components/logo"
 )
 
-const (
-	diag                = "╱"
-	logoHeightThreshold = 30
-)
+const diag = "╱"
 
 // Model renders session info for the chat view.
 type Model struct {
@@ -71,24 +68,17 @@ func (m *Model) View() string {
 
 	var parts []string
 
-	if m.height > logoHeightThreshold {
-		// Full logo with diagonal lines and version
-		diagLine := diagStyle.Render(strings.Repeat(diag, m.width))
+	// Logo with diagonal lines and version
+	diagLine := diagStyle.Render(strings.Repeat(diag, m.width))
 
-		// Version row (right-aligned)
-		versionStyle := lipgloss.NewStyle().
-			Foreground(colors.Brand.GradientStart).
-			Width(m.width).
-			Align(lipgloss.Right)
-		versionRow := versionStyle.Render(m.version)
+	versionStyle := lipgloss.NewStyle().
+		Foreground(colors.Brand.GradientStart).
+		Width(m.width).
+		Align(lipgloss.Right)
+	versionRow := versionStyle.Render(m.version)
 
-		logoView := m.logo.View()
-		parts = append(parts, diagLine, diagLine, versionRow, logoView, diagLine, "")
-	} else {
-		// Compact logo
-		m.logo.SetCompact(true)
-		parts = append(parts, m.logo.View(), "")
-	}
+	logoView := m.logo.View()
+	parts = append(parts, diagLine, diagLine, versionRow, logoView, diagLine, "")
 
 	// Title
 	title := m.title

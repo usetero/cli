@@ -41,7 +41,7 @@ type AuthenticateModel struct {
 	ctx    context.Context
 	theme  *styles.Theme
 	auth   auth.Auth
-	logger log.Logger
+	scope  log.Scope
 	state  authState
 	device *auth.DeviceAuth
 	err    error
@@ -54,7 +54,7 @@ type AuthenticateModel struct {
 }
 
 // NewAuthenticate creates a new authenticate step.
-func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.Auth, logger log.Logger) *AuthenticateModel {
+func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.Auth, scope log.Scope) *AuthenticateModel {
 	if ctx == nil {
 		panic("ctx is nil")
 	}
@@ -63,9 +63,6 @@ func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.
 	}
 	if authService == nil {
 		panic("authService is nil")
-	}
-	if logger == nil {
-		panic("logger is nil")
 	}
 
 	sp := spinner.New()
@@ -76,7 +73,7 @@ func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.
 		ctx:     ctx,
 		theme:   theme,
 		auth:    authService,
-		logger:  logger,
+		scope:   scope,
 		state:   stateInitializing,
 		spinner: sp,
 	}
@@ -84,7 +81,7 @@ func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.
 
 // Init starts the device auth flow.
 func (m *AuthenticateModel) Init() tea.Cmd {
-	m.logger.Info("starting device auth flow")
+	m.scope.Info("starting device auth flow")
 	return tea.Batch(m.spinner.Tick, m.startDeviceAuth())
 }
 
@@ -111,32 +108,32 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case deviceAuthMsg:
 		if msg.err != nil {
-			m.logger.Error("device auth failed", "error", msg.err)
+			m.scope.Error("device auth failed", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		m.device = msg.deviceAuth
 		m.state = stateReady
-		m.logger.Debug("device code received", "code", m.device.UserCode)
+		m.scope.Debug("device code received", "code", m.device.UserCode)
 
 		if err := browser.OpenURL(m.device.VerificationURIComplete); err != nil {
-			m.logger.Warn("failed to open browser", "error", err)
+			m.scope.Warn("failed to open browser", "error", err)
 			m.browserFailed = true
 			return nil
 		}
-		m.logger.Debug("browser opened")
+		m.scope.Debug("browser opened")
 		m.state = statePolling
 		return m.pollForAuth()
 
 	case authCompleteMsg:
 		if msg.err != nil {
-			m.logger.Error("authentication failed", "error", msg.err)
+			m.scope.Error("authentication failed", "error", msg.err)
 			m.err = msg.err
 			m.state = stateReady
 			return nil
 		}
 		m.state = stateComplete
-		m.logger.Info("user authenticated")
+		m.scope.Info("user authenticated")
 		return func() tea.Msg {
 			return msgs.Authenticated{}
 		}
@@ -153,28 +150,28 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			if err := browser.OpenURL(m.device.VerificationURIComplete); err != nil {
-				m.logger.Warn("failed to open browser", "error", err)
+				m.scope.Warn("failed to open browser", "error", err)
 				m.browserFailed = true
 				return nil
 			}
-			m.logger.Debug("browser opened")
+			m.scope.Debug("browser opened")
 			m.browserFailed = false
 			m.state = statePolling
 			return m.pollForAuth()
 
 		case "c":
 			if err := clipboard.WriteAll(m.device.VerificationURIComplete); err != nil {
-				m.logger.Warn("failed to copy to clipboard", "error", err)
+				m.scope.Warn("failed to copy to clipboard", "error", err)
 				return nil
 			}
-			m.logger.Debug("url copied to clipboard")
+			m.scope.Debug("url copied to clipboard")
 			m.copiedToClipboard = true
 			m.state = statePolling
 			return m.pollForAuth()
 
 		case "r":
 			if m.err != nil {
-				m.logger.Debug("retrying authentication")
+				m.scope.Debug("retrying authentication")
 				m.err = nil
 				m.state = stateInitializing
 				return m.Init()

@@ -30,7 +30,7 @@ type SelectModel struct {
 	services api.APIServices
 	prefs    preferences.Preferences
 	auth     auth.Auth
-	logger   log.Logger
+	scope    log.Scope
 
 	list            *remotelist.Model
 	refreshLoader   *loader.Model
@@ -48,7 +48,7 @@ func NewSelect(
 	services api.APIServices,
 	prefs preferences.Preferences,
 	authService auth.Auth,
-	logger log.Logger,
+	scope log.Scope,
 ) *SelectModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -62,23 +62,21 @@ func NewSelect(
 	if authService == nil {
 		panic("authService is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &SelectModel{
 		ctx:      ctx,
 		theme:    theme,
 		services: services,
 		prefs:    prefs,
 		auth:     authService,
-		logger:   logger,
+		scope:    scope,
 		list:     remotelist.New(theme, "Loading organizations"),
 	}
 }
 
 // Init starts loading organizations.
 func (m *SelectModel) Init() tea.Cmd {
-	m.logger.Info("loading organizations")
+	m.scope.Info("loading organizations")
 	return m.list.InitWithLoader(m.loadOrgs())
 }
 
@@ -109,7 +107,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case remotelist.LoadResult:
 		if msg.Err != nil {
-			m.logger.Error("failed to load organizations", "error", msg.Err)
+			m.scope.Error("failed to load organizations", "error", msg.Err)
 			return m.list.Update(msg)
 		}
 
@@ -117,10 +115,10 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		for i, item := range msg.Items {
 			m.orgs[i] = item.(domain.Organization)
 		}
-		m.logger.Info("organizations loaded", "count", len(m.orgs))
+		m.scope.Info("organizations loaded", "count", len(m.orgs))
 
 		if len(m.orgs) == 0 {
-			m.logger.Debug("no organizations found")
+			m.scope.Debug("no organizations found")
 			return func() tea.Msg { return msgs.NoOrgs{} }
 		}
 
@@ -128,14 +126,14 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		if prefID != "" {
 			for _, org := range m.orgs {
 				if org.ID == prefID {
-					m.logger.Debug("using saved organization preference", "id", org.ID)
+					m.scope.Debug("using saved organization preference", "id", org.ID)
 					return m.selectOrg(org)
 				}
 			}
 		}
 
 		if len(m.orgs) == 1 {
-			m.logger.Debug("auto-selected organization (only one)")
+			m.scope.Debug("auto-selected organization (only one)")
 			_ = m.prefs.SetDefaultOrgID(m.orgs[0].ID)
 			return m.selectOrg(m.orgs[0])
 		}
@@ -145,10 +143,10 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	case tokenRefreshedMsg:
 		m.refreshingToken = false
 		if msg.err != nil {
-			m.logger.Warn("token refresh failed", "error", msg.err)
+			m.scope.Warn("token refresh failed", "error", msg.err)
 		}
 		org := *m.selectedOrg
-		m.logger.Info("organization selected", "id", org.ID, "name", org.Name)
+		m.scope.Info("organization selected", "id", org.ID, "name", org.Name)
 		return func() tea.Msg { return msgs.OrgSelected{Org: org} }
 
 	case tea.KeyPressMsg:
@@ -166,7 +164,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			return func() tea.Msg { return msgs.NoOrgs{} }
 		case "r":
 			if m.list.HasError() {
-				m.logger.Debug("retrying organization load")
+				m.scope.Debug("retrying organization load")
 				return m.list.Retry()
 			}
 		}
@@ -188,7 +186,7 @@ func (m *SelectModel) selectOrg(org domain.Organization) tea.Cmd {
 		return tea.Batch(m.refreshLoader.Init(), m.refreshToken(org))
 	}
 
-	m.logger.Info("organization selected", "id", org.ID, "name", org.Name)
+	m.scope.Info("organization selected", "id", org.ID, "name", org.Name)
 	return func() tea.Msg { return msgs.OrgSelected{Org: org} }
 }
 

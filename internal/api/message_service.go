@@ -20,22 +20,22 @@ type Messages interface {
 // MessageService handles message persistence via GraphQL.
 type MessageService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 var _ Messages = (*MessageService)(nil)
 
 // NewMessageService creates a new message service.
-func NewMessageService(client Client, logger log.Logger) *MessageService {
+func NewMessageService(client Client, scope log.Scope) *MessageService {
 	return &MessageService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("messages"),
 	}
 }
 
 // CreateMessage persists a message to the control plane.
 func (s *MessageService) CreateMessage(ctx context.Context, msg *domain.Message) error {
-	s.logger.Debug("persisting message",
+	s.scope.Debug("persisting message",
 		"id", msg.ID.String(),
 		"conversationID", msg.ConversationID.String(),
 		"role", msg.Role,

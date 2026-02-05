@@ -36,18 +36,18 @@ type Preferences interface {
 // It defines domain concepts (email, orgID, etc.) and translates them
 // to/from generic key-value storage operations.
 type Service struct {
-	store  Store
-	logger log.Logger
+	store Store
+	scope log.Scope
 }
 
 // Ensure Service implements Preferences.
 var _ Preferences = (*Service)(nil)
 
 // NewService creates a new preferences service.
-func NewService(store Store, logger log.Logger) *Service {
+func NewService(store Store, scope log.Scope) *Service {
 	return &Service{
-		store:  store,
-		logger: logger,
+		store: store,
+		scope: scope.Child("preferences"),
 	}
 }
 

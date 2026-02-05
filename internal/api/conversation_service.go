@@ -21,23 +21,23 @@ type Conversations interface {
 // ConversationService handles conversation-related API operations.
 type ConversationService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 // Ensure ConversationService implements Conversations.
 var _ Conversations = (*ConversationService)(nil)
 
 // NewConversationService creates a new conversation service.
-func NewConversationService(client Client, logger log.Logger) *ConversationService {
+func NewConversationService(client Client, scope log.Scope) *ConversationService {
 	return &ConversationService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("conversations"),
 	}
 }
 
 // Create creates a new conversation with the given client-provided ID.
 func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
-	s.logger.Debug("creating conversation via API", "id", id.String(), "workspaceID", workspaceID.String(), "title", title)
+	s.scope.Debug("creating conversation via API", "id", id.String(), "workspaceID", workspaceID.String(), "title", title)
 
 	input := gen.CreateConversationInput{
 		Id:          ptr(id.String()),
@@ -47,7 +47,7 @@ func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspac
 
 	resp, err := s.client.CreateConversation(ctx, input)
 	if err != nil {
-		s.logger.Error("failed to create conversation", "error", err)
+		s.scope.Error("failed to create conversation", "error", err)
 		if classified := classifyError(err); classified != nil {
 			return nil, fmt.Errorf("create conversation %s: %w", id, classified)
 		}
@@ -60,13 +60,13 @@ func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspac
 		Title:       title,
 	}
 
-	s.logger.Debug("created conversation via API", "id", conversation.ID)
+	s.scope.Debug("created conversation via API", "id", conversation.ID)
 	return conversation, nil
 }
 
 // Update updates a conversation's title.
 func (s *ConversationService) Update(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
-	s.logger.Debug("updating conversation via API", "id", id.String(), "title", title)
+	s.scope.Debug("updating conversation via API", "id", id.String(), "title", title)
 
 	input := gen.UpdateConversationInput{
 		Title: ptr(title),
@@ -74,7 +74,7 @@ func (s *ConversationService) Update(ctx context.Context, id domain.Conversation
 
 	resp, err := s.client.UpdateConversation(ctx, id.String(), input)
 	if err != nil {
-		s.logger.Error("failed to update conversation", "error", err, "id", id)
+		s.scope.Error("failed to update conversation", "error", err, "id", id)
 		if classified := classifyError(err); classified != nil {
 			return nil, fmt.Errorf("update conversation %s: %w", id, classified)
 		}
@@ -86,24 +86,24 @@ func (s *ConversationService) Update(ctx context.Context, id domain.Conversation
 		Title: deref(resp.UpdateConversation.Title),
 	}
 
-	s.logger.Debug("updated conversation via API", "id", conversation.ID)
+	s.scope.Debug("updated conversation via API", "id", conversation.ID)
 	return conversation, nil
 }
 
 // Delete deletes a conversation.
 // Returns ErrNotFound (via errors.Is) if the conversation does not exist.
 func (s *ConversationService) Delete(ctx context.Context, id domain.ConversationID) error {
-	s.logger.Debug("deleting conversation via API", "id", id.String())
+	s.scope.Debug("deleting conversation via API", "id", id.String())
 
 	_, err := s.client.DeleteConversation(ctx, id.String())
 	if err != nil {
-		s.logger.Error("failed to delete conversation", "error", err, "id", id)
+		s.scope.Error("failed to delete conversation", "error", err, "id", id)
 		if classified := classifyError(err); classified != nil {
 			return errors.Join(fmt.Errorf("delete conversation %s", id), classified)
 		}
 		return err
 	}
 
-	s.logger.Debug("deleted conversation via API", "id", id.String())
+	s.scope.Debug("deleted conversation via API", "id", id.String())
 	return nil
 }

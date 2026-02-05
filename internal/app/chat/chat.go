@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -10,27 +11,29 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/sidebar"
-	"github.com/usetero/cli/internal/app/layouts/base"
-	"github.com/usetero/cli/internal/app/layouts/header"
 	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/header"
+	"github.com/usetero/cli/internal/tea/keymap"
 )
 
-const sidebarWidth = 30
+const (
+	sidebarWidth          = 30
+	sidebarMinWindowWidth = 100 // minimum window width to show sidebar
+)
 
 // Model is the main chat model.
 type Model struct {
-	logger log.Logger
+	scope log.Scope
 
-	headerLayout *header.Model
-	baseLayout   *base.Model
-	commandBar   *commandbar.Model
-	sidebar      *sidebar.Model
-	messageList  *messagelist.Model
+	header      *header.Model
+	commandBar  *commandbar.Model
+	sidebar     *sidebar.Model
+	messageList *messagelist.Model
 
 	// Conversation is created lazily on first message
 	conversationID domain.ConversationID
@@ -56,24 +59,23 @@ func New(
 	db sqlite.DB,
 	chatClient chatclient.Client,
 	toolRegistry *tools.Registry,
-	logger log.Logger,
+	scope log.Scope,
 ) *Model {
-	chatLogger := logger.With("component", "chat")
+	scope = scope.Child("chat")
 
-	headerLayout := header.New(theme)
-	headerLayout.SetTitle("Chat")
-	headerLayout.SetOrgName(workspace.Name)
+	h := header.New(theme)
+	h.SetTitle("Chat")
+	h.SetOrgName(workspace.Name)
 
 	sidebarModel := sidebar.New(theme)
 	sidebarModel.SetWorkspace(workspace.Name)
 
 	m := &Model{
-		logger:       chatLogger,
-		headerLayout: headerLayout,
-		baseLayout:   base.New(theme),
+		scope:        scope,
+		header:       h,
 		commandBar:   commandbar.New(theme, width),
 		sidebar:      sidebarModel,
-		messageList:  messagelist.New(theme, width, height, db, chatClient, toolRegistry, chatLogger),
+		messageList:  messagelist.New(theme, width, height, db, chatClient, toolRegistry, scope),
 		account:      account,
 		workspace:    workspace,
 		theme:        theme,
@@ -99,21 +101,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	// Handle messages this model cares about
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.updateLayout()
-
 	case msgs.UserSubmittedInput:
 		cmds = append(cmds, m.handleUserInput(msg))
 
 	case conversationCreated:
-		m.logger.Info("conversation created", "id", msg.conversationID)
+		m.scope.Info("conversation created", "id", msg.conversationID)
 		m.conversationID = msg.conversationID
 		cmds = append(cmds, m.persistUserMessage(msg.input))
 
 	case userMessagePersisted:
-		m.logger.Debug("received userMessagePersisted", "message_id", msg.messageID)
+		m.scope.Debug("received userMessagePersisted", "message_id", msg.messageID)
 		cmds = append(cmds, m.handlePersistedMessage(msg))
 	}
 
@@ -124,29 +121,43 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// SetSize updates the dimensions.
+func (m *Model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+	m.updateLayout()
+}
+
+// useSidebarLayout returns true when we should show sidebar instead of header.
+func (m *Model) useSidebarLayout() bool {
+	return m.hasMessages() && m.width >= sidebarMinWindowWidth
+}
+
 // updateLayout updates all component sizes based on current dimensions and state.
 func (m *Model) updateLayout() {
-	m.headerLayout.SetSize(m.width, m.height)
-	m.baseLayout.SetSize(m.width, m.height)
+	// Always update all components so they're ready when layout switches
+	m.header.SetWidth(m.width)
+	m.sidebar.SetSize(sidebarWidth, m.height)
 
-	if m.hasMessages() {
-		// With messages: base layout + sidebar
-		contentWidth, contentHeight := m.baseLayout.ContentSize()
-		mainWidth := contentWidth - sidebarWidth - 1 // -1 for gap
+	if m.useSidebarLayout() {
+		mainWidth := m.width - sidebarWidth - 1 // -1 for gap
+		listHeight := m.height - m.commandBar.Height()
 
-		m.sidebar.SetSize(sidebarWidth, contentHeight)
 		m.commandBar.SetWidth(mainWidth)
-
-		listHeight := contentHeight - m.commandBar.Height()
 		m.messageList.SetSize(mainWidth, listHeight)
 	} else {
-		// Empty state: header layout, centered
-		contentWidth, contentHeight := m.headerLayout.ContentSize()
-		m.commandBar.SetWidth(contentWidth)
+		listHeight := m.height - m.header.Height() - m.commandBar.Height()
 
-		listHeight := contentHeight - m.commandBar.Height()
-		m.messageList.SetSize(contentWidth, listHeight)
+		m.commandBar.SetWidth(m.width)
+		m.messageList.SetSize(m.width, listHeight)
 	}
+}
+
+// KeyBindings returns the key bindings for display in footer.
+func (m *Model) KeyBindings() []key.Binding {
+	bindings := m.commandBar.KeyBindings()
+	bindings = append(bindings, keymap.Global...)
+	return bindings
 }
 
 // hasMessages returns true if there are messages to display.
@@ -157,9 +168,9 @@ func (m *Model) hasMessages() bool {
 // handleUserInput creates conversation if needed, then persists the user message.
 func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 	if len(input.Text) > 0 {
-		m.logger.Info("user submitted text", "text_length", len(input.Text))
+		m.scope.Info("user submitted text", "text_length", len(input.Text))
 	} else {
-		m.logger.Info("user submitted tool results", "count", len(input.ToolResults))
+		m.scope.Info("user submitted tool results", "count", len(input.ToolResults))
 	}
 
 	// If no conversation yet, create one first (only for text input)
@@ -181,7 +192,7 @@ func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 			m.workspace.ID.String(),
 		)
 		if err != nil {
-			m.logger.Error("failed to create conversation", "error", err)
+			m.scope.Error("failed to create conversation", "error", err)
 			return nil
 		}
 
@@ -224,13 +235,13 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 			msgID, err = m.db.Messages().CreateUserMessage(ctx, m.account.ID, m.conversationID, input.Text)
 		}
 		if err != nil {
-			m.logger.Error("failed to create user message", "error", err)
+			m.scope.Error("failed to create user message", "error", err)
 			return nil
 		}
 
 		messages, err := m.db.Messages().List(ctx, m.conversationID)
 		if err != nil {
-			m.logger.Error("failed to load messages", "error", err)
+			m.scope.Error("failed to load messages", "error", err)
 			return nil
 		}
 
@@ -255,7 +266,7 @@ type userMessagePersisted struct {
 func (m *Model) handlePersistedMessage(msg userMessagePersisted) tea.Cmd {
 	wasEmpty := !m.hasMessages()
 
-	m.logger.Info("turn started", "conversation_id", msg.conversationID, "user_message_id", msg.messageID)
+	m.scope.Info("turn started", "conversation_id", msg.conversationID, "user_message_id", msg.messageID)
 
 	cmd := m.messageList.StartTurn(
 		msg.conversationID,
@@ -273,7 +284,7 @@ func (m *Model) handlePersistedMessage(msg userMessagePersisted) tea.Cmd {
 	return cmd
 }
 
-// View renders the chat.
+// View renders the chat content (without chrome - app handles that).
 func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
 		return ""
@@ -281,29 +292,30 @@ func (m *Model) View() string {
 
 	colors := m.theme.Colors
 
-	// Empty state: header layout with centered prompt
+	// Empty state: header + centered prompt
 	if !m.hasMessages() {
-		contentWidth, contentHeight := m.headerLayout.ContentSize()
+		headerView := m.header.View()
+		headerHeight := m.header.Height()
+		contentHeight := m.height - headerHeight - m.commandBar.Height()
 
 		emptyView := lipgloss.NewStyle().
 			Foreground(colors.Page.TextMuted).
-			Width(contentWidth).
-			Height(contentHeight-m.commandBar.Height()).
+			Width(m.width).
+			Height(contentHeight).
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("Start a conversation...")
 
 		commandBarView := m.commandBar.View()
-		content := lipgloss.JoinVertical(lipgloss.Left, emptyView, commandBarView)
 
-		return m.headerLayout.Render(content)
+		return lipgloss.JoinVertical(lipgloss.Left, headerView, emptyView, commandBarView)
 	}
 
-	// Has messages: base layout with sidebar on right
-	commandBarView := m.commandBar.View()
-	mainContent := lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), commandBarView)
+	// Sidebar layout: messages + command bar | sidebar
+	if m.useSidebarLayout() {
+		mainContent := lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.commandBar.View())
+		return lipgloss.JoinHorizontal(lipgloss.Top, mainContent, " ", m.sidebar.View())
+	}
 
-	sidebarView := m.sidebar.View()
-	composedContent := lipgloss.JoinHorizontal(lipgloss.Top, mainContent, " ", sidebarView)
-
-	return m.baseLayout.Render(composedContent)
+	// Header layout: header + messages + command bar
+	return lipgloss.JoinVertical(lipgloss.Left, m.header.View(), m.messageList.View(), m.commandBar.View())
 }

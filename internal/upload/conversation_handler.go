@@ -19,13 +19,13 @@ import (
 // conversationHandler handles uploading conversations to the GraphQL API.
 type conversationHandler struct {
 	conversations api.Conversations
-	logger        log.Logger
+	scope         log.Scope
 }
 
-func newConversationHandler(conversations api.Conversations, logger log.Logger) *conversationHandler {
+func newConversationHandler(conversations api.Conversations, scope log.Scope) *conversationHandler {
 	return &conversationHandler{
 		conversations: conversations,
-		logger:        logger,
+		scope:         scope.Child("conversations"),
 	}
 }
 
@@ -41,7 +41,7 @@ func (h *conversationHandler) Handle(ctx context.Context, entry *db.CrudEntry, e
 	case db.OpDelete:
 		return h.handleDelete(ctx, entry)
 	default:
-		h.logger.Warn("unknown conversation op", "op", entry.Op)
+		h.scope.Warn("unknown conversation op", "op", entry.Op)
 		return nil
 	}
 }
@@ -59,13 +59,13 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 	if err != nil {
 		// Already exists is fine - the conversation is there, which is what we wanted
 		if errors.Is(err, api.ErrAlreadyExists) {
-			h.logger.Debug("conversation already exists, skipping", "id", entry.RowID)
+			h.scope.Debug("conversation already exists, skipping", "id", entry.RowID)
 			return nil
 		}
 		return fmt.Errorf("create conversation: %w", err)
 	}
 
-	h.logger.Debug("uploaded conversation", "id", entry.RowID)
+	h.scope.Debug("uploaded conversation", "id", entry.RowID)
 	return nil
 }
 
@@ -77,7 +77,7 @@ func (h *conversationHandler) handlePatch(ctx context.Context, entry *db.CrudEnt
 		return fmt.Errorf("update conversation: %w", err)
 	}
 
-	h.logger.Debug("updated conversation", "id", entry.RowID)
+	h.scope.Debug("updated conversation", "id", entry.RowID)
 	return nil
 }
 
@@ -86,12 +86,12 @@ func (h *conversationHandler) handleDelete(ctx context.Context, entry *db.CrudEn
 	if err != nil {
 		// Not found is fine - the conversation is gone, which is what we wanted
 		if errors.Is(err, api.ErrNotFound) {
-			h.logger.Debug("conversation already deleted, skipping", "id", entry.RowID)
+			h.scope.Debug("conversation already deleted, skipping", "id", entry.RowID)
 			return nil
 		}
 		return fmt.Errorf("delete conversation: %w", err)
 	}
 
-	h.logger.Debug("deleted conversation", "id", entry.RowID)
+	h.scope.Debug("deleted conversation", "id", entry.RowID)
 	return nil
 }

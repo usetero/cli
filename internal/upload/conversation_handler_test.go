@@ -40,7 +40,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,
@@ -76,7 +76,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,
@@ -106,7 +106,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPatch,
@@ -138,7 +138,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPatch,
@@ -164,7 +164,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpDelete,
@@ -191,7 +191,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpDelete,
@@ -215,7 +215,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpDelete,
@@ -239,7 +239,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			},
 		}
 
-		h := newConversationHandler(mock, logtest.New(t))
+		h := newConversationHandler(mock, logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    db.OpPut,
@@ -259,7 +259,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 	t.Run("unknown op returns nil", func(t *testing.T) {
 		t.Parallel()
 
-		h := newConversationHandler(apitest.NewMockConversations(), logtest.New(t))
+		h := newConversationHandler(apitest.NewMockConversations(), logtest.NewScope(t))
 
 		entry := &db.CrudEntry{
 			Op:    "UNKNOWN",

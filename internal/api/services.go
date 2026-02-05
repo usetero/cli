@@ -22,26 +22,27 @@ type APIServices struct {
 
 // NewServices creates APIServices with an internally-managed client.
 // This is the preferred constructor for production use.
-func NewServices(endpoint string, authService auth.Auth, logger log.Logger) APIServices {
+func NewServices(endpoint string, authService auth.Auth, scope log.Scope) APIServices {
 	c := NewClient(endpoint, authService)
-	return newAPIServices(c, logger)
+	return newAPIServices(c, scope)
 }
 
 // NewAPIServices creates all API services from the given client.
 // Use this constructor when you need to inject a mock client for testing.
-func NewAPIServices(client Client, logger log.Logger) APIServices {
-	return newAPIServices(client, logger)
+func NewAPIServices(client Client, scope log.Scope) APIServices {
+	return newAPIServices(client, scope)
 }
 
-func newAPIServices(client Client, logger log.Logger) APIServices {
+func newAPIServices(client Client, scope log.Scope) APIServices {
+	scope = scope.Child("api")
 	return APIServices{
 		client:          client,
-		Organizations:   NewOrganizationService(client, logger),
-		Accounts:        NewAccountService(client, logger),
-		Workspaces:      NewWorkspaceService(client, logger),
-		DatadogAccounts: NewDatadogAccountService(client, logger),
-		Conversations:   NewConversationService(client, logger),
-		Messages:        NewMessageService(client, logger),
+		Organizations:   NewOrganizationService(client, scope),
+		Accounts:        NewAccountService(client, scope),
+		Workspaces:      NewWorkspaceService(client, scope),
+		DatadogAccounts: NewDatadogAccountService(client, scope),
+		Conversations:   NewConversationService(client, scope),
+		Messages:        NewMessageService(client, scope),
 	}
 }
 

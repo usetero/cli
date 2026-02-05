@@ -28,7 +28,7 @@ type CreateModel struct {
 	theme    *styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
-	logger   log.Logger
+	scope    log.Scope
 	org      domain.Organization
 
 	input    *input.Model
@@ -45,7 +45,7 @@ func NewCreate(
 	org domain.Organization,
 	services api.APIServices,
 	prefs preferences.Preferences,
-	logger log.Logger,
+	scope log.Scope,
 ) *CreateModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -55,9 +55,6 @@ func NewCreate(
 	}
 	if prefs == nil {
 		panic("prefs is nil")
-	}
-	if logger == nil {
-		panic("logger is nil")
 	}
 
 	inp := input.New(theme)
@@ -69,7 +66,7 @@ func NewCreate(
 		theme:    theme,
 		services: services,
 		prefs:    prefs,
-		logger:   logger,
+		scope:    scope,
 		org:      org,
 		input:    inp,
 	}
@@ -86,7 +83,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 	case accountCreatedMsg:
 		m.creating = false
 		if msg.err != nil {
-			m.logger.Error("failed to create account", "error", msg.err)
+			m.scope.Error("failed to create account", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
@@ -94,7 +91,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		m.services.SetAccountID(msg.account.ID)
 		org := m.org
 		acc := msg.account
-		m.logger.Info("account created", "id", acc.ID, "name", acc.Name)
+		m.scope.Info("account created", "id", acc.ID, "name", acc.Name)
 		return func() tea.Msg { return msgs.AccountCreated{Org: org, Account: acc} }
 
 	case tea.KeyPressMsg:
@@ -109,7 +106,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 			}
 			m.creating = true
 			m.err = nil
-			m.logger.Info("creating account", "name", name)
+			m.scope.Info("creating account", "name", name)
 			return m.createAccount(name)
 		}
 	}

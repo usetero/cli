@@ -22,7 +22,7 @@ type SelectModel struct {
 	theme    *styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
-	logger   log.Logger
+	scope    log.Scope
 	org      domain.Organization
 
 	list     *remotelist.Model
@@ -38,7 +38,7 @@ func NewSelect(
 	org domain.Organization,
 	services api.APIServices,
 	prefs preferences.Preferences,
-	logger log.Logger,
+	scope log.Scope,
 ) *SelectModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -49,15 +49,13 @@ func NewSelect(
 	if prefs == nil {
 		panic("prefs is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &SelectModel{
 		ctx:      ctx,
 		theme:    theme,
 		services: services,
 		prefs:    prefs,
-		logger:   logger,
+		scope:    scope,
 		org:      org,
 		list:     remotelist.New(theme, "Loading accounts"),
 	}
@@ -65,7 +63,7 @@ func NewSelect(
 
 // Init starts loading accounts.
 func (m *SelectModel) Init() tea.Cmd {
-	m.logger.Info("loading accounts", "orgID", m.org.ID)
+	m.scope.Info("loading accounts", "orgID", m.org.ID)
 	return m.list.InitWithLoader(m.loadAccounts())
 }
 
@@ -89,7 +87,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case remotelist.LoadResult:
 		if msg.Err != nil {
-			m.logger.Error("failed to load accounts", "error", msg.Err)
+			m.scope.Error("failed to load accounts", "error", msg.Err)
 			return m.list.Update(msg)
 		}
 
@@ -97,10 +95,10 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		for i, item := range msg.Items {
 			m.accounts[i] = item.(domain.Account)
 		}
-		m.logger.Info("accounts loaded", "count", len(m.accounts))
+		m.scope.Info("accounts loaded", "count", len(m.accounts))
 
 		if len(m.accounts) == 0 {
-			m.logger.Debug("no accounts found")
+			m.scope.Debug("no accounts found")
 			org := m.org
 			return func() tea.Msg { return msgs.NoAccounts{Org: org} }
 		}
@@ -109,7 +107,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		if prefID != "" {
 			for _, acc := range m.accounts {
 				if acc.ID == prefID {
-					m.logger.Debug("using saved account preference", "id", acc.ID)
+					m.scope.Debug("using saved account preference", "id", acc.ID)
 					m.services.SetAccountID(acc.ID)
 					return m.emitSelected(acc)
 				}
@@ -117,7 +115,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		}
 
 		if len(m.accounts) == 1 {
-			m.logger.Debug("auto-selected account (only one)")
+			m.scope.Debug("auto-selected account (only one)")
 			acc := m.accounts[0]
 			_ = m.prefs.SetDefaultAccountID(acc.ID)
 			m.services.SetAccountID(acc.ID)
@@ -143,7 +141,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			return func() tea.Msg { return msgs.NoAccounts{Org: org} }
 		case "r":
 			if m.list.HasError() {
-				m.logger.Debug("retrying account load")
+				m.scope.Debug("retrying account load")
 				return m.list.Retry()
 			}
 		}
@@ -154,7 +152,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 
 func (m *SelectModel) emitSelected(acc domain.Account) tea.Cmd {
 	org := m.org
-	m.logger.Info("account selected", "id", acc.ID, "name", acc.Name)
+	m.scope.Info("account selected", "id", acc.ID, "name", acc.Name)
 	return func() tea.Msg {
 		return msgs.AccountSelected{Org: org, Account: acc}
 	}

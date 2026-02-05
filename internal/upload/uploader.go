@@ -37,7 +37,7 @@ type uploader struct {
 	client         psapi.Client
 	tokenRefresher TokenRefresher
 	handlers       map[sqlite.Table]Handler
-	logger         log.Logger
+	scope          log.Scope
 
 	// Configuration
 	pollInterval time.Duration
@@ -59,18 +59,19 @@ func New(
 	tokenRefresher TokenRefresher,
 	conversations api.Conversations,
 	messages api.Messages,
-	logger log.Logger,
+	scope log.Scope,
 ) Uploader {
+	scope = scope.Child("upload")
 	return &uploader{
 		db:             database,
 		queue:          db.NewCrudQueue(database),
 		client:         client,
 		tokenRefresher: tokenRefresher,
 		handlers: map[sqlite.Table]Handler{
-			sqlite.TableConversations: newConversationHandler(conversations, logger),
-			sqlite.TableMessages:      newMessageHandler(messages, database, logger),
+			sqlite.TableConversations: newConversationHandler(conversations, scope),
+			sqlite.TableMessages:      newMessageHandler(messages, database, scope),
 		},
-		logger:       logger,
+		scope:        scope,
 		pollInterval: defaultPollInterval,
 		retryDelay:   defaultRetryDelay,
 		maxRetries:   defaultMaxRetries,
@@ -85,9 +86,9 @@ func (u *uploader) Events() <-chan Event {
 
 // Run starts the upload loop. It blocks until the context is cancelled.
 func (u *uploader) Run(ctx context.Context) error {
-	u.logger.Info("upload loop started")
+	u.scope.Info("upload loop started")
 	defer func() {
-		u.logger.Info("upload loop stopped")
+		u.scope.Info("upload loop stopped")
 		close(u.events)
 	}()
 
@@ -101,7 +102,7 @@ func (u *uploader) Run(ctx context.Context) error {
 		// Refresh token before each upload cycle
 		token, err := u.tokenRefresher.GetAccessToken(ctx)
 		if err != nil {
-			u.logger.Warn("failed to get access token", "error", err)
+			u.scope.Warn("failed to get access token", "error", err)
 			u.wait(ctx, u.retryDelay)
 			continue
 		}
@@ -118,7 +119,7 @@ func (u *uploader) Run(ctx context.Context) error {
 		// Clear stalled state on success
 		if u.stalledSince != nil {
 			stalledFor := time.Since(*u.stalledSince)
-			u.logger.Info("upload queue recovered", "stalledFor", stalledFor.Round(time.Second))
+			u.scope.Info("upload queue recovered", "stalledFor", stalledFor.Round(time.Second))
 			u.emit(ctx, RecoveredEvent{StalledFor: stalledFor})
 			u.stalledSince = nil
 			u.stalledEntry = nil
@@ -172,7 +173,7 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("complete batch: %w", err)
 	}
 
-	u.logger.Debug("completed batch", "count", len(entries), "checkpoint", checkpoint)
+	u.scope.Debug("completed batch", "count", len(entries), "checkpoint", checkpoint)
 	return len(entries), nil
 }
 
@@ -180,25 +181,25 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 func (u *uploader) uploadEntry(ctx context.Context, entry *db.CrudEntry, emit Emitter) error {
 	handler, ok := u.handlers[entry.Table]
 	if !ok {
-		u.logger.Warn("no handler for table, skipping", "table", entry.Table, "rowId", entry.RowID)
+		u.scope.Warn("no handler for table, skipping", "table", entry.Table, "rowId", entry.RowID)
 		return nil
 	}
 
 	var lastErr error
 	for attempt := 0; attempt <= u.maxRetries; attempt++ {
 		if attempt > 0 {
-			u.logger.Debug("retrying upload", "table", entry.Table, "rowId", entry.RowID, "attempt", attempt)
+			u.scope.Debug("retrying upload", "table", entry.Table, "rowId", entry.RowID, "attempt", attempt)
 			u.wait(ctx, u.retryDelay*time.Duration(attempt))
 		}
 
 		err := handler.Handle(ctx, entry, emit)
 		if err == nil {
-			u.logger.Debug("uploaded entry", "table", entry.Table, "rowId", entry.RowID, "op", entry.Op)
+			u.scope.Debug("uploaded entry", "table", entry.Table, "rowId", entry.RowID, "op", entry.Op)
 			return nil
 		}
 
 		lastErr = err
-		u.logger.Warn("upload failed", "table", entry.Table, "rowId", entry.RowID, "attempt", attempt, "error", err)
+		u.scope.Warn("upload failed", "table", entry.Table, "rowId", entry.RowID, "attempt", attempt, "error", err)
 	}
 
 	u.stalledEntry = entry
@@ -209,7 +210,7 @@ func (u *uploader) handleError(ctx context.Context, err error) {
 	if u.stalledSince == nil {
 		now := time.Now()
 		u.stalledSince = &now
-		u.logger.Warn("upload queue stalled", "error", err)
+		u.scope.Warn("upload queue stalled", "error", err)
 	}
 
 	u.emit(ctx, StalledEvent{

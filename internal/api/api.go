@@ -15,11 +15,12 @@ type API struct {
 
 // New creates a new API with all services initialized.
 // Requires an authenticated API client.
-func New(client Client, logger log.Logger) *API {
+func New(client Client, scope log.Scope) *API {
+	scope = scope.Child("api")
 	return &API{
-		Organizations:   NewOrganizationService(client, logger),
-		Accounts:        NewAccountService(client, logger),
-		DatadogAccounts: NewDatadogAccountService(client, logger),
-		Services:        NewServiceService(client, logger),
+		Organizations:   NewOrganizationService(client, scope),
+		Accounts:        NewAccountService(client, scope),
+		DatadogAccounts: NewDatadogAccountService(client, scope),
+		Services:        NewServiceService(client, scope),
 	}
 }

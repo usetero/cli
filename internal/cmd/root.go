@@ -20,21 +20,21 @@ import (
 	"github.com/usetero/cli/internal/workos"
 )
 
-func NewRootCmd(logger log.Logger, version string) *cobra.Command {
+func NewRootCmd(scope log.Scope, version string) *cobra.Command {
 	// Load CLI configuration
 	cliConfig := config.LoadCLIConfig()
 
-	rootCmd := newRootCmd(logger, version, cliConfig)
+	rootCmd := newRootCmd(scope, version, cliConfig)
 
 	// Subcommands
-	rootCmd.AddCommand(NewAuthCmd(logger, cliConfig))
-	rootCmd.AddCommand(NewResetCmd(logger, cliConfig))
-	rootCmd.AddCommand(NewDebugCmd(logger, cliConfig))
+	rootCmd.AddCommand(NewAuthCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewResetCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewDebugCmd(scope, cliConfig))
 
 	return rootCmd
 }
 
-func newRootCmd(logger log.Logger, version string, cliConfig *config.CLIConfig) *cobra.Command {
+func newRootCmd(scope log.Scope, version string, cliConfig *config.CLIConfig) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:     "tero",
 		Short:   "Tero - Your telemetry quality platform",
@@ -55,7 +55,7 @@ Just run 'tero' to start an interactive chat session.`,
 			if err != nil {
 				return err
 			}
-			prefs := preferences.NewService(cfg, logger)
+			prefs := preferences.NewService(cfg, scope)
 
 			// Create token store
 			tokenStore := keyring.New(namespace)
@@ -64,29 +64,29 @@ Just run 'tero' to start an interactive chat session.`,
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 
 			// Create auth service
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			// Create theme
 			theme := styles.NewTheme(true)
 
 			// Create API services
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 
 			// Create storage for SQLite databases
 			storage := sqlite.NewStorageService(cfg)
 
 			// Create PowerSync syncer
-			syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authService, logger)
+			syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authService, scope)
 
 			// Create and run the TUI
 			p := tea.NewProgram(
-				app.New(ctx, cliConfig, theme, services, authService, prefs, storage, syncer, logger),
+				app.New(ctx, cliConfig, theme, services, authService, prefs, storage, syncer, scope),
 				tea.WithContext(ctx),
 				tea.WithEnvironment(os.Environ()),
 				tea.WithFilter(filter.Mouse),
 			)
 			if _, err := p.Run(); err != nil {
-				logger.Error("bubbletea program error", "error", err)
+				scope.Error("bubbletea program error", "error", err)
 				return err
 			}
 			return nil

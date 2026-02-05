@@ -27,18 +27,19 @@ type Auth interface {
 type Service struct {
 	provider OAuthProvider
 	storage  SecureStorage
-	logger   log.Logger
+	scope    log.Scope
 }
 
 // Ensure Service implements Auth.
 var _ Auth = (*Service)(nil)
 
 // NewService creates a new authentication service.
-func NewService(provider OAuthProvider, storage SecureStorage, logger log.Logger) *Service {
+func NewService(provider OAuthProvider, storage SecureStorage, scope log.Scope) *Service {
+	scope = scope.Child("auth")
 	return &Service{
 		provider: provider,
 		storage:  storage,
-		logger:   logger,
+		scope:    scope,
 	}
 }
 
@@ -70,15 +71,15 @@ type User struct {
 
 // StartDeviceAuth initiates the device authorization flow.
 func (s *Service) StartDeviceAuth(ctx context.Context) (*DeviceAuth, error) {
-	s.logger.Debug("starting device authorization flow")
+	s.scope.Debug("starting device authorization flow")
 
 	resp, err := s.provider.AuthorizeDevice(ctx)
 	if err != nil {
-		s.logger.Error("failed to start device authorization", "error", err)
+		s.scope.Error("failed to start device authorization", "error", err)
 		return nil, err
 	}
 
-	s.logger.Debug("device authorization started",
+	s.scope.Debug("device authorization started",
 		"user_code", resp.UserCode,
 		"expires_in", resp.ExpiresIn,
 		"interval", resp.Interval)
@@ -96,7 +97,7 @@ func (s *Service) StartDeviceAuth(ctx context.Context) (*DeviceAuth, error) {
 // WaitForAuth polls the OAuth provider until the user completes authentication or an error occurs.
 // This is a blocking call that handles the polling loop with proper backoff.
 func (s *Service) WaitForAuth(ctx context.Context, deviceCode string, interval time.Duration) (*Result, error) {
-	s.logger.Debug("starting authentication polling", "interval", interval)
+	s.scope.Debug("starting authentication polling", "interval", interval)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -111,10 +112,10 @@ func (s *Service) WaitForAuth(ctx context.Context, deviceCode string, interval t
 			resp, err := s.provider.PollAuthentication(ctx, deviceCode)
 			if err == nil {
 				// Success! Save tokens and return
-				s.logger.Info("authentication successful", "user_id", resp.User.ID, "email", resp.User.Email)
+				s.scope.Info("authentication successful", "user_id", resp.User.ID, "email", resp.User.Email)
 
 				if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
-					s.logger.Error("failed to save tokens", "error", err)
+					s.scope.Error("failed to save tokens", "error", err)
 					return nil, err
 				}
 
@@ -134,27 +135,27 @@ func (s *Service) WaitForAuth(ctx context.Context, deviceCode string, interval t
 			switch {
 			case errors.As(err, &pendingErr):
 				// Still waiting - continue polling
-				s.logger.Debug("authorization pending, continuing to poll")
+				s.scope.Debug("authorization pending, continuing to poll")
 				continue
 
 			case errors.As(err, &slowDownErr):
 				// Increase polling interval
 				currentInterval = currentInterval * 2
 				ticker.Reset(currentInterval)
-				s.logger.Debug("slowing down polling", "new_interval", currentInterval)
+				s.scope.Debug("slowing down polling", "new_interval", currentInterval)
 				continue
 
 			case errors.As(err, &expiredErr):
-				s.logger.Error("device code expired")
+				s.scope.Error("device code expired")
 				return nil, errors.New("device code expired - press 'r' to restart")
 
 			case errors.As(err, &deniedErr):
-				s.logger.Info("user denied authorization")
+				s.scope.Info("user denied authorization")
 				return nil, errors.New("user denied authorization")
 
 			default:
 				// Unknown error
-				s.logger.Error("authentication polling failed", "error", err)
+				s.scope.Error("authentication polling failed", "error", err)
 				return nil, err
 			}
 		}
@@ -165,7 +166,7 @@ func (s *Service) WaitForAuth(ctx context.Context, deviceCode string, interval t
 func (s *Service) IsAuthenticated() bool {
 	accessToken, err := s.storage.Get("access_token")
 	if err != nil {
-		s.logger.Error("failed to check authentication", "error", err)
+		s.scope.Error("failed to check authentication", "error", err)
 		return false
 	}
 	return accessToken != ""
@@ -175,7 +176,7 @@ func (s *Service) IsAuthenticated() bool {
 func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	accessToken, err := s.storage.Get("access_token")
 	if err != nil {
-		s.logger.Error("failed to get access token", "error", err)
+		s.scope.Error("failed to get access token", "error", err)
 		return "", err
 	}
 	if accessToken == "" {
@@ -184,10 +185,10 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 
 	// Check if token is expired
 	if isTokenExpired(accessToken) {
-		s.logger.Debug("access token expired, refreshing")
+		s.scope.Debug("access token expired, refreshing")
 		refreshToken, err := s.storage.Get("refresh_token")
 		if err != nil {
-			s.logger.Error("failed to get refresh token", "error", err)
+			s.scope.Error("failed to get refresh token", "error", err)
 			return "", err
 		}
 		if refreshToken == "" {
@@ -196,16 +197,16 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 
 		resp, err := s.provider.RefreshToken(ctx, refreshToken)
 		if err != nil {
-			s.logger.Error("failed to refresh token", "error", err)
+			s.scope.Error("failed to refresh token", "error", err)
 			return "", err
 		}
 
 		if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
-			s.logger.Error("failed to save refreshed tokens", "error", err)
+			s.scope.Error("failed to save refreshed tokens", "error", err)
 			return "", err
 		}
 
-		s.logger.Debug("token refreshed successfully")
+		s.scope.Debug("token refreshed successfully")
 		return resp.AccessToken, nil
 	}
 
@@ -214,13 +215,13 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 
 // ClearTokens removes all stored authentication tokens.
 func (s *Service) ClearTokens() error {
-	s.logger.Info("clearing authentication tokens")
+	s.scope.Info("clearing authentication tokens")
 	if err := s.storage.Delete("access_token"); err != nil {
-		s.logger.Error("failed to delete access token", "error", err)
+		s.scope.Error("failed to delete access token", "error", err)
 		return err
 	}
 	if err := s.storage.Delete("refresh_token"); err != nil {
-		s.logger.Error("failed to delete refresh token", "error", err)
+		s.scope.Error("failed to delete refresh token", "error", err)
 		return err
 	}
 	return nil
@@ -230,11 +231,11 @@ func (s *Service) ClearTokens() error {
 // This is used for bootstrap flows where the user needs a user-scoped token to create an org.
 // Returns the new access token so callers can update their API clients.
 func (s *Service) RefreshTokenWithoutOrganization(ctx context.Context) (string, error) {
-	s.logger.Debug("refreshing token without organization scope")
+	s.scope.Debug("refreshing token without organization scope")
 
 	refreshToken, err := s.storage.Get("refresh_token")
 	if err != nil {
-		s.logger.Error("failed to get refresh token", "error", err)
+		s.scope.Error("failed to get refresh token", "error", err)
 		return "", err
 	}
 	if refreshToken == "" {
@@ -243,16 +244,16 @@ func (s *Service) RefreshTokenWithoutOrganization(ctx context.Context) (string, 
 
 	resp, err := s.provider.RefreshToken(ctx, refreshToken)
 	if err != nil {
-		s.logger.Error("failed to refresh token without organization", "error", err)
+		s.scope.Error("failed to refresh token without organization", "error", err)
 		return "", err
 	}
 
 	if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
-		s.logger.Error("failed to save refreshed tokens", "error", err)
+		s.scope.Error("failed to save refreshed tokens", "error", err)
 		return "", err
 	}
 
-	s.logger.Info("token refreshed without organization scope")
+	s.scope.Info("token refreshed without organization scope")
 	return resp.AccessToken, nil
 }
 
@@ -260,11 +261,11 @@ func (s *Service) RefreshTokenWithoutOrganization(ctx context.Context) (string, 
 // This is used after creating/selecting an organization to get a token with the org_id claim.
 // Returns the new access token so callers can update their API clients.
 func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error) {
-	s.logger.Debug("refreshing token with organization", "workos_org_id", workosOrgID)
+	s.scope.Debug("refreshing token with organization", "workos_org_id", workosOrgID)
 
 	refreshToken, err := s.storage.Get("refresh_token")
 	if err != nil {
-		s.logger.Error("failed to get refresh token", "error", err)
+		s.scope.Error("failed to get refresh token", "error", err)
 		return "", err
 	}
 	if refreshToken == "" {
@@ -273,16 +274,16 @@ func (s *Service) RefreshTokenWithOrganization(ctx context.Context, workosOrgID 
 
 	resp, err := s.provider.RefreshTokenWithOrganization(ctx, refreshToken, workosOrgID)
 	if err != nil {
-		s.logger.Error("failed to refresh token with organization", "error", err)
+		s.scope.Error("failed to refresh token with organization", "error", err)
 		return "", err
 	}
 
 	if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
-		s.logger.Error("failed to save refreshed tokens", "error", err)
+		s.scope.Error("failed to save refreshed tokens", "error", err)
 		return "", err
 	}
 
-	s.logger.Info("token refreshed with organization scope", "workos_org_id", workosOrgID)
+	s.scope.Info("token refreshed with organization scope", "workos_org_id", workosOrgID)
 	return resp.AccessToken, nil
 }
 

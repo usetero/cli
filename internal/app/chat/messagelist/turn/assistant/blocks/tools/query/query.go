@@ -17,7 +17,7 @@ import (
 // Model renders and executes a query tool.
 type Model struct {
 	theme    *styles.Theme
-	logger   log.Logger
+	scope    log.Scope
 	index    int
 	toolID   string
 	name     string
@@ -35,10 +35,11 @@ type Model struct {
 }
 
 // New creates a new query tool model.
-func New(theme *styles.Theme, index int, toolID string, width int, executor *chattools.QueryTool, logger log.Logger) *Model {
+func New(theme *styles.Theme, index int, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
+	scope = scope.Child("query")
 	return &Model{
 		theme:    theme,
-		logger:   logger.With("component", "query_tool", "tool_id", toolID),
+		scope:    scope,
 		index:    index,
 		toolID:   toolID,
 		name:     executor.Name(),
@@ -117,12 +118,12 @@ func (m *Model) execute() tea.Cmd {
 		m.sql = in.SQL
 	}
 
-	m.logger.Info("executing query", "sql", m.sql)
+	m.scope.Info("executing query", "sql", m.sql)
 
 	if m.executor == nil {
 		m.err = fmt.Errorf("no executor")
 		m.state = tools.StateComplete
-		m.logger.Error("query failed", "error", m.err)
+		m.scope.Error("query failed", "error", m.err)
 		return m.fireCompleted()
 	}
 
@@ -130,13 +131,13 @@ func (m *Model) execute() tea.Cmd {
 	if err != nil {
 		m.err = err
 		m.state = tools.StateComplete
-		m.logger.Error("query failed", "error", err)
+		m.scope.Error("query failed", "error", err)
 		return m.fireCompleted()
 	}
 
 	m.rows = result.Rows
 	m.state = tools.StateComplete
-	m.logger.Info("query completed", "row_count", len(m.rows))
+	m.scope.Info("query completed", "row_count", len(m.rows))
 	return m.fireCompleted()
 }
 

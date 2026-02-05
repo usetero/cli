@@ -27,7 +27,7 @@ type CreateModel struct {
 	theme    *styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
-	logger   log.Logger
+	scope    log.Scope
 
 	input    *input.Model
 	creating bool
@@ -42,7 +42,7 @@ func NewCreate(
 	theme *styles.Theme,
 	services api.APIServices,
 	prefs preferences.Preferences,
-	logger log.Logger,
+	scope log.Scope,
 ) *CreateModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -52,9 +52,6 @@ func NewCreate(
 	}
 	if prefs == nil {
 		panic("prefs is nil")
-	}
-	if logger == nil {
-		panic("logger is nil")
 	}
 
 	inp := input.New(theme)
@@ -66,7 +63,7 @@ func NewCreate(
 		theme:    theme,
 		services: services,
 		prefs:    prefs,
-		logger:   logger,
+		scope:    scope,
 		input:    inp,
 	}
 }
@@ -82,13 +79,13 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 	case orgCreatedMsg:
 		m.creating = false
 		if msg.err != nil {
-			m.logger.Error("failed to create organization", "error", msg.err)
+			m.scope.Error("failed to create organization", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		_ = m.prefs.SetDefaultOrgID(msg.result.Organization.ID)
 		org := *msg.result.Organization
-		m.logger.Info("organization created", "id", org.ID, "name", org.Name)
+		m.scope.Info("organization created", "id", org.ID, "name", org.Name)
 		return func() tea.Msg { return msgs.OrgCreated{Org: org} }
 
 	case tea.KeyPressMsg:
@@ -103,7 +100,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 			}
 			m.creating = true
 			m.err = nil
-			m.logger.Info("creating organization", "name", name)
+			m.scope.Info("creating organization", "name", name)
 			return m.createOrg(name)
 		}
 	}

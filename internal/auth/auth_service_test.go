@@ -28,7 +28,7 @@ func TestService_GetAccessToken(t *testing.T) {
 			},
 		}
 
-		svc := auth.NewService(&authtest.MockOAuthProvider{}, storage, logtest.New(t))
+		svc := auth.NewService(&authtest.MockOAuthProvider{}, storage, logtest.NewScope(t))
 
 		token, err := svc.GetAccessToken(context.Background())
 		if err != nil {
@@ -68,7 +68,7 @@ func TestService_GetAccessToken(t *testing.T) {
 			},
 		}
 
-		svc := auth.NewService(provider, storage, logtest.New(t))
+		svc := auth.NewService(provider, storage, logtest.NewScope(t))
 
 		token, err := svc.GetAccessToken(context.Background())
 		if err != nil {
@@ -101,7 +101,7 @@ func TestService_GetAccessToken(t *testing.T) {
 			},
 		}
 
-		svc := auth.NewService(provider, storage, logtest.New(t))
+		svc := auth.NewService(provider, storage, logtest.NewScope(t))
 
 		_, err := svc.GetAccessToken(context.Background())
 		if err == nil {
@@ -147,7 +147,7 @@ func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
 			},
 		}
 
-		svc := auth.NewService(provider, storage, logtest.New(t))
+		svc := auth.NewService(provider, storage, logtest.NewScope(t))
 
 		token, err := svc.RefreshTokenWithoutOrganization(context.Background())
 		if err != nil {
@@ -172,7 +172,7 @@ func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
 			},
 		}
 
-		svc := auth.NewService(&authtest.MockOAuthProvider{}, storage, logtest.New(t))
+		svc := auth.NewService(&authtest.MockOAuthProvider{}, storage, logtest.NewScope(t))
 
 		_, err := svc.RefreshTokenWithoutOrganization(context.Background())
 		if err == nil {

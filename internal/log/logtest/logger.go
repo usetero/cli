@@ -24,3 +24,9 @@ func New(t *testing.T) log.Logger {
 		Level: slog.LevelDebug,
 	})))
 }
+
+// NewScope creates a root scope that writes to testing.T
+// Logs are only shown when the test fails or with -v flag
+func NewScope(t *testing.T) log.Scope {
+	return log.RootScope(New(t))
+}

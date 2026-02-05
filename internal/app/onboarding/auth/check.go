@@ -20,15 +20,15 @@ type checkResultMsg struct {
 
 // CheckModel checks if the user has a valid auth token.
 type CheckModel struct {
-	ctx    context.Context
-	theme  *styles.Theme
-	auth   auth.Auth
-	logger log.Logger
-	err    error
+	ctx   context.Context
+	theme *styles.Theme
+	auth  auth.Auth
+	scope log.Scope
+	err   error
 }
 
 // NewCheck creates a new auth check step.
-func NewCheck(ctx context.Context, theme *styles.Theme, authService auth.Auth, logger log.Logger) *CheckModel {
+func NewCheck(ctx context.Context, theme *styles.Theme, authService auth.Auth, scope log.Scope) *CheckModel {
 	if ctx == nil {
 		panic("ctx is nil")
 	}
@@ -38,20 +38,18 @@ func NewCheck(ctx context.Context, theme *styles.Theme, authService auth.Auth, l
 	if authService == nil {
 		panic("authService is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &CheckModel{
-		ctx:    ctx,
-		theme:  theme,
-		auth:   authService,
-		logger: logger,
+		ctx:   ctx,
+		theme: theme,
+		auth:  authService,
+		scope: scope,
 	}
 }
 
 // Init starts the auth check.
 func (m *CheckModel) Init() tea.Cmd {
-	m.logger.Info("checking authentication")
+	m.scope.Info("checking authentication")
 	return m.checkAuth()
 }
 
@@ -76,14 +74,14 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case checkResultMsg:
 		if msg.err != nil {
-			m.logger.Error("auth check failed", "error", msg.err)
+			m.scope.Error("auth check failed", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		if msg.hasValidAuth {
-			m.logger.Info("auth valid")
+			m.scope.Info("auth valid")
 		} else {
-			m.logger.Info("auth required")
+			m.scope.Info("auth required")
 		}
 		return func() tea.Msg {
 			return msgs.AuthChecked{NeedsAuth: !msg.hasValidAuth}

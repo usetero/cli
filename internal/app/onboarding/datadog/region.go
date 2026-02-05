@@ -14,23 +14,21 @@ import (
 // RegionModel handles Datadog region selection.
 type RegionModel struct {
 	theme    *styles.Theme
-	logger   log.Logger
+	scope    log.Scope
 	selected int
 	width    int
 	height   int
 }
 
 // NewRegion creates a new region selection step.
-func NewRegion(theme *styles.Theme, logger log.Logger) *RegionModel {
+func NewRegion(theme *styles.Theme, scope log.Scope) *RegionModel {
 	if theme == nil {
 		panic("theme is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &RegionModel{
-		theme:  theme,
-		logger: logger,
+		theme: theme,
+		scope: scope,
 	}
 }
 
@@ -54,7 +52,7 @@ func (m *RegionModel) Update(msg tea.Msg) tea.Cmd {
 			}
 		case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
 			site := domain.DatadogRegions[m.selected].Site
-			m.logger.Info("datadog region selected", "site", site)
+			m.scope.Info("datadog region selected", "site", site)
 			return func() tea.Msg {
 				return msgs.DatadogRegionSelected{Site: site}
 			}

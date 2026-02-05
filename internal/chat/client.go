@@ -51,7 +51,7 @@ type client struct {
 	httpClient  HTTPDoer
 	auth        auth.Auth
 	accountID   domain.AccountID
-	logger      log.Logger
+	scope       log.Scope
 	globalTools []Tool
 }
 
@@ -62,7 +62,7 @@ var _ Client = (*client)(nil)
 // - globalTools are included in every request automatically
 // - Retries transient errors (connection reset, 502/503/504) up to 3 times with backoff
 // - Gets a fresh token via auth.GetAccessToken before each request
-func NewClient(endpoint string, authService auth.Auth, logger log.Logger, globalTools []Tool) Client {
+func NewClient(endpoint string, authService auth.Auth, scope log.Scope, globalTools []Tool) Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = retryMax
 	retryClient.RetryWaitMin = retryWaitMin
@@ -73,18 +73,18 @@ func NewClient(endpoint string, authService auth.Auth, logger log.Logger, global
 		endpoint:    strings.TrimSuffix(endpoint, "/"),
 		httpClient:  retryClient.StandardClient(),
 		auth:        authService,
-		logger:      logger,
+		scope:       scope.Child("chat"),
 		globalTools: globalTools,
 	}
 }
 
 // NewClientWithHTTP creates a new Chat API client with a custom HTTP client (for testing).
-func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDoer, logger log.Logger, globalTools []Tool) Client {
+func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDoer, scope log.Scope, globalTools []Tool) Client {
 	return &client{
 		endpoint:    strings.TrimSuffix(endpoint, "/"),
 		httpClient:  httpClient,
 		auth:        authService,
-		logger:      logger,
+		scope:       scope.Child("chat"),
 		globalTools: globalTools,
 	}
 }
@@ -102,7 +102,7 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 	allTools := append(c.globalTools, req.Tools...)
 	req.Tools = allTools
 
-	c.logger.Debug("sending to chat API",
+	c.scope.Debug("sending to chat API",
 		log.String("conversation_id", req.ConversationID),
 		log.Int("message_count", len(req.Messages)),
 		log.Int("context_count", len(req.Context)),

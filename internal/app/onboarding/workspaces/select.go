@@ -24,7 +24,7 @@ type SelectModel struct {
 	services api.APIServices
 	prefs    preferences.Preferences
 	account  domain.Account
-	logger   log.Logger
+	scope    log.Scope
 
 	list       *remotelist.Model
 	workspaces []domain.Workspace
@@ -39,7 +39,7 @@ func NewSelect(
 	account domain.Account,
 	services api.APIServices,
 	prefs preferences.Preferences,
-	logger log.Logger,
+	scope log.Scope,
 ) *SelectModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -50,12 +50,8 @@ func NewSelect(
 	if prefs == nil {
 		panic("prefs is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
 
-	logger = logger.With(slog.String("step", "workspace_select"))
-	logger.Debug("initialized")
+	scope.Debug("initialized")
 
 	return &SelectModel{
 		ctx:      ctx,
@@ -63,14 +59,14 @@ func NewSelect(
 		services: services,
 		prefs:    prefs,
 		account:  account,
-		logger:   logger,
+		scope:    scope,
 		list:     remotelist.New(theme, "Loading workspaces"),
 	}
 }
 
 // Init starts loading workspaces.
 func (m *SelectModel) Init() tea.Cmd {
-	m.logger.Debug("loading workspaces", slog.String("account_id", m.account.ID.String()))
+	m.scope.Debug("loading workspaces", slog.String("account_id", m.account.ID.String()))
 	return m.list.InitWithLoader(m.loadWorkspaces())
 }
 
@@ -78,11 +74,11 @@ func (m *SelectModel) loadWorkspaces() tea.Cmd {
 	return func() tea.Msg {
 		workspaces, err := m.services.Workspaces.List(m.ctx, m.account.ID.String())
 		if err != nil {
-			m.logger.Error("failed to load workspaces", slog.Any("error", err))
+			m.scope.Error("failed to load workspaces", slog.Any("error", err))
 			return remotelist.LoadResult{Err: err}
 		}
 
-		m.logger.Debug("loaded workspaces", slog.Int("count", len(workspaces)))
+		m.scope.Debug("loaded workspaces", slog.Int("count", len(workspaces)))
 		items := make([]remotelist.Item, len(workspaces))
 		for i, ws := range workspaces {
 			items[i] = ws // domain.Workspace implements FilterValue()
@@ -106,7 +102,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			if prefID != "" {
 				for _, ws := range m.workspaces {
 					if ws.ID == prefID {
-						m.logger.Info("workspace restored from preference", slog.String("workspace_id", string(ws.ID)))
+						m.scope.Info("workspace restored from preference", slog.String("workspace_id", string(ws.ID)))
 						return m.emitSelected(ws)
 					}
 				}
@@ -116,7 +112,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			if len(m.workspaces) == 1 {
 				ws := m.workspaces[0]
 				_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
-				m.logger.Info("workspace auto-selected", slog.String("workspace_id", string(ws.ID)))
+				m.scope.Info("workspace auto-selected", slog.String("workspace_id", string(ws.ID)))
 				return m.emitSelected(ws)
 			}
 		}
@@ -131,12 +127,12 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			if item := m.list.SelectedItem(); item != nil {
 				ws := item.(domain.Workspace)
 				_ = m.prefs.SetDefaultWorkspaceID(ws.ID)
-				m.logger.Info("workspace selected", slog.String("workspace_id", string(ws.ID)))
+				m.scope.Info("workspace selected", slog.String("workspace_id", string(ws.ID)))
 				return m.emitSelected(ws)
 			}
 		case "r":
 			if m.list.HasError() {
-				m.logger.Debug("retrying workspace load")
+				m.scope.Debug("retrying workspace load")
 				return m.list.Retry()
 			}
 		}

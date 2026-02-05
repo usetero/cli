@@ -8,6 +8,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app/chat"
@@ -24,6 +25,7 @@ import (
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/footer"
 	"github.com/usetero/cli/internal/tea/cursor"
 	"github.com/usetero/cli/internal/tea/keymap"
 	"github.com/usetero/cli/internal/upload"
@@ -37,11 +39,20 @@ const (
 	stateChat
 )
 
+const (
+	horizontalPadding = 1
+	verticalPadding   = 1
+	footerSpacing     = 1
+
+	minWidth  = 50
+	minHeight = 25
+)
+
 // Model is the root application model.
 type Model struct {
-	ctx    context.Context
-	theme  *styles.Theme
-	logger log.Logger
+	ctx   context.Context
+	theme *styles.Theme
+	scope log.Scope
 
 	// Dependencies
 	cfg         *config.CLIConfig
@@ -57,6 +68,7 @@ type Model struct {
 	toolRegistry *chattools.Registry
 
 	// Components
+	footer     *footer.Model
 	onboarding *onboarding.Model
 	chat       *chat.Model
 	state      state
@@ -75,7 +87,7 @@ func New(
 	prefs preferences.Preferences,
 	storage sqlite.Storage,
 	syncer powersync.Syncer,
-	logger log.Logger,
+	scope log.Scope,
 ) *Model {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -98,20 +110,20 @@ func New(
 	if syncer == nil {
 		panic("syncer is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
+	scope = scope.Child("app")
 
 	return &Model{
 		ctx:         ctx,
 		theme:       theme,
-		logger:      logger,
+		scope:       scope,
 		cfg:         cfg,
 		storage:     storage,
 		authService: authService,
 		syncer:      syncer,
 		services:    services,
-		onboarding:  onboarding.New(ctx, theme, services, prefs, authService, syncer, logger),
+		footer:      footer.New(theme),
+		onboarding:  onboarding.New(ctx, theme, services, prefs, authService, syncer, scope),
 		state:       stateOnboarding,
 	}
 }
@@ -127,12 +139,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.footer.SetWidth(msg.Width - (horizontalPadding * 2))
+		contentWidth, contentHeight := m.contentSize()
 		if m.state == stateOnboarding && m.onboarding != nil {
-			m.onboarding.SetSize(msg.Width, msg.Height)
+			m.onboarding.SetSize(contentWidth, contentHeight)
 		}
 		if m.state == stateChat && m.chat != nil {
-			cmd := m.chat.Update(msg)
-			return m, cmd
+			m.chat.SetSize(contentWidth, contentHeight)
 		}
 		return m, nil
 
@@ -144,16 +157,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgs.AccountSelected:
 		// Open database and start syncer when account is selected
-		m.logger.Info("account selected", "account_id", msg.Account.ID.String())
+		m.scope.Info("account selected", "account_id", msg.Account.ID.String())
 
 		if err := m.openDatabase(msg.Account.ID.String()); err != nil {
-			m.logger.Error("failed to open database", "error", err)
+			m.scope.Error("failed to open database", "error", err)
 			// TODO: show error to user
 			return m, nil
 		}
 
 		if err := m.startSync(msg.Account.ID.String()); err != nil {
-			m.logger.Error("failed to start sync", "error", err)
+			m.scope.Error("failed to start sync", "error", err)
 			// TODO: show error to user
 			return m, nil
 		}
@@ -166,7 +179,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Create chat client with tool definitions
-		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.logger, m.toolRegistry.Definitions())
+		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions())
 		m.chatClient.SetAccountID(msg.Account.ID)
 
 		// Forward to onboarding so it can continue
@@ -178,24 +191,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgs.OnboardingComplete:
 		m.state = stateChat
-		m.logger.Info("onboarding complete",
+		m.scope.Info("onboarding complete",
 			"org", msg.Org.Name,
 			"account", msg.Account.Name,
 			"workspace", msg.Workspace.Name,
 		)
 
 		// Create chat model
+		contentWidth, contentHeight := m.contentSize()
 		m.chat = chat.New(
 			msg.Account,
 			msg.Workspace,
-			m.width,
-			m.height,
+			contentWidth,
+			contentHeight,
 			m.theme,
 			m.db,
 			m.chatClient,
 			m.toolRegistry,
-			m.logger,
+			m.scope,
 		)
+
+		// Set keybindings from chat
+		m.footer.SetKeyBindings(m.chat.KeyBindings())
 
 		return m, m.chat.Init()
 	}
@@ -230,7 +247,7 @@ func (m *Model) openDatabase(accountID string) error {
 	}
 
 	m.db = db
-	m.logger.Info("database opened", "path", dbPath)
+	m.scope.Info("database opened", "path", dbPath)
 	return nil
 }
 
@@ -243,7 +260,7 @@ func (m *Model) startSync(accountID string) error {
 	if err := m.syncer.Start(m.ctx, m.db, accountID, nil); err != nil {
 		return err
 	}
-	m.logger.Info("syncer started", "account_id", accountID)
+	m.scope.Info("syncer started", "account_id", accountID)
 
 	// Set account ID on services
 	m.services.SetAccountID(domain.AccountID(accountID))
@@ -252,13 +269,13 @@ func (m *Model) startSync(accountID string) error {
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
 
 	// Create and start uploader
-	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.logger)
+	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.scope)
 	go func() {
 		if err := m.uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
-			m.logger.Error("uploader error", "error", err)
+			m.scope.Error("uploader error", "error", err)
 		}
 	}()
-	m.logger.Info("uploader started", "account_id", accountID)
+	m.scope.Info("uploader started", "account_id", accountID)
 
 	return nil
 }
@@ -267,6 +284,28 @@ func (m *Model) startSync(accountID string) error {
 func (m *Model) View() tea.View {
 	colors := m.theme.Colors
 
+	// Show message if window is too small
+	if m.width < minWidth || m.height < minHeight {
+		content := lipgloss.NewStyle().
+			Width(m.width).
+			Height(m.height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Render(
+				lipgloss.NewStyle().
+					Padding(0, 2).
+					Foreground(colors.Page.Text).
+					BorderStyle(lipgloss.RoundedBorder()).
+					BorderForeground(colors.Accent).
+					Render("Window too small"),
+			)
+		return tea.View{
+			Content:         content,
+			BackgroundColor: colors.Page.Bg,
+			AltScreen:       true,
+		}
+	}
+
+	// Get content from current state
 	var content string
 	switch m.state {
 	case stateOnboarding:
@@ -277,8 +316,11 @@ func (m *Model) View() tea.View {
 		}
 	}
 
+	// Render with padding and footer
+	rendered := m.renderWithChrome(content)
+
 	// Extract cursor marker and set cursor position
-	cleanView, cur := cursor.Extract(content)
+	cleanView, cur := cursor.Extract(rendered)
 	if cur != nil {
 		cur.Color = colors.Accent
 	}
@@ -288,7 +330,47 @@ func (m *Model) View() tea.View {
 		BackgroundColor: colors.Page.Bg,
 		AltScreen:       true,
 		Cursor:          cur,
+		MouseMode:       tea.MouseModeCellMotion,
 	}
+}
+
+// renderWithChrome wraps content with padding and footer.
+func (m *Model) renderWithChrome(content string) string {
+	if m.width == 0 || m.height == 0 {
+		return ""
+	}
+
+	innerWidth := m.width - (horizontalPadding * 2)
+	footerView := m.footer.View()
+	footerHeight := lipgloss.Height(footerView)
+	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+
+	contentStyle := lipgloss.NewStyle().
+		Width(innerWidth).
+		Height(contentHeight)
+	styledContent := contentStyle.Render(content)
+
+	innerView := lipgloss.JoinVertical(
+		lipgloss.Top,
+		styledContent,
+		"",
+		footerView,
+	)
+
+	return lipgloss.NewStyle().
+		Padding(verticalPadding, horizontalPadding).
+		Render(innerView)
+}
+
+// contentSize returns the available space for content.
+func (m *Model) contentSize() (int, int) {
+	if m.width == 0 || m.height == 0 {
+		return 0, 0
+	}
+	contentWidth := m.width - (horizontalPadding * 2)
+	footerHeight := m.footer.Height()
+	contentHeight := m.height - (verticalPadding * 2) - footerHeight - footerSpacing
+	return contentWidth, contentHeight
 }
 
 func (m *Model) shutdown() {

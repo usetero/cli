@@ -29,7 +29,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.New(t))
+		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		accounts, err := svc.List(context.Background(), "org-123")
 
 		if err != nil {
@@ -58,7 +58,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.New(t))
+		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		accounts, err := svc.List(context.Background(), "org-123")
 
 		if err != nil {
@@ -77,7 +77,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.New(t))
+		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		_, err := svc.List(context.Background(), "org-123")
 
 		if err == nil {
@@ -106,7 +106,7 @@ func TestAccountService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.New(t))
+		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
 		account, err := svc.Create(context.Background(), testID, "org-123", "New Account")
 
@@ -132,7 +132,7 @@ func TestAccountService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.New(t))
+		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		_, err := svc.Create(context.Background(), uuid.New(), "org-123", "Test")
 
 		if err == nil {

@@ -30,23 +30,25 @@ type org struct {
 	WorkosID domain.WorkosOrganizationID
 }
 
-func NewAuthCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func NewAuthCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
+	scope = scope.Child("auth")
+
 	authCmd := &cobra.Command{
 		Use:   "auth",
 		Short: "Manage authentication",
 		Long:  "Commands for managing authentication with Tero.",
 	}
 
-	authCmd.AddCommand(newLoginCmd(logger, cliConfig))
-	authCmd.AddCommand(newTokenCmd(logger, cliConfig))
-	authCmd.AddCommand(newLogoutCmd(logger, cliConfig))
-	authCmd.AddCommand(newStatusCmd(logger, cliConfig))
-	authCmd.AddCommand(newSwitchCmd(logger, cliConfig))
+	authCmd.AddCommand(newLoginCmd(scope, cliConfig))
+	authCmd.AddCommand(newTokenCmd(scope, cliConfig))
+	authCmd.AddCommand(newLogoutCmd(scope, cliConfig))
+	authCmd.AddCommand(newStatusCmd(scope, cliConfig))
+	authCmd.AddCommand(newSwitchCmd(scope, cliConfig))
 
 	return authCmd
 }
 
-func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	var noOrg bool
 
 	cmd := &cobra.Command{
@@ -59,7 +61,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			ctx := cmd.Context()
 
@@ -102,7 +104,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			}
 
 			// Fetch organizations
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
@@ -145,7 +147,7 @@ func newLoginCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 	return cmd
 }
 
-func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "switch [organization]",
 		Short: "Switch to a different organization",
@@ -157,7 +159,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			ctx := cmd.Context()
 
@@ -167,7 +169,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			}
 
 			// Fetch organizations
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				return fmt.Errorf("failed to fetch organizations: %w", err)
@@ -212,7 +214,7 @@ func newSwitchCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 	}
 }
 
-func newTokenCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newTokenCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "token",
 		Short: "Print the current access token",
@@ -221,7 +223,7 @@ func newTokenCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			token, err := authService.GetAccessToken(cmd.Context())
 			if err != nil {
@@ -234,7 +236,7 @@ func newTokenCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 	}
 }
 
-func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newLogoutCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Clear stored credentials",
@@ -245,7 +247,7 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			namespace := cliConfig.Namespace()
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			if err := authService.ClearTokens(); err != nil {
 				return fmt.Errorf("failed to clear credentials: %w", err)
@@ -257,7 +259,7 @@ func newLogoutCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 	}
 }
 
-func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show authentication status",
@@ -309,8 +311,8 @@ func newStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command
 			if workosOrgID != "" {
 				orgName := workosOrgID // fallback to ID
 				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-				authService := auth.NewService(workosClient, tokenStore, logger)
-				services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger)
+				authService := auth.NewService(workosClient, tokenStore, scope)
+				services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 				if orgs, err := fetchOrganizations(cmd.Context(), services); err == nil {
 					for _, o := range orgs {
 						if o.WorkosID == domain.WorkosOrganizationID(workosOrgID) {

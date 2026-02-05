@@ -19,7 +19,7 @@ func TestNewSyncer(t *testing.T) {
 	t.Run("initial state is disconnected", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := powersync.NewSyncer("https://example.com", nil, logtest.New(t))
+		syncer := powersync.NewSyncer("https://example.com", nil, logtest.NewScope(t))
 
 		if _, ok := syncer.State().(*powersync.Disconnected); !ok {
 			t.Errorf("State() = %T, want *Disconnected", syncer.State())
@@ -29,7 +29,7 @@ func TestNewSyncer(t *testing.T) {
 	t.Run("IsReady is false initially", func(t *testing.T) {
 		t.Parallel()
 
-		syncer := powersync.NewSyncer("https://example.com", nil, logtest.New(t))
+		syncer := powersync.NewSyncer("https://example.com", nil, logtest.NewScope(t))
 
 		if syncer.IsReady() {
 			t.Error("IsReady() should be false before Start")
@@ -47,7 +47,7 @@ func TestSyncer_Start(t *testing.T) {
 		syncer := powersync.NewSyncer(
 			"https://example.com",
 			powersynctest.NewMockTokenRefresher("token"),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		defer func() {

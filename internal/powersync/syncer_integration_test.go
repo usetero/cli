@@ -28,7 +28,7 @@ import (
 
 func TestIntegration_Syncer(t *testing.T) {
 	cliConfig := config.LoadCLIConfig()
-	logger := logtest.New(t)
+	logger := logtest.NewScope(t)
 
 	// Derive namespace from API endpoint (empty for production, host for dev)
 	namespace := cliConfig.Namespace()
@@ -81,7 +81,7 @@ func TestIntegration_Syncer(t *testing.T) {
 		t.Logf("Account: %s (%s)", account.Name, account.ID)
 
 		db := dbtest.OpenTestDB(t)
-		syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logtest.New(t))
+		syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logtest.NewScope(t))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

@@ -3,7 +3,6 @@ package sync
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -26,7 +25,7 @@ type pollMsg struct{}
 type Model struct {
 	theme    *styles.Theme
 	syncer   powersync.Syncer
-	logger   log.Logger
+	scope    log.Scope
 	spinner  spinner.Model
 	progress *progress.Model
 	width    int
@@ -34,19 +33,15 @@ type Model struct {
 }
 
 // New creates a new sync step.
-func New(theme *styles.Theme, syncer powersync.Syncer, logger log.Logger) *Model {
+func New(theme *styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
 	if theme == nil {
 		panic("theme is nil")
 	}
 	if syncer == nil {
 		panic("syncer is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
 
-	logger = logger.With(slog.String("step", "sync"))
-	logger.Debug("initialized")
+	scope.Debug("initialized")
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
@@ -55,7 +50,7 @@ func New(theme *styles.Theme, syncer powersync.Syncer, logger log.Logger) *Model
 	return &Model{
 		theme:    theme,
 		syncer:   syncer,
-		logger:   logger,
+		scope:    scope,
 		spinner:  sp,
 		progress: progress.New(theme, 50),
 	}
@@ -64,10 +59,10 @@ func New(theme *styles.Theme, syncer powersync.Syncer, logger log.Logger) *Model
 // Init starts polling if not already ready.
 func (m *Model) Init() tea.Cmd {
 	if m.syncer.IsReady() {
-		m.logger.Info("sync already complete")
+		m.scope.Info("sync already complete")
 		return func() tea.Msg { return msgs.SyncComplete{} }
 	}
-	m.logger.Debug("starting sync poll")
+	m.scope.Debug("starting sync poll")
 	return tea.Batch(m.spinner.Tick, m.poll())
 }
 
@@ -82,7 +77,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg.(type) {
 	case pollMsg:
 		if m.syncer.IsReady() {
-			m.logger.Info("sync completed")
+			m.scope.Info("sync completed")
 			return func() tea.Msg { return msgs.SyncComplete{} }
 		}
 		return m.poll()

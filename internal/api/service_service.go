@@ -14,16 +14,16 @@ type Services interface {
 // and represent applications/microservices generating telemetry.
 type ServiceService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 // Ensure ServiceService implements Services.
 var _ Services = (*ServiceService)(nil)
 
 // NewServiceService creates a new service service.
-func NewServiceService(client Client, logger log.Logger) *ServiceService {
+func NewServiceService(client Client, scope log.Scope) *ServiceService {
 	return &ServiceService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("services"),
 	}
 }

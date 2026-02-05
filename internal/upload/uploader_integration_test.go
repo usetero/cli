@@ -29,7 +29,7 @@ import (
 
 func TestIntegration_Upload(t *testing.T) {
 	ctx := context.Background()
-	logger := logtest.New(t)
+	logger := logtest.NewScope(t)
 
 	// Load config
 	cliConfig := config.LoadCLIConfig()

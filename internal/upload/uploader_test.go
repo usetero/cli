@@ -31,7 +31,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -54,7 +54,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -102,7 +102,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
 			apitest.NewMockMessages(),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		ctx, cancel := context.WithCancel(ctx)
@@ -157,7 +157,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		ctx, cancel := context.WithCancel(ctx)
@@ -221,7 +221,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
 			apitest.NewMockMessages(),
-			logtest.New(t),
+			logtest.NewScope(t),
 		)
 
 		ctx, cancel := context.WithCancel(ctx)

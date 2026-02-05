@@ -18,11 +18,11 @@ func NewSyncerWithMockClient(endpoint string, tokenRefresher powersync.TokenRefr
 	return powersync.NewSyncer(
 		endpoint,
 		tokenRefresher,
-		discardLogger(),
+		discardScope(),
 		powersync.WithClientFactory(apitest.NewMockClientFactory(mock)),
 	)
 }
 
-func discardLogger() log.Logger {
-	return log.Wrap(slog.New(slog.NewTextHandler(io.Discard, nil)))
+func discardScope() log.Scope {
+	return log.RootScope(log.Wrap(slog.New(slog.NewTextHandler(io.Discard, nil))))
 }

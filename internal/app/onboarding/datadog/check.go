@@ -24,7 +24,7 @@ type CheckModel struct {
 	ctx      context.Context
 	theme    *styles.Theme
 	services api.APIServices
-	logger   log.Logger
+	scope    log.Scope
 	account  domain.Account
 	err      error
 }
@@ -35,7 +35,7 @@ func NewCheck(
 	theme *styles.Theme,
 	account domain.Account,
 	services api.APIServices,
-	logger log.Logger,
+	scope log.Scope,
 ) *CheckModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -43,21 +43,19 @@ func NewCheck(
 	if theme == nil {
 		panic("theme is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &CheckModel{
 		ctx:      ctx,
 		theme:    theme,
 		services: services,
-		logger:   logger,
+		scope:    scope,
 		account:  account,
 	}
 }
 
 // Init starts checking for Datadog configuration.
 func (m *CheckModel) Init() tea.Cmd {
-	m.logger.Info("checking datadog configuration", "accountID", m.account.ID)
+	m.scope.Info("checking datadog configuration", "accountID", m.account.ID)
 	return m.checkDatadog()
 }
 
@@ -76,20 +74,20 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case checkResultMsg:
 		if msg.err != nil {
-			m.logger.Error("datadog check failed", "error", msg.err)
+			m.scope.Error("datadog check failed", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		if msg.hasDatadog {
-			m.logger.Info("datadog configured")
+			m.scope.Info("datadog configured")
 			return func() tea.Msg { return msgs.DatadogReady{} }
 		}
-		m.logger.Info("datadog setup required")
+		m.scope.Info("datadog setup required")
 		return func() tea.Msg { return msgs.DatadogNeeded{} }
 
 	case tea.KeyPressMsg:
 		if msg.String() == "r" && m.err != nil {
-			m.logger.Debug("retrying datadog check")
+			m.scope.Debug("retrying datadog check")
 			m.err = nil
 			return m.checkDatadog()
 		}

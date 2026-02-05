@@ -19,17 +19,17 @@ func Execute(version string) {
 		level = log.LevelDebug
 	}
 
-	logger := log.New(level)
+	scope := log.RootScope(log.New(level))
 
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("panic recovered", "panic", r, "stack", string(debug.Stack()))
+			scope.Error("panic recovered", "panic", r, "stack", string(debug.Stack()))
 			fmt.Fprintf(os.Stderr, "Fatal error: %v\n", r)
 			os.Exit(1)
 		}
 	}()
 
-	rootCmd := NewRootCmd(logger, version)
+	rootCmd := NewRootCmd(scope, version)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

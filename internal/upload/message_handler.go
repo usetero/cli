@@ -33,14 +33,14 @@ import (
 type messageHandler struct {
 	messages api.Messages
 	db       sqlite.DB
-	logger   log.Logger
+	scope    log.Scope
 }
 
-func newMessageHandler(messages api.Messages, db sqlite.DB, logger log.Logger) *messageHandler {
+func newMessageHandler(messages api.Messages, db sqlite.DB, scope log.Scope) *messageHandler {
 	return &messageHandler{
 		messages: messages,
 		db:       db,
-		logger:   logger,
+		scope:    scope.Child("messages"),
 	}
 }
 
@@ -51,10 +51,10 @@ func (h *messageHandler) Handle(ctx context.Context, entry *db.CrudEntry, emit E
 		return h.handlePutOrPatch(ctx, entry)
 	case db.OpDelete:
 		// Messages are deleted via conversation deletion, not individually.
-		h.logger.Debug("skipping message DELETE", "id", entry.RowID)
+		h.scope.Debug("skipping message DELETE", "id", entry.RowID)
 		return nil
 	default:
-		h.logger.Warn("unknown message op", "op", entry.Op)
+		h.scope.Warn("unknown message op", "op", entry.Op)
 		return nil
 	}
 }
@@ -63,7 +63,7 @@ func (h *messageHandler) handlePutOrPatch(ctx context.Context, entry *db.CrudEnt
 	msg, err := h.db.Messages().Get(ctx, domain.MessageID(entry.RowID))
 	if err != nil {
 		// Message may have been deleted, skip
-		h.logger.Debug("message not found, skipping", "id", entry.RowID, "error", err)
+		h.scope.Debug("message not found, skipping", "id", entry.RowID, "error", err)
 		return nil
 	}
 
@@ -73,20 +73,20 @@ func (h *messageHandler) handlePutOrPatch(ctx context.Context, entry *db.CrudEnt
 		if entry.Op == db.OpPut {
 			return h.persistUserMessage(ctx, entry, msg)
 		}
-		h.logger.Debug("skipping user message PATCH", "id", entry.RowID)
+		h.scope.Debug("skipping user message PATCH", "id", entry.RowID)
 		return nil
 
 	case domain.RoleAssistant:
 		// Assistant messages: persist when complete (entry sets stop_reason)
 		_, hasStopReason := entry.Data["stop_reason"]
 		if !hasStopReason {
-			h.logger.Debug("skipping assistant message (incomplete)", "id", entry.RowID, "op", entry.Op)
+			h.scope.Debug("skipping assistant message (incomplete)", "id", entry.RowID, "op", entry.Op)
 			return nil
 		}
 		return h.persistAssistantMessage(ctx, msg)
 
 	default:
-		h.logger.Warn("unknown message role", "role", msg.Role)
+		h.scope.Warn("unknown message role", "role", msg.Role)
 		return nil
 	}
 }
@@ -97,7 +97,7 @@ func (h *messageHandler) persistUserMessage(ctx context.Context, entry *db.CrudE
 		return fmt.Errorf("persist user message: %w", err)
 	}
 
-	h.logger.Debug("persisted user message", "id", entry.RowID)
+	h.scope.Debug("persisted user message", "id", entry.RowID)
 	return nil
 }
 
@@ -107,6 +107,6 @@ func (h *messageHandler) persistAssistantMessage(ctx context.Context, msg *domai
 		return fmt.Errorf("persist assistant message: %w", err)
 	}
 
-	h.logger.Debug("persisted assistant message", "id", msg.ID)
+	h.scope.Debug("persisted assistant message", "id", msg.ID)
 	return nil
 }

@@ -39,7 +39,7 @@ var _ Syncer = (*syncer)(nil)
 type syncer struct {
 	endpoint       string
 	tokenRefresher TokenRefresher
-	log            log.Logger
+	scope          log.Scope
 	clientFactory  func(endpoint string) api.Client
 
 	database    sqlite.DB
@@ -71,11 +71,11 @@ func WithClientFactory(factory func(endpoint string) api.Client) SyncerOption {
 }
 
 // NewSyncer creates a new Syncer. Call Start() when you have a database ready.
-func NewSyncer(endpoint string, tokenRefresher TokenRefresher, logger log.Logger, opts ...SyncerOption) Syncer {
+func NewSyncer(endpoint string, tokenRefresher TokenRefresher, scope log.Scope, opts ...SyncerOption) Syncer {
 	s := &syncer{
 		endpoint:       endpoint,
 		tokenRefresher: tokenRefresher,
-		log:            logger,
+		scope:          scope.Child("powersync"),
 		clientFactory:  api.NewClient,
 	}
 	for _, opt := range opts {
@@ -123,7 +123,7 @@ func (s *syncer) Start(ctx context.Context, database sqlite.DB, accountID string
 	ctx, s.cancel = context.WithCancel(ctx)
 	go s.run(ctx)
 
-	s.log.Info("sync started", log.String("accountID", accountID))
+	s.scope.Info("sync started", log.String("accountID", accountID))
 	return nil
 }
 
@@ -142,7 +142,7 @@ func (s *syncer) Stop() {
 	s.database = nil
 	s.done = nil
 	s.setState(NewDisconnected())
-	s.log.Info("sync stopped")
+	s.scope.Info("sync stopped")
 }
 
 // State returns the current syncer state.
@@ -193,7 +193,7 @@ func (s *syncer) run(ctx context.Context) {
 					s.setError(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
 					return
 				}
-				s.log.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
+				s.scope.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
 				s.setState(NewSyncing("Reconnecting..."))
 				if err := s.refreshToken(ctx); err != nil {
 					s.setError(fmt.Errorf("token refresh: %w", err))
@@ -203,7 +203,7 @@ func (s *syncer) run(ctx context.Context) {
 			}
 
 			if clientErr.IsTransient() {
-				s.log.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
+				s.scope.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
 				s.setState(NewSyncing("Reconnecting..."))
 				s.wait(ctx, retryDelay)
 				retryDelay = min(retryDelay*2, maxRetryDelay)
@@ -254,7 +254,7 @@ func (s *syncer) connectAndSync(ctx context.Context, req *api.SyncStreamRequest)
 		return fmt.Errorf("no sync request")
 	}
 
-	s.log.Debug("connecting stream")
+	s.scope.Debug("connecting stream")
 	s.setState(NewSyncing("Syncing your data..."))
 
 	// Track if we've notified connection established
@@ -294,7 +294,7 @@ func (s *syncer) handleLine(line []byte) error {
 	for _, inst := range instructions {
 		switch inst.Type {
 		case extension.InstructionDidCompleteSync:
-			s.log.Debug("sync complete")
+			s.scope.Debug("sync complete")
 			s.setState(NewReady())
 			s.fireFirstSync()
 
@@ -306,21 +306,21 @@ func (s *syncer) handleLine(line []byte) error {
 				} else {
 					s.setState(NewSyncing("Syncing your data...").WithProgress(downloaded, total))
 				}
-				s.log.Debug("sync progress", "downloaded", downloaded, "total", total)
+				s.scope.Debug("sync progress", "downloaded", downloaded, "total", total)
 			}
 
 		case extension.InstructionFetchCredentials:
-			s.log.Debug("received FetchCredentials", "didExpire", inst.DidExpire)
+			s.scope.Debug("received FetchCredentials", "didExpire", inst.DidExpire)
 			if err := s.refreshToken(ctx); err != nil {
 				return err
 			}
 
 		case extension.InstructionCloseSyncStream:
-			s.log.Debug("received CloseSyncStream")
+			s.scope.Debug("received CloseSyncStream")
 			return nil
 
 		case extension.InstructionLogLine:
-			s.log.Debug("powersync", "severity", inst.Severity, "line", inst.Line)
+			s.scope.Debug("powersync", "severity", inst.Severity, "line", inst.Line)
 			// Surface non-debug log lines as transient warnings in the UI
 			// PowerSync sends important messages (like checkpoint issues) as INFO
 			if inst.Severity != "debug" && inst.Line != "" {
@@ -339,7 +339,7 @@ func (s *syncer) handleLine(line []byte) error {
 func (s *syncer) fireFirstSync() {
 	// Only fire once - check if we're transitioning to ready
 	if s.onFirstSync != nil {
-		s.log.Info("sync connected")
+		s.scope.Info("sync connected")
 		s.onFirstSync()
 		s.onFirstSync = nil // Don't fire again
 	}
@@ -359,7 +359,7 @@ func (s *syncer) refreshToken(ctx context.Context) error {
 
 func (s *syncer) setError(err error) {
 	s.setState(NewError(err))
-	s.log.Error("sync failed", log.Any("error", err))
+	s.scope.Error("sync failed", log.Any("error", err))
 }
 
 func (s *syncer) wait(ctx context.Context, d time.Duration) {

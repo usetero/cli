@@ -27,7 +27,7 @@ type APIKeyModel struct {
 	ctx      context.Context
 	theme    *styles.Theme
 	services api.APIServices
-	logger   log.Logger
+	scope    log.Scope
 	account  domain.Account
 	site     domain.DatadogSite
 
@@ -45,7 +45,7 @@ func NewAPIKey(
 	account domain.Account,
 	site domain.DatadogSite,
 	services api.APIServices,
-	logger log.Logger,
+	scope log.Scope,
 ) *APIKeyModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -55,9 +55,6 @@ func NewAPIKey(
 	}
 	if site == "" {
 		panic("site is empty")
-	}
-	if logger == nil {
-		panic("logger is nil")
 	}
 
 	inp := input.New(theme)
@@ -70,7 +67,7 @@ func NewAPIKey(
 		ctx:      ctx,
 		theme:    theme,
 		services: services,
-		logger:   logger,
+		scope:    scope,
 		account:  account,
 		site:     site,
 		input:    inp,
@@ -88,16 +85,16 @@ func (m *APIKeyModel) Update(msg tea.Msg) tea.Cmd {
 	case apiKeyValidatedMsg:
 		m.validating = false
 		if msg.err != nil {
-			m.logger.Error("api key validation failed", "error", msg.err)
+			m.scope.Error("api key validation failed", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
 		if !msg.valid {
-			m.logger.Info("api key invalid", "reason", msg.errorMsg)
+			m.scope.Info("api key invalid", "reason", msg.errorMsg)
 			m.err = &validationError{msg.errorMsg}
 			return nil
 		}
-		m.logger.Info("api key validated")
+		m.scope.Info("api key validated")
 		apiKey := m.input.Value()
 		return func() tea.Msg {
 			return msgs.DatadogAPIKeyEntered{APIKey: apiKey}
@@ -115,7 +112,7 @@ func (m *APIKeyModel) Update(msg tea.Msg) tea.Cmd {
 			}
 			m.validating = true
 			m.err = nil
-			m.logger.Info("validating api key")
+			m.scope.Info("validating api key")
 			return m.validateAPIKey(apiKey)
 		}
 	}

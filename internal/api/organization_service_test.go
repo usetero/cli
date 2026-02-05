@@ -37,7 +37,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.New(t))
+		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		orgs, err := svc.List(context.Background())
 
 		if err != nil {
@@ -66,7 +66,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.New(t))
+		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		orgs, err := svc.List(context.Background())
 
 		if err != nil {
@@ -85,7 +85,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.New(t))
+		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		_, err := svc.List(context.Background())
 
 		if err == nil {
@@ -125,7 +125,7 @@ func TestOrganizationService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.New(t))
+		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
 		result, err := svc.Create(context.Background(), testID, "New Org")
 
@@ -157,7 +157,7 @@ func TestOrganizationService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.New(t))
+		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		_, err := svc.Create(context.Background(), uuid.New(), "Test")
 
 		if err == nil {

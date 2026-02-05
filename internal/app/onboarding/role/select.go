@@ -21,27 +21,25 @@ type savedRoleMsg struct {
 type Model struct {
 	theme    *styles.Theme
 	prefs    preferences.Preferences
-	logger   log.Logger
+	scope    log.Scope
 	selected int
 	width    int
 	height   int
 }
 
 // New creates a new role selection step.
-func New(theme *styles.Theme, prefs preferences.Preferences, logger log.Logger) *Model {
+func New(theme *styles.Theme, prefs preferences.Preferences, scope log.Scope) *Model {
 	if theme == nil {
 		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
+
 	return &Model{
-		theme:  theme,
-		prefs:  prefs,
-		logger: logger,
+		theme: theme,
+		prefs: prefs,
+		scope: scope,
 	}
 }
 
@@ -57,7 +55,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case savedRoleMsg:
 		if msg.role == msgs.RolePlatform || msg.role == msgs.RoleEngineer {
-			m.logger.Debug("using saved role preference", "role", msg.role)
+			m.scope.Debug("using saved role preference", "role", msg.role)
 			return func() tea.Msg {
 				return msgs.RoleSelected{Role: msg.role}
 			}
@@ -83,7 +81,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				role = msgs.RoleEngineer
 			}
 			_ = m.prefs.SetRole(role)
-			m.logger.Info("role selected", "role", role)
+			m.scope.Info("role selected", "role", role)
 			return func() tea.Msg {
 				return msgs.RoleSelected{Role: role}
 			}

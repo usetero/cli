@@ -18,16 +18,17 @@ const gap = 2 // blank lines between turns
 
 // Model displays the conversation history and manages turns.
 type Model struct {
-	theme  *styles.Theme
-	logger log.Logger
+	theme *styles.Theme
+	scope log.Scope
 
 	turns  []*turn.Model
 	width  int
 	height int
 
 	// Scroll state
-	offsetIdx  int // index of first visible turn
-	offsetLine int // lines scrolled within that turn
+	offsetIdx    int  // index of first visible turn
+	offsetLine   int  // lines scrolled within that turn
+	userScrolled bool // true if user has manually scrolled up (disables auto-scroll)
 
 	// Dependencies
 	db           sqlite.DB
@@ -42,11 +43,13 @@ func New(
 	db sqlite.DB,
 	chatClient chatclient.Client,
 	toolRegistry *tools.Registry,
-	logger log.Logger,
+	scope log.Scope,
 ) *Model {
+	scope = scope.Child("messagelist")
+
 	return &Model{
 		theme:        theme,
-		logger:       logger.With("component", "messagelist"),
+		scope:        scope,
 		width:        width,
 		height:       height,
 		db:           db,
@@ -64,13 +67,25 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.Button {
 		case tea.MouseWheelUp:
 			m.scrollUp(3)
+			m.userScrolled = true
 		case tea.MouseWheelDown:
 			m.scrollDown(3)
+			// If user scrolled to bottom, re-enable auto-scroll
+			if m.isAtBottom() {
+				m.userScrolled = false
+			}
 		}
 
-	case msgs.TurnStarted, msgs.AssistantContentUpdated, msgs.StreamCompleted:
-		// Auto-scroll to bottom when content updates
+	case msgs.TurnStarted:
+		// New turn always scrolls to bottom
+		m.userScrolled = false
 		m.scrollToBottom()
+
+	case msgs.AssistantContentUpdated, msgs.StreamCompleted:
+		// Only auto-scroll if user hasn't manually scrolled up
+		if !m.userScrolled {
+			m.scrollToBottom()
+		}
 	}
 
 	// Forward to all turns
@@ -92,7 +107,7 @@ func (m *Model) StartTurn(
 	messages []domain.Message,
 	context []domain.ContextEntity,
 ) tea.Cmd {
-	m.logger.Debug("starting turn", "user_message_id", userMessageID)
+	m.scope.Debug("starting turn", "user_message_id", userMessageID)
 
 	t := turn.New(
 		m.theme,
@@ -104,7 +119,7 @@ func (m *Model) StartTurn(
 		m.db,
 		m.chatClient,
 		m.toolRegistry,
-		m.logger,
+		m.scope,
 	)
 
 	cmd := t.StartStream(messages, context)
@@ -210,9 +225,18 @@ func (m *Model) scrollUp(n int) {
 	}
 }
 
-// scrollDown scrolls down by n lines.
+// scrollDown scrolls down by n lines, clamping at the bottom.
 func (m *Model) scrollDown(n int) {
-	for n > 0 && m.offsetIdx < len(m.turns) {
+	maxIdx, maxLine := m.maxScroll()
+
+	for n > 0 {
+		// Stop if at max scroll
+		if m.offsetIdx > maxIdx || (m.offsetIdx == maxIdx && m.offsetLine >= maxLine) {
+			m.offsetIdx = maxIdx
+			m.offsetLine = maxLine
+			return
+		}
+
 		turnHeight := m.turns[m.offsetIdx].Height(m.width)
 		remainingInTurn := turnHeight - m.offsetLine - 1
 		if m.offsetIdx < len(m.turns)-1 {
@@ -229,39 +253,56 @@ func (m *Model) scrollDown(n int) {
 		m.offsetLine = 0
 	}
 
-	// Clamp to valid range
-	if m.offsetIdx >= len(m.turns) {
-		m.scrollToBottom()
+	// Clamp to max
+	if m.offsetIdx > maxIdx || (m.offsetIdx == maxIdx && m.offsetLine > maxLine) {
+		m.offsetIdx = maxIdx
+		m.offsetLine = maxLine
 	}
+}
+
+// maxScroll returns the scroll position where bottom of content meets bottom of viewport.
+func (m *Model) maxScroll() (idx int, line int) {
+	if len(m.turns) == 0 {
+		return 0, 0
+	}
+
+	// Calculate total content height
+	totalHeight := 0
+	for i, t := range m.turns {
+		totalHeight += t.Height(m.width)
+		if i < len(m.turns)-1 {
+			totalHeight += gap
+		}
+	}
+
+	// Content fits in viewport - no scrolling
+	if totalHeight <= m.height {
+		return 0, 0
+	}
+
+	// Convert max scroll offset to idx/line
+	maxOffset := totalHeight - m.height
+	for i, t := range m.turns {
+		h := t.Height(m.width)
+		if i < len(m.turns)-1 {
+			h += gap
+		}
+		if maxOffset < h {
+			return i, maxOffset
+		}
+		maxOffset -= h
+	}
+
+	return len(m.turns) - 1, 0
 }
 
 // scrollToBottom scrolls to show the last content.
 func (m *Model) scrollToBottom() {
-	if len(m.turns) == 0 {
-		m.offsetIdx = 0
-		m.offsetLine = 0
-		return
-	}
+	m.offsetIdx, m.offsetLine = m.maxScroll()
+}
 
-	// Calculate total height from bottom
-	var totalHeight int
-	lastIdx := len(m.turns) - 1
-
-	for idx := lastIdx; idx >= 0; idx-- {
-		turnHeight := m.turns[idx].Height(m.width)
-		if idx < lastIdx {
-			turnHeight += gap
-		}
-		totalHeight += turnHeight
-
-		if totalHeight >= m.height {
-			m.offsetIdx = idx
-			m.offsetLine = totalHeight - m.height
-			return
-		}
-	}
-
-	// All content fits
-	m.offsetIdx = 0
-	m.offsetLine = 0
+// isAtBottom returns true if scrolled to the bottom.
+func (m *Model) isAtBottom() bool {
+	maxIdx, maxLine := m.maxScroll()
+	return m.offsetIdx == maxIdx && m.offsetLine == maxLine
 }

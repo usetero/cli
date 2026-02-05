@@ -18,7 +18,7 @@ import (
 // Model renders an assistant message and manages its content blocks.
 type Model struct {
 	theme        *styles.Theme
-	logger       log.Logger
+	scope        log.Scope
 	id           domain.MessageID
 	blocks       []blocks.Block
 	width        int
@@ -28,10 +28,11 @@ type Model struct {
 }
 
 // New creates a new assistant message view.
-func New(theme *styles.Theme, id domain.MessageID, width int, toolRegistry *chattools.Registry, logger log.Logger) *Model {
+func New(theme *styles.Theme, id domain.MessageID, width int, toolRegistry *chattools.Registry, scope log.Scope) *Model {
+	scope = scope.Child("assistant")
 	return &Model{
 		theme:        theme,
-		logger:       logger.With("component", "assistant", "message_id", id),
+		scope:        scope,
 		id:           id,
 		width:        width,
 		toolRegistry: toolRegistry,
@@ -146,8 +147,8 @@ func (m *Model) hasBlock(index int) bool {
 func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse) tools.Model {
 	switch toolUse.Name {
 	case m.toolRegistry.Query.Name():
-		return query.New(m.theme, index, toolUse.ID, m.width, m.toolRegistry.Query, m.logger)
+		return query.New(m.theme, index, toolUse.ID, m.width, m.toolRegistry.Query, m.scope)
 	default:
-		return query.New(m.theme, index, toolUse.ID, m.width, nil, m.logger)
+		return query.New(m.theme, index, toolUse.ID, m.width, nil, m.scope)
 	}
 }

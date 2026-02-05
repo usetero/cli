@@ -18,23 +18,25 @@ import (
 	"github.com/usetero/cli/internal/workos"
 )
 
-func NewDebugCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func NewDebugCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
+	scope = scope.Child("debug")
+
 	debugCmd := &cobra.Command{
 		Use:   "debug",
 		Short: "Debug and diagnostic commands",
 		Long:  "Commands for debugging and diagnosing issues with Tero.",
 	}
 
-	debugCmd.AddCommand(newDebugStatusCmd(logger, cliConfig))
-	debugCmd.AddCommand(newDebugPrefsCmd(logger, cliConfig))
-	debugCmd.AddCommand(newDebugGraphQLCmd(logger, cliConfig))
-	debugCmd.AddCommand(newDebugPathsCmd(logger, cliConfig))
+	debugCmd.AddCommand(newDebugStatusCmd(scope, cliConfig))
+	debugCmd.AddCommand(newDebugPrefsCmd(scope, cliConfig))
+	debugCmd.AddCommand(newDebugGraphQLCmd(scope, cliConfig))
+	debugCmd.AddCommand(newDebugPathsCmd(scope, cliConfig))
 
 	return debugCmd
 }
 
 // newDebugStatusCmd shows the current datadog account status
-func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show Datadog account discovery status",
@@ -49,7 +51,7 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			prefs := preferences.NewService(cfg, logger)
+			prefs := preferences.NewService(cfg, scope)
 
 			accountID := prefs.GetDefaultAccountID()
 			if accountID == "" {
@@ -59,7 +61,7 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 			}
 
 			// Get API services
-			services, err := getAPIServices(cmd.Context(), logger, cliConfig)
+			services, err := getAPIServices(cmd.Context(), scope, cliConfig)
 			if err != nil {
 				return err
 			}
@@ -126,7 +128,7 @@ func newDebugStatusCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Co
 }
 
 // newDebugPrefsCmd shows the current preferences
-func newDebugPrefsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "prefs",
 		Short: "Show current preferences",
@@ -140,7 +142,7 @@ func newDebugPrefsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			prefs := preferences.NewService(cfg, logger)
+			prefs := preferences.NewService(cfg, scope)
 
 			// Get config path for display
 			homeDir, _ := os.UserHomeDir()
@@ -188,7 +190,7 @@ func newDebugPrefsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 }
 
 // newDebugGraphQLCmd runs a free-form GraphQL query
-func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newDebugGraphQLCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	var variables string
 
 	cmd := &cobra.Command{
@@ -208,7 +210,7 @@ func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.C
 			}
 
 			// Get API services
-			services, err := getAPIServices(cmd.Context(), logger, cliConfig)
+			services, err := getAPIServices(cmd.Context(), scope, cliConfig)
 			if err != nil {
 				return err
 			}
@@ -216,7 +218,7 @@ func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.C
 			// Set account ID header if available
 			cfg, _ := config.Load(cliConfig.Namespace())
 			if cfg != nil {
-				prefs := preferences.NewService(cfg, logger)
+				prefs := preferences.NewService(cfg, scope)
 				if accountID := prefs.GetDefaultAccountID(); accountID != "" {
 					services.SetAccountID(accountID)
 				}
@@ -245,7 +247,7 @@ func newDebugGraphQLCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.C
 }
 
 // newDebugPathsCmd shows relevant file paths
-func newDebugPathsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "paths",
 		Short: "Show file paths used by Tero",
@@ -292,11 +294,11 @@ func newDebugPathsCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Com
 }
 
 // getAPIServices creates authenticated API services
-func getAPIServices(ctx context.Context, logger log.Logger, cliConfig *config.CLIConfig) (api.APIServices, error) {
+func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (api.APIServices, error) {
 	namespace := cliConfig.Namespace()
 	tokenStore := keyring.New(namespace)
 	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-	authService := auth.NewService(workosClient, tokenStore, logger)
+	authService := auth.NewService(workosClient, tokenStore, scope)
 
 	// Verify we're authenticated
 	_, err := authService.GetAccessToken(ctx)
@@ -304,7 +306,7 @@ func getAPIServices(ctx context.Context, logger log.Logger, cliConfig *config.CL
 		return api.APIServices{}, fmt.Errorf("not authenticated: run 'tero auth login' first")
 	}
 
-	return api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, logger), nil
+	return api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope), nil
 }
 
 func ifEmpty(s, fallback string) string {

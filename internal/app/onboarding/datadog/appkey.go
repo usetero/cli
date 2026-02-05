@@ -27,7 +27,7 @@ type AppKeyModel struct {
 	ctx      context.Context
 	theme    *styles.Theme
 	services api.APIServices
-	logger   log.Logger
+	scope    log.Scope
 	account  domain.Account
 	site     domain.DatadogSite
 	apiKey   string
@@ -47,7 +47,7 @@ func NewAppKey(
 	site domain.DatadogSite,
 	apiKey string,
 	services api.APIServices,
-	logger log.Logger,
+	scope log.Scope,
 ) *AppKeyModel {
 	if ctx == nil {
 		panic("ctx is nil")
@@ -61,9 +61,6 @@ func NewAppKey(
 	if apiKey == "" {
 		panic("apiKey is empty")
 	}
-	if logger == nil {
-		panic("logger is nil")
-	}
 
 	inp := input.New(theme)
 	inp.SetPlaceholder("Datadog Application Key")
@@ -75,7 +72,7 @@ func NewAppKey(
 		ctx:      ctx,
 		theme:    theme,
 		services: services,
-		logger:   logger,
+		scope:    scope,
 		account:  account,
 		site:     site,
 		apiKey:   apiKey,
@@ -94,11 +91,11 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 	case accountCreatedMsg:
 		m.creating = false
 		if msg.err != nil {
-			m.logger.Error("failed to create datadog account", "error", msg.err)
+			m.scope.Error("failed to create datadog account", "error", msg.err)
 			m.err = msg.err
 			return nil
 		}
-		m.logger.Info("datadog account created", "id", msg.datadogAccountID)
+		m.scope.Info("datadog account created", "id", msg.datadogAccountID)
 		ddAccountID := msg.datadogAccountID
 		return func() tea.Msg {
 			return msgs.DatadogAccountCreated{DatadogAccountID: ddAccountID}
@@ -116,7 +113,7 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 			}
 			m.creating = true
 			m.err = nil
-			m.logger.Info("creating datadog account")
+			m.scope.Info("creating datadog account")
 			return m.createAccount(appKey)
 		}
 	}

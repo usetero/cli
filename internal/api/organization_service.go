@@ -18,17 +18,17 @@ type Organizations interface {
 // OrganizationService handles organization-related API operations.
 type OrganizationService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 // Ensure OrganizationService implements Organizations.
 var _ Organizations = (*OrganizationService)(nil)
 
 // NewOrganizationService creates a new organization service.
-func NewOrganizationService(client Client, logger log.Logger) *OrganizationService {
+func NewOrganizationService(client Client, scope log.Scope) *OrganizationService {
 	return &OrganizationService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("organizations"),
 	}
 }
 
@@ -41,10 +41,10 @@ type OrganizationBootstrapResult struct {
 
 // List fetches all organizations for the user.
 func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, error) {
-	s.logger.Debug("fetching organizations from API")
+	s.scope.Debug("fetching organizations from API")
 	resp, err := s.client.ListOrganizations(ctx)
 	if err != nil {
-		s.logger.Error("failed to fetch organizations", "error", err)
+		s.scope.Error("failed to fetch organizations", "error", err)
 		return nil, err
 	}
 
@@ -58,13 +58,13 @@ func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, 
 		}
 	}
 
-	s.logger.Debug("fetched organizations from API", "count", len(orgs))
+	s.scope.Debug("fetched organizations from API", "count", len(orgs))
 	return orgs, nil
 }
 
 // Create creates a new organization with bootstrapped account and workspace.
 func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error) {
-	s.logger.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
+	s.scope.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
 	input := gen.CreateOrganizationInput{
 		Id:   ptr(id.String()),
 		Name: name,
@@ -72,7 +72,7 @@ func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name str
 
 	resp, err := s.client.CreateOrganizationAndBootstrap(ctx, input)
 	if err != nil {
-		s.logger.Error("failed to create organization", "error", err)
+		s.scope.Error("failed to create organization", "error", err)
 		return nil, err
 	}
 
@@ -98,6 +98,6 @@ func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name str
 		Workspace:    workspace,
 	}
 
-	s.logger.Debug("created organization via API", "id", org.ID, "name", org.Name, "accountID", account.ID)
+	s.scope.Debug("created organization via API", "id", org.ID, "name", org.Name, "accountID", account.ID)
 	return result, nil
 }

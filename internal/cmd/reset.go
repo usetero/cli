@@ -14,7 +14,8 @@ import (
 	"github.com/usetero/cli/internal/workos"
 )
 
-func NewResetCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command {
+func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
+	scope = scope.Child("reset")
 	var includeDB bool
 
 	cmd := &cobra.Command{
@@ -31,7 +32,7 @@ func NewResetCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			prefs := preferences.NewService(cfg, logger)
+			prefs := preferences.NewService(cfg, scope)
 			if err := prefs.Clear(); err != nil {
 				return fmt.Errorf("failed to clear preferences: %w", err)
 			}
@@ -39,7 +40,7 @@ func NewResetCmd(logger log.Logger, cliConfig *config.CLIConfig) *cobra.Command 
 			// Clear auth tokens
 			tokenStore := keyring.New(namespace)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, logger)
+			authService := auth.NewService(workosClient, tokenStore, scope)
 			if err := authService.ClearTokens(); err != nil {
 				return fmt.Errorf("failed to clear tokens: %w", err)
 			}

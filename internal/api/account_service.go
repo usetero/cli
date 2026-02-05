@@ -19,26 +19,26 @@ type Accounts interface {
 // AccountService handles account-related API operations.
 type AccountService struct {
 	client Client
-	logger log.Logger
+	scope  log.Scope
 }
 
 // Ensure AccountService implements Accounts.
 var _ Accounts = (*AccountService)(nil)
 
 // NewAccountService creates a new account service.
-func NewAccountService(client Client, logger log.Logger) *AccountService {
+func NewAccountService(client Client, scope log.Scope) *AccountService {
 	return &AccountService{
 		client: client,
-		logger: logger,
+		scope:  scope.Child("accounts"),
 	}
 }
 
 // List fetches all accounts for an organization.
 func (s *AccountService) List(ctx context.Context, organizationID domain.OrganizationID) ([]domain.Account, error) {
-	s.logger.Debug("fetching accounts from API", "organizationID", organizationID)
+	s.scope.Debug("fetching accounts from API", "organizationID", organizationID)
 	resp, err := s.client.ListAccounts(ctx, organizationID.String())
 	if err != nil {
-		s.logger.Error("failed to fetch accounts", "error", err, "organizationID", organizationID)
+		s.scope.Error("failed to fetch accounts", "error", err, "organizationID", organizationID)
 		return nil, err
 	}
 
@@ -51,22 +51,22 @@ func (s *AccountService) List(ctx context.Context, organizationID domain.Organiz
 		}
 	}
 
-	s.logger.Debug("fetched accounts from API", "count", len(accounts))
+	s.scope.Debug("fetched accounts from API", "count", len(accounts))
 	return accounts, nil
 }
 
 // Get fetches a single account by ID. Returns nil if not found.
 func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*domain.Account, error) {
-	s.logger.Debug("fetching account from API", "accountID", accountID)
+	s.scope.Debug("fetching account from API", "accountID", accountID)
 	resp, err := s.client.GetAccount(ctx, accountID.String())
 	if err != nil {
-		s.logger.Error("failed to fetch account", "error", err, "accountID", accountID)
+		s.scope.Error("failed to fetch account", "error", err, "accountID", accountID)
 		return nil, err
 	}
 
-	s.logger.Debug("GetAccount response", "edges", len(resp.Accounts.Edges))
+	s.scope.Debug("GetAccount response", "edges", len(resp.Accounts.Edges))
 	if len(resp.Accounts.Edges) == 0 {
-		s.logger.Debug("account not found", "accountID", accountID)
+		s.scope.Debug("account not found", "accountID", accountID)
 		return nil, nil
 	}
 
@@ -79,7 +79,7 @@ func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*
 
 // Create creates a new account with the given client-provided ID.
 func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error) {
-	s.logger.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
+	s.scope.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
 	input := gen.CreateAccountInput{
 		Id:             ptr(id.String()),
 		OrganizationID: organizationID.String(),
@@ -88,7 +88,7 @@ func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationI
 
 	resp, err := s.client.CreateAccount(ctx, input)
 	if err != nil {
-		s.logger.Error("failed to create account", "error", err)
+		s.scope.Error("failed to create account", "error", err)
 		return nil, err
 	}
 
@@ -97,6 +97,6 @@ func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationI
 		Name: resp.CreateAccount.Name,
 	}
 
-	s.logger.Debug("created account via API", "id", account.ID, "name", account.Name)
+	s.scope.Debug("created account via API", "id", account.ID, "name", account.Name)
 	return account, nil
 }
