@@ -77,10 +77,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyPressMsg:
 		if m.focused {
 			if key.Matches(msg, scrollUpKey) {
-				m.scrollUp(3)
+				m.scrollUp(1)
 				m.userScrolled = true
 			} else if key.Matches(msg, scrollDownKey) {
-				m.scrollDown(3)
+				m.scrollDown(1)
 				if m.isAtBottom() {
 					m.userScrolled = false
 				}
@@ -90,10 +90,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.MouseWheelMsg:
 		switch msg.Button {
 		case tea.MouseWheelUp:
-			m.scrollUp(3)
+			m.scrollUp(5)
 			m.userScrolled = true
 		case tea.MouseWheelDown:
-			m.scrollDown(3)
+			m.scrollDown(5)
 			// If user scrolled to bottom, re-enable auto-scroll
 			if m.isAtBottom() {
 				m.userScrolled = false
@@ -206,6 +206,7 @@ func (m *Model) View() string {
 		BorderLeft(true).
 		BorderStyle(lipgloss.ThickBorder()).
 		BorderForeground(borderColor).
+		PaddingRight(focusBorderWidth).
 		Render(output)
 }
 
@@ -215,13 +216,14 @@ func (m *Model) renderContent() string {
 		return ""
 	}
 
+	gap := strings.Repeat("\n", roundGap+1) // roundGap blank lines = roundGap+1 newlines
+
 	var parts []string
 	for _, r := range m.rounds {
 		parts = append(parts, r.View())
 	}
 
-	// Join with gaps between rounds
-	return strings.Join(parts, "\n\n")
+	return strings.Join(parts, gap)
 }
 
 // emptyView renders an empty view padded to height.
@@ -305,9 +307,9 @@ func (m *Model) SetFocused(focused bool) {
 }
 
 // contentWidth returns the width available for round content.
-// Border is always present (invisible when unfocused) so always subtract.
+// Border + right padding are always present so always subtract.
 func (m *Model) contentWidth() int {
-	return m.width - focusBorderWidth
+	return m.width - focusBorderWidth - focusBorderWidth
 }
 
 // updateRoundWidths sets the width on all rounds.

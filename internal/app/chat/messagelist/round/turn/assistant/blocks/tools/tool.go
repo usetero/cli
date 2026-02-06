@@ -159,7 +159,9 @@ func (m *Model) View() string {
 		if status := m.child.Status(); status != "" {
 			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
 		}
-		body := m.bodyStyle().Render(m.thinking.View())
+		body := lipgloss.NewStyle().
+			PaddingLeft(bodyPaddingLeft).
+			Render(m.thinking.View())
 		return header + "\n\n" + body
 
 	case StatusSuccess:
@@ -192,7 +194,9 @@ func (m *Model) View() string {
 			Padding(0, 1).
 			Render("ERROR")
 		errMsg := m.child.Err().Error()
-		body := m.bodyStyle().Render(errTag + " " + mutedStyle.Render(errMsg))
+		body := lipgloss.NewStyle().
+			PaddingLeft(bodyPaddingLeft).
+			Render(errTag + " " + mutedStyle.Render(errMsg))
 		return header + "\n\n" + body
 	}
 
