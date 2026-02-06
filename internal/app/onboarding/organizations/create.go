@@ -3,6 +3,7 @@ package organizations
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/google/uuid"
@@ -112,7 +113,10 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 func (m *CreateModel) createOrg(name string) tea.Cmd {
 	return func() tea.Msg {
 		id := uuid.New()
-		result, err := m.services.Organizations.Create(m.ctx, id, name)
+		result, err := m.services.Organizations.Create(m.ctx, api.CreateOrganizationInput{
+			ID:   id,
+			Name: name,
+		})
 		if err != nil {
 			return orgCreatedMsg{err: err}
 		}
@@ -147,4 +151,14 @@ func (m *CreateModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.input.SetWidth(width)
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *CreateModel) ShortHelp() []key.Binding {
+	if m.creating {
+		return nil
+	}
+	return []key.Binding{
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "create")),
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -23,7 +24,6 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/header"
 )
 
 // Model is the onboarding orchestrator.
@@ -36,7 +36,6 @@ type Model struct {
 	auth     iauth.Auth
 	syncer   powersync.Syncer
 	scope    log.Scope
-	header   *header.Model
 
 	// Accumulated state from step completions
 	org       *domain.Organization
@@ -87,7 +86,6 @@ func New(
 		auth:     authService,
 		syncer:   syncer,
 		scope:    scope,
-		header:   header.New(theme),
 	}
 }
 
@@ -103,10 +101,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.header.SetWidth(msg.Width)
 		if m.step != nil {
-			contentWidth, contentHeight := m.contentSize()
-			m.step.SetSize(contentWidth, contentHeight)
+			m.step.SetSize(m.width, m.height)
 		}
 		return nil
 
@@ -218,8 +214,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // setStep sets the current step and initializes it.
 func (m *Model) setStep(step Step) tea.Cmd {
 	m.step = step
-	contentWidth, contentHeight := m.contentSize()
-	m.step.SetSize(contentWidth, contentHeight)
+	m.step.SetSize(m.width, m.height)
 	return m.step.Init()
 }
 
@@ -229,36 +224,27 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	// Get content dimensions
-	contentWidth, contentHeight := m.contentSize()
-
-	// Get step content
-	stepContent := m.step.View()
-
 	// Bottom-align step content in available space
-	content := lipgloss.NewStyle().
-		Width(contentWidth).
-		Height(contentHeight).
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
 		AlignVertical(lipgloss.Bottom).
-		Render(stepContent)
-
-	// Render header + content (app handles chrome)
-	return lipgloss.JoinVertical(lipgloss.Left, m.header.View(), content)
+		Render(m.step.View())
 }
 
 // SetSize updates the model's dimensions.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
-	m.header.SetWidth(width)
 	if m.step != nil {
-		contentWidth, contentHeight := m.contentSize()
-		m.step.SetSize(contentWidth, contentHeight)
+		m.step.SetSize(width, height)
 	}
 }
 
-// contentSize returns the available size for step content.
-func (m *Model) contentSize() (int, int) {
-	headerHeight := m.header.Height()
-	return m.width, m.height - headerHeight
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	if m.step != nil {
+		return m.step.ShortHelp()
+	}
+	return nil
 }

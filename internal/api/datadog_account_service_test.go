@@ -195,7 +195,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "api-key", "US1")
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "api-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -223,7 +223,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -250,7 +250,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), "bad-key", "US1")
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -272,7 +272,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		_, _, err := svc.ValidateAPIKey(context.Background(), "key", "US1")
+		_, _, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "key", Site: "US1"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

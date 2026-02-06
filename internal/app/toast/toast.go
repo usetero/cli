@@ -36,6 +36,7 @@ type toast struct {
 }
 
 // Model holds the toast state and renders it.
+// It is a fixed-height component - height is 0 when no toast, 1 when showing.
 type Model struct {
 	theme   *styles.Theme
 	current *toast
@@ -52,6 +53,15 @@ func New(theme *styles.Theme) *Model {
 // SetWidth sets the available width for rendering.
 func (m *Model) SetWidth(width int) {
 	m.width = width
+}
+
+// Height returns the number of lines this component renders.
+// Returns 0 when no toast is showing, 1 when a toast is visible.
+func (m *Model) Height() int {
+	if m.current == nil {
+		return 0
+	}
+	return 1
 }
 
 // Update handles messages.

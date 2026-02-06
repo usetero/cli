@@ -92,3 +92,11 @@ func (m *RegionModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 }
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *RegionModel) ShortHelp() []key.Binding {
+	return []key.Binding{
+		key.NewBinding(key.WithKeys("up", "down"), key.WithHelp("↑/↓", "select")),
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
+	}
+}

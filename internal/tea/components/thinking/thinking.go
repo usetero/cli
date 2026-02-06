@@ -4,6 +4,8 @@ package thinking
 import (
 	"math/rand/v2"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -13,15 +15,16 @@ import (
 )
 
 const (
-	fps            = 20
-	charCount      = 12
-	ellipsisFrames = 4
-	ellipsisSpeed  = 8 // frames per ellipsis change
+	fps           = 20
+	defaultSize   = 12
+	birthDuration = time.Second // time for all characters to appear
+	ellipsisSpeed = 8           // frames per ellipsis change
 )
 
 var (
 	scrambleChars = []rune("0123456789abcdefABCDEF~!@#$%^&*()+=_")
 	ellipsis      = []string{"", ".", "..", "..."}
+	nextID        atomic.Int64
 )
 
 // TickMsg triggers the next animation frame.
@@ -29,44 +32,87 @@ type TickMsg struct {
 	id int
 }
 
+// Settings configures the thinking indicator.
+type Settings struct {
+	Size  int    // Number of scramble characters (default 12)
+	Label string // Optional label that appears after scramble
+}
+
 // Model is an animated thinking indicator with gradient scrambled characters.
 type Model struct {
 	id           int
 	theme        *styles.Theme
+	size         int
 	label        string
+	startTime    time.Time
+	birthOffsets []time.Duration // random birth time for each character
 	frame        int
 	ellipsisStep int
 	colorRamp    []lipgloss.Style
 }
 
-var nextID int
+// Color ramp cache.
+var (
+	cache   = make(map[int][]lipgloss.Style)
+	cacheMu sync.RWMutex
+)
 
-// New creates a new thinking indicator with the given label.
-func New(theme *styles.Theme, label string) *Model {
-	nextID++
-	m := &Model{
-		id:    nextID,
-		theme: theme,
-		label: label,
+// New creates a new thinking indicator.
+func New(theme *styles.Theme, settings Settings) *Model {
+	size := settings.Size
+	if size <= 0 {
+		size = defaultSize
 	}
-	m.buildColorRamp()
+
+	// Total width = scramble + space + label
+	labelLen := len([]rune(settings.Label))
+	totalWidth := size
+	if labelLen > 0 {
+		totalWidth += 1 + labelLen // space + label
+	}
+
+	// Random birth offset for each character position
+	births := make([]time.Duration, totalWidth)
+	for i := range births {
+		births[i] = time.Duration(rand.Int64N(int64(birthDuration)))
+	}
+
+	m := &Model{
+		id:           int(nextID.Add(1)),
+		theme:        theme,
+		size:         size,
+		label:        settings.Label,
+		startTime:    time.Now(),
+		birthOffsets: births,
+	}
+	m.colorRamp = m.getOrBuildColorRamp()
 	return m
 }
 
-// buildColorRamp pre-computes gradient styles for performance.
-func (m *Model) buildColorRamp() {
+func (m *Model) getOrBuildColorRamp() []lipgloss.Style {
+	cacheMu.RLock()
+	ramp, ok := cache[m.size]
+	cacheMu.RUnlock()
+	if ok {
+		return ramp
+	}
+
 	colors := m.theme.Colors
-	// Create a cycling gradient: start -> end -> start
-	ramp := styles.BlendColors(
-		charCount*2,
+	blended := styles.BlendColors(
+		m.size*2,
 		colors.Brand.GradientStart,
 		colors.Brand.GradientEnd,
 		colors.Brand.GradientStart,
 	)
-	m.colorRamp = make([]lipgloss.Style, len(ramp))
-	for i, c := range ramp {
-		m.colorRamp[i] = lipgloss.NewStyle().Foreground(c)
+	ramp = make([]lipgloss.Style, len(blended))
+	for i, c := range blended {
+		ramp[i] = lipgloss.NewStyle().Foreground(c)
 	}
+
+	cacheMu.Lock()
+	cache[m.size] = ramp
+	cacheMu.Unlock()
+	return ramp
 }
 
 // Init starts the animation.
@@ -76,13 +122,9 @@ func (m *Model) Init() tea.Cmd {
 
 // Update handles tick messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case TickMsg:
-		if msg.id != m.id {
-			return nil
-		}
+	if tick, ok := msg.(TickMsg); ok && tick.id == m.id {
 		m.frame = (m.frame + 1) % len(m.colorRamp)
-		m.ellipsisStep = (m.ellipsisStep + 1) % (ellipsisSpeed * ellipsisFrames)
+		m.ellipsisStep = (m.ellipsisStep + 1) % (ellipsisSpeed * len(ellipsis))
 		return m.tick()
 	}
 	return nil
@@ -91,31 +133,88 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // View renders the thinking indicator.
 func (m *Model) View() string {
 	var b strings.Builder
+	elapsed := time.Since(m.startTime)
+	labelRunes := []rune(m.label)
+	labelStyle := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	allBorn := elapsed >= birthDuration
 
-	// Render scrambled gradient characters
-	for i := range charCount {
-		colorIdx := (i + m.frame) % len(m.colorRamp)
-		char := scrambleChars[rand.IntN(len(scrambleChars))]
-		b.WriteString(m.colorRamp[colorIdx].Render(string(char)))
+	totalWidth := m.size
+	if len(labelRunes) > 0 {
+		totalWidth += 1 + len(labelRunes) // space + label
 	}
 
-	// Add label with ellipsis
-	if m.label != "" {
-		b.WriteString(" ")
-		labelStyle := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	for i := range totalWidth {
+		// Not yet born - show nothing
+		if !allBorn && elapsed < m.birthOffsets[i] {
+			b.WriteRune(' ')
+			continue
+		}
+
+		if i < m.size {
+			// Scramble region
+			colorIdx := (i + m.frame) % len(m.colorRamp)
+			char := scrambleChars[rand.IntN(len(scrambleChars))]
+			b.WriteString(m.colorRamp[colorIdx].Render(string(char)))
+		} else if i == m.size {
+			// Space between scramble and label
+			b.WriteRune(' ')
+		} else {
+			// Label region
+			labelIdx := i - m.size - 1
+			b.WriteString(labelStyle.Render(string(labelRunes[labelIdx])))
+		}
+	}
+
+	// Ellipsis after label (only when all characters born)
+	if allBorn && m.label != "" {
 		ellipsisIdx := m.ellipsisStep / ellipsisSpeed
-		b.WriteString(labelStyle.Render(m.label + ellipsis[ellipsisIdx]))
+		b.WriteString(labelStyle.Render(ellipsis[ellipsisIdx]))
 	}
 
 	return b.String()
 }
 
-// SetLabel updates the label text.
+// SetLabel updates the label and resets birth offsets.
 func (m *Model) SetLabel(label string) {
+	if m.label == label {
+		return
+	}
 	m.label = label
+	m.startTime = time.Now()
+
+	labelLen := len([]rune(label))
+	totalWidth := m.size
+	if labelLen > 0 {
+		totalWidth += 1 + labelLen
+	}
+	m.birthOffsets = make([]time.Duration, totalWidth)
+	for i := range m.birthOffsets {
+		m.birthOffsets[i] = time.Duration(rand.Int64N(int64(birthDuration)))
+	}
 }
 
-// tick returns a command that triggers the next animation frame.
+// SetSize updates the scramble size.
+func (m *Model) SetSize(size int) {
+	if size <= 0 {
+		size = defaultSize
+	}
+	if m.size == size {
+		return
+	}
+	m.size = size
+	m.colorRamp = m.getOrBuildColorRamp()
+
+	labelLen := len([]rune(m.label))
+	totalWidth := size
+	if labelLen > 0 {
+		totalWidth += 1 + labelLen
+	}
+	m.birthOffsets = make([]time.Duration, totalWidth)
+	for i := range m.birthOffsets {
+		m.birthOffsets[i] = time.Duration(rand.Int64N(int64(birthDuration)))
+	}
+}
+
 func (m *Model) tick() tea.Cmd {
 	id := m.id
 	return tea.Tick(time.Second/fps, func(time.Time) tea.Msg {

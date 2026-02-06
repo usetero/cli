@@ -23,6 +23,9 @@ const (
 	EventTypeMessageStart     EventType = "message_start"
 	EventTypeMessageStop      EventType = "message_stop"
 	EventTypeContentBlockStop EventType = "content_block_stop"
+
+	// Post-stream metadata.
+	EventTypeMetadataUpdate EventType = "metadata_update"
 )
 
 // event is a single event from the Chat API response stream.
@@ -35,6 +38,7 @@ type event struct {
 	ToolInputDelta string        `json:"tool_input_delta,omitempty"`
 	MessageStart   *messageStart `json:"message_start,omitempty"`
 	MessageStop    *messageStop  `json:"message_stop,omitempty"`
+	Metadata       *metadata     `json:"metadata,omitempty"`
 	Done           bool          `json:"-"` // Set when stream is complete (after [DONE])
 }
 
@@ -52,10 +56,18 @@ type toolUseEvent struct {
 
 // messageStart contains metadata sent at the start of a message stream.
 type messageStart struct {
-	Model string `json:"model"`
+	Model         string `json:"model"`
+	ContextWindow int    `json:"context_window,omitempty"`
 }
 
 // messageStop contains metadata sent at the end of a message stream.
 type messageStop struct {
-	StopReason string `json:"stop_reason"`
+	StopReason   string `json:"stop_reason"`
+	InputTokens  int    `json:"input_tokens,omitempty"`
+	OutputTokens int    `json:"output_tokens,omitempty"`
+}
+
+// metadata contains post-stream metadata updates.
+type metadata struct {
+	Title string `json:"title,omitempty"`
 }

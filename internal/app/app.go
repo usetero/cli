@@ -12,9 +12,12 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app/chat"
+	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/keybar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
 	chatclient "github.com/usetero/cli/internal/chat"
@@ -40,10 +43,12 @@ const (
 	stateChat
 )
 
+// Layout constants.
 const (
 	horizontalPadding = 1
 	verticalPadding   = 1
-	footerSpacing     = 1
+	gapAfterStatusBar = 1
+	gapBeforeToast    = 1
 
 	minWidth  = 50
 	minHeight = 25
@@ -69,11 +74,14 @@ type Model struct {
 	toolRegistry *chattools.Registry
 
 	// Components
+	statusBar  *statusbar.Model
 	toast      *toast.Model
+	keyBar     *keybar.Model
 	onboarding *onboarding.Model
 	chat       *chat.Model
 	state      state
 
+	// Dimensions
 	width  int
 	height int
 }
@@ -123,7 +131,9 @@ func New(
 		authService: authService,
 		syncer:      syncer,
 		services:    services,
+		statusBar:   statusbar.New(theme, syncer, cfg.APIEndpoint),
 		toast:       toast.New(theme),
+		keyBar:      keybar.New(theme, scope),
 		onboarding:  onboarding.New(ctx, theme, services, prefs, authService, syncer, scope),
 		state:       stateOnboarding,
 	}
@@ -131,7 +141,10 @@ func New(
 
 // Init initializes the app.
 func (m *Model) Init() tea.Cmd {
-	return m.onboarding.Init()
+	return tea.Batch(
+		m.statusBar.Init(),
+		m.onboarding.Init(),
+	)
 }
 
 // Update handles messages.
@@ -140,14 +153,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.toast.SetWidth(msg.Width - (horizontalPadding * 2))
-		contentWidth, contentHeight := m.contentSize()
-		if m.state == stateOnboarding && m.onboarding != nil {
-			m.onboarding.SetSize(contentWidth, contentHeight)
-		}
-		if m.state == stateChat && m.chat != nil {
-			m.chat.SetSize(contentWidth, contentHeight)
-		}
+		m.updateLayout()
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -170,6 +176,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, appmsg.ErrorCmd("Failed to start sync", err, true)
 		}
 
+		// Start catalog status polling now that db is ready
+		catalogCmd := m.statusBar.SetDB(m.db)
+
 		// Create tool registry with executors
 		m.toolRegistry = &chattools.Registry{
 			Query:        chattools.NewQueryTool(m.db),
@@ -184,9 +193,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Forward to onboarding so it can continue
 		if m.onboarding != nil {
 			cmd := m.onboarding.Update(msg)
-			return m, cmd
+			return m, tea.Batch(catalogCmd, cmd)
 		}
-		return m, nil
+		return m, catalogCmd
 
 	case onboardingmsg.OnboardingComplete:
 		m.state = stateChat
@@ -196,13 +205,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"workspace", msg.Workspace.Name,
 		)
 
-		// Create chat model
-		contentWidth, contentHeight := m.contentSize()
+		// Create chat model (sizing happens via updateLayout)
 		m.chat = chat.New(
 			msg.Account,
 			msg.Workspace,
-			contentWidth,
-			contentHeight,
 			m.theme,
 			m.db,
 			m.chatClient,
@@ -210,11 +216,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.scope,
 		)
 
+		// Size the new chat component
+		m.updateLayout()
+
 		return m, m.chat.Init()
+
+	case msgs.StreamCompleted:
+		if msg.Title != "" && m.db != nil {
+			m.statusBar.SetTitle(msg.Title)
+			// Persist title in background
+			go func() {
+				ctx := context.Background()
+				if err := m.db.Conversations().UpdateTitle(ctx, string(m.chat.ConversationID()), msg.Title); err != nil {
+					m.scope.Error("failed to update conversation title", "error", err)
+				}
+			}()
+		}
+		// Update context window usage in statusbar
+		if msg.InputTokens > 0 {
+			m.statusBar.SetContextCount(msg.InputTokens + msg.OutputTokens)
+		}
+		if msg.InputTokens > 0 && msg.ContextWindow > 0 {
+			m.statusBar.SetContextPercent(msg.InputTokens * 100 / msg.ContextWindow)
+		}
 	}
 
-	// Forward to current state and toast
+	// Forward to app-level chrome and current page
 	var cmds []tea.Cmd
+
+	// Status bar listens to all messages
+	if cmd := m.statusBar.Update(msg); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 
 	// Toast listens to all messages
 	if cmd := m.toast.Update(msg); cmd != nil {
@@ -232,7 +265,71 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Update keybar after page updates (bindings may have changed)
+	m.updateKeyBar()
+
 	return m, tea.Batch(cmds...)
+}
+
+// updateLayout propagates sizes to children based on current dimensions.
+func (m *Model) updateLayout() {
+	contentWidth, contentHeight := m.contentSize()
+
+	// Fixed components get width, report their height
+	m.statusBar.SetWidth(contentWidth)
+	m.toast.SetWidth(contentWidth)
+	m.keyBar.SetWidth(contentWidth)
+
+	statusBarHeight := m.statusBar.Height()
+	toastHeight := m.toast.Height()
+	keyBarHeight := m.keyBar.Height()
+
+	// Page is flexible - gets remaining height
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - keyBarHeight
+	if toastHeight > 0 {
+		pageHeight -= toastHeight + gapBeforeToast
+	}
+
+	switch m.state {
+	case stateOnboarding:
+		if m.onboarding != nil {
+			m.onboarding.SetSize(contentWidth, pageHeight)
+		}
+	case stateChat:
+		if m.chat != nil {
+			m.chat.SetSize(contentWidth, pageHeight)
+		}
+	}
+}
+
+// contentSize returns the available space for content (after app padding).
+func (m *Model) contentSize() (int, int) {
+	if m.width == 0 || m.height == 0 {
+		return 0, 0
+	}
+	contentWidth := m.width - (horizontalPadding * 2)
+	contentHeight := m.height - (verticalPadding * 2)
+	return contentWidth, contentHeight
+}
+
+// updateKeyBar updates the keybar with current page bindings plus global bindings.
+func (m *Model) updateKeyBar() {
+	var bindings []key.Binding
+
+	switch m.state {
+	case stateOnboarding:
+		if m.onboarding != nil {
+			bindings = m.onboarding.ShortHelp()
+		}
+	case stateChat:
+		if m.chat != nil {
+			bindings = m.chat.ShortHelp()
+		}
+	}
+
+	// Always append global bindings
+	bindings = append(bindings, keymap.Global...)
+	m.keyBar.SetKeyBindings(bindings)
 }
 
 // openDatabase opens the SQLite database for the given account.
@@ -306,19 +403,8 @@ func (m *Model) View() tea.View {
 		}
 	}
 
-	// Get content from current state
-	var content string
-	switch m.state {
-	case stateOnboarding:
-		content = m.onboarding.View()
-	case stateChat:
-		if m.chat != nil {
-			content = m.chat.View()
-		}
-	}
-
-	// Render with padding and footer
-	rendered := m.renderWithChrome(content)
+	// Render content
+	rendered := m.renderContent()
 
 	// Extract cursor marker and set cursor position
 	cleanView, cur := cursor.Extract(rendered)
@@ -335,56 +421,66 @@ func (m *Model) View() tea.View {
 	}
 }
 
-// renderWithChrome wraps content with padding and toast.
-func (m *Model) renderWithChrome(content string) string {
+// renderContent renders the main content with padding.
+// Layout: statusbar | page | toast (optional) | keybar
+func (m *Model) renderContent() string {
 	if m.width == 0 || m.height == 0 {
 		return ""
 	}
 
-	innerWidth := m.width - (horizontalPadding * 2)
+	contentWidth, contentHeight := m.contentSize()
+
+	// Get fixed component views and heights
+	statusBarView := m.statusBar.View()
+	statusBarHeight := m.statusBar.Height()
 	toastView := m.toast.View()
-	toastHeight := lipgloss.Height(toastView)
-	if toastHeight == 0 {
-		// No toast showing, no extra spacing needed
-		contentHeight := m.height - (verticalPadding * 2)
-		contentStyle := lipgloss.NewStyle().
-			Width(innerWidth).
-			Height(contentHeight)
-		return lipgloss.NewStyle().
-			Padding(verticalPadding, horizontalPadding).
-			Render(contentStyle.Render(content))
+	toastHeight := m.toast.Height()
+	keyBarView := m.keyBar.View()
+	keyBarHeight := m.keyBar.Height()
+
+	// Get page content from current state
+	var pageView string
+	switch m.state {
+	case stateOnboarding:
+		pageView = m.onboarding.View()
+	case stateChat:
+		if m.chat != nil {
+			pageView = m.chat.View()
+		}
 	}
 
-	// Toast is showing - reserve space for it
-	contentHeight := m.height - (verticalPadding * 2) - toastHeight - footerSpacing
+	// Calculate page height (flexible component gets remaining space)
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - keyBarHeight
+	if toastHeight > 0 {
+		pageHeight -= toastHeight + gapBeforeToast
+	}
 
-	contentStyle := lipgloss.NewStyle().
-		Width(innerWidth).
-		Height(contentHeight)
-	styledContent := contentStyle.Render(content)
+	// Style page to fill its allocated space
+	styledPage := lipgloss.NewStyle().
+		Width(contentWidth).
+		Height(pageHeight).
+		MaxHeight(pageHeight).
+		Render(pageView)
 
-	innerView := lipgloss.JoinVertical(
-		lipgloss.Top,
-		styledContent,
-		"",
-		toastView,
-	)
+	// Build vertical stack
+	var sections []string
+	sections = append(sections, statusBarView)
+	sections = append(sections, "") // gapAfterStatusBar
+	sections = append(sections, styledPage)
+	if toastHeight > 0 {
+		sections = append(sections, "") // gapBeforeToast
+		sections = append(sections, toastView)
+	}
+	if keyBarHeight > 0 {
+		sections = append(sections, keyBarView)
+	}
 
+	innerView := lipgloss.JoinVertical(lipgloss.Left, sections...)
+
+	// Apply app padding
 	return lipgloss.NewStyle().
 		Padding(verticalPadding, horizontalPadding).
 		Render(innerView)
-}
-
-// contentSize returns the available space for content.
-// Note: This returns the size assuming no toast. When a toast appears,
-// renderWithChrome handles the adjustment dynamically.
-func (m *Model) contentSize() (int, int) {
-	if m.width == 0 || m.height == 0 {
-		return 0, 0
-	}
-	contentWidth := m.width - (horizontalPadding * 2)
-	contentHeight := m.height - (verticalPadding * 2)
-	return contentWidth, contentHeight
 }
 
 func (m *Model) shutdown() {

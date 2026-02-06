@@ -9,11 +9,18 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// CreateAccountInput contains the fields for creating an account.
+type CreateAccountInput struct {
+	ID             uuid.UUID
+	OrganizationID domain.OrganizationID
+	Name           string
+}
+
 // Accounts provides access to accounts.
 type Accounts interface {
 	List(ctx context.Context, organizationID domain.OrganizationID) ([]domain.Account, error)
 	Get(ctx context.Context, accountID domain.AccountID) (*domain.Account, error)
-	Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error)
+	Create(ctx context.Context, input CreateAccountInput) (*domain.Account, error)
 }
 
 // AccountService handles account-related API operations.
@@ -78,15 +85,15 @@ func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*
 }
 
 // Create creates a new account with the given client-provided ID.
-func (s *AccountService) Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error) {
-	s.scope.Debug("creating account via API", "id", id.String(), "organizationID", organizationID, "name", name)
-	input := gen.CreateAccountInput{
-		Id:             ptr(id.String()),
-		OrganizationID: organizationID.String(),
-		Name:           name,
+func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (*domain.Account, error) {
+	s.scope.Debug("creating account via API", "id", input.ID.String(), "organizationID", input.OrganizationID, "name", input.Name)
+	genInput := gen.CreateAccountInput{
+		Id:             ptr(input.ID.String()),
+		OrganizationID: input.OrganizationID.String(),
+		Name:           input.Name,
 	}
 
-	resp, err := s.client.CreateAccount(ctx, input)
+	resp, err := s.client.CreateAccount(ctx, genInput)
 	if err != nil {
 		s.scope.Error("failed to create account", "error", err)
 		return nil, err

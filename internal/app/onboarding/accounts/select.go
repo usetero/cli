@@ -4,6 +4,7 @@ package accounts
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -191,4 +192,22 @@ func (m *SelectModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.list.SetWidth(width)
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *SelectModel) ShortHelp() []key.Binding {
+	if m.list.IsLoading() {
+		return nil
+	}
+	if m.list.HasError() {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "retry")),
+		}
+	}
+	bindings := m.list.ShortHelp()
+	bindings = append(bindings,
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
+		key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new account")),
+	)
+	return bindings
 }

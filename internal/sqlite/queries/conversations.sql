@@ -15,3 +15,6 @@ LIMIT 1;
 -- name: InsertConversation :exec
 INSERT INTO conversations (id, account_id, workspace_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?);
+
+-- name: UpdateConversationTitle :exec
+UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?;

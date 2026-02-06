@@ -9,8 +9,16 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/cursor"
+	"github.com/usetero/cli/internal/tea/keymap"
+)
+
+const (
+	textareaHeight   = 3                                // visible input lines
+	verticalPadding  = 2                                // 1 top + 1 bottom
+	commandBarHeight = textareaHeight + verticalPadding // total height
 )
 
 // Model handles user input via a textarea.
@@ -18,19 +26,20 @@ type Model struct {
 	theme    *styles.Theme
 	textarea textarea.Model
 	width    int
+	scope    log.Scope
 }
 
 // New creates a new command bar.
-func New(theme *styles.Theme, width int) *Model {
+func New(theme *styles.Theme, scope log.Scope) *Model {
+	scope = scope.Child("commandbar")
 	colors := theme.Colors
 
 	ta := textarea.New()
 	ta.Placeholder = "Type a message..."
 	ta.ShowLineNumbers = false
-	ta.SetHeight(3)
+	ta.SetHeight(textareaHeight)
 	ta.CharLimit = -1
 	ta.SetVirtualCursor(false)
-	ta.SetWidth(width)
 	ta.Focus()
 
 	base := lipgloss.NewStyle().Foreground(colors.Page.Text)
@@ -70,7 +79,7 @@ func New(theme *styles.Theme, width int) *Model {
 	return &Model{
 		theme:    theme,
 		textarea: ta,
-		width:    width,
+		scope:    scope,
 	}
 }
 
@@ -86,13 +95,16 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		// Shift+enter for newline - consume, don't forward to textarea
-		if msg.String() == "shift+enter" || msg.String() == "ctrl+j" {
+		// DEBUG: log all keys
+		m.scope.Debug("key received", "key", msg.String())
+
+		// Newline - consume, don't forward to textarea
+		if key.Matches(msg, keymap.Newline) {
 			m.textarea.InsertRune('\n')
 			return nil
 		}
 		// Enter to submit - consume, don't forward to textarea
-		if msg.String() == "enter" {
+		if key.Matches(msg, keymap.Send) {
 			text := strings.TrimSpace(m.textarea.Value())
 			if text != "" {
 				m.textarea.Reset()
@@ -122,7 +134,15 @@ func (m *Model) View() string {
 		view = cursor.Insert(view, cur.X, cur.Y)
 	}
 
+	// Pad textarea output to exactly textareaHeight lines
+	lines := strings.Split(view, "\n")
+	for len(lines) < textareaHeight {
+		lines = append(lines, "")
+	}
+	view = strings.Join(lines[:textareaHeight], "\n")
+
 	return lipgloss.NewStyle().
+		Width(m.width).
 		Padding(1, 0).
 		Render(view)
 }
@@ -135,7 +155,7 @@ func (m *Model) SetWidth(width int) {
 
 // Height returns the height of the command bar.
 func (m *Model) Height() int {
-	return 5 // 3 lines + 2 padding
+	return commandBarHeight
 }
 
 // Focus returns a command to focus the textarea.
@@ -153,10 +173,7 @@ func (m *Model) Focused() bool {
 	return m.textarea.Focused()
 }
 
-// KeyBindings returns the key bindings for the command bar.
-func (m *Model) KeyBindings() []key.Binding {
-	return []key.Binding{
-		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "send")),
-		key.NewBinding(key.WithKeys("shift+enter"), key.WithHelp("shift+enter", "newline")),
-	}
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	return []key.Binding{keymap.Send, keymap.Newline}
 }

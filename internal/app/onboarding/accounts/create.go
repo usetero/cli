@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/google/uuid"
@@ -118,7 +119,11 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 func (m *CreateModel) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
 		id := uuid.New()
-		account, err := m.services.Accounts.Create(m.ctx, id, m.org.ID, name)
+		account, err := m.services.Accounts.Create(m.ctx, api.CreateAccountInput{
+			ID:             id,
+			OrganizationID: m.org.ID,
+			Name:           name,
+		})
 		if err != nil {
 			return accountCreatedMsg{err: err}
 		}
@@ -153,4 +158,16 @@ func (m *CreateModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.input.SetWidth(width)
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *CreateModel) ShortHelp() []key.Binding {
+	if m.creating {
+		return nil
+	}
+	bindings := m.input.ShortHelp()
+	bindings = append(bindings,
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "create")),
+	)
+	return bindings
 }

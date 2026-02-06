@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -141,6 +142,11 @@ func (m *Model) FilteringEnabled() bool {
 // KeyMap returns the key bindings for list navigation.
 func (m *Model) KeyMap() KeyMap {
 	return m.list.KeyMap
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	return m.list.ShortHelp()
 }
 
 // Index returns the index of the currently selected item.

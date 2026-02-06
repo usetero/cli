@@ -54,8 +54,16 @@ Guidelines:
 					Type:        "string",
 					Description: "The SQL query to execute",
 				},
+				"status": {
+					Type:        "string",
+					Description: "Message shown while the query runs (e.g., 'Checking service status', 'Looking for errors')",
+				},
+				"result": {
+					Type:        "string",
+					Description: "Message shown when complete. Use {count} for row count if relevant (e.g., 'Found {count} services'). Omit {count} for aggregates (e.g., 'Calculated')",
+				},
 			},
-			[]string{"sql"},
+			[]string{"sql", "status", "result"},
 		),
 	}
 }

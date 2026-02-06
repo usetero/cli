@@ -4,12 +4,14 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
 )
 
 // TextBlock renders a text content block.
+// It is a fixed-height component - height is determined by content.
 type TextBlock struct {
 	theme    *styles.Theme
 	index    int
@@ -59,6 +61,14 @@ func (m *TextBlock) Index() int {
 // View renders the text block.
 func (m *TextBlock) View() string {
 	return m.rendered
+}
+
+// Height returns the number of lines this block renders.
+func (m *TextBlock) Height() int {
+	if m.rendered == "" {
+		return 0
+	}
+	return lipgloss.Height(m.rendered)
 }
 
 // SetText sets the text and re-renders.

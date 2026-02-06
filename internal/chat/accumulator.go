@@ -20,6 +20,14 @@ type accumulator struct {
 
 	// Tool accumulation - tool_use starts it, deltas build input, content_block_stop finalizes
 	currentTool *toolAccumulator
+
+	// Post-stream metadata
+	title string
+
+	// Token usage
+	contextWindow int
+	inputTokens   int
+	outputTokens  int
 }
 
 type toolAccumulator struct {
@@ -46,11 +54,14 @@ func (a *accumulator) handle(e event) {
 	case EventTypeMessageStart:
 		if e.MessageStart != nil {
 			a.model = e.MessageStart.Model
+			a.contextWindow = e.MessageStart.ContextWindow
 		}
 
 	case EventTypeMessageStop:
 		if e.MessageStop != nil {
 			a.stopReason = e.MessageStop.StopReason
+			a.inputTokens = e.MessageStop.InputTokens
+			a.outputTokens = e.MessageStop.OutputTokens
 		}
 		a.finalizeCurrent()
 
@@ -83,6 +94,11 @@ func (a *accumulator) handle(e event) {
 		// Finalize whatever block is in progress
 		a.finalizeCurrent()
 		a.finalizeCurrentTool()
+
+	case EventTypeMetadataUpdate:
+		if e.Metadata != nil && e.Metadata.Title != "" {
+			a.title = e.Metadata.Title
+		}
 
 	case EventTypeText, EventTypeThinking, EventTypeToolResult:
 		// Complete blocks - just append

@@ -18,6 +18,7 @@ const (
 	initialRetryDelay = 1 * time.Second
 	maxRetryDelay     = 30 * time.Second
 	maxAuthRetries    = 2
+	errorStateAfter   = 3 // show error state after this many consecutive failures
 )
 
 // TokenRefresher provides access tokens for authentication.
@@ -118,7 +119,7 @@ func (s *syncer) Start(ctx context.Context, database sqlite.DB, accountID string
 	s.client = s.clientFactory(s.endpoint)
 	s.client.SetToken(token)
 	s.done = make(chan struct{})
-	s.setState(NewConnecting("Connecting..."))
+	s.setState(NewConnecting())
 
 	ctx, s.cancel = context.WithCancel(ctx)
 	go s.run(ctx)
@@ -169,6 +170,7 @@ func (s *syncer) run(ctx context.Context) {
 
 	retryDelay := initialRetryDelay
 	authRetries := 0
+	retries := 0
 
 	for {
 		if ctx.Err() != nil {
@@ -179,6 +181,7 @@ func (s *syncer) run(ctx context.Context) {
 		if err == nil {
 			retryDelay = initialRetryDelay
 			authRetries = 0
+			retries = 0
 			continue
 		}
 		if ctx.Err() != nil {
@@ -194,7 +197,7 @@ func (s *syncer) run(ctx context.Context) {
 					return
 				}
 				s.scope.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
-				s.setState(NewSyncing("Reconnecting..."))
+				s.setState(NewReconnecting(false))
 				if err := s.refreshToken(ctx); err != nil {
 					s.setError(fmt.Errorf("token refresh: %w", err))
 					return
@@ -202,17 +205,20 @@ func (s *syncer) run(ctx context.Context) {
 				continue
 			}
 
-			if clientErr.IsTransient() {
-				s.scope.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
-				s.setState(NewSyncing("Reconnecting..."))
-				s.wait(ctx, retryDelay)
-				retryDelay = min(retryDelay*2, maxRetryDelay)
-				continue
+			if clientErr.IsPermanent() {
+				s.setError(err)
+				return
 			}
 		}
 
-		s.setError(err)
-		return
+		// Transient API errors and non-API errors (e.g. extension state
+		// errors) are retried with backoff. syncOnce calls Start() which
+		// resets the extension state via tear_down(), so retry is safe.
+		retries++
+		s.scope.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Int("attempt", retries), log.Any("error", err))
+		s.setState(NewReconnecting(retries >= errorStateAfter))
+		s.wait(ctx, retryDelay)
+		retryDelay = min(retryDelay*2, maxRetryDelay)
 	}
 }
 
@@ -255,7 +261,7 @@ func (s *syncer) connectAndSync(ctx context.Context, req *api.SyncStreamRequest)
 	}
 
 	s.scope.Debug("connecting stream")
-	s.setState(NewSyncing("Syncing your data..."))
+	s.setState(NewSyncing())
 
 	// Track if we've notified connection established
 	connected := false
@@ -301,11 +307,7 @@ func (s *syncer) handleLine(line []byte) error {
 		case extension.InstructionUpdateSyncStatus:
 			if inst.SyncStatus != nil && inst.SyncStatus.Downloading != nil {
 				downloaded, total := inst.SyncStatus.Downloading.TotalProgress()
-				if syncing, ok := s.State().(*Syncing); ok {
-					s.setState(syncing.UpdateProgress(downloaded, total))
-				} else {
-					s.setState(NewSyncing("Syncing your data...").WithProgress(downloaded, total))
-				}
+				s.setState(NewSyncing().WithProgress(downloaded, total))
 				s.scope.Debug("sync progress", "downloaded", downloaded, "total", total)
 			}
 
@@ -321,13 +323,6 @@ func (s *syncer) handleLine(line []byte) error {
 
 		case extension.InstructionLogLine:
 			s.scope.Debug("powersync", "severity", inst.Severity, "line", inst.Line)
-			// Surface non-debug log lines as transient warnings in the UI
-			// PowerSync sends important messages (like checkpoint issues) as INFO
-			if inst.Severity != "debug" && inst.Line != "" {
-				if syncing, ok := s.State().(*Syncing); ok {
-					s.setState(syncing.WithWarning(inst.Line))
-				}
-			}
 		default:
 			// Other instruction types not expected during line processing
 		}

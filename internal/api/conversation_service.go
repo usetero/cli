@@ -11,10 +11,23 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// CreateConversationInput contains the fields for creating a conversation.
+type CreateConversationInput struct {
+	ID          uuid.UUID
+	WorkspaceID domain.WorkspaceID
+	Title       string
+}
+
+// UpdateConversationInput contains the fields that can be updated on a conversation.
+// Fields are pointers — nil means "don't change", non-nil means "set to this value".
+type UpdateConversationInput struct {
+	Title *string
+}
+
 // Conversations provides access to conversations.
 type Conversations interface {
-	Create(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error)
-	Update(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error)
+	Create(ctx context.Context, input CreateConversationInput) (*domain.Conversation, error)
+	Update(ctx context.Context, id domain.ConversationID, input UpdateConversationInput) (*domain.Conversation, error)
 	Delete(ctx context.Context, id domain.ConversationID) error
 }
 
@@ -36,43 +49,48 @@ func NewConversationService(client Client, scope log.Scope) *ConversationService
 }
 
 // Create creates a new conversation with the given client-provided ID.
-func (s *ConversationService) Create(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
-	s.scope.Debug("creating conversation via API", "id", id.String(), "workspaceID", workspaceID.String(), "title", title)
+func (s *ConversationService) Create(ctx context.Context, input CreateConversationInput) (*domain.Conversation, error) {
+	s.scope.Debug("creating conversation via API", "id", input.ID.String(), "workspaceID", input.WorkspaceID.String(), "title", input.Title)
 
-	input := gen.CreateConversationInput{
-		Id:          ptr(id.String()),
-		WorkspaceID: workspaceID.String(),
-		Title:       ptr(title),
+	genInput := gen.CreateConversationInput{
+		Id:          ptr(input.ID.String()),
+		WorkspaceID: input.WorkspaceID.String(),
+		Title:       ptr(input.Title),
 	}
 
-	resp, err := s.client.CreateConversation(ctx, input)
+	resp, err := s.client.CreateConversation(ctx, genInput)
 	if err != nil {
 		s.scope.Error("failed to create conversation", "error", err)
 		if classified := classifyError(err); classified != nil {
-			return nil, fmt.Errorf("create conversation %s: %w", id, classified)
+			return nil, fmt.Errorf("create conversation %s: %w", input.ID, classified)
 		}
 		return nil, err
 	}
 
 	conversation := &domain.Conversation{
 		ID:          domain.ConversationID(resp.CreateConversation.Id),
-		WorkspaceID: workspaceID,
-		Title:       title,
+		WorkspaceID: input.WorkspaceID,
+		Title:       input.Title,
 	}
 
 	s.scope.Debug("created conversation via API", "id", conversation.ID)
 	return conversation, nil
 }
 
-// Update updates a conversation's title.
-func (s *ConversationService) Update(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
-	s.scope.Debug("updating conversation via API", "id", id.String(), "title", title)
+// Update updates a conversation.
+func (s *ConversationService) Update(ctx context.Context, id domain.ConversationID, input UpdateConversationInput) (*domain.Conversation, error) {
+	s.scope.Debug("updating conversation via API", "id", id.String())
 
-	input := gen.UpdateConversationInput{
-		Title: ptr(title),
+	genInput := gen.UpdateConversationInput{}
+	if input.Title != nil {
+		if *input.Title == "" {
+			genInput.ClearTitle = ptr(true)
+		} else {
+			genInput.Title = input.Title
+		}
 	}
 
-	resp, err := s.client.UpdateConversation(ctx, id.String(), input)
+	resp, err := s.client.UpdateConversation(ctx, id.String(), genInput)
 	if err != nil {
 		s.scope.Error("failed to update conversation", "error", err, "id", id)
 		if classified := classifyError(err); classified != nil {

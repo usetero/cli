@@ -235,6 +235,10 @@ func (e *Error) IsTransient() bool {
 	return e.Kind == ErrorKindTransient
 }
 
+func (e *Error) IsPermanent() bool {
+	return e.Kind == ErrorKindPermanent
+}
+
 func classifyHTTPStatus(statusCode int) ErrorKind {
 	switch {
 	case statusCode == 401 || statusCode == 403:

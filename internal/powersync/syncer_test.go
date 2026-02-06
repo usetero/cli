@@ -2,6 +2,7 @@ package powersync_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -326,6 +327,92 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		if errState.Err == nil {
 			t.Error("Error.Err should not be nil")
 		}
+	})
+
+	t.Run("retries on non-API error with backoff", func(t *testing.T) {
+		t.Parallel()
+
+		db := dbtest.OpenTestDB(t)
+
+		connectCalls := 0
+		mock := apitest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+			connectCalls++
+			if connectCalls == 1 {
+				// Simulate an extension error (not an api.Error)
+				return fmt.Errorf("powersync_control: invalid state: No iteration is active")
+			}
+			<-ctx.Done()
+			return ctx.Err()
+		}
+
+		syncer := powersynctest.NewSyncerWithMockClient(
+			"https://example.com",
+			powersynctest.NewMockTokenRefresher("token"),
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := syncer.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+
+		// Wait for retry (initial backoff is 1 second)
+		time.Sleep(2 * time.Second)
+		syncer.Stop()
+
+		if connectCalls < 2 {
+			t.Errorf("expected at least 2 connect calls, got %d", connectCalls)
+		}
+
+		// Should NOT be in error state — should have recovered
+		if _, ok := syncer.State().(*powersync.Error); ok {
+			t.Error("non-API errors should be retried, not fatal")
+		}
+		if _, ok := syncer.State().(*powersync.Reconnecting); ok {
+			t.Error("expected recovery, not reconnecting")
+		}
+	})
+
+	t.Run("marks degraded after repeated failures", func(t *testing.T) {
+		t.Parallel()
+
+		db := dbtest.OpenTestDB(t)
+
+		mock := apitest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+			return fmt.Errorf("powersync_control: invalid state: No iteration is active")
+		}
+
+		syncer := powersynctest.NewSyncerWithMockClient(
+			"https://example.com",
+			powersynctest.NewMockTokenRefresher("token"),
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := syncer.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+
+		// Wait long enough for errorStateAfter (3) retries with backoff (1s + 2s + 4s)
+		time.Sleep(8 * time.Second)
+
+		state, ok := syncer.State().(*powersync.Reconnecting)
+		if !ok {
+			t.Fatalf("State() = %T, want *Reconnecting", syncer.State())
+		}
+		if !state.Degraded {
+			t.Error("expected Degraded to be true after repeated failures")
+		}
+
+		syncer.Stop()
 	})
 
 	t.Run("retries on transient error with backoff", func(t *testing.T) {

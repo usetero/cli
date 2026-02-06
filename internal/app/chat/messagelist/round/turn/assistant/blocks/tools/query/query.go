@@ -3,9 +3,10 @@ package query
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/app/chat/messagelist/turn/assistant/blocks/tools"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
@@ -15,13 +16,13 @@ import (
 	"github.com/usetero/cli/internal/styles"
 )
 
-// Model renders and executes a query tool.
+// Model handles query tool execution and content rendering.
+// Chrome (icon, name) is handled by the parent tools.Model.
 type Model struct {
 	theme    *styles.Theme
 	scope    log.Scope
 	index    int
 	toolID   string
-	name     string
 	state    tools.State
 	executor *chattools.QueryTool
 	width    int
@@ -29,8 +30,12 @@ type Model struct {
 	// Input accumulation
 	input string
 
+	// Parsed input
+	sql            string
+	status         string
+	resultTemplate string
+
 	// Results
-	sql  string
 	rows []map[string]any
 	err  error
 }
@@ -43,7 +48,6 @@ func New(theme *styles.Theme, index int, toolID string, width int, executor *cha
 		scope:    scope,
 		index:    index,
 		toolID:   toolID,
-		name:     executor.Name(),
 		state:    tools.StateAccumulating,
 		executor: executor,
 		width:    width,
@@ -79,28 +83,22 @@ func (m *Model) handleContent(content []domain.Block) tea.Cmd {
 	return nil
 }
 
-// View renders the tool block.
-func (m *Model) View() string {
-	switch m.state {
-	case tools.StateAccumulating:
-		return "⋯ " + m.name
-	case tools.StateExecuting:
-		return "◐ " + m.name
-	case tools.StateComplete:
-		if m.err != nil {
-			return "✗ " + m.name + ": " + m.err.Error()
-		}
-		return m.renderResults()
-	default:
-		return m.name
-	}
+// Status returns the status message shown while executing.
+func (m *Model) Status() string {
+	return m.status
 }
 
-func (m *Model) renderResults() string {
-	if len(m.rows) == 0 {
-		return "✓ " + m.name + " (no results)"
+// Result returns the result message with {count} substituted.
+func (m *Model) Result() string {
+	if m.resultTemplate == "" {
+		return fmt.Sprintf("%d rows", len(m.rows))
 	}
-	return fmt.Sprintf("✓ %s (%d rows)", m.name, len(m.rows))
+	return strings.Replace(m.resultTemplate, "{count}", fmt.Sprintf("%d", len(m.rows)), 1)
+}
+
+// View renders additional content below the header (not used - parent handles display).
+func (m *Model) View() string {
+	return ""
 }
 
 // SetWidth sets the width.
@@ -111,15 +109,15 @@ func (m *Model) SetWidth(width int) {
 func (m *Model) execute() tea.Cmd {
 	m.state = tools.StateExecuting
 
-	// Parse SQL from input
-	var in struct {
-		SQL string `json:"sql"`
-	}
+	// Parse input
+	var in domaintools.QueryInput
 	if err := json.Unmarshal([]byte(m.input), &in); err == nil {
 		m.sql = in.SQL
+		m.status = in.Status
+		m.resultTemplate = in.Result
 	}
 
-	m.scope.Info("executing query", "sql", m.sql)
+	m.scope.Info("executing query", "sql", m.sql, "status", m.status)
 
 	if m.executor == nil {
 		m.err = fmt.Errorf("no executor")
@@ -152,9 +150,9 @@ func (m *Model) fireCompleted() tea.Cmd {
 	}
 }
 
-// Index returns the block index.
-func (m *Model) Index() int {
-	return m.index
+// Name returns the tool's display name.
+func (m *Model) Name() string {
+	return "query"
 }
 
 // ToolID returns the tool's ID.
@@ -162,12 +160,12 @@ func (m *Model) ToolID() string {
 	return m.toolID
 }
 
-// Name returns the tool's name.
-func (m *Model) Name() string {
-	return m.name
-}
-
 // State returns the tool's current state.
 func (m *Model) State() tools.State {
 	return m.state
+}
+
+// Err returns any error from execution.
+func (m *Model) Err() error {
+	return m.err
 }

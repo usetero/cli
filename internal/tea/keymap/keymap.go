@@ -3,7 +3,7 @@ package keymap
 
 import "charm.land/bubbles/v2/key"
 
-// Global key bindings available throughout the application.
+// Common key bindings.
 var (
 	Quit = key.NewBinding(
 		key.WithKeys("ctrl+c"),
@@ -11,10 +11,22 @@ var (
 	)
 	Exit = key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("", ""), // Works but not shown in help
+		key.WithHelp("", ""),
+	)
+	Tab = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "switch focus"),
+	)
+	Send = key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "send"),
+	)
+	Newline = key.NewBinding(
+		key.WithKeys("shift+enter", "alt+enter", "ctrl+j"),
+		key.WithHelp("shift+enter", "newline"),
 	)
 
-	// Global is the set of global bindings shown in help.
+	// Global is shown in the keybar across all screens.
 	Global = []key.Binding{Quit}
 )
 

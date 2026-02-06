@@ -3,6 +3,7 @@ package datadog
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -129,7 +130,10 @@ func (e *validationError) Error() string { return e.msg }
 
 func (m *APIKeyModel) validateAPIKey(apiKey string) tea.Cmd {
 	return func() tea.Msg {
-		valid, errorMsg, err := m.services.DatadogAccounts.ValidateAPIKey(m.ctx, apiKey, m.site.String())
+		valid, errorMsg, err := m.services.DatadogAccounts.ValidateAPIKey(m.ctx, api.ValidateAPIKeyInput{
+			APIKey: apiKey,
+			Site:   m.site.String(),
+		})
 		if err != nil {
 			return apiKeyValidatedMsg{err: err}
 		}
@@ -164,4 +168,16 @@ func (m *APIKeyModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.input.SetWidth(width)
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *APIKeyModel) ShortHelp() []key.Binding {
+	if m.validating {
+		return nil
+	}
+	bindings := m.input.ShortHelp()
+	bindings = append(bindings,
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "validate")),
+	)
+	return bindings
 }

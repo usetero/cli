@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -233,4 +234,20 @@ func (m *AuthenticateModel) View() string {
 func (m *AuthenticateModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *AuthenticateModel) ShortHelp() []key.Binding {
+	if m.state != stateReady {
+		return nil
+	}
+	if m.err != nil {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "retry")),
+		}
+	}
+	return []key.Binding{
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open browser")),
+		key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy URL")),
+	}
 }

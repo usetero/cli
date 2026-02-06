@@ -44,8 +44,14 @@ func readStream(r io.Reader, handler eventHandler) error {
 			return fmt.Errorf("parse event: %w", err)
 		}
 
-		// Reject empty/unknown event types
+		// Handle server error responses (e.g. {"error":"internal error"})
 		if e.Type == "" && !e.Done {
+			var errResp struct {
+				Error string `json:"error"`
+			}
+			if json.Unmarshal([]byte(data), &errResp) == nil && errResp.Error != "" {
+				return fmt.Errorf("server error: %s", errResp.Error)
+			}
 			return fmt.Errorf("received empty event type, raw data: %s", data)
 		}
 

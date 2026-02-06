@@ -2,11 +2,11 @@ package turn
 
 import (
 	"context"
-	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/app/chat/messagelist/turn/assistant"
-	"github.com/usetero/cli/internal/app/chat/messagelist/turn/user"
+	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
@@ -17,6 +17,9 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
+
+// gapBetweenUserAndAssistant is the number of blank lines between user message and assistant response.
+const gapBetweenUserAndAssistant = 1
 
 // State represents the current state of a turn.
 type State int
@@ -29,6 +32,7 @@ const (
 )
 
 // Model represents a single user→assistant exchange.
+// It is a fixed-height component - height is determined by content.
 type Model struct {
 	theme *styles.Theme
 	scope log.Scope
@@ -40,6 +44,7 @@ type Model struct {
 	assistantMessage *assistant.Model
 
 	state   State
+	focused bool
 	width   int
 	stream  *streamState
 	initCmd tea.Cmd // Command to start thinking animation
@@ -62,6 +67,7 @@ type streamState struct {
 // streamUpdate is sent through the channel as the stream progresses.
 type streamUpdate struct {
 	message *domain.Message
+	result  *chatclient.StreamResult // final result, only set on done
 	err     error
 	done    bool
 }
@@ -128,39 +134,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.assistantMessage.Update(msg))
 		return tea.Batch(cmds...)
 
-	case msgs.QueryCompleted:
-		cmds = append(cmds, m.handleToolCompleted(msg.ToolUseID, tools.Result{
-			ToolUseID: msg.ToolUseID,
-			Query:     &msg.Result,
-			Error:     errorResultFromErr(msg.Error),
-		}))
-
-	case msgs.StartJourneyCompleted:
-		cmds = append(cmds, m.handleToolCompleted(msg.ToolUseID, tools.Result{
-			ToolUseID:    msg.ToolUseID,
-			StartJourney: &msg.Result,
-			Error:        errorResultFromErr(msg.Error),
-		}))
-
-	case msgs.EndJourneyCompleted:
-		cmds = append(cmds, m.handleToolCompleted(msg.ToolUseID, tools.Result{
-			ToolUseID:  msg.ToolUseID,
-			EndJourney: &msg.Result,
-			Error:      errorResultFromErr(msg.Error),
-		}))
+	case msgs.ToolCompleted:
+		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
 	}
 
 	cmds = append(cmds, m.userMessage.Update(msg))
 	cmds = append(cmds, m.assistantMessage.Update(msg))
 
 	return tea.Batch(cmds...)
-}
-
-func errorResultFromErr(err error) *tools.ErrorResult {
-	if err == nil {
-		return nil
-	}
-	return &tools.ErrorResult{Message: err.Error()}
 }
 
 func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.Cmd {
@@ -181,7 +162,7 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	return nil
 }
 
-// View renders the turn.
+// View renders the turn (user message + assistant response).
 func (m *Model) View() string {
 	userView := m.userMessage.View()
 	assistantView := m.assistantMessage.View()
@@ -189,16 +170,32 @@ func (m *Model) View() string {
 	if userView == "" {
 		return assistantView
 	}
-	return userView + "\n\n" + assistantView
+
+	// Parent (turn) adds gap between children (user, assistant)
+	parts := []string{userView}
+	for i := 0; i < gapBetweenUserAndAssistant; i++ {
+		parts = append(parts, "")
+	}
+	parts = append(parts, assistantView)
+
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
-// Height returns the number of lines this turn renders.
-func (m *Model) Height(width int) int {
-	view := m.View()
-	if view == "" {
-		return 0
+// AssistantView renders only the assistant response (for tool loop continuations).
+func (m *Model) AssistantView() string {
+	return m.assistantMessage.View()
+}
+
+// Height returns the number of lines this component renders.
+func (m *Model) Height() int {
+	userHeight := m.userMessage.Height()
+	assistantHeight := m.assistantMessage.Height()
+
+	if userHeight == 0 {
+		return assistantHeight
 	}
-	return strings.Count(view, "\n") + 1
+	// user + gap + assistant
+	return userHeight + gapBetweenUserAndAssistant + assistantHeight
 }
 
 // StartStream begins streaming the assistant response.
@@ -223,7 +220,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 		}
 
 		var lastMessage *domain.Message
-		err := m.chatClient.Stream(context.Background(), req, func(msg *domain.Message) {
+		result, err := m.chatClient.Stream(context.Background(), req, func(msg *domain.Message) {
 			lastMessage = msg
 			updates <- streamUpdate{message: msg}
 		})
@@ -231,7 +228,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 		if err != nil {
 			updates <- streamUpdate{err: err, done: true}
 		} else {
-			updates <- streamUpdate{message: lastMessage, done: true}
+			updates <- streamUpdate{message: lastMessage, result: result, done: true}
 		}
 	}()
 
@@ -277,6 +274,16 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	if update.done {
 		m.scope.Info("stream completed", "stop_reason", update.message.StopReason)
 
+		// Extract metadata from stream result if present
+		var title string
+		var contextWindow, inputTokens, outputTokens int
+		if update.result != nil && update.result.Metadata != nil {
+			title = update.result.Metadata.Title
+			contextWindow = update.result.Metadata.ContextWindow
+			inputTokens = update.result.Metadata.InputTokens
+			outputTokens = update.result.Metadata.OutputTokens
+		}
+
 		if update.message.StopReason == "tool_use" {
 			m.pendingTools = countToolUseBlocks(update.message.Content)
 			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
@@ -288,9 +295,13 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 				return tea.Batch(
 					func() tea.Msg {
 						return msgs.StreamCompleted{
-							TurnID:     m.userMessage.ID(),
-							Message:    *update.message,
-							StopReason: update.message.StopReason,
+							TurnID:        m.userMessage.ID(),
+							Message:       *update.message,
+							StopReason:    update.message.StopReason,
+							Title:         title,
+							ContextWindow: contextWindow,
+							InputTokens:   inputTokens,
+							OutputTokens:  outputTokens,
 						}
 					},
 					m.persistAssistantMessage(update.message),
@@ -307,9 +318,13 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		return tea.Batch(
 			func() tea.Msg {
 				return msgs.StreamCompleted{
-					TurnID:     turnID,
-					Message:    *update.message,
-					StopReason: update.message.StopReason,
+					TurnID:        turnID,
+					Message:       *update.message,
+					StopReason:    update.message.StopReason,
+					Title:         title,
+					ContextWindow: contextWindow,
+					InputTokens:   inputTokens,
+					OutputTokens:  outputTokens,
 				}
 			},
 			m.persistAssistantMessage(update.message),
@@ -391,12 +406,14 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 	}
 }
 
-// fireToolResults fires UserSubmittedInput with tool results.
+// fireToolResults fires ToolResultsReady for the round to handle.
 func (m *Model) fireToolResults() tea.Cmd {
+	turnID := m.userMessage.ID()
 	results := m.toolResults
 	return func() tea.Msg {
-		return msgs.UserSubmittedInput{
-			ToolResults: results,
+		return msgs.ToolResultsReady{
+			TurnID:  turnID,
+			Results: results,
 		}
 	}
 }
@@ -410,4 +427,16 @@ func countToolUseBlocks(content []domain.Block) int {
 		}
 	}
 	return count
+}
+
+// SetFocused sets the focused state and propagates to child models.
+func (m *Model) SetFocused(focused bool) {
+	m.focused = focused
+	m.userMessage.SetFocused(focused)
+	m.assistantMessage.SetFocused(focused)
+}
+
+// Focused returns whether the turn is focused.
+func (m *Model) Focused() bool {
+	return m.focused
 }

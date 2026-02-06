@@ -7,11 +7,12 @@ import (
 )
 
 // Surface defines colors for a background surface.
-// Text and TextMuted are guaranteed to have good contrast with Bg.
+// Text colors are guaranteed to have good contrast with Bg.
 type Surface struct {
-	Bg        color.Color
-	Text      color.Color
-	TextMuted color.Color
+	Bg         color.Color
+	Text       color.Color // primary text
+	TextMuted  color.Color // secondary (keys, labels)
+	TextSubtle color.Color // tertiary (descriptions, hints)
 }
 
 // InputSurface defines colors for input elements.
@@ -93,14 +94,16 @@ func buildColors(p Palette, isDark bool) *Colors {
 			IsDark: true,
 
 			Page: Surface{
-				Bg:        MustHex(p.Neutral[S900]),
-				Text:      MustHex(p.Neutral[S50]),
-				TextMuted: MustHex(p.Neutral[S300]),
+				Bg:         MustHex(p.Neutral[S900]),
+				Text:       MustHex(p.Neutral[S200]),
+				TextMuted:  MustHex(p.Neutral[S400]),
+				TextSubtle: MustHex(p.Neutral[S500]),
 			},
 			Panel: Surface{
-				Bg:        MustHex(p.Neutral[S800]),
-				Text:      MustHex(p.Neutral[S50]),
-				TextMuted: MustHex(p.Neutral[S300]),
+				Bg:         MustHex(p.Neutral[S800]),
+				Text:       MustHex(p.Neutral[S50]),
+				TextMuted:  MustHex(p.Neutral[S300]),
+				TextSubtle: MustHex(p.Neutral[S400]),
 			},
 			Input: InputSurface{
 				Bg:          MustHex(p.Neutral[S800]),
@@ -140,14 +143,16 @@ func buildColors(p Palette, isDark bool) *Colors {
 		IsDark: false,
 
 		Page: Surface{
-			Bg:        MustHex(p.Neutral[S50]),
-			Text:      MustHex(p.Neutral[S900]),
-			TextMuted: MustHex(p.Neutral[S600]),
+			Bg:         MustHex(p.Neutral[S50]),
+			Text:       MustHex(p.Neutral[S900]),
+			TextMuted:  MustHex(p.Neutral[S600]),
+			TextSubtle: MustHex(p.Neutral[S500]),
 		},
 		Panel: Surface{
-			Bg:        MustHex(p.Neutral[S100]),
-			Text:      MustHex(p.Neutral[S900]),
-			TextMuted: MustHex(p.Neutral[S600]),
+			Bg:         MustHex(p.Neutral[S100]),
+			Text:       MustHex(p.Neutral[S900]),
+			TextMuted:  MustHex(p.Neutral[S600]),
+			TextSubtle: MustHex(p.Neutral[S500]),
 		},
 		Input: InputSurface{
 			Bg:          MustHex(White),

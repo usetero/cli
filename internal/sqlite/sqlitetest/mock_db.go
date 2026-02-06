@@ -16,6 +16,9 @@ type MockDB struct {
 	// ConversationsImpl is the mock conversations implementation.
 	ConversationsImpl sqlite.Conversations
 
+	// DatadogAccountStatusesImpl is the mock Datadog account statuses implementation.
+	DatadogAccountStatusesImpl sqlite.DatadogAccountStatuses
+
 	// SubscriptionImpl is returned by Subscribe.
 	SubscriptionImpl *sqlite.Subscription
 
@@ -48,6 +51,11 @@ func (m *MockDB) Messages() sqlite.Messages {
 // Conversations implements sqlite.DB.
 func (m *MockDB) Conversations() sqlite.Conversations {
 	return m.ConversationsImpl
+}
+
+// DatadogAccountStatuses implements sqlite.DB.
+func (m *MockDB) DatadogAccountStatuses() sqlite.DatadogAccountStatuses {
+	return m.DatadogAccountStatusesImpl
 }
 
 // Subscribe implements sqlite.DB.

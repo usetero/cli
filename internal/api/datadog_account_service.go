@@ -8,12 +8,28 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// ValidateAPIKeyInput contains the fields for validating a Datadog API key.
+type ValidateAPIKeyInput struct {
+	APIKey string
+	Site   string
+}
+
+// CreateDatadogAccountInput contains the fields for creating a Datadog account with credentials.
+type CreateDatadogAccountInput struct {
+	ID        uuid.UUID
+	AccountID string
+	Name      string
+	Site      string
+	APIKey    string
+	AppKey    string
+}
+
 // DatadogAccounts provides access to Datadog account operations.
 type DatadogAccounts interface {
 	HasAccount(ctx context.Context, accountID string) (bool, error)
 	GetAccount(ctx context.Context, accountID string) (*DatadogAccount, error)
-	ValidateAPIKey(ctx context.Context, apiKey, site string) (bool, string, error)
-	CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error)
+	ValidateAPIKey(ctx context.Context, input ValidateAPIKeyInput) (bool, string, error)
+	CreateAccount(ctx context.Context, input CreateDatadogAccountInput) (*DatadogAccount, error)
 	GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error)
 }
 
@@ -124,15 +140,15 @@ func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID string
 // ValidateAPIKey validates the API key via the control plane.
 // The control plane handles validation against Datadog's API.
 // Returns whether the key is valid, an error message if invalid, and any system errors.
-func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site string) (bool, string, error) {
-	s.scope.Debug("validating datadog API key via control plane", "site", site)
+func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, input ValidateAPIKeyInput) (bool, string, error) {
+	s.scope.Debug("validating datadog API key via control plane", "site", input.Site)
 
-	input := gen.ValidateDatadogApiKeyInput{
-		ApiKey: apiKey,
-		Site:   gen.DatadogAccountSite(site),
+	genInput := gen.ValidateDatadogApiKeyInput{
+		ApiKey: input.APIKey,
+		Site:   gen.DatadogAccountSite(input.Site),
 	}
 
-	resp, err := s.client.ValidateDatadogApiKey(ctx, input)
+	resp, err := s.client.ValidateDatadogApiKey(ctx, genInput)
 	if err != nil {
 		s.scope.Error("failed to validate datadog API key", "error", err)
 		return false, "", err
@@ -155,22 +171,22 @@ func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, apiKey, site
 // Both API key and Application key must be provided.
 // Keys are sent to control plane and stored securely there - never stored locally.
 // The control plane validates the credentials before creating the account.
-func (s *DatadogAccountService) CreateAccount(ctx context.Context, id uuid.UUID, accountID, name, site, apiKey, appKey string) (*DatadogAccount, error) {
-	s.scope.Debug("creating datadog account with credentials via API", "id", id.String(), "accountID", accountID, "site", site)
-	input := gen.CreateDatadogAccountWithCredentialsInput{
+func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateDatadogAccountInput) (*DatadogAccount, error) {
+	s.scope.Debug("creating datadog account with credentials via API", "id", input.ID.String(), "accountID", input.AccountID, "site", input.Site)
+	genInput := gen.CreateDatadogAccountWithCredentialsInput{
 		Attributes: gen.CreateDatadogAccountInput{
-			Id:        ptr(id.String()),
-			AccountID: accountID,
-			Name:      name,
-			Site:      gen.DatadogAccountSite(site), // US1, US5, EU1, etc.
+			Id:        ptr(input.ID.String()),
+			AccountID: input.AccountID,
+			Name:      input.Name,
+			Site:      gen.DatadogAccountSite(input.Site),
 		},
 		Credentials: gen.CreateDatadogCredentialsInput{
-			ApiKey: apiKey,
-			AppKey: appKey,
+			ApiKey: input.APIKey,
+			AppKey: input.AppKey,
 		},
 	}
 
-	resp, err := s.client.CreateDatadogAccountWithCredentials(ctx, input)
+	resp, err := s.client.CreateDatadogAccountWithCredentials(ctx, genInput)
 	if err != nil {
 		s.scope.Error("failed to create datadog account", "error", err)
 		return nil, err

@@ -1,6 +1,9 @@
 package onboarding
 
-import tea "charm.land/bubbletea/v2"
+import (
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+)
 
 // Step represents a single step in the onboarding flow.
 type Step interface {
@@ -16,4 +19,7 @@ type Step interface {
 
 	// SetSize updates the step's dimensions.
 	SetSize(width, height int)
+
+	// ShortHelp returns the key bindings for the short help view.
+	ShortHelp() []key.Binding
 }

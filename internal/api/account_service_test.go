@@ -108,7 +108,7 @@ func TestAccountService_Create(t *testing.T) {
 
 		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
-		account, err := svc.Create(context.Background(), testID, "org-123", "New Account")
+		account, err := svc.Create(context.Background(), api.CreateAccountInput{ID: testID, OrganizationID: "org-123", Name: "New Account"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -133,7 +133,7 @@ func TestAccountService_Create(t *testing.T) {
 		}
 
 		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
-		_, err := svc.Create(context.Background(), uuid.New(), "org-123", "Test")
+		_, err := svc.Create(context.Background(), api.CreateAccountInput{ID: uuid.New(), OrganizationID: "org-123", Name: "Test"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

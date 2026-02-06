@@ -2,6 +2,7 @@
 package remotelist
 
 import (
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/styles"
@@ -160,4 +161,12 @@ func (m *Model) Error() error {
 // KeyMap returns the list key bindings.
 func (m *Model) KeyMap() list.KeyMap {
 	return m.list.KeyMap()
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	if m.state != stateLoaded {
+		return nil
+	}
+	return m.list.ShortHelp()
 }

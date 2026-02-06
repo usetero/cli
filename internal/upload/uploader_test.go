@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -91,8 +92,8 @@ func TestUploader_Run(t *testing.T) {
 		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
-				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
 			},
 		}
 
@@ -206,12 +207,12 @@ func TestUploader_Run(t *testing.T) {
 
 		callCount := 0
 		conversations := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
 				callCount++
 				if callCount <= 4 {
 					return nil, errors.New("temporary error")
 				}
-				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
+				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
 			},
 		}
 

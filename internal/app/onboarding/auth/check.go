@@ -4,6 +4,7 @@ package auth
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
@@ -96,3 +97,8 @@ func (m *CheckModel) View() string {
 
 // SetSize updates dimensions.
 func (m *CheckModel) SetSize(width, height int) {}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *CheckModel) ShortHelp() []key.Binding {
+	return nil
+}

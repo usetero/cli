@@ -49,7 +49,7 @@ func TestClient_Stream(t *testing.T) {
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 		client.SetAccountID("acc-123")
 
-		err := client.Stream(context.Background(), chat.Request{
+		_, err := client.Stream(context.Background(), chat.Request{
 			ConversationID: "conv-1",
 			Messages:       []domain.Message{},
 		}, func(msg *domain.Message) {})
@@ -95,7 +95,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com/", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err != nil {
 			t.Fatalf("Stream() error = %v", err)
 		}
@@ -124,7 +124,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -150,7 +150,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -179,7 +179,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -209,7 +209,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -247,7 +247,7 @@ data: [DONE]
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
 		var messages []*domain.Message
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
 			// Make a copy since the message is built incrementally
 			msgCopy := *msg
 			messages = append(messages, &msgCopy)
@@ -311,7 +311,7 @@ data: [DONE]
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
 		var lastMessage *domain.Message
-		err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
 			lastMessage = msg
 		})
 

@@ -3,6 +3,7 @@ package datadog
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -125,15 +126,14 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
 	return func() tea.Msg {
 		id := uuid.New()
-		ddAccount, err := m.services.DatadogAccounts.CreateAccount(
-			m.ctx,
-			id,
-			m.account.ID.String(),
-			m.account.Name,
-			m.site.String(),
-			m.apiKey,
-			appKey,
-		)
+		ddAccount, err := m.services.DatadogAccounts.CreateAccount(m.ctx, api.CreateDatadogAccountInput{
+			ID:        id,
+			AccountID: m.account.ID.String(),
+			Name:      m.account.Name,
+			Site:      m.site.String(),
+			APIKey:    m.apiKey,
+			AppKey:    appKey,
+		})
 		if err != nil {
 			return accountCreatedMsg{err: err}
 		}
@@ -168,4 +168,16 @@ func (m *AppKeyModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.input.SetWidth(width)
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *AppKeyModel) ShortHelp() []key.Binding {
+	if m.creating {
+		return nil
+	}
+	bindings := m.input.ShortHelp()
+	bindings = append(bindings,
+		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "connect")),
+	)
+	return bindings
 }

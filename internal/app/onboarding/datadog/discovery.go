@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -191,4 +192,14 @@ func (m *DiscoveryModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.progress.SetWidth(min(width, 50))
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *DiscoveryModel) ShortHelp() []key.Binding {
+	if m.err != nil {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "retry")),
+		}
+	}
+	return nil
 }

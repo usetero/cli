@@ -110,3 +110,18 @@ func (q *Queries) ListConversationsByAccount(ctx context.Context, accountID *str
 	}
 	return items, nil
 }
+
+const updateConversationTitle = `-- name: UpdateConversationTitle :exec
+UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?
+`
+
+type UpdateConversationTitleParams struct {
+	Title     *string
+	UpdatedAt *string
+	ID        *string
+}
+
+func (q *Queries) UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error {
+	_, err := q.db.ExecContext(ctx, updateConversationTitle, arg.Title, arg.UpdatedAt, arg.ID)
+	return err
+}

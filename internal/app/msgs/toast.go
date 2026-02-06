@@ -1,4 +1,3 @@
-// Package msgs defines app-level messages.
 package msgs
 
 import tea "charm.land/bubbletea/v2"

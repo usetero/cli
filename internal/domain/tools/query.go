@@ -2,7 +2,9 @@ package tools
 
 // QueryInput is the input schema for the query tool.
 type QueryInput struct {
-	SQL string `json:"sql"`
+	SQL    string `json:"sql"`
+	Status string `json:"status"`
+	Result string `json:"result"`
 }
 
 // QueryResult is the typed output of a query tool execution.

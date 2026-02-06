@@ -3,7 +3,7 @@ package apitest
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -11,7 +11,7 @@ import (
 type MockAccounts struct {
 	ListFunc   func(ctx context.Context, organizationID domain.OrganizationID) ([]domain.Account, error)
 	GetFunc    func(ctx context.Context, accountID domain.AccountID) (*domain.Account, error)
-	CreateFunc func(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error)
+	CreateFunc func(ctx context.Context, input api.CreateAccountInput) (*domain.Account, error)
 }
 
 // NewMockAccounts creates a MockAccounts with sensible defaults.
@@ -33,9 +33,9 @@ func (m *MockAccounts) Get(ctx context.Context, accountID domain.AccountID) (*do
 	return nil, nil
 }
 
-func (m *MockAccounts) Create(ctx context.Context, id uuid.UUID, organizationID domain.OrganizationID, name string) (*domain.Account, error) {
+func (m *MockAccounts) Create(ctx context.Context, input api.CreateAccountInput) (*domain.Account, error) {
 	if m.CreateFunc != nil {
-		return m.CreateFunc(ctx, id, organizationID, name)
+		return m.CreateFunc(ctx, input)
 	}
 	return nil, nil
 }

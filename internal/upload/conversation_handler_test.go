@@ -32,11 +32,11 @@ func TestConversationHandler_Handle(t *testing.T) {
 		}
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
-				calledWith.id = id
-				calledWith.workspaceID = workspaceID
-				calledWith.title = title
-				return &domain.Conversation{ID: domain.ConversationID(id.String())}, nil
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+				calledWith.id = input.ID
+				calledWith.workspaceID = input.WorkspaceID
+				calledWith.title = input.Title
+				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
 			},
 		}
 
@@ -71,7 +71,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -99,10 +99,12 @@ func TestConversationHandler_Handle(t *testing.T) {
 		}
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error) {
 				calledWith.id = id
-				calledWith.title = title
-				return &domain.Conversation{ID: id, Title: title}, nil
+				if input.Title != nil {
+					calledWith.title = *input.Title
+				}
+				return &domain.Conversation{ID: id, Title: calledWith.title}, nil
 			},
 		}
 
@@ -133,7 +135,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id domain.ConversationID, title string) (*domain.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -233,9 +235,9 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, id uuid.UUID, workspaceID domain.WorkspaceID, title string) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
 				// Service layer returns wrapped ErrAlreadyExists
-				return nil, fmt.Errorf("create conversation %s: %w", id, api.ErrAlreadyExists)
+				return nil, fmt.Errorf("create conversation %s: %w", input.ID, api.ErrAlreadyExists)
 			},
 		}
 

@@ -28,6 +28,7 @@ var (
 type DB interface {
 	Messages() Messages
 	Conversations() Conversations
+	DatadogAccountStatuses() DatadogAccountStatuses
 	Subscribe() *Subscription
 	Query(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) *sql.Row
@@ -146,6 +147,11 @@ func (d *database) Messages() Messages {
 // Conversations returns type-safe conversation operations.
 func (d *database) Conversations() Conversations {
 	return &conversationsImpl{queries: d.Queries()}
+}
+
+// DatadogAccountStatuses returns type-safe Datadog account status operations.
+func (d *database) DatadogAccountStatuses() DatadogAccountStatuses {
+	return &datadogAccountStatusesImpl{queries: d.Queries()}
 }
 
 // Query executes a query and returns the results.

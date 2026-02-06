@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/app/chat/commandbar"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	"github.com/usetero/cli/internal/app/chat/sidebar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/tools"
@@ -18,22 +17,14 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/header"
-	"github.com/usetero/cli/internal/tea/keymap"
-)
-
-const (
-	sidebarWidth          = 30
-	sidebarMinWindowWidth = 100 // minimum window width to show sidebar
 )
 
 // Model is the main chat model.
+// It is a flexible component - it renders exactly the size given by SetSize.
 type Model struct {
 	scope log.Scope
 
-	header      *header.Model
 	commandBar  *commandbar.Model
-	sidebar     *sidebar.Model
 	messageList *messagelist.Model
 
 	// Conversation is created lazily on first message
@@ -55,7 +46,6 @@ type Model struct {
 func New(
 	account domain.Account,
 	workspace domain.Workspace,
-	width, height int,
 	theme *styles.Theme,
 	db sqlite.DB,
 	chatClient chatclient.Client,
@@ -64,31 +54,17 @@ func New(
 ) *Model {
 	scope = scope.Child("chat")
 
-	h := header.New(theme)
-	h.SetTitle("Chat")
-	h.SetOrgName(workspace.Name)
-
-	sidebarModel := sidebar.New(theme)
-	sidebarModel.SetWorkspace(workspace.Name)
-
-	m := &Model{
+	return &Model{
 		scope:        scope,
-		header:       h,
-		commandBar:   commandbar.New(theme, width),
-		sidebar:      sidebarModel,
-		messageList:  messagelist.New(theme, width, height, db, chatClient, toolRegistry, scope),
+		commandBar:   commandbar.New(theme, scope),
+		messageList:  messagelist.New(theme, db, chatClient, toolRegistry, scope),
 		account:      account,
 		workspace:    workspace,
 		theme:        theme,
-		width:        width,
-		height:       height,
 		db:           db,
 		chatClient:   chatClient,
 		toolRegistry: toolRegistry,
 	}
-
-	m.updateLayout()
-	return m
 }
 
 // Init initializes the model.
@@ -122,43 +98,35 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// SetSize updates the dimensions.
+// SetSize updates the dimensions. This is a flexible component.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.updateLayout()
 }
 
-// useSidebarLayout returns true when we should show sidebar instead of header.
-func (m *Model) useSidebarLayout() bool {
-	return m.hasMessages() && m.width >= sidebarMinWindowWidth
-}
-
-// updateLayout updates all component sizes based on current dimensions and state.
+// updateLayout calculates sizes for children based on current dimensions.
 func (m *Model) updateLayout() {
-	// Always update all components so they're ready when layout switches
-	m.header.SetWidth(m.width)
-	m.sidebar.SetSize(sidebarWidth, m.height)
+	// CommandBar is fixed height
+	m.commandBar.SetWidth(m.width)
+	commandBarHeight := m.commandBar.Height()
 
-	if m.useSidebarLayout() {
-		mainWidth := m.width - sidebarWidth - 1 // -1 for gap
-		listHeight := m.height - m.commandBar.Height()
-
-		m.commandBar.SetWidth(mainWidth)
-		m.messageList.SetSize(mainWidth, listHeight)
-	} else {
-		listHeight := m.height - m.header.Height() - m.commandBar.Height()
-
-		m.commandBar.SetWidth(m.width)
-		m.messageList.SetSize(m.width, listHeight)
+	// MessageList is flexible - gets remaining space
+	messageListHeight := m.height - commandBarHeight
+	if messageListHeight < 0 {
+		messageListHeight = 0
 	}
+	m.messageList.SetSize(m.width, messageListHeight)
 }
 
-// KeyBindings returns the key bindings for display in footer.
-func (m *Model) KeyBindings() []key.Binding {
-	bindings := m.commandBar.KeyBindings()
-	bindings = append(bindings, keymap.Global...)
-	return bindings
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	return m.commandBar.ShortHelp()
+}
+
+// ConversationID returns the current conversation ID.
+func (m *Model) ConversationID() domain.ConversationID {
+	return m.conversationID
 }
 
 // hasMessages returns true if there are messages to display.
@@ -265,11 +233,9 @@ type userMessagePersisted struct {
 
 // handlePersistedMessage starts the turn after the user message is persisted.
 func (m *Model) handlePersistedMessage(msg userMessagePersisted) tea.Cmd {
-	wasEmpty := !m.hasMessages()
-
 	m.scope.Info("turn started", "conversation_id", msg.conversationID, "user_message_id", msg.messageID)
 
-	cmd := m.messageList.StartTurn(
+	return m.messageList.StartTurn(
 		msg.conversationID,
 		m.account.ID,
 		msg.messageID,
@@ -277,15 +243,9 @@ func (m *Model) handlePersistedMessage(msg userMessagePersisted) tea.Cmd {
 		msg.messages,
 		nil,
 	)
-
-	if wasEmpty {
-		m.updateLayout()
-	}
-
-	return cmd
 }
 
-// View renders the chat content (without chrome - app handles that).
+// View renders the chat. This is a flexible component - renders exactly to SetSize dimensions.
 func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
 		return ""
@@ -293,30 +253,19 @@ func (m *Model) View() string {
 
 	colors := m.theme.Colors
 
-	// Empty state: header + centered prompt
+	// Empty state: centered prompt + command bar
 	if !m.hasMessages() {
-		headerView := m.header.View()
-		headerHeight := m.header.Height()
-		contentHeight := m.height - headerHeight - m.commandBar.Height()
-
+		emptyHeight := m.height - m.commandBar.Height()
 		emptyView := lipgloss.NewStyle().
 			Foreground(colors.Page.TextMuted).
 			Width(m.width).
-			Height(contentHeight).
+			Height(emptyHeight).
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("Start a conversation...")
 
-		commandBarView := m.commandBar.View()
-
-		return lipgloss.JoinVertical(lipgloss.Left, headerView, emptyView, commandBarView)
+		return lipgloss.JoinVertical(lipgloss.Left, emptyView, m.commandBar.View())
 	}
 
-	// Sidebar layout: messages + command bar | sidebar
-	if m.useSidebarLayout() {
-		mainContent := lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.commandBar.View())
-		return lipgloss.JoinHorizontal(lipgloss.Top, mainContent, " ", m.sidebar.View())
-	}
-
-	// Header layout: header + messages + command bar
-	return lipgloss.JoinVertical(lipgloss.Left, m.header.View(), m.messageList.View(), m.commandBar.View())
+	// Normal state: message list + command bar
+	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.commandBar.View())
 }

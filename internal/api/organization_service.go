@@ -9,10 +9,16 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// CreateOrganizationInput contains the fields for creating an organization.
+type CreateOrganizationInput struct {
+	ID   uuid.UUID
+	Name string
+}
+
 // Organizations provides access to organizations.
 type Organizations interface {
 	List(ctx context.Context) ([]domain.Organization, error)
-	Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error)
+	Create(ctx context.Context, input CreateOrganizationInput) (*OrganizationBootstrapResult, error)
 }
 
 // OrganizationService handles organization-related API operations.
@@ -63,14 +69,14 @@ func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, 
 }
 
 // Create creates a new organization with bootstrapped account and workspace.
-func (s *OrganizationService) Create(ctx context.Context, id uuid.UUID, name string) (*OrganizationBootstrapResult, error) {
-	s.scope.Debug("creating organization with bootstrap via API", "id", id.String(), "name", name)
-	input := gen.CreateOrganizationInput{
-		Id:   ptr(id.String()),
-		Name: name,
+func (s *OrganizationService) Create(ctx context.Context, input CreateOrganizationInput) (*OrganizationBootstrapResult, error) {
+	s.scope.Debug("creating organization with bootstrap via API", "id", input.ID.String(), "name", input.Name)
+	genInput := gen.CreateOrganizationInput{
+		Id:   ptr(input.ID.String()),
+		Name: input.Name,
 	}
 
-	resp, err := s.client.CreateOrganizationAndBootstrap(ctx, input)
+	resp, err := s.client.CreateOrganizationAndBootstrap(ctx, genInput)
 	if err != nil {
 		s.scope.Error("failed to create organization", "error", err)
 		return nil, err

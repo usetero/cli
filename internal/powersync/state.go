@@ -12,6 +12,7 @@ import (
 //	case *powersync.Connecting:
 //	case *powersync.Syncing:
 //	case *powersync.Ready:
+//	case *powersync.Reconnecting:
 //	case *powersync.Error:
 //	}
 type State interface {
@@ -23,72 +24,55 @@ type Disconnected struct{}
 
 func (*Disconnected) state() {}
 
-// NewDisconnected creates a disconnected state.
 func NewDisconnected() *Disconnected {
 	return &Disconnected{}
 }
 
-// Connecting means the syncer is establishing a connection.
-type Connecting struct {
-	Message string
-}
+// Connecting means the syncer is establishing its first connection.
+type Connecting struct{}
 
 func (*Connecting) state() {}
 
-// NewConnecting creates a connecting state.
-func NewConnecting(message string) *Connecting {
-	return &Connecting{Message: message}
+func NewConnecting() *Connecting {
+	return &Connecting{}
 }
 
 // Syncing means the syncer is actively downloading data.
 type Syncing struct {
-	Message  string    // Always set: "Syncing your data..." or with progress
-	Warning  string    // Transient issue, empty if none
-	Progress *Progress // Download progress, nil if not yet known
+	Progress *Progress // nil until progress is known
 }
 
 func (*Syncing) state() {}
 
-// NewSyncing creates a syncing state with the given message.
-func NewSyncing(message string) *Syncing {
-	return &Syncing{Message: message}
+func NewSyncing() *Syncing {
+	return &Syncing{}
 }
 
-// WithProgress returns a copy with progress set.
 func (s *Syncing) WithProgress(downloaded, total int) *Syncing {
 	return &Syncing{
-		Message:  s.Message,
-		Warning:  s.Warning,
 		Progress: &Progress{Downloaded: downloaded, Total: total},
 	}
 }
 
-// UpdateProgress returns a copy with updated progress and message, preserving warning.
-func (s *Syncing) UpdateProgress(downloaded, total int) *Syncing {
-	return &Syncing{
-		Message:  fmt.Sprintf("Syncing your data... (%d/%d)", downloaded, total),
-		Warning:  s.Warning,
-		Progress: &Progress{Downloaded: downloaded, Total: total},
-	}
-}
-
-// WithWarning returns a copy with warning set.
-func (s *Syncing) WithWarning(warning string) *Syncing {
-	return &Syncing{
-		Message:  s.Message,
-		Warning:  warning,
-		Progress: s.Progress,
-	}
-}
-
-// Ready means the initial sync is complete.
+// Ready means the initial sync is complete and data is fresh.
 type Ready struct{}
 
 func (*Ready) state() {}
 
-// NewReady creates a ready state.
 func NewReady() *Ready {
 	return &Ready{}
+}
+
+// Reconnecting means the syncer lost its connection and is retrying.
+// Degraded is true after repeated consecutive failures.
+type Reconnecting struct {
+	Degraded bool
+}
+
+func (*Reconnecting) state() {}
+
+func NewReconnecting(degraded bool) *Reconnecting {
+	return &Reconnecting{Degraded: degraded}
 }
 
 // Error means a fatal error occurred and syncing stopped.
@@ -98,7 +82,6 @@ type Error struct {
 
 func (*Error) state() {}
 
-// NewError creates an error state.
 func NewError(err error) *Error {
 	return &Error{Err: err}
 }
@@ -107,4 +90,9 @@ func NewError(err error) *Error {
 type Progress struct {
 	Downloaded int
 	Total      int
+}
+
+// String returns a human-readable progress string like "50/100".
+func (p *Progress) String() string {
+	return fmt.Sprintf("%d/%d", p.Downloaded, p.Total)
 }

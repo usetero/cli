@@ -127,7 +127,7 @@ func TestOrganizationService_Create(t *testing.T) {
 
 		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
-		result, err := svc.Create(context.Background(), testID, "New Org")
+		result, err := svc.Create(context.Background(), api.CreateOrganizationInput{ID: testID, Name: "New Org"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -158,7 +158,7 @@ func TestOrganizationService_Create(t *testing.T) {
 		}
 
 		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
-		_, err := svc.Create(context.Background(), uuid.New(), "Test")
+		_, err := svc.Create(context.Background(), api.CreateOrganizationInput{ID: uuid.New(), Name: "Test"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

@@ -3,23 +3,19 @@ package sync
 
 import (
 	"fmt"
-	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/progress"
 )
-
-const pollInterval = 200 * time.Millisecond
-
-// pollMsg triggers a sync status check.
-type pollMsg struct{}
 
 // Model waits for sync to complete.
 type Model struct {
@@ -56,31 +52,25 @@ func New(theme *styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
 	}
 }
 
-// Init starts polling if not already ready.
+// Init starts the spinner and checks if already ready.
 func (m *Model) Init() tea.Cmd {
 	if m.syncer.IsReady() {
 		m.scope.Info("sync already complete")
 		return func() tea.Msg { return msgs.SyncComplete{} }
 	}
-	m.scope.Debug("starting sync poll")
-	return tea.Batch(m.spinner.Tick, m.poll())
-}
-
-func (m *Model) poll() tea.Cmd {
-	return tea.Tick(pollInterval, func(time.Time) tea.Msg {
-		return pollMsg{}
-	})
+	m.scope.Debug("waiting for sync")
+	return m.spinner.Tick
 }
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
-	case pollMsg:
-		if m.syncer.IsReady() {
+	switch msg := msg.(type) {
+	case appmsg.SyncStateChanged:
+		if _, ok := msg.State.(*powersync.Ready); ok {
 			m.scope.Info("sync completed")
 			return func() tea.Msg { return msgs.SyncComplete{} }
 		}
-		return m.poll()
+		return nil
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -94,8 +84,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // View renders the sync UI.
 func (m *Model) View() string {
 	s := m.theme.Styles
-	colors := m.theme.Colors
-
 	title := s.Title.Render("Getting ready")
 
 	switch state := m.syncer.State().(type) {
@@ -106,11 +94,15 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", s.Error.Render(fmt.Sprintf("Error: %v", state.Err)))
 
 	case *powersync.Connecting:
-		statusLine := m.spinner.View() + " " + s.Body.Render(state.Message)
+		statusLine := m.spinner.View() + " " + s.Body.Render("Connecting...")
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 
 	case *powersync.Syncing:
-		statusLine := m.spinner.View() + " " + s.Body.Render(state.Message)
+		msg := "Syncing your data..."
+		if state.Progress != nil && state.Progress.Total > 0 {
+			msg = fmt.Sprintf("Syncing your data... (%s)", state.Progress)
+		}
+		statusLine := m.spinner.View() + " " + s.Body.Render(msg)
 		parts := []string{title, "", statusLine}
 
 		if state.Progress != nil && state.Progress.Total > 0 {
@@ -120,12 +112,11 @@ func (m *Model) View() string {
 			parts = append(parts, "", progressBar, "", s.Help.Render(countText))
 		}
 
-		if state.Warning != "" {
-			warningStyle := lipgloss.NewStyle().Foreground(colors.Warning.Fg)
-			parts = append(parts, "", "  "+warningStyle.Render(state.Warning))
-		}
-
 		return lipgloss.JoinVertical(lipgloss.Left, parts...)
+
+	case *powersync.Reconnecting:
+		statusLine := m.spinner.View() + " " + s.Body.Render("Reconnecting...")
+		return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 
 	default:
 		statusLine := m.spinner.View() + " " + s.Body.Render("Starting...")
@@ -138,4 +129,10 @@ func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.progress.SetWidth(min(width, 50))
+}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *Model) ShortHelp() []key.Binding {
+	// Sync is automatic, no user action needed
+	return nil
 }

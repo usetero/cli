@@ -4,6 +4,7 @@ package datadog
 import (
 	"context"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/api"
@@ -108,3 +109,13 @@ func (m *CheckModel) View() string {
 
 // SetSize updates dimensions.
 func (m *CheckModel) SetSize(width, height int) {}
+
+// ShortHelp returns the key bindings for the short help view.
+func (m *CheckModel) ShortHelp() []key.Binding {
+	if m.err != nil {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "retry")),
+		}
+	}
+	return nil
+}

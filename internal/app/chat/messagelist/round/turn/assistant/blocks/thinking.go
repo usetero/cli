@@ -2,13 +2,14 @@ package blocks
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
 )
 
 // ThinkingBlock renders a thinking content block.
-// Can be expanded or collapsed.
+// Can be expanded or collapsed. It is a fixed-height component.
 type ThinkingBlock struct {
 	theme    *styles.Theme
 	index    int
@@ -60,6 +61,11 @@ func (m *ThinkingBlock) View() string {
 		return "▼ Thinking\n" + m.text
 	}
 	return "▶ Thinking (collapsed)"
+}
+
+// Height returns the number of lines this block renders.
+func (m *ThinkingBlock) Height() int {
+	return lipgloss.Height(m.View())
 }
 
 // SetText sets the text.

@@ -11,6 +11,7 @@ import (
 // Conversations provides type-safe access to conversations.
 type Conversations interface {
 	Create(ctx context.Context, accountID, workspaceID string) (string, error)
+	UpdateTitle(ctx context.Context, id, title string) error
 	List(ctx context.Context, accountID string) ([]gen.Conversation, error)
 	Get(ctx context.Context, id string) (gen.Conversation, error)
 }
@@ -37,6 +38,17 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID s
 	}
 
 	return convID, nil
+}
+
+// UpdateTitle sets the title on a conversation.
+func (c *conversationsImpl) UpdateTitle(ctx context.Context, id, title string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	err := c.queries.UpdateConversationTitle(ctx, gen.UpdateConversationTitleParams{
+		Title:     &title,
+		UpdatedAt: &now,
+		ID:        &id,
+	})
+	return WrapSQLiteError(err, "update conversation title")
 }
 
 // List returns all conversations for an account.

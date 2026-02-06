@@ -55,7 +55,11 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 		return fmt.Errorf("invalid conversation ID %q: %w", entry.RowID, err)
 	}
 
-	_, err = h.conversations.Create(ctx, id, domain.WorkspaceID(workspaceID), title)
+	_, err = h.conversations.Create(ctx, api.CreateConversationInput{
+		ID:          id,
+		WorkspaceID: domain.WorkspaceID(workspaceID),
+		Title:       title,
+	})
 	if err != nil {
 		// Already exists is fine - the conversation is there, which is what we wanted
 		if errors.Is(err, api.ErrAlreadyExists) {
@@ -70,9 +74,14 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 }
 
 func (h *conversationHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) error {
-	title, _ := entry.Data["title"].(string)
+	var input api.UpdateConversationInput
 
-	_, err := h.conversations.Update(ctx, domain.ConversationID(entry.RowID), title)
+	if titleVal, ok := entry.Data["title"]; ok {
+		title, _ := titleVal.(string)
+		input.Title = &title
+	}
+
+	_, err := h.conversations.Update(ctx, domain.ConversationID(entry.RowID), input)
 	if err != nil {
 		return fmt.Errorf("update conversation: %w", err)
 	}

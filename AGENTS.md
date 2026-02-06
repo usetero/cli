@@ -15,7 +15,7 @@ Then pick your interface:
 
 | Doc | When to Read |
 |-----|--------------|
-| [TUI.md](docs/TUI.md) | Working on the terminal UI. Bubbletea, models, chat. |
+| [TEA.md](docs/TEA.md) | Working on the terminal UI. Bubbletea patterns, models, layout. |
 | [MCP.md](docs/MCP.md) | Working on the MCP server. (Not yet implemented.) |
 | [CLI.md](docs/CLI.md) | Adding CLI commands. Direct API access. |
 
