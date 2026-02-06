@@ -195,13 +195,13 @@ func (m *Model) View() string {
 	contentWidth := lipgloss.Width(content)
 
 	// Fill space between left content and right hint with diagonals
-	leftDiags := diagStyle.Render(diag + diag + diag)
-	middlePadding := m.width - contentWidth - rightWidth - 9 // 3 left diags + 3 right diags + 3 spaces
+	leftDiags := diagStyle.Render(diag + diag)
+	middlePadding := m.width - contentWidth - rightWidth - 7 // 2 left diags + 2 right diags + 3 spaces
 	if middlePadding < 3 {
 		middlePadding = 3
 	}
 	middleDiags := diagStyle.Render(strings.Repeat(diag, middlePadding))
-	rightDiags := diagStyle.Render(diag + diag + diag)
+	rightDiags := diagStyle.Render(diag + diag)
 
 	return leftDiags + " " + content + " " + middleDiags + " " + rightSeg + rightDiags
 }
