@@ -1,10 +1,8 @@
--- Tero Local Catalog Schema
--- Auto-generated with comments from control plane. DO NOT EDIT.
+-- Tero Client Schema
+-- Auto-generated from sync-rules.yaml and Postgres metadata. DO NOT EDIT.
+-- Run 'task generate:powersync' to regenerate.
 --
--- SQLite 3.51.1 with full support for: CTEs, window functions, JSON functions,
--- RETURNING, generated columns, and all modern SQL features.
---
--- This is a LOCAL SQLite database synced from the Tero control plane.
+-- This describes the local SQLite database synced from the Tero control plane.
 -- All data is scoped to the authenticated user's account.
 --
 -- Key concepts:
@@ -13,17 +11,16 @@
 --   policies      - AI-identified waste (health checks, duplicate fields, bloat)
 --   *_cache       - Pre-computed status and metrics (query these for current state)
 --
--- IMPORTANT: All queries are READ-ONLY. This is a local sync of server data.
-
+-- All queries are READ-ONLY. This is a local sync of server data.
 
 CREATE TABLE conversation_contexts (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from conversation.account_id.
-    added_by TEXT, -- Who added this entity to context
+    added_by TEXT, -- Who added this entity to context Values: user, assistant.
     conversation_id TEXT, -- Conversation this context belongs to
     created_at TEXT, -- When the entity was added to context
     entity_id TEXT, -- ID of the context entity
-    entity_type TEXT -- Type of the context entity
+    entity_type TEXT -- Type of the context entity Values: service, log_event.
 );
 
 CREATE TABLE conversations (
@@ -33,9 +30,11 @@ CREATE TABLE conversations (
     title TEXT, -- AI-generated title, set after first exchange
     updated_at TEXT, -- When the conversation was last updated
     user_id TEXT, -- WorkOS user ID who owns this conversation
+    view_id TEXT, -- If set, this conversation is for iterating on a specific view
     workspace_id TEXT -- Workspace this conversation belongs to
 );
 
+-- Aggregated status for each Datadog account based on service statuses. Status progression: DISABLED (all services disabled) > INACTIVE (all services zero volume) > BROKEN (any service broken) > STALE (any service stale) > DISCOVERING (any service discovering) > ANALYZING (any service analyzing) > READY (all services ready).
 CREATE TABLE datadog_account_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID (denormalized from Datadog account)
@@ -73,7 +72,7 @@ CREATE TABLE datadog_accounts (
     account_id TEXT, -- Parent account this configuration belongs to
     created_at TEXT, -- When the Datadog account was created
     name TEXT, -- Display name for this Datadog account
-    site TEXT, -- Datadog site for this account (must be explicit)
+    site TEXT, -- Datadog site for this account (must be explicit) Values: US1, US3, US5, EU1, US1_FED, AP1, AP2.
     updated_at TEXT -- When the Datadog account was last updated
 );
 
@@ -94,7 +93,7 @@ CREATE TABLE discovery_statuses (
     consecutive_warnings INTEGER, -- Number of consecutive warnings (reset on success)
     created_at TEXT, -- When status tracking began
     datadog_account_id TEXT, -- Datadog account performing the discovery (FK arc with other integrations)
-    discovery_type TEXT, -- Type of discovery operation being tracked
+    discovery_type TEXT, -- Type of discovery operation being tracked Values: service, log_events, log_volume, service_log_volume.
     last_error TEXT, -- Last error message if discovery failed
     last_error_at TEXT, -- When the last error occurred
     last_warning TEXT, -- Last warning message (transient issues like rate limits)
@@ -110,16 +109,20 @@ CREATE TABLE log_event_policies (
     analysis TEXT, -- Category-specific analysis (only one field populated, matching category)
     approved_at TEXT, -- When this policy was approved by a user
     approved_by TEXT, -- User ID who approved this policy
+    benefits TEXT, -- What benefits this policy provides. volume_reduction: fewer events, bytes_reduction: smaller events, signal_quality: less noise, compliance: regulatory/policy, resilience: system stability.
     category TEXT, -- Policy category (e.g., 'health_checks', 'pii_leakage')
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy
     log_event_id TEXT, -- The log event this policy applies to
     model TEXT, -- AI model that generated this policy (e.g., 'claude-sonnet-4-20250514')
+    objectivity TEXT, -- How verifiable is this finding? factual: user can confirm by looking at the data, reasoned: requires AI judgment. Auto-set by trigger from category.
+    risk_level TEXT, -- How bad is it if this policy is wrong? low: safe to apply, medium: review recommended, high: could break things. Set by AI per finding.
     updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
 );
 
+-- Policy recommendations with status and estimated savings. Shows whether each policy is pending (WASTE), approved (SAVED), or rejected (DISMISSED), along with volume and bytes saved per hour.
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
@@ -135,6 +138,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
+-- Current status of each log event based on discovery and analysis state. Status progression: BROKEN (discovery errors) > SAVED (policy approved) > VALUABLE (analyzed, no issues) > WASTE (issues found, pending action) > ANALYZING (has volumes, awaiting analysis) > DISCOVERING (no volumes yet).
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
@@ -185,7 +189,7 @@ CREATE TABLE messages (
     conversation_id TEXT, -- Conversation this message belongs to
     created_at TEXT, -- When the message was created
     model TEXT, -- AI model that produced this message. Null for user messages.
-    role TEXT, -- Who sent this message.
+    role TEXT, -- Who sent this message. Values: user, assistant.
     stop_reason TEXT -- Why the assistant stopped: end_turn, tool_use. Null for user messages.
 );
 
@@ -200,6 +204,7 @@ CREATE TABLE service_log_volumes (
     volume_per_hour INTEGER -- Log volume for this service during this hour
 );
 
+-- Aggregated status for each service based on log event statuses. Status progression: DISABLED (user turned off) > INACTIVE (zero volume) > BROKEN (discovery errors) > STALE (data older than 48h) > DISCOVERING (coverage < 90%) > ANALYZING (log events being analyzed) > READY (all log events terminal).
 CREATE TABLE service_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID (denormalized from service)
@@ -246,12 +251,32 @@ CREATE TABLE teams (
     workspace_id TEXT -- Parent workspace this team belongs to
 );
 
+CREATE TABLE view_favorites (
+    id TEXT, -- Unique identifier
+    account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from view.account_id.
+    created_at TEXT, -- When the view was favorited
+    user_id TEXT, -- WorkOS user ID who favorited this view
+    view_id TEXT -- The view being favorited
+);
+
+CREATE TABLE views (
+    id TEXT, -- Unique identifier
+    account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from message.account_id.
+    conversation_id TEXT, -- Denormalized from message for easier queries
+    created_at TEXT, -- When the view was created
+    created_by TEXT, -- WorkOS user ID who triggered this view creation
+    entity_type TEXT, -- Which catalog entity this view queries Values: service, log_event, policy.
+    forked_from_id TEXT, -- Parent view if this is a refinement/iteration
+    message_id TEXT, -- Assistant message that created this view via show_view tool call
+    query TEXT -- Raw SQL query executed against the client's local SQLite database
+);
+
 CREATE TABLE workspaces (
     id TEXT, -- Unique identifier of the workspace
     account_id TEXT, -- Parent account this workspace belongs to
     created_at TEXT, -- When the workspace was created
     name TEXT, -- Human-readable name within the account
-    purpose TEXT, -- Primary purpose determining evaluation strategy
+    purpose TEXT, -- Primary purpose determining evaluation strategy Values: observability, security, compliance.
     updated_at TEXT -- When the workspace was last updated
 );
 

@@ -1,5 +1,3 @@
-//go:generate go run ./generate
-
 package tools
 
 import (

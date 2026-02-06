@@ -53,7 +53,7 @@ tasks:
     cmds:
       - go generate ./internal/powersync
       - go generate ./internal/sqlite
-      - go generate ./internal/chat/tools
+      - cp ../control-plane/internal/powersync/schema.sql internal/chat/tools/query_schema.sql
 
   # ===========================================================================
   # Build
