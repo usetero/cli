@@ -28,7 +28,6 @@ type Model struct {
 	id           domain.MessageID
 	blocks       []blocks.Block
 	width        int
-	focused      bool
 	toolRegistry *chattools.Registry
 	thinking     *thinking.Model
 	streaming    bool
@@ -102,22 +101,10 @@ func (m *Model) View() string {
 	}
 	content := lipgloss.JoinVertical(lipgloss.Left, contentParts...)
 
-	// Assistant message is indented to align with user message border
-	// When focused, it gets a visible left border
-	if m.focused {
-		colors := m.theme.Colors
-		style := lipgloss.NewStyle().
-			Width(m.width - paddingWidth).
-			PaddingLeft(1).
-			BorderLeft(true).
-			BorderStyle(lipgloss.ThickBorder()).
-			BorderForeground(colors.Success.Fg)
-		return style.Render(content)
-	}
-
-	// Not focused: just padding to align with user message (border + padding = 2)
+	// Assistant message is indented to align with user message border.
+	// Width is total outer width including padding.
 	return lipgloss.NewStyle().
-		Width(m.width - paddingWidth).
+		Width(m.width).
 		PaddingLeft(paddingWidth).
 		Render(content)
 }
@@ -135,6 +122,11 @@ func (m *Model) SetWidth(width int) {
 	for _, b := range m.blocks {
 		b.SetWidth(contentWidth)
 	}
+}
+
+// AddBlock adds a block directly (for testing).
+func (m *Model) AddBlock(b blocks.Block) {
+	m.blocks = append(m.blocks, b)
 }
 
 // SetContent populates blocks from content. Used for initial population to avoid empty render.
@@ -205,9 +197,4 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 		child = query.New(m.theme, index, toolUse.ID, width, nil, m.scope)
 	}
 	return tools.New(m.theme, index, toolUse.ID, width, child)
-}
-
-// SetFocused sets the focused state.
-func (m *Model) SetFocused(focused bool) {
-	m.focused = focused
 }

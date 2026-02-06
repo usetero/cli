@@ -3,6 +3,7 @@ package messagelist
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
@@ -15,8 +16,16 @@ import (
 	"github.com/usetero/cli/internal/styles"
 )
 
+var (
+	scrollUpKey   = key.NewBinding(key.WithKeys("up"))
+	scrollDownKey = key.NewBinding(key.WithKeys("down"))
+)
+
 // roundGap is the number of blank lines between rounds.
 const roundGap = 2
+
+// focusBorderWidth is the width consumed by the left border when focused.
+const focusBorderWidth = 1
 
 // Model displays the conversation history and manages rounds.
 // It is a flexible component - it renders exactly the height given by SetSize.
@@ -27,6 +36,9 @@ type Model struct {
 	rounds []*round.Model
 	width  int
 	height int
+
+	// Focus state
+	focused bool // true when message list has keyboard focus
 
 	// Scroll state
 	scrollOffset int  // lines scrolled from top
@@ -62,6 +74,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		if m.focused {
+			if key.Matches(msg, scrollUpKey) {
+				m.scrollUp(3)
+				m.userScrolled = true
+			} else if key.Matches(msg, scrollDownKey) {
+				m.scrollDown(3)
+				if m.isAtBottom() {
+					m.userScrolled = false
+				}
+			}
+		}
+
 	case tea.MouseWheelMsg:
 		switch msg.Button {
 		case tea.MouseWheelUp:
@@ -114,7 +139,7 @@ func (m *Model) StartTurn(
 		accountID,
 		userMessageID,
 		input,
-		m.width,
+		m.contentWidth(),
 		m.db,
 		m.chatClient,
 		m.toolRegistry,
@@ -151,25 +176,37 @@ func (m *Model) View() string {
 
 	// If content fits, pad to height
 	if totalLines <= m.height {
-		return m.padToHeight(content)
+		lines = m.padLines(lines)
+	} else {
+		// Content exceeds height - apply scroll offset and truncate
+		startLine := m.scrollOffset
+		if startLine > totalLines-m.height {
+			startLine = totalLines - m.height
+		}
+		if startLine < 0 {
+			startLine = 0
+		}
+
+		endLine := startLine + m.height
+		if endLine > totalLines {
+			endLine = totalLines
+		}
+
+		lines = lines[startLine:endLine]
 	}
 
-	// Content exceeds height - apply scroll offset and truncate
-	startLine := m.scrollOffset
-	if startLine > totalLines-m.height {
-		startLine = totalLines - m.height
-	}
-	if startLine < 0 {
-		startLine = 0
+	output := strings.Join(lines, "\n")
+
+	borderColor := m.theme.Colors.Page.Bg
+	if m.focused {
+		borderColor = m.theme.Colors.AccentAlt
 	}
 
-	endLine := startLine + m.height
-	if endLine > totalLines {
-		endLine = totalLines
-	}
-
-	visibleLines := lines[startLine:endLine]
-	return strings.Join(visibleLines, "\n")
+	return lipgloss.NewStyle().
+		BorderLeft(true).
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderForeground(borderColor).
+		Render(output)
 }
 
 // renderContent renders all rounds with gaps between them.
@@ -195,13 +232,12 @@ func (m *Model) emptyView() string {
 		Render("")
 }
 
-// padToHeight pads content to exactly m.height lines.
-func (m *Model) padToHeight(content string) string {
-	lines := strings.Split(content, "\n")
+// padLines pads lines to exactly m.height.
+func (m *Model) padLines(lines []string) []string {
 	for len(lines) < m.height {
 		lines = append(lines, "")
 	}
-	return strings.Join(lines, "\n")
+	return lines
 }
 
 // contentHeight returns the total height of all content.
@@ -260,10 +296,31 @@ func (m *Model) isAtBottom() bool {
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+	m.updateRoundWidths()
+}
 
+// SetFocused sets focus state.
+func (m *Model) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// contentWidth returns the width available for round content.
+// Border is always present (invisible when unfocused) so always subtract.
+func (m *Model) contentWidth() int {
+	return m.width - focusBorderWidth
+}
+
+// updateRoundWidths sets the width on all rounds.
+func (m *Model) updateRoundWidths() {
+	w := m.contentWidth()
 	for _, r := range m.rounds {
-		r.SetWidth(width)
+		r.SetWidth(w)
 	}
+}
+
+// Focused returns whether the message list is focused.
+func (m *Model) Focused() bool {
+	return m.focused
 }
 
 // Len returns the number of rounds.

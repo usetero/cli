@@ -44,7 +44,6 @@ type Model struct {
 	assistantMessage *assistant.Model
 
 	state   State
-	focused bool
 	width   int
 	stream  *streamState
 	initCmd tea.Cmd // Command to start thinking animation
@@ -427,16 +426,4 @@ func countToolUseBlocks(content []domain.Block) int {
 		}
 	}
 	return count
-}
-
-// SetFocused sets the focused state and propagates to child models.
-func (m *Model) SetFocused(focused bool) {
-	m.focused = focused
-	m.userMessage.SetFocused(focused)
-	m.assistantMessage.SetFocused(focused)
-}
-
-// Focused returns whether the turn is focused.
-func (m *Model) Focused() bool {
-	return m.focused
 }

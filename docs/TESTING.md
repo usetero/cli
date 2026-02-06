@@ -112,6 +112,81 @@ func TestFoo(t *testing.T) {
 | Integration | `foo_integration_test.go` | `//go:build integration` | `TestIntegration_` |
 | Correctness | `foo_correctness_test.go` | `//go:build correctness` | `TestCorrectness_` |
 
+## Testing `View()`
+
+`View()` is a public method that returns a string. Test it like any other method — given state and inputs, assert the output behaves correctly.
+
+The one TUI-specific detail: output contains ANSI escape codes, so use `ansi.StringWidth` instead of `len()` to measure visible width. The `teatest` package provides assertion helpers for this.
+
+### Width Contract
+
+Every component must render within its assigned width. This is the core behavioral invariant for `View()`:
+
+```go
+func TestQuery_View(t *testing.T) {
+    t.Run("respects width", func(t *testing.T) {
+        m := New(theme, scope)
+        m.SetWidth(80)
+        // populate with data...
+
+        teatest.AssertMaxWidth(t, 80, m.View())
+    })
+}
+```
+
+Test at multiple widths to catch edge cases:
+
+```go
+for _, width := range []int{40, 80, 120, 200} {
+    t.Run(fmt.Sprintf("width_%d", width), func(t *testing.T) {
+        // ...
+        teatest.AssertMaxWidth(t, width, m.View())
+    })
+}
+```
+
+### Test the Real Rendering Chain
+
+Parent components wrap child `View()` output with padding, borders, etc. Test with real models to catch width accounting bugs between layers:
+
+```go
+// BAD: simulating the parent's rendering with manual lipgloss calls
+body := lipgloss.NewStyle().PaddingLeft(2).Render(childView)
+
+// GOOD: using real models — catches disagreements between parent and child
+parent := assistant.New(theme, "id", width, nil, scope)
+parent.AddBlock(realToolModel)
+teatest.AssertMaxWidth(t, width, parent.View())
+```
+
+### Test Construction-Time Rendering
+
+Components may render before `SetWidth` is called (e.g. a query completes during streaming before any resize event). Test both paths:
+
+```go
+// Path 1: construction-time width only (no SetWidth call)
+m := New(theme, "id", width, nil, scope)
+m.AddBlock(tool)
+teatest.AssertMaxWidth(t, width, m.View())
+
+// Path 2: after explicit SetWidth
+m.SetWidth(newWidth)
+teatest.AssertMaxWidth(t, newWidth, m.View())
+```
+
+### Test Helpers
+
+| Package | Import | Use |
+|---------|--------|-----|
+| `teatest` | `github.com/usetero/cli/internal/tea/teatest` | `AssertMaxWidth()` — no line exceeds width; `AssertExactWidth()` — widest line equals width |
+| `logtest` | `github.com/usetero/cli/internal/log/logtest` | `NewScope(t)` for test loggers |
+| `styles` | `github.com/usetero/cli/internal/styles` | `NewTheme(true)` for dark theme in tests |
+
+### Reference Tests
+
+- `assistant_test.go` — full rendering chain: assistant → tool → query
+- `query_test.go` — single component width testing at multiple widths
+
 ## What to Test
 
 Test:

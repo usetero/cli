@@ -36,8 +36,12 @@ const (
 	IconError   = "×"
 )
 
-// Content indentation.
-const bodyIndent = 2
+// Body padding: left=bodyPaddingLeft, right=bodyPaddingRight, top/bottom=1.
+const (
+	bodyPaddingLeft  = 2
+	bodyPaddingRight = 1
+	bodyPaddingH     = bodyPaddingLeft + bodyPaddingRight
+)
 
 // Child is the interface that specific tool models must implement.
 type Child interface {
@@ -69,6 +73,8 @@ type Model struct {
 
 // New creates a new tool model wrapping the given child.
 func New(theme *styles.Theme, index int, toolID string, width int, child Child) *Model {
+	// Child gets width minus body horizontal padding
+	child.SetWidth(width - bodyPaddingH)
 	return &Model{
 		theme:    theme,
 		index:    index,
@@ -136,7 +142,6 @@ func (m *Model) View() string {
 	icon := m.renderIcon()
 	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
 	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	textStyle := lipgloss.NewStyle().Foreground(colors.Page.Text)
 
 	switch m.status {
 	case StatusPending:
@@ -154,22 +159,23 @@ func (m *Model) View() string {
 		if status := m.child.Status(); status != "" {
 			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
 		}
-		body := lipgloss.NewStyle().PaddingLeft(bodyIndent).Render(m.thinking.View())
+		body := m.bodyStyle().Render(m.thinking.View())
 		return header + "\n\n" + body
 
 	case StatusSuccess:
-		// ✓ Query · Checking service status
+		// ✓ Query · Found 14 services
 		//
-		//   Found 14 services
-		header := fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
-		if status := m.child.Status(); status != "" {
-			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
-		}
+		//   <child view if any>
 		result := m.child.Result()
-		if result == "" {
+		header := fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
+		if result != "" {
+			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+result))
+		}
+		childView := m.child.View()
+		if childView == "" {
 			return header
 		}
-		body := lipgloss.NewStyle().PaddingLeft(bodyIndent).Render(textStyle.Render(result))
+		body := m.bodyStyle().Render(childView)
 		return header + "\n\n" + body
 
 	case StatusError:
@@ -186,7 +192,7 @@ func (m *Model) View() string {
 			Padding(0, 1).
 			Render("ERROR")
 		errMsg := m.child.Err().Error()
-		body := lipgloss.NewStyle().PaddingLeft(bodyIndent).Render(errTag + " " + mutedStyle.Render(errMsg))
+		body := m.bodyStyle().Render(errTag + " " + mutedStyle.Render(errMsg))
 		return header + "\n\n" + body
 	}
 
@@ -196,6 +202,13 @@ func (m *Model) View() string {
 // Height returns the number of lines this block renders.
 func (m *Model) Height() int {
 	return lipgloss.Height(m.View())
+}
+
+// bodyStyle returns the style for the tool's content area.
+func (m *Model) bodyStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Padding(1, bodyPaddingRight, 1, bodyPaddingLeft).
+		Background(m.theme.Colors.Panel.Bg)
 }
 
 // renderIcon returns the colored status icon.
@@ -212,11 +225,15 @@ func (m *Model) renderIcon() string {
 	}
 }
 
+// ForceStatus sets the status directly (for testing).
+func (m *Model) ForceStatus(status Status) {
+	m.status = status
+}
+
 // SetWidth sets the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
-	// Child gets width minus indent
-	m.child.SetWidth(width - bodyIndent)
+	m.child.SetWidth(width - bodyPaddingH)
 }
 
 // Index returns the block index.

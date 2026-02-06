@@ -47,7 +47,6 @@ type Model struct {
 
 	turns     []*turn.Model
 	state     State
-	focused   bool
 	width     int
 	startTime time.Time
 	endTime   time.Time
@@ -337,18 +336,4 @@ func (m *Model) State() State {
 // ID returns the round's ID (first user message ID).
 func (m *Model) ID() domain.MessageID {
 	return m.id
-}
-
-// SetFocused sets the focused state.
-func (m *Model) SetFocused(focused bool) {
-	m.focused = focused
-	// Only the current turn shows focus
-	for i, t := range m.turns {
-		t.SetFocused(focused && i == len(m.turns)-1)
-	}
-}
-
-// Focused returns whether the round is focused.
-func (m *Model) Focused() bool {
-	return m.focused
 }

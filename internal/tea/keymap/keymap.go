@@ -29,7 +29,6 @@ var (
 		key.WithKeys("ctrl+d"),
 		key.WithHelp("ctrl+d", "details"),
 	)
-
 	// Global is shown in the keybar across all screens.
 	Global = []key.Binding{Quit}
 )

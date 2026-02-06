@@ -47,7 +47,8 @@ type Colors struct {
 
 	// Brand
 	Brand       BrandColors // Logo gradient, header diagonals
-	Accent      color.Color // Interactive: links, selections, focus rings
+	Accent      color.Color // Interactive: links, selections, prompts (Emerald)
+	AccentAlt   color.Color // Alternate accent: focus rings, highlights (Cyan)
 	SelectionBg color.Color // Text selection background
 	SelectionFg color.Color // Text selection foreground
 
@@ -118,6 +119,7 @@ func buildColors(p Palette, isDark bool) *Colors {
 				GradientEnd:   MustHex(p.Accent[S600]), // Cyan-600 (darker)
 			},
 			Accent:      MustHex(p.Brand[S300]),  // Emerald-300
+			AccentAlt:   MustHex(p.Accent[S600]), // Cyan-600
 			SelectionBg: MustHex(p.Brand[S600]),  // Emerald-600
 			SelectionFg: MustHex(p.Neutral[S50]), // White
 
@@ -167,6 +169,7 @@ func buildColors(p Palette, isDark bool) *Colors {
 			GradientEnd:   MustHex(p.Accent[S800]), // Cyan-800 (darker for light bg)
 		},
 		Accent:      MustHex(p.Brand[S600]),   // Emerald-600
+		AccentAlt:   MustHex(p.Accent[S600]),  // Cyan-600
 		SelectionBg: MustHex(p.Brand[S500]),   // Emerald-500
 		SelectionFg: MustHex(p.Neutral[S950]), // Near black
 

@@ -11,11 +11,10 @@ import (
 // Model renders a user message.
 // It is a fixed-height component - height is determined by content.
 type Model struct {
-	theme   *styles.Theme
-	id      domain.MessageID
-	input   msgs.UserSubmittedInput
-	width   int
-	focused bool
+	theme *styles.Theme
+	id    domain.MessageID
+	input msgs.UserSubmittedInput
+	width int
 }
 
 // New creates a new user message view.
@@ -54,11 +53,6 @@ func (m *Model) View() string {
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(colors.Accent)
 
-	if m.focused {
-		// Thicker border when focused
-		style = style.BorderStyle(lipgloss.ThickBorder())
-	}
-
 	return style.Render(m.input.Text)
 }
 
@@ -79,9 +73,4 @@ func (m *Model) SetWidth(width int) {
 // ID returns the message ID.
 func (m *Model) ID() domain.MessageID {
 	return m.id
-}
-
-// SetFocused sets the focused state.
-func (m *Model) SetFocused(focused bool) {
-	m.focused = focused
 }

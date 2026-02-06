@@ -17,12 +17,42 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/keymap"
+)
+
+// Chat-specific key bindings.
+var (
+	scrollUp = key.NewBinding(
+		key.WithKeys("up"),
+		key.WithHelp("↑↓", "scroll"),
+	)
+	scrollDown = key.NewBinding(
+		key.WithKeys("down"),
+		key.WithHelp("", ""),
+	)
+	focusCommandBar = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "focus command bar"),
+	)
+	focusChat = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "focus chat"),
+	)
+)
+
+// focus tracks which component has keyboard focus.
+type focus int
+
+const (
+	focusEditor focus = iota
+	focusMessages
 )
 
 // Model is the main chat model.
 // It is a flexible component - it renders exactly the size given by SetSize.
 type Model struct {
 	scope log.Scope
+	focus focus
 
 	commandBar  *commandbar.Model
 	messageList *messagelist.Model
@@ -78,6 +108,22 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	// Handle messages this model cares about
 	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		if key.Matches(msg, keymap.Tab) {
+			cmds = append(cmds, m.toggleFocus())
+			return tea.Batch(cmds...)
+		}
+		if m.focus == focusMessages {
+			// Enter or esc returns to editor
+			if key.Matches(msg, keymap.Send) || key.Matches(msg, keymap.Exit) {
+				cmds = append(cmds, m.setFocus(focusEditor))
+				return tea.Batch(cmds...)
+			}
+			// Only forward to message list when it's focused
+			cmds = append(cmds, m.messageList.Update(msg))
+			return tea.Batch(cmds...)
+		}
+
 	case msgs.UserSubmittedInput:
 		cmds = append(cmds, m.handleUserInput(msg))
 
@@ -91,11 +137,39 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.handlePersistedMessage(msg))
 	}
 
-	// Always forward to children
+	// Forward to children
 	cmds = append(cmds, m.commandBar.Update(msg))
 	cmds = append(cmds, m.messageList.Update(msg))
 
 	return tea.Batch(cmds...)
+}
+
+// toggleFocus switches focus between editor and messages.
+func (m *Model) toggleFocus() tea.Cmd {
+	switch m.focus {
+	case focusEditor:
+		if !m.hasMessages() {
+			return nil // nothing to focus
+		}
+		return m.setFocus(focusMessages)
+	default:
+		return m.setFocus(focusEditor)
+	}
+}
+
+// setFocus sets focus to the given target.
+func (m *Model) setFocus(f focus) tea.Cmd {
+	m.focus = f
+	switch f {
+	case focusEditor:
+		m.messageList.SetFocused(false)
+		return m.commandBar.Focus()
+	case focusMessages:
+		m.commandBar.Blur()
+		m.messageList.SetFocused(true)
+		return nil
+	}
+	return nil
 }
 
 // SetSize updates the dimensions. This is a flexible component.
@@ -121,6 +195,12 @@ func (m *Model) updateLayout() {
 
 // ShortHelp returns the key bindings for the short help view.
 func (m *Model) ShortHelp() []key.Binding {
+	if m.focus == focusMessages {
+		return []key.Binding{scrollUp, focusCommandBar}
+	}
+	if m.hasMessages() {
+		return append(m.commandBar.ShortHelp(), focusChat)
+	}
 	return m.commandBar.ShortHelp()
 }
 

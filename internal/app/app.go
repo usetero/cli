@@ -47,7 +47,7 @@ const (
 const (
 	horizontalPadding = 1
 	verticalPadding   = 1
-	gapAfterStatusBar = 1
+	gapAfterStatusBar = 2
 
 	minWidth  = 50
 	minHeight = 25
@@ -482,7 +482,9 @@ func (m *Model) renderContent() string {
 	// Build vertical stack
 	var sections []string
 	sections = append(sections, statusBarView)
-	sections = append(sections, "") // gapAfterStatusBar
+	for i := 0; i < gapAfterStatusBar; i++ {
+		sections = append(sections, "")
+	}
 	sections = append(sections, styledPage)
 	sections = append(sections, toastView)
 	if keyBarHeight > 0 {

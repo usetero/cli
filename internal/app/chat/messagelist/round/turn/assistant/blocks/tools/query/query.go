@@ -3,9 +3,12 @@ package query
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
@@ -14,6 +17,7 @@ import (
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/table"
 )
 
 // Model handles query tool execution and content rendering.
@@ -96,9 +100,74 @@ func (m *Model) Result() string {
 	return strings.Replace(m.resultTemplate, "{count}", fmt.Sprintf("%d", len(m.rows)), 1)
 }
 
-// View renders additional content below the header (not used - parent handles display).
+const maxPreviewRows = 5
+
+// View renders a table preview of query results, clipped to the available width.
 func (m *Model) View() string {
-	return ""
+	if len(m.rows) == 0 {
+		return ""
+	}
+
+	// Collect column headers from first row, sorted for stable order.
+	// Promote "name" to the front if it exists.
+	first := m.rows[0]
+	var headers []string
+	hasName := false
+	for k := range first {
+		if k == "name" {
+			hasName = true
+		} else {
+			headers = append(headers, k)
+		}
+	}
+	sort.Strings(headers)
+	if hasName {
+		headers = append([]string{"name"}, headers...)
+	}
+
+	// Cap rows
+	showRows := m.rows
+	truncatedRows := 0
+	if len(showRows) > maxPreviewRows {
+		truncatedRows = len(showRows) - maxPreviewRows
+		showRows = showRows[:maxPreviewRows]
+	}
+
+	// Build table — no explicit width so columns size to content
+	tbl := table.New(m.theme, table.WithFitHeaders(), table.WithBackground(m.theme.Colors.Panel.Bg))
+	tbl.Headers(headers...)
+
+	for _, row := range showRows {
+		cells := make([]string, len(headers))
+		for i, h := range headers {
+			cells[i] = fmt.Sprintf("%v", row[h])
+		}
+		tbl.Row(cells...)
+	}
+
+	result := tbl.View()
+
+	if truncatedRows > 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted).PaddingLeft(1)
+		result += "\n\n" + muted.Render(fmt.Sprintf("+%d more rows", truncatedRows))
+	}
+
+	// Clip each line to available width so wide tables don't wrap
+	if m.width > 0 {
+		lines := strings.Split(result, "\n")
+		for i, line := range lines {
+			lines[i] = ansi.Truncate(line, m.width, "")
+		}
+		result = strings.Join(lines, "\n")
+	}
+
+	return result
+}
+
+// SetRows sets the result rows directly (for testing).
+func (m *Model) SetRows(rows []map[string]any) {
+	m.rows = rows
+	m.state = tools.StateComplete
 }
 
 // SetWidth sets the width.
