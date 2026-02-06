@@ -48,7 +48,6 @@ const (
 	horizontalPadding = 1
 	verticalPadding   = 1
 	gapAfterStatusBar = 1
-	gapBeforeToast    = 1
 
 	minWidth  = 50
 	minHeight = 25
@@ -233,11 +232,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}()
 		}
 		// Update context window usage in statusbar
-		if msg.InputTokens > 0 {
-			m.statusBar.SetContextCount(msg.InputTokens + msg.OutputTokens)
-		}
 		if msg.InputTokens > 0 && msg.ContextWindow > 0 {
-			m.statusBar.SetContextPercent(msg.InputTokens * 100 / msg.ContextWindow)
+			pct := (msg.InputTokens*100 + msg.ContextWindow - 1) / msg.ContextWindow // round up
+			m.statusBar.SetContextPercent(pct)
 		}
 	}
 
@@ -285,10 +282,8 @@ func (m *Model) updateLayout() {
 	keyBarHeight := m.keyBar.Height()
 
 	// Page is flexible - gets remaining height
-	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - keyBarHeight
-	if toastHeight > 0 {
-		pageHeight -= toastHeight + gapBeforeToast
-	}
+	// Toast always reserves its line to prevent layout shifts
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - keyBarHeight
 
 	switch m.state {
 	case stateOnboarding:
@@ -450,10 +445,8 @@ func (m *Model) renderContent() string {
 	}
 
 	// Calculate page height (flexible component gets remaining space)
-	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - keyBarHeight
-	if toastHeight > 0 {
-		pageHeight -= toastHeight + gapBeforeToast
-	}
+	// Toast always reserves its line to prevent layout shifts
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - keyBarHeight
 
 	// Style page to fill its allocated space
 	styledPage := lipgloss.NewStyle().
@@ -467,10 +460,7 @@ func (m *Model) renderContent() string {
 	sections = append(sections, statusBarView)
 	sections = append(sections, "") // gapAfterStatusBar
 	sections = append(sections, styledPage)
-	if toastHeight > 0 {
-		sections = append(sections, "") // gapBeforeToast
-		sections = append(sections, toastView)
-	}
+	sections = append(sections, toastView)
 	if keyBarHeight > 0 {
 		sections = append(sections, keyBarView)
 	}

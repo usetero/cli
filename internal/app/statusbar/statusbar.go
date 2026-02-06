@@ -3,6 +3,7 @@ package statusbar
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -30,9 +31,6 @@ type Model struct {
 
 	// Conversation
 	title string
-
-	// Context
-	contextCount int
 
 	// Context window usage (0-100)
 	contextPercent int
@@ -88,11 +86,6 @@ func (m *Model) SetTitle(title string) {
 	m.title = title
 }
 
-// SetContextCount sets the number of entities in context.
-func (m *Model) SetContextCount(count int) {
-	m.contextCount = count
-}
-
 // SetContextPercent sets the context window usage percentage.
 func (m *Model) SetContextPercent(percent int) {
 	m.contextPercent = percent
@@ -112,7 +105,6 @@ func (m *Model) View() string {
 	colors := m.theme.Colors
 	diagStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd)
 	sepStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 
 	sep := sepStyle.Render(" │ ")
 
@@ -150,18 +142,9 @@ func (m *Model) View() string {
 		}
 	}
 
-	// 5. Context count (if fits)
-	if m.contextCount > 0 {
-		ctxSeg := mutedStyle.Render(fmt.Sprintf("@%d", m.contextCount))
-		testContent := strings.Join(segments, sep) + sep + ctxSeg
-		if lipgloss.Width(testContent) < m.width-8 {
-			segments = append(segments, ctxSeg)
-		}
-	}
-
-	// 6. Context percent (if fits)
+	// 5. Context window usage (if fits)
 	if m.contextPercent > 0 {
-		pctSeg := mutedStyle.Render(fmt.Sprintf("%d%%", m.contextPercent))
+		pctSeg := m.renderContextPercent()
 		testContent := strings.Join(segments, sep) + sep + pctSeg
 		if lipgloss.Width(testContent) < m.width-3 {
 			segments = append(segments, pctSeg)
@@ -223,4 +206,22 @@ func (m *Model) renderTitle(maxWidth int) string {
 	}
 
 	return style.Render("\"" + title + "\"")
+}
+
+// renderContextPercent renders "ctx: N%" with color based on usage level.
+func (m *Model) renderContextPercent() string {
+	colors := m.theme.Colors
+
+	var fg color.Color
+	switch {
+	case m.contextPercent >= 90:
+		fg = colors.Error.Fg
+	case m.contextPercent >= 75:
+		fg = colors.Warning.Fg
+	default:
+		fg = colors.Page.TextMuted
+	}
+
+	style := lipgloss.NewStyle().Foreground(fg)
+	return style.Render(fmt.Sprintf("ctx: %d%%", m.contextPercent))
 }

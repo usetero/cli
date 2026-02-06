@@ -56,11 +56,8 @@ func (m *Model) SetWidth(width int) {
 }
 
 // Height returns the number of lines this component renders.
-// Returns 0 when no toast is showing, 1 when a toast is visible.
+// Always returns 1 to reserve space and prevent layout shifts.
 func (m *Model) Height() int {
-	if m.current == nil {
-		return 0
-	}
 	return 1
 }
 
@@ -91,10 +88,10 @@ func (m *Model) show(t toast) tea.Cmd {
 	return clearAfter(DefaultTTL)
 }
 
-// View renders the toast. Returns empty string if no toast.
+// View renders the toast. Returns an empty line if no toast to reserve space.
 func (m *Model) View() string {
 	if m.current == nil {
-		return ""
+		return " "
 	}
 
 	colors := m.theme.Colors
