@@ -18,6 +18,17 @@ import (
 
 const diag = "╱"
 
+// Tab indices for the drawer.
+const (
+	TabSync    = 0
+	TabCatalog = 1
+	TabChat    = 2
+	tabCount   = 3
+)
+
+// Tab labels.
+var tabLabels = [tabCount]string{"Sync", "Catalog", "Chat"}
+
 // Model renders the app status bar.
 type Model struct {
 	theme         *styles.Theme
@@ -34,6 +45,10 @@ type Model struct {
 
 	// Context window usage (0-100)
 	contextPercent int
+
+	// Drawer state
+	drawerOpen bool
+	activeTab  int
 }
 
 // New creates a new statusbar.
@@ -91,6 +106,26 @@ func (m *Model) SetContextPercent(percent int) {
 	m.contextPercent = percent
 }
 
+// ToggleDrawer toggles the drawer open/closed.
+func (m *Model) ToggleDrawer() {
+	m.drawerOpen = !m.drawerOpen
+}
+
+// CloseDrawer closes the drawer.
+func (m *Model) CloseDrawer() {
+	m.drawerOpen = false
+}
+
+// NextTab cycles to the next drawer tab.
+func (m *Model) NextTab() {
+	m.activeTab = (m.activeTab + 1) % tabCount
+}
+
+// IsDrawerOpen returns whether the drawer is open.
+func (m *Model) IsDrawerOpen() bool {
+	return m.drawerOpen
+}
+
 // Height returns the height of the statusbar.
 func (m *Model) Height() int {
 	return 1
@@ -108,7 +143,7 @@ func (m *Model) View() string {
 
 	sep := sepStyle.Render(" │ ")
 
-	// Build segments from left to right
+	// Build left-aligned segments
 	var segments []string
 
 	// 1. Brand + sync status (always shown)
@@ -116,7 +151,7 @@ func (m *Model) View() string {
 	segments = append(segments, brandConn)
 
 	// 2. Catalog pulse (phase-aware: services, policies, discovery progress)
-	catalogView := m.catalogStatus.View()
+	catalogView := m.catalogStatus.CompactView()
 	if catalogView != "" {
 		segments = append(segments, catalogView)
 	}
@@ -151,19 +186,91 @@ func (m *Model) View() string {
 		}
 	}
 
-	// Join all segments
+	// Build right-aligned segment: ctrl+d hint
+	rightSeg := m.renderDrawerHint()
+	rightWidth := lipgloss.Width(rightSeg)
+
+	// Join left segments
 	content := strings.Join(segments, sep)
 	contentWidth := lipgloss.Width(content)
 
-	// Fill remaining space with diagonals
+	// Fill space between left content and right hint with diagonals
 	leftDiags := diagStyle.Render(diag + diag + diag)
-	rightPadding := m.width - contentWidth - 4 // 3 left diags + 1 space
-	if rightPadding < 3 {
-		rightPadding = 3
+	middlePadding := m.width - contentWidth - rightWidth - 9 // 3 left diags + 3 right diags + 3 spaces
+	if middlePadding < 3 {
+		middlePadding = 3
 	}
-	rightDiags := diagStyle.Render(strings.Repeat(diag, rightPadding))
+	middleDiags := diagStyle.Render(strings.Repeat(diag, middlePadding))
+	rightDiags := diagStyle.Render(diag + diag + diag)
 
-	return leftDiags + " " + content + " " + rightDiags
+	return leftDiags + " " + content + " " + middleDiags + " " + rightSeg + rightDiags
+}
+
+// DrawerView renders the drawer overlay.
+func (m *Model) DrawerView(width, height int) string {
+	colors := m.theme.Colors
+
+	// Tab bar
+	tabBar := m.renderTabBar(width - 4) // account for border + padding
+
+	// Active tab content
+	var content string
+	switch m.activeTab {
+	case TabSync:
+		content = m.syncStatus.ExpandedView()
+	case TabCatalog:
+		content = m.catalogStatus.ExpandedView()
+	case TabChat:
+		content = m.renderContextPercent()
+	}
+
+	if content == "" {
+		content = lipgloss.NewStyle().Foreground(colors.Page.TextSubtle).Render("No data")
+	}
+
+	inner := lipgloss.JoinVertical(lipgloss.Left, tabBar, "", content)
+
+	style := lipgloss.NewStyle().
+		Width(width).
+		Height(height).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colors.Accent).
+		Padding(0, 1)
+
+	return style.Render(inner)
+}
+
+// renderTabBar renders the tab selector for the drawer.
+func (m *Model) renderTabBar(width int) string {
+	colors := m.theme.Colors
+	activeStyle := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
+	inactiveStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	sepStyle := lipgloss.NewStyle().Foreground(colors.Page.TextSubtle)
+
+	var tabs []string
+	for i, label := range tabLabels {
+		if i == m.activeTab {
+			tabs = append(tabs, activeStyle.Render(label))
+		} else {
+			tabs = append(tabs, inactiveStyle.Render(label))
+		}
+	}
+
+	return strings.Join(tabs, sepStyle.Render("  "))
+}
+
+// renderDrawerHint renders the "ctrl+d open/close" hint.
+func (m *Model) renderDrawerHint() string {
+	colors := m.theme.Colors
+	keyStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	tipStyle := lipgloss.NewStyle().Foreground(colors.Page.TextSubtle)
+
+	tip := " open "
+	if m.drawerOpen {
+		tip = " close"
+	}
+
+	return keyStyle.Render("ctrl+d") + tipStyle.Render(tip)
 }
 
 // renderBrand renders "TERO" with optional sync status.
@@ -172,7 +279,7 @@ func (m *Model) renderBrand() string {
 
 	brand := styles.ApplyBoldForegroundGrad("TERO", colors.Brand.GradientStart, colors.Brand.GradientEnd)
 
-	syncView := m.syncStatus.View()
+	syncView := m.syncStatus.CompactView()
 	if syncView == "" {
 		return brand
 	}

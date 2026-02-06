@@ -120,8 +120,8 @@ func (m *Model) stateChanged(current powersync.State) bool {
 	return true
 }
 
-// View renders the sync status: "● api.usetero.com" or "● syncing 45%"
-func (m *Model) View() string {
+// CompactView renders the sync status for the statusbar: "● api.usetero.com" or "● syncing 45%"
+func (m *Model) CompactView() string {
 	if m.syncer == nil {
 		return ""
 	}
@@ -159,6 +159,11 @@ func (m *Model) View() string {
 	default:
 		return ""
 	}
+}
+
+// ExpandedView renders the detailed sync status for the drawer.
+func (m *Model) ExpandedView() string {
+	return m.CompactView()
 }
 
 func dot(c color.Color) string {

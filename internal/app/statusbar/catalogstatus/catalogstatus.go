@@ -88,8 +88,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the catalog pulse segment.
-func (m *Model) View() string {
+// CompactView renders the catalog pulse for the statusbar.
+func (m *Model) CompactView() string {
 	if !m.hasData {
 		return ""
 	}
@@ -155,4 +155,9 @@ func (m *Model) View() string {
 	}
 
 	return result
+}
+
+// ExpandedView renders the detailed catalog status for the drawer.
+func (m *Model) ExpandedView() string {
+	return m.CompactView()
 }

@@ -157,8 +157,27 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keymap.Quit) || key.Matches(msg, keymap.Exit) {
-			m.shutdown()
-			return m, tea.Quit
+			if m.statusBar.IsDrawerOpen() {
+				m.statusBar.CloseDrawer()
+				return m, nil
+			}
+			if key.Matches(msg, keymap.Quit) {
+				m.shutdown()
+				return m, tea.Quit
+			}
+		}
+
+		if key.Matches(msg, keymap.Details) {
+			m.statusBar.ToggleDrawer()
+			return m, nil
+		}
+
+		if m.statusBar.IsDrawerOpen() {
+			if key.Matches(msg, keymap.Tab) {
+				m.statusBar.NextTab()
+			}
+			// Consume all keys when drawer is open
+			return m, nil
 		}
 
 	case onboardingmsg.AccountSelected:
@@ -407,6 +426,11 @@ func (m *Model) View() tea.View {
 		cur.Color = colors.Accent
 	}
 
+	// Suppress cursor when drawer is open
+	if m.statusBar.IsDrawerOpen() {
+		cur = nil
+	}
+
 	return tea.View{
 		Content:         cleanView,
 		BackgroundColor: colors.Page.Bg,
@@ -468,9 +492,25 @@ func (m *Model) renderContent() string {
 	innerView := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
 	// Apply app padding
-	return lipgloss.NewStyle().
+	paddedView := lipgloss.NewStyle().
 		Padding(verticalPadding, horizontalPadding).
 		Render(innerView)
+
+	// Overlay drawer if open
+	if m.statusBar.IsDrawerOpen() {
+		drawerWidth := contentWidth - 2
+		drawerHeight := 6
+		drawer := m.statusBar.DrawerView(drawerWidth, drawerHeight)
+
+		layers := []*lipgloss.Layer{
+			lipgloss.NewLayer(paddedView).X(0).Y(0),
+			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(verticalPadding + statusBarHeight + gapAfterStatusBar),
+		}
+		canvas := lipgloss.NewCompositor(layers...)
+		return canvas.Render()
+	}
+
+	return paddedView
 }
 
 func (m *Model) shutdown() {

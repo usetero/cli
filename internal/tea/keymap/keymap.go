@@ -25,6 +25,10 @@ var (
 		key.WithKeys("shift+enter", "alt+enter", "ctrl+j"),
 		key.WithHelp("shift+enter", "newline"),
 	)
+	Details = key.NewBinding(
+		key.WithKeys("ctrl+d"),
+		key.WithHelp("ctrl+d", "details"),
+	)
 
 	// Global is shown in the keybar across all screens.
 	Global = []key.Binding{Quit}
