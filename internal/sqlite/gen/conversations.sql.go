@@ -10,7 +10,7 @@ import (
 )
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, account_id, created_at, title, updated_at, user_id, workspace_id FROM conversations WHERE id = ?
+SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations WHERE id = ?
 `
 
 func (q *Queries) GetConversation(ctx context.Context, id *string) (Conversation, error) {
@@ -23,13 +23,14 @@ func (q *Queries) GetConversation(ctx context.Context, id *string) (Conversation
 		&i.Title,
 		&i.UpdatedAt,
 		&i.UserID,
+		&i.ViewID,
 		&i.WorkspaceID,
 	)
 	return i, err
 }
 
 const getLatestConversationByAccount = `-- name: GetLatestConversationByAccount :one
-SELECT id, account_id, created_at, title, updated_at, user_id, workspace_id FROM conversations
+SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations
 WHERE account_id = ?
 ORDER BY updated_at DESC
 LIMIT 1
@@ -45,6 +46,7 @@ func (q *Queries) GetLatestConversationByAccount(ctx context.Context, accountID 
 		&i.Title,
 		&i.UpdatedAt,
 		&i.UserID,
+		&i.ViewID,
 		&i.WorkspaceID,
 	)
 	return i, err
@@ -75,7 +77,7 @@ func (q *Queries) InsertConversation(ctx context.Context, arg InsertConversation
 }
 
 const listConversationsByAccount = `-- name: ListConversationsByAccount :many
-SELECT id, account_id, created_at, title, updated_at, user_id, workspace_id FROM conversations
+SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations
 WHERE account_id = ?
 ORDER BY updated_at DESC
 `
@@ -96,6 +98,7 @@ func (q *Queries) ListConversationsByAccount(ctx context.Context, accountID *str
 			&i.Title,
 			&i.UpdatedAt,
 			&i.UserID,
+			&i.ViewID,
 			&i.WorkspaceID,
 		); err != nil {
 			return nil, err

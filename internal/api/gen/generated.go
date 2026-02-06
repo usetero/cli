@@ -133,6 +133,7 @@ type CreateConversationInput struct {
 	// AI-generated title, set after first exchange
 	Title       *string `json:"title"`
 	WorkspaceID string  `json:"workspaceID"`
+	ViewID      *string `json:"viewID"`
 	// Optional client-provided UUID for offline-first sync.
 	// If provided and a conversation with this ID exists, returns the existing record.
 	Id *string `json:"id"`
@@ -143,6 +144,9 @@ func (v *CreateConversationInput) GetTitle() *string { return v.Title }
 
 // GetWorkspaceID returns CreateConversationInput.WorkspaceID, and is useful for accessing the field via an interface.
 func (v *CreateConversationInput) GetWorkspaceID() string { return v.WorkspaceID }
+
+// GetViewID returns CreateConversationInput.ViewID, and is useful for accessing the field via an interface.
+func (v *CreateConversationInput) GetViewID() *string { return v.ViewID }
 
 // GetId returns CreateConversationInput.Id, and is useful for accessing the field via an interface.
 func (v *CreateConversationInput) GetId() *string { return v.Id }
@@ -881,6 +885,8 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeOrganization
 // GetServiceNodeService
 // GetServiceNodeTeam
+// GetServiceNodeView
+// GetServiceNodeViewFavorite
 // GetServiceNodeWorkspace
 // The GraphQL type's documentation follows.
 //
@@ -905,6 +911,8 @@ func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()      
 func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()        {}
 func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()             {}
 func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                {}
+func (v *GetServiceNodeView) implementsGraphQLInterfaceGetServiceNode()                {}
+func (v *GetServiceNodeViewFavorite) implementsGraphQLInterfaceGetServiceNode()        {}
 func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()           {}
 
 func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
@@ -959,6 +967,12 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "Team":
 		*v = new(GetServiceNodeTeam)
+		return json.Unmarshal(b, *v)
+	case "View":
+		*v = new(GetServiceNodeView)
+		return json.Unmarshal(b, *v)
+	case "ViewFavorite":
+		*v = new(GetServiceNodeViewFavorite)
 		return json.Unmarshal(b, *v)
 	case "Workspace":
 		*v = new(GetServiceNodeWorkspace)
@@ -1078,6 +1092,22 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeTeam
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeView:
+		typename = "View"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeView
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeViewFavorite:
+		typename = "ViewFavorite"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeViewFavorite
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeWorkspace:
@@ -1279,6 +1309,22 @@ type GetServiceNodeTeam struct {
 
 // GetTypename returns GetServiceNodeTeam.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeTeam) GetTypename() *string { return v.Typename }
+
+// GetServiceNodeView includes the requested fields of the GraphQL type View.
+type GetServiceNodeView struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeView.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeView) GetTypename() *string { return v.Typename }
+
+// GetServiceNodeViewFavorite includes the requested fields of the GraphQL type ViewFavorite.
+type GetServiceNodeViewFavorite struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeViewFavorite.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeViewFavorite) GetTypename() *string { return v.Typename }
 
 // GetServiceNodeWorkspace includes the requested fields of the GraphQL type Workspace.
 type GetServiceNodeWorkspace struct {
@@ -1763,6 +1809,8 @@ type UpdateConversationInput struct {
 	// AI-generated title, set after first exchange
 	Title      *string `json:"title"`
 	ClearTitle *bool   `json:"clearTitle"`
+	ViewID     *string `json:"viewID"`
+	ClearView  *bool   `json:"clearView"`
 }
 
 // GetTitle returns UpdateConversationInput.Title, and is useful for accessing the field via an interface.
@@ -1770,6 +1818,12 @@ func (v *UpdateConversationInput) GetTitle() *string { return v.Title }
 
 // GetClearTitle returns UpdateConversationInput.ClearTitle, and is useful for accessing the field via an interface.
 func (v *UpdateConversationInput) GetClearTitle() *bool { return v.ClearTitle }
+
+// GetViewID returns UpdateConversationInput.ViewID, and is useful for accessing the field via an interface.
+func (v *UpdateConversationInput) GetViewID() *string { return v.ViewID }
+
+// GetClearView returns UpdateConversationInput.ClearView, and is useful for accessing the field via an interface.
+func (v *UpdateConversationInput) GetClearView() *bool { return v.ClearView }
 
 // UpdateConversationResponse is returned by UpdateConversation on success.
 type UpdateConversationResponse struct {

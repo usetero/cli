@@ -1,0 +1,112 @@
+package messagelist
+
+import (
+	"image"
+	"strings"
+
+	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
+	"github.com/usetero/cli/internal/tea/highlight"
+)
+
+// --- Click handling ---
+
+// handleBlockClick handles a click on a specific block.
+// If the block implements Toggleable, it toggles and we rebuild
+// the viewport items (heights may have changed).
+func (m *Model) handleBlockClick(idx int) {
+	if idx < 0 || idx >= len(m.blocks) {
+		return
+	}
+	if t, ok := m.blocks[idx].block.(block.Toggleable); ok {
+		t.Toggle()
+		m.syncViewportItems()
+	}
+}
+
+// --- Highlight / selection ---
+
+// hasHighlight returns whether there is a current text selection.
+func (m *Model) hasHighlight() bool {
+	if m.mouseDownBlock < 0 || m.mouseDragBlock < 0 {
+		return false
+	}
+	return m.mouseDownBlock != m.mouseDragBlock ||
+		m.mouseDownY != m.mouseDragY ||
+		m.mouseDownX != m.mouseDragX
+}
+
+// getHighlightRange returns the normalized selection range (start <= end).
+func (m *Model) getHighlightRange() (startBlock, startLine, startCol, endBlock, endLine, endCol int) {
+	if m.mouseDownBlock < 0 {
+		return -1, -1, -1, -1, -1, -1
+	}
+
+	draggingForward := m.mouseDragBlock > m.mouseDownBlock ||
+		(m.mouseDragBlock == m.mouseDownBlock && m.mouseDragY > m.mouseDownY) ||
+		(m.mouseDragBlock == m.mouseDownBlock && m.mouseDragY == m.mouseDownY && m.mouseDragX >= m.mouseDownX)
+
+	if draggingForward {
+		return m.mouseDownBlock, m.mouseDownY, m.mouseDownX,
+			m.mouseDragBlock, m.mouseDragY, m.mouseDragX
+	}
+	return m.mouseDragBlock, m.mouseDragY, m.mouseDragX,
+		m.mouseDownBlock, m.mouseDownY, m.mouseDownX
+}
+
+// blockHighlightRange returns the highlight coordinates for a single block,
+// given its index and the overall selection range. Returns (-1,-1,-1,-1) if
+// the block is not in the selection.
+func blockHighlightRange(idx, startBlock, startLine, startCol, endBlock, endLine, endCol int) (sLine, sCol, eLine, eCol int) {
+	if idx < startBlock || idx > endBlock {
+		return -1, -1, -1, -1
+	}
+	if idx == startBlock && idx == endBlock {
+		return startLine, startCol, endLine, endCol
+	}
+	if idx == startBlock {
+		return startLine, startCol, -1, -1 // to end of block
+	}
+	if idx == endBlock {
+		return 0, 0, endLine, endCol
+	}
+	return 0, 0, -1, -1 // fully highlighted
+}
+
+// extractHighlight returns the plain text of the current selection.
+func (m *Model) extractHighlight() string {
+	startBlock, startLine, startCol, endBlock, endLine, endCol := m.getHighlightRange()
+	if startBlock < 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	for i := startBlock; i <= endBlock && i < len(m.blocks); i++ {
+		sLine, sCol, eLine, eCol := blockHighlightRange(i, startBlock, startLine, startCol, endBlock, endLine, endCol)
+		if sLine < 0 {
+			continue
+		}
+
+		rendered := m.renderBlock(m.blocks[i])
+		w := m.contentWidth()
+		h := lipgloss.Height(rendered)
+		area := image.Rect(0, 0, w, h)
+
+		text := highlight.Extract(rendered, area, sLine, sCol, eLine, eCol)
+		if text != "" {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+			sb.WriteString(strings.TrimRight(text, "\n"))
+		}
+	}
+
+	return sb.String()
+}
+
+// clearSelection resets mouse selection state.
+func (m *Model) clearSelection() {
+	m.mouseDown = false
+	m.mouseDownBlock = -1
+	m.mouseDragBlock = -1
+}

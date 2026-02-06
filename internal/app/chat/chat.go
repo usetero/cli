@@ -26,10 +26,6 @@ var (
 		key.WithKeys("up"),
 		key.WithHelp("↑↓", "scroll"),
 	)
-	scrollDown = key.NewBinding(
-		key.WithKeys("down"),
-		key.WithHelp("", ""),
-	)
 	focusCommandBar = key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "focus command bar"),
@@ -65,6 +61,8 @@ type Model struct {
 	theme     *styles.Theme
 	width     int
 	height    int
+	originX   int
+	originY   int
 
 	// Dependencies
 	db           sqlite.DB
@@ -135,6 +133,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case userMessagePersisted:
 		m.scope.Debug("received userMessagePersisted", "message_id", msg.messageID)
 		cmds = append(cmds, m.handlePersistedMessage(msg))
+
+	case tea.MouseClickMsg:
+		// Click on the message list area focuses it
+		if m.hasMessages() && msg.Y >= m.originY && msg.Y < m.originY+m.height-m.commandBar.Height() {
+			if m.focus != focusMessages {
+				cmds = append(cmds, m.setFocus(focusMessages))
+			}
+		}
 	}
 
 	// Forward to children
@@ -179,6 +185,13 @@ func (m *Model) SetSize(width, height int) {
 	m.updateLayout()
 }
 
+// SetOrigin sets the terminal-absolute position of this component's top-left corner.
+func (m *Model) SetOrigin(x, y int) {
+	m.originX = x
+	m.originY = y
+	m.updateLayout()
+}
+
 // updateLayout calculates sizes for children based on current dimensions.
 func (m *Model) updateLayout() {
 	// CommandBar is fixed height
@@ -191,6 +204,7 @@ func (m *Model) updateLayout() {
 		messageListHeight = 0
 	}
 	m.messageList.SetSize(m.width, messageListHeight)
+	m.messageList.SetOrigin(m.originX, m.originY)
 }
 
 // ShortHelp returns the key bindings for the short help view.

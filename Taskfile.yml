@@ -53,7 +53,7 @@ tasks:
     cmds:
       - go generate ./internal/powersync
       - go generate ./internal/sqlite
-      - go generate ./internal/tui/app/tools/query
+      - go generate ./internal/chat/tools
 
   # ===========================================================================
   # Build

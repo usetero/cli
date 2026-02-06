@@ -3,6 +3,7 @@ package user
 import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
@@ -10,11 +11,13 @@ import (
 
 // Model renders a user message.
 // It is a fixed-height component - height is determined by content.
+// Implements block.Block.
 type Model struct {
-	theme *styles.Theme
-	id    domain.MessageID
-	input msgs.UserSubmittedInput
-	width int
+	theme   *styles.Theme
+	id      domain.MessageID
+	input   msgs.UserSubmittedInput
+	width   int
+	focused bool
 }
 
 // New creates a new user message view.
@@ -45,13 +48,18 @@ func (m *Model) View() string {
 	colors := m.theme.Colors
 
 	// User message has a colored left border
+	borderColor := colors.Accent
+	if m.focused {
+		borderColor = colors.AccentAlt
+	}
+
 	style := lipgloss.NewStyle().
 		Foreground(colors.Page.Text).
 		Width(m.width - borderWidth).
 		PaddingLeft(1).
 		BorderLeft(true).
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(colors.Accent)
+		BorderForeground(borderColor)
 
 	return style.Render(m.input.Text)
 }
@@ -73,4 +81,24 @@ func (m *Model) SetWidth(width int) {
 // ID returns the message ID.
 func (m *Model) ID() domain.MessageID {
 	return m.id
+}
+
+// Kind implements block.Block.
+func (m *Model) Kind() block.Kind {
+	return block.KindUser
+}
+
+// SetFocused implements block.Block.
+func (m *Model) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// Focused implements block.Block.
+func (m *Model) Focused() bool {
+	return m.focused
+}
+
+// IsVisible returns false for tool result messages (they have no visual representation).
+func (m *Model) IsVisible() bool {
+	return len(m.input.ToolResults) == 0
 }

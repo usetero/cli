@@ -1,48 +1,96 @@
 package messagelist
 
 import (
-	"strings"
-
 	"charm.land/bubbles/v2/key"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/tools"
-	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/viewport"
 )
 
 var (
 	scrollUpKey   = key.NewBinding(key.WithKeys("up"))
 	scrollDownKey = key.NewBinding(key.WithKeys("down"))
+	focusPrevKey  = key.NewBinding(key.WithKeys("shift+up"))
+	focusNextKey  = key.NewBinding(key.WithKeys("shift+down"))
 )
 
-// roundGap is the number of blank lines between rounds.
-const roundGap = 2
+// Layout constants.
+const (
+	// outerBorderWidth is the left border on the entire message list (thick accent bar).
+	outerBorderWidth = 1
 
-// focusBorderWidth is the width consumed by the left border when focused.
-const focusBorderWidth = 1
+	// outerPaddingRight is the right padding on the entire message list.
+	outerPaddingRight = 1
+
+	// blockGap is the number of blank lines between blocks within a round.
+	blockGap = 1
+
+	// roundGap is the number of blank lines between rounds.
+	roundGap = 2
+
+	// gapBeforeDivider is blank lines before the round completion divider.
+	gapBeforeDivider = 1
+
+	// dividerHeight is the number of lines the divider itself occupies.
+	dividerHeight = 1
+)
+
+// blockEntry pairs a block with its round metadata for layout decisions.
+type blockEntry struct {
+	block      block.Block
+	roundIndex int
+}
 
 // Model displays the conversation history and manages rounds.
-// It is a flexible component - it renders exactly the height given by SetSize.
+// Scroll, focus, and hit-test math is delegated to a viewport.Model.
+//
+// Methods are split across files by responsibility:
+//   - messagelist.go  struct, constructor, accessors, layout helpers
+//   - update.go       message dispatch
+//   - render.go       View, block rendering, gaps, dividers
+//   - mouse.go        click routing, text selection
+//   - rounds.go       round lifecycle, block collection
 type Model struct {
 	theme *styles.Theme
 	scope log.Scope
 
+	// Data hierarchy (owns the blocks, routes updates)
 	rounds []*round.Model
+
+	// Flat block list for viewport rendering (rebuilt from rounds)
+	blocks []blockEntry
+
+	// Viewport: scroll, focus, hit testing (pure math)
+	vp viewport.Model
+
+	// Viewport dimensions
 	width  int
 	height int
 
-	// Focus state
-	focused bool // true when message list has keyboard focus
+	// Screen origin (top-left corner of this component in terminal coordinates).
+	// Set by the parent layout so mouse clicks can be translated.
+	originX int
+	originY int
 
-	// Scroll state
-	scrollOffset int  // lines scrolled from top
-	userScrolled bool // true if user has manually scrolled up (disables auto-scroll)
+	// Whether this component has keyboard focus (different from block focus)
+	focused bool
+
+	// Mouse selection state
+	mouseDown      bool
+	mouseDownBlock int // block index where mouse was pressed (-1 = none)
+	mouseDownX     int // X within block content
+	mouseDownY     int // Y within block (line offset)
+	mouseDragBlock int // current block during drag (-1 = none)
+	mouseDragX     int // current X within block content
+	mouseDragY     int // current Y within block
+
+	// Auto-scroll
+	userScrolled bool
 
 	// Dependencies
 	db           sqlite.DB
@@ -61,263 +109,37 @@ func New(
 	scope = scope.Child("messagelist")
 
 	return &Model{
-		theme:        theme,
-		scope:        scope,
-		db:           db,
-		chatClient:   chatClient,
-		toolRegistry: toolRegistry,
+		theme:          theme,
+		scope:          scope,
+		vp:             viewport.New(),
+		mouseDownBlock: -1,
+		mouseDragBlock: -1,
+		db:             db,
+		chatClient:     chatClient,
+		toolRegistry:   toolRegistry,
 	}
 }
 
-// Update handles messages.
-func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
+// --- Size and focus ---
 
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		if m.focused {
-			if key.Matches(msg, scrollUpKey) {
-				m.scrollUp(1)
-				m.userScrolled = true
-			} else if key.Matches(msg, scrollDownKey) {
-				m.scrollDown(1)
-				if m.isAtBottom() {
-					m.userScrolled = false
-				}
-			}
-		}
-
-	case tea.MouseWheelMsg:
-		switch msg.Button {
-		case tea.MouseWheelUp:
-			m.scrollUp(5)
-			m.userScrolled = true
-		case tea.MouseWheelDown:
-			m.scrollDown(5)
-			// If user scrolled to bottom, re-enable auto-scroll
-			if m.isAtBottom() {
-				m.userScrolled = false
-			}
-		}
-
-	case msgs.TurnStarted:
-		// New turn always scrolls to bottom
-		m.userScrolled = false
-		m.scrollToBottom()
-
-	case msgs.AssistantContentUpdated, msgs.StreamCompleted:
-		// Only auto-scroll if user hasn't manually scrolled up
-		if !m.userScrolled {
-			m.scrollToBottom()
-		}
-	}
-
-	// Forward to all rounds
-	for _, r := range m.rounds {
-		if cmd := r.Update(msg); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return tea.Batch(cmds...)
-}
-
-// StartTurn creates a new round and begins streaming.
-func (m *Model) StartTurn(
-	conversationID domain.ConversationID,
-	accountID domain.AccountID,
-	userMessageID domain.MessageID,
-	input msgs.UserSubmittedInput,
-	messages []domain.Message,
-	context []domain.ContextEntity,
-) tea.Cmd {
-	m.scope.Debug("starting turn", "user_message_id", userMessageID)
-
-	r := round.New(
-		m.theme,
-		conversationID,
-		accountID,
-		userMessageID,
-		input,
-		m.contentWidth(),
-		m.db,
-		m.chatClient,
-		m.toolRegistry,
-		m.scope,
-	)
-
-	cmd := r.StartStream(messages, context)
-	m.rounds = append(m.rounds, r)
-
-	startCmd := func() tea.Msg {
-		return msgs.TurnStarted{
-			UserMessageID:  userMessageID,
-			ConversationID: conversationID,
-		}
-	}
-
-	return tea.Batch(cmd, startCmd)
-}
-
-// View renders exactly m.height lines of the message list.
-func (m *Model) View() string {
-	if m.width == 0 || m.height == 0 {
-		return ""
-	}
-
-	// Render all content
-	content := m.renderContent()
-	if content == "" {
-		return m.emptyView()
-	}
-
-	lines := strings.Split(content, "\n")
-	totalLines := len(lines)
-
-	// If content fits, pad to height
-	if totalLines <= m.height {
-		lines = m.padLines(lines)
-	} else {
-		// Content exceeds height - apply scroll offset and truncate
-		startLine := m.scrollOffset
-		if startLine > totalLines-m.height {
-			startLine = totalLines - m.height
-		}
-		if startLine < 0 {
-			startLine = 0
-		}
-
-		endLine := startLine + m.height
-		if endLine > totalLines {
-			endLine = totalLines
-		}
-
-		lines = lines[startLine:endLine]
-	}
-
-	output := strings.Join(lines, "\n")
-
-	borderColor := m.theme.Colors.Page.Bg
-	if m.focused {
-		borderColor = m.theme.Colors.AccentAlt
-	}
-
-	return lipgloss.NewStyle().
-		BorderLeft(true).
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderForeground(borderColor).
-		PaddingRight(focusBorderWidth).
-		Render(output)
-}
-
-// renderContent renders all rounds with gaps between them.
-func (m *Model) renderContent() string {
-	if len(m.rounds) == 0 {
-		return ""
-	}
-
-	gap := strings.Repeat("\n", roundGap+1) // roundGap blank lines = roundGap+1 newlines
-
-	var parts []string
-	for _, r := range m.rounds {
-		parts = append(parts, r.View())
-	}
-
-	return strings.Join(parts, gap)
-}
-
-// emptyView renders an empty view padded to height.
-func (m *Model) emptyView() string {
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Render("")
-}
-
-// padLines pads lines to exactly m.height.
-func (m *Model) padLines(lines []string) []string {
-	for len(lines) < m.height {
-		lines = append(lines, "")
-	}
-	return lines
-}
-
-// contentHeight returns the total height of all content.
-func (m *Model) contentHeight() int {
-	if len(m.rounds) == 0 {
-		return 0
-	}
-
-	total := 0
-	for i, r := range m.rounds {
-		total += r.Height()
-		if i < len(m.rounds)-1 {
-			total += roundGap
-		}
-	}
-	return total
-}
-
-// maxScroll returns the maximum scroll offset.
-func (m *Model) maxScroll() int {
-	contentHeight := m.contentHeight()
-	if contentHeight <= m.height {
-		return 0
-	}
-	return contentHeight - m.height
-}
-
-// scrollUp scrolls up by n lines.
-func (m *Model) scrollUp(n int) {
-	m.scrollOffset -= n
-	if m.scrollOffset < 0 {
-		m.scrollOffset = 0
-	}
-}
-
-// scrollDown scrolls down by n lines.
-func (m *Model) scrollDown(n int) {
-	m.scrollOffset += n
-	maxOffset := m.maxScroll()
-	if m.scrollOffset > maxOffset {
-		m.scrollOffset = maxOffset
-	}
-}
-
-// scrollToBottom scrolls to show the bottom of content.
-func (m *Model) scrollToBottom() {
-	m.scrollOffset = m.maxScroll()
-}
-
-// isAtBottom returns true if scrolled to the bottom.
-func (m *Model) isAtBottom() bool {
-	return m.scrollOffset >= m.maxScroll()
-}
-
-// SetSize sets the dimensions. This is a flexible component.
+// SetSize sets the dimensions.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+	m.vp.SetHeight(height)
 	m.updateRoundWidths()
+}
+
+// SetOrigin sets the terminal-absolute position of this component's top-left corner.
+// Called by the parent during layout so mouse coordinates can be translated.
+func (m *Model) SetOrigin(x, y int) {
+	m.originX = x
+	m.originY = y
 }
 
 // SetFocused sets focus state.
 func (m *Model) SetFocused(focused bool) {
 	m.focused = focused
-}
-
-// contentWidth returns the width available for round content.
-// Border + right padding are always present so always subtract.
-func (m *Model) contentWidth() int {
-	return m.width - focusBorderWidth - focusBorderWidth
-}
-
-// updateRoundWidths sets the width on all rounds.
-func (m *Model) updateRoundWidths() {
-	w := m.contentWidth()
-	for _, r := range m.rounds {
-		r.SetWidth(w)
-	}
 }
 
 // Focused returns whether the message list is focused.
@@ -328,4 +150,53 @@ func (m *Model) Focused() bool {
 // Len returns the number of rounds.
 func (m *Model) Len() int {
 	return len(m.rounds)
+}
+
+// --- Layout helpers ---
+
+// contentWidth returns the width available for block content.
+func (m *Model) contentWidth() int {
+	return m.width - outerBorderWidth - outerPaddingRight
+}
+
+// blockHeight returns the line count of block at idx without rendering.
+func (m *Model) blockHeight(idx int) int {
+	h := m.blocks[idx].block.Height()
+	if h < 1 {
+		return 1
+	}
+	return h
+}
+
+// gapSize returns the number of gap/divider lines between blocks at idx-1 and idx.
+func (m *Model) gapSize(idx int) int {
+	if idx <= 0 || idx >= len(m.blocks) {
+		return 0
+	}
+
+	prev := m.blocks[idx-1]
+	curr := m.blocks[idx]
+
+	if prev.roundIndex != curr.roundIndex {
+		n := roundGap
+		if m.rounds[prev.roundIndex].State() == round.StateComplete {
+			n += gapBeforeDivider + dividerHeight
+		}
+		return n
+	}
+
+	return blockGap
+}
+
+// trailingHeight returns the height of content below the last block
+// (divider for completed rounds).
+func (m *Model) trailingHeight() int {
+	if len(m.blocks) == 0 {
+		return 0
+	}
+	last := m.blocks[len(m.blocks)-1]
+	if m.rounds[last.roundIndex].State() == round.StateComplete {
+		return gapBeforeDivider + dividerHeight
+	}
+	return 0
 }

@@ -2,7 +2,7 @@ package assistant
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
@@ -13,12 +13,6 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/thinking"
 )
-
-// paddingWidth is the width consumed by the left padding (aligns with user border).
-const paddingWidth = 2
-
-// gapBetweenBlocks is the number of blank lines between sibling blocks.
-const gapBetweenBlocks = 1
 
 // Model renders an assistant message and manages its content blocks.
 // It is a fixed-height component - height is determined by content.
@@ -76,49 +70,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// View renders the assistant message.
-func (m *Model) View() string {
-	var parts []string
-	for _, b := range m.blocks {
-		parts = append(parts, b.View())
-	}
-
-	// Show thinking indicator while streaming
-	if m.streaming {
-		parts = append(parts, m.thinking.View())
-	}
-
-	// Parent (assistant) adds gaps between children (blocks)
-	var contentParts []string
-	for i, p := range parts {
-		if i > 0 {
-			// Add blank lines between blocks
-			for j := 0; j < gapBetweenBlocks; j++ {
-				contentParts = append(contentParts, "")
-			}
-		}
-		contentParts = append(contentParts, p)
-	}
-	content := lipgloss.JoinVertical(lipgloss.Left, contentParts...)
-
-	// Assistant message is indented to align with user message border.
-	// Width is total outer width including padding.
-	return lipgloss.NewStyle().
-		Width(m.width).
-		PaddingLeft(paddingWidth).
-		Render(content)
-}
-
-// Height returns the number of lines this component renders.
-func (m *Model) Height() int {
-	return lipgloss.Height(m.View())
-}
-
 // SetWidth sets the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
 	// Blocks get the content width (minus padding)
-	contentWidth := width - paddingWidth
+	contentWidth := width - block.AssistantPadding
 	for _, b := range m.blocks {
 		b.SetWidth(contentWidth)
 	}
@@ -144,11 +100,24 @@ func (m *Model) SetID(id domain.MessageID) {
 	m.id = id
 }
 
+// Blocks returns all visual blocks for the viewport.
+// Content blocks are returned first, followed by the thinking animation if streaming.
+func (m *Model) Blocks() []block.Block {
+	var result []block.Block
+	for _, b := range m.blocks {
+		result = append(result, b)
+	}
+	if m.streaming {
+		result = append(result, blocks.NewThinkingAnimBlock(m.thinking))
+	}
+	return result
+}
+
 // ensureBlocks creates block models as needed. Blocks handle their own updates via messages.
 // Returns a command to initialize any new tool animations.
 func (m *Model) ensureBlocks(content []domain.Block) tea.Cmd {
 	var cmds []tea.Cmd
-	contentWidth := m.width - paddingWidth
+	contentWidth := m.width - block.AssistantPadding
 	for _, b := range content {
 		if m.hasBlock(b.Index) {
 			continue // Block exists, handles its own updates

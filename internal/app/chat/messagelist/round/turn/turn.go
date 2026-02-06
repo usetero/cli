@@ -4,7 +4,7 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
@@ -17,9 +17,6 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
-
-// gapBetweenUserAndAssistant is the number of blank lines between user message and assistant response.
-const gapBetweenUserAndAssistant = 1
 
 // State represents the current state of a turn.
 type State int
@@ -161,42 +158,6 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	return nil
 }
 
-// View renders the turn (user message + assistant response).
-func (m *Model) View() string {
-	userView := m.userMessage.View()
-	assistantView := m.assistantMessage.View()
-
-	if userView == "" {
-		return assistantView
-	}
-
-	// Parent (turn) adds gap between children (user, assistant)
-	parts := []string{userView}
-	for i := 0; i < gapBetweenUserAndAssistant; i++ {
-		parts = append(parts, "")
-	}
-	parts = append(parts, assistantView)
-
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
-}
-
-// AssistantView renders only the assistant response (for tool loop continuations).
-func (m *Model) AssistantView() string {
-	return m.assistantMessage.View()
-}
-
-// Height returns the number of lines this component renders.
-func (m *Model) Height() int {
-	userHeight := m.userMessage.Height()
-	assistantHeight := m.assistantMessage.Height()
-
-	if userHeight == 0 {
-		return assistantHeight
-	}
-	// user + gap + assistant
-	return userHeight + gapBetweenUserAndAssistant + assistantHeight
-}
-
 // StartStream begins streaming the assistant response.
 func (m *Model) StartStream(messages []domain.Message, chatContext []domain.ContextEntity) tea.Cmd {
 	m.scope.Debug("starting stream", "message_count", len(messages))
@@ -232,6 +193,17 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 	}()
 
 	return tea.Batch(initCmd, m.nextStreamUpdate())
+}
+
+// Blocks returns all visual blocks for the viewport.
+// Includes user message (if visible) followed by assistant blocks.
+func (m *Model) Blocks() []block.Block {
+	var result []block.Block
+	if m.userMessage.IsVisible() {
+		result = append(result, m.userMessage)
+	}
+	result = append(result, m.assistantMessage.Blocks()...)
+	return result
 }
 
 // SetWidth sets the width.

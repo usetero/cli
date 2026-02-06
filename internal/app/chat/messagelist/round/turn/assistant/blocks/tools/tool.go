@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/thinking"
@@ -59,7 +60,7 @@ type Child interface {
 // Model is the chrome wrapper for tool blocks.
 // It handles icon rendering, name display, animation, and content indentation.
 // The actual tool logic lives in the embedded child.
-// It is a fixed-height component.
+// It is a fixed-height component. Implements block.Block.
 type Model struct {
 	theme  *styles.Theme
 	index  int
@@ -69,6 +70,8 @@ type Model struct {
 
 	child    Child
 	thinking *thinking.Model
+	focused  bool
+	expanded bool // whether the body content is visible (only applies to completed tools)
 }
 
 // New creates a new tool model wrapping the given child.
@@ -83,6 +86,7 @@ func New(theme *styles.Theme, index int, toolID string, width int, child Child) 
 		status:   StatusPending,
 		child:    child,
 		thinking: thinking.New(theme, thinking.Settings{Size: 10}),
+		expanded: true,
 	}
 }
 
@@ -173,6 +177,9 @@ func (m *Model) View() string {
 		if result != "" {
 			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+result))
 		}
+		if !m.expanded {
+			return header
+		}
 		childView := m.child.View()
 		if childView == "" {
 			return header
@@ -258,4 +265,24 @@ func (m *Model) Name() string {
 // State returns the child's state.
 func (m *Model) State() State {
 	return m.child.State()
+}
+
+// Kind implements block.Block.
+func (m *Model) Kind() block.Kind {
+	return block.KindTool
+}
+
+// SetFocused implements block.Block.
+func (m *Model) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// Focused implements block.Block.
+func (m *Model) Focused() bool {
+	return m.focused
+}
+
+// Toggle implements block.Toggleable — expands/collapses the tool body.
+func (m *Model) Toggle() {
+	m.expanded = !m.expanded
 }

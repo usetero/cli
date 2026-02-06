@@ -47,7 +47,8 @@ const (
 const (
 	horizontalPadding = 1
 	verticalPadding   = 1
-	gapAfterStatusBar = 2
+	gapAfterStatusBar = 1
+	gapBeforeKeyBar   = 1
 
 	minWidth  = 50
 	minHeight = 25
@@ -302,7 +303,7 @@ func (m *Model) updateLayout() {
 
 	// Page is flexible - gets remaining height
 	// Toast always reserves its line to prevent layout shifts
-	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - keyBarHeight
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - gapBeforeKeyBar - keyBarHeight
 
 	switch m.state {
 	case stateOnboarding:
@@ -312,6 +313,8 @@ func (m *Model) updateLayout() {
 	case stateChat:
 		if m.chat != nil {
 			m.chat.SetSize(contentWidth, pageHeight)
+			// Chat page origin: toast + statusbar + gap (no top padding)
+			m.chat.SetOrigin(horizontalPadding, toastHeight+statusBarHeight+gapAfterStatusBar)
 		}
 	}
 }
@@ -322,7 +325,7 @@ func (m *Model) contentSize() (int, int) {
 		return 0, 0
 	}
 	contentWidth := m.width - (horizontalPadding * 2)
-	contentHeight := m.height - (verticalPadding * 2)
+	contentHeight := m.height - verticalPadding // bottom padding only, no top padding
 	return contentWidth, contentHeight
 }
 
@@ -470,7 +473,7 @@ func (m *Model) renderContent() string {
 
 	// Calculate page height (flexible component gets remaining space)
 	// Toast always reserves its line to prevent layout shifts
-	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - keyBarHeight
+	pageHeight := contentHeight - statusBarHeight - gapAfterStatusBar - toastHeight - gapBeforeKeyBar - keyBarHeight
 
 	// Style page to fill its allocated space
 	styledPage := lipgloss.NewStyle().
@@ -479,23 +482,29 @@ func (m *Model) renderContent() string {
 		MaxHeight(pageHeight).
 		Render(pageView)
 
-	// Build vertical stack
+	// Build vertical stack: toast → statusbar → gap → page → gap → keybar
 	var sections []string
+	sections = append(sections, toastView)
 	sections = append(sections, statusBarView)
-	for i := 0; i < gapAfterStatusBar; i++ {
+	for range gapAfterStatusBar {
 		sections = append(sections, "")
 	}
 	sections = append(sections, styledPage)
-	sections = append(sections, toastView)
+	for range gapBeforeKeyBar {
+		sections = append(sections, "")
+	}
 	if keyBarHeight > 0 {
 		sections = append(sections, keyBarView)
 	}
 
 	innerView := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
-	// Apply app padding
+	// Apply app padding (no top padding — toast occupies that line)
 	paddedView := lipgloss.NewStyle().
-		Padding(verticalPadding, horizontalPadding).
+		PaddingTop(0).
+		PaddingRight(horizontalPadding).
+		PaddingBottom(verticalPadding).
+		PaddingLeft(horizontalPadding).
 		Render(innerView)
 
 	// Overlay drawer if open
@@ -506,7 +515,7 @@ func (m *Model) renderContent() string {
 
 		layers := []*lipgloss.Layer{
 			lipgloss.NewLayer(paddedView).X(0).Y(0),
-			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(verticalPadding + statusBarHeight + gapAfterStatusBar),
+			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(toastHeight + statusBarHeight + gapAfterStatusBar),
 		}
 		canvas := lipgloss.NewCompositor(layers...)
 		return canvas.Render()

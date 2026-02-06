@@ -3,6 +3,7 @@ package blocks
 import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
@@ -10,12 +11,14 @@ import (
 
 // ThinkingBlock renders a thinking content block.
 // Can be expanded or collapsed. It is a fixed-height component.
+// Implements block.Block.
 type ThinkingBlock struct {
 	theme    *styles.Theme
 	index    int
 	text     string
 	expanded bool
 	width    int
+	focused  bool
 }
 
 // NewThinkingBlock creates a new thinking block with the given content.
@@ -86,4 +89,19 @@ func (m *ThinkingBlock) SetExpanded(expanded bool) {
 // Toggle toggles the expanded state.
 func (m *ThinkingBlock) Toggle() {
 	m.expanded = !m.expanded
+}
+
+// Kind implements block.Block.
+func (m *ThinkingBlock) Kind() block.Kind {
+	return block.KindThinking
+}
+
+// SetFocused implements block.Block.
+func (m *ThinkingBlock) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// Focused implements block.Block.
+func (m *ThinkingBlock) Focused() bool {
+	return m.focused
 }

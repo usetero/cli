@@ -18,6 +18,7 @@ CREATE TABLE conversations (
     title TEXT,
     updated_at TEXT,
     user_id TEXT,
+    view_id TEXT,
     workspace_id TEXT
 );
 
@@ -95,12 +96,15 @@ CREATE TABLE log_event_policies (
     analysis TEXT,
     approved_at TEXT,
     approved_by TEXT,
+    benefits TEXT,
     category TEXT,
     created_at TEXT,
     dismissed_at TEXT,
     dismissed_by TEXT,
     log_event_id TEXT,
     model TEXT,
+    objectivity TEXT,
+    risk_level TEXT,
     updated_at TEXT,
     workspace_id TEXT
 );
@@ -229,6 +233,26 @@ CREATE TABLE teams (
     name TEXT,
     updated_at TEXT,
     workspace_id TEXT
+);
+
+CREATE TABLE view_favorites (
+    id TEXT,
+    account_id TEXT,
+    created_at TEXT,
+    user_id TEXT,
+    view_id TEXT
+);
+
+CREATE TABLE views (
+    id TEXT,
+    account_id TEXT,
+    conversation_id TEXT,
+    created_at TEXT,
+    created_by TEXT,
+    entity_type TEXT,
+    forked_from_id TEXT,
+    message_id TEXT,
+    query TEXT
 );
 
 CREATE TABLE workspaces (

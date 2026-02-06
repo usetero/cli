@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
@@ -12,12 +13,14 @@ import (
 
 // TextBlock renders a text content block.
 // It is a fixed-height component - height is determined by content.
+// Implements block.Block.
 type TextBlock struct {
 	theme    *styles.Theme
 	index    int
 	text     string
 	width    int
 	rendered string // cached rendered output
+	focused  bool
 }
 
 // NewTextBlock creates a new text block with the given content.
@@ -87,6 +90,21 @@ func (m *TextBlock) SetWidth(width int) {
 	}
 	m.width = width
 	m.render()
+}
+
+// Kind implements block.Block.
+func (m *TextBlock) Kind() block.Kind {
+	return block.KindAssistantText
+}
+
+// SetFocused implements block.Block.
+func (m *TextBlock) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// Focused implements block.Block.
+func (m *TextBlock) Focused() bool {
+	return m.focused
 }
 
 func (m *TextBlock) render() {

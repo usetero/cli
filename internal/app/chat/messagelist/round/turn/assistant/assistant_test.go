@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -11,7 +12,7 @@ import (
 	"github.com/usetero/cli/internal/tea/teatest"
 )
 
-func TestAssistantViewNoWrapping(t *testing.T) {
+func TestBlocksNoWrapping(t *testing.T) {
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 
@@ -28,14 +29,13 @@ func TestAssistantViewNoWrapping(t *testing.T) {
 		t.Run(fmt.Sprintf("term_%d", termWidth), func(t *testing.T) {
 			// Real width chain: app subtracts 2 for horizontal padding
 			assistantWidth := termWidth - 2
-			contentWidth := assistantWidth - paddingWidth
+			contentWidth := assistantWidth - block.AssistantPadding
 
 			// Real assistant model
 			m := New(theme, "test-msg", assistantWidth, nil, scope)
 			m.streaming = false
 
 			// Real query model — pass contentWidth (same as production in newToolBlock)
-			// tool.New will call child.SetWidth(contentWidth - bodyPaddingH) internally
 			q := query.New(theme, 0, "tool-1", contentWidth, nil, scope)
 			q.SetRows(rows)
 
@@ -46,12 +46,14 @@ func TestAssistantViewNoWrapping(t *testing.T) {
 			// Add tool block to assistant
 			m.AddBlock(tool)
 
-			// NOTE: NOT calling m.SetWidth() — testing the construction-time width path
-			// which is what happens when a query completes before any resize event
-
-			// Render and assert no line overflows
-			output := m.View()
-			teatest.AssertMaxWidth(t, assistantWidth, output)
+			// Verify each block renders within contentWidth.
+			// The viewport wraps blocks with PaddingLeft(block.AssistantPadding), so
+			// blocks themselves must fit within contentWidth.
+			for _, b := range m.Blocks() {
+				b.SetWidth(contentWidth)
+				output := b.View()
+				teatest.AssertMaxWidth(t, contentWidth, output)
+			}
 		})
 	}
 }

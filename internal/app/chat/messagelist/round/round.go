@@ -2,12 +2,10 @@ package round
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
@@ -17,12 +15,6 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-)
-
-// Layout constants for gaps (parent owns spacing between children).
-const (
-	gapBetweenTurns  = 1 // blank lines between turns in a multi-turn round
-	gapBeforeDivider = 1 // blank lines before the completion divider
 )
 
 // State represents the current state of a round.
@@ -232,92 +224,13 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 	return nextTurn.StartStream(msg.messages, nil)
 }
 
-// View renders all turns in the round.
-func (m *Model) View() string {
-	var parts []string
-
-	for i, t := range m.turns {
-		// Parent (round) adds gap between children (turns)
-		if i > 0 {
-			for j := 0; j < gapBetweenTurns; j++ {
-				parts = append(parts, "")
-			}
-		}
-
-		if i == 0 {
-			// First turn: show user message + assistant
-			parts = append(parts, t.View())
-		} else {
-			// Subsequent turns: only show assistant response (tool loop continuation)
-			parts = append(parts, t.AssistantView())
-		}
+// Blocks returns all visual blocks from all turns in this round.
+func (m *Model) Blocks() []block.Block {
+	var result []block.Block
+	for _, t := range m.turns {
+		result = append(result, t.Blocks()...)
 	}
-
-	// Add divider when round is complete
-	if m.state == StateComplete {
-		for i := 0; i < gapBeforeDivider; i++ {
-			parts = append(parts, "")
-		}
-		parts = append(parts, m.divider())
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
-}
-
-// Height returns the number of lines this component renders.
-func (m *Model) Height() int {
-	total := 0
-
-	for i, t := range m.turns {
-		if i == 0 {
-			total += t.Height()
-		} else {
-			total += lipgloss.Height(t.AssistantView())
-		}
-		// Add gap between turns (except after last)
-		if i < len(m.turns)-1 {
-			total += gapBetweenTurns
-		}
-	}
-
-	// Add divider height when complete
-	if m.state == StateComplete {
-		total += gapBeforeDivider
-		total += 1 // divider line
-	}
-
-	return total
-}
-
-// divider renders "  ◇ Tero 4s ─────────" (indented to align with assistant text)
-func (m *Model) divider() string {
-	const indent = 2 // matches assistant paddingWidth
-
-	colors := m.theme.Colors
-	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	border := lipgloss.NewStyle().Foreground(colors.BorderDefault)
-
-	// Calculate duration
-	duration := m.endTime.Sub(m.startTime)
-	var durationStr string
-	if duration < time.Minute {
-		durationStr = fmt.Sprintf("%.1fs", duration.Seconds())
-	} else {
-		durationStr = fmt.Sprintf("%.1fm", duration.Minutes())
-	}
-
-	// Build prefix: "◇ Tero 4s "
-	prefix := fmt.Sprintf("◇ Tero %s ", durationStr)
-	prefixWidth := lipgloss.Width(prefix)
-
-	// Fill remaining width with ─ (account for indent)
-	lineWidth := m.width - indent - prefixWidth
-	if lineWidth < 0 {
-		lineWidth = 0
-	}
-	line := strings.Repeat("─", lineWidth)
-
-	return strings.Repeat(" ", indent) + muted.Render(prefix) + border.Render(line)
+	return result
 }
 
 // SetWidth sets the width for all turns.
@@ -336,4 +249,12 @@ func (m *Model) State() State {
 // ID returns the round's ID (first user message ID).
 func (m *Model) ID() domain.MessageID {
 	return m.id
+}
+
+// Duration returns the elapsed time for this round.
+func (m *Model) Duration() time.Duration {
+	if m.endTime.IsZero() {
+		return time.Since(m.startTime)
+	}
+	return m.endTime.Sub(m.startTime)
 }

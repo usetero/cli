@@ -139,9 +139,8 @@ func (m *Model) View() string {
 
 	colors := m.theme.Colors
 	diagStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd)
-	sepStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 
-	sep := sepStyle.Render(" │ ")
+	sep := diagStyle.Render(" " + diag + " ")
 
 	// Build left-aligned segments
 	var segments []string

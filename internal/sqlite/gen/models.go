@@ -11,6 +11,7 @@ type Conversation struct {
 	Title       *string
 	UpdatedAt   *string
 	UserID      *string
+	ViewID      *string
 	WorkspaceID *string
 }
 
@@ -111,12 +112,15 @@ type LogEventPolicy struct {
 	Analysis    *string
 	ApprovedAt  *string
 	ApprovedBy  *string
+	Benefits    *string
 	Category    *string
 	CreatedAt   *string
 	DismissedAt *string
 	DismissedBy *string
 	LogEventID  *string
 	Model       *string
+	Objectivity *string
+	RiskLevel   *string
 	UpdatedAt   *string
 	WorkspaceID *string
 }
@@ -232,6 +236,26 @@ type Team struct {
 	Name        *string
 	UpdatedAt   *string
 	WorkspaceID *string
+}
+
+type View struct {
+	ID             *string
+	AccountID      *string
+	ConversationID *string
+	CreatedAt      *string
+	CreatedBy      *string
+	EntityType     *string
+	ForkedFromID   *string
+	MessageID      *string
+	Query          *string
+}
+
+type ViewFavorite struct {
+	ID        *string
+	AccountID *string
+	CreatedAt *string
+	UserID    *string
+	ViewID    *string
 }
 
 type Workspace struct {
