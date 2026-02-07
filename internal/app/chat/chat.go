@@ -140,6 +140,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			if m.focus != focusMessages {
 				cmds = append(cmds, m.setFocus(focusMessages))
 			}
+		} else if msg.Y >= m.originY+m.height-m.commandBar.Height() {
+			if m.focus != focusEditor {
+				cmds = append(cmds, m.setFocus(focusEditor))
+			}
 		}
 	}
 
