@@ -87,12 +87,14 @@ func (m *Model) extractHighlight() string {
 			continue
 		}
 
-		rendered := m.renderBlock(m.blocks[i])
-		w := m.contentWidth()
-		h := lipgloss.Height(rendered)
+		// Extract from the block's own View() — the content before
+		// renderBlock wraps it with border/padding decorations.
+		content := m.blocks[i].block.View()
+		w := lipgloss.Width(content)
+		h := lipgloss.Height(content)
 		area := image.Rect(0, 0, w, h)
 
-		text := highlight.Extract(rendered, area, sLine, sCol, eLine, eCol)
+		text := highlight.Extract(content, area, sLine, sCol, eLine, eCol)
 		if text != "" {
 			if sb.Len() > 0 {
 				sb.WriteString("\n")

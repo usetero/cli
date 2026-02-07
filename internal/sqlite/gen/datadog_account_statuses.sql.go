@@ -11,16 +11,15 @@ import (
 
 const getCatalogStatus = `-- name: GetCatalogStatus :one
 SELECT
+  CAST(COALESCE(MAX(ready_for_use), 0) AS INTEGER) AS ready_for_use,
   CAST(COALESCE(SUM(log_service_count), 0) AS INTEGER) AS service_count,
-  CAST(COALESCE(SUM(log_waste_count), 0) AS INTEGER) AS waste_count,
-  CAST(COALESCE(SUM(log_saved_count), 0) AS INTEGER) AS saved_count,
+  CAST(COALESCE(SUM(log_active_services), 0) AS INTEGER) AS active_services,
+  CAST(COALESCE(SUM(log_event_count), 0) AS INTEGER) AS event_count,
+  CAST(COALESCE(SUM(log_analyzed_count), 0) AS INTEGER) AS analyzed_count,
   CAST(COALESCE(SUM(log_analyzing_count), 0) AS INTEGER) AS analyzing_count,
   CAST(COALESCE(SUM(log_discovering_count), 0) AS INTEGER) AS discovering_count,
-  CAST(COALESCE(SUM(log_broken_services), 0) AS INTEGER) AS broken_count,
-  CAST(COALESCE(SUM(log_event_count), 0) AS INTEGER) AS event_count,
+  CAST(COALESCE(SUM(log_broken_services), 0) AS INTEGER) AS broken_services,
   CAST(COALESCE(AVG(log_percent_complete), 0.0) AS REAL) AS percent_complete,
-  -- Worst status by severity: BROKEN > STALE > DISCOVERING > ANALYZING > READY
-  -- Use CASE to map to numeric severity, take the MIN (worst), map back.
   CASE MIN(CASE log_status
     WHEN 'DISABLED' THEN 7
     WHEN 'INACTIVE' THEN 6
@@ -39,35 +38,89 @@ SELECT
     WHEN 6 THEN 'INACTIVE'
     WHEN 7 THEN 'DISABLED'
     ELSE ''
-  END AS worst_status
+  END AS worst_status,
+  COALESCE(MAX(log_error), '') AS log_error
 FROM datadog_account_statuses_cache
 `
 
 type GetCatalogStatusRow struct {
+	ReadyForUse      int64
 	ServiceCount     int64
-	WasteCount       int64
-	SavedCount       int64
+	ActiveServices   int64
+	EventCount       int64
+	AnalyzedCount    int64
 	AnalyzingCount   int64
 	DiscoveringCount int64
-	BrokenCount      int64
-	EventCount       int64
+	BrokenServices   int64
 	PercentComplete  float64
 	WorstStatus      string
+	LogError         interface{}
 }
 
 func (q *Queries) GetCatalogStatus(ctx context.Context) (GetCatalogStatusRow, error) {
 	row := q.db.QueryRowContext(ctx, getCatalogStatus)
 	var i GetCatalogStatusRow
 	err := row.Scan(
+		&i.ReadyForUse,
 		&i.ServiceCount,
-		&i.WasteCount,
-		&i.SavedCount,
+		&i.ActiveServices,
+		&i.EventCount,
+		&i.AnalyzedCount,
 		&i.AnalyzingCount,
 		&i.DiscoveringCount,
-		&i.BrokenCount,
-		&i.EventCount,
+		&i.BrokenServices,
 		&i.PercentComplete,
 		&i.WorstStatus,
+		&i.LogError,
+	)
+	return i, err
+}
+
+const getPolicyStatus = `-- name: GetPolicyStatus :one
+SELECT
+  CAST(COALESCE(MAX(ready_for_use), 0) AS INTEGER) AS ready_for_use,
+  CAST(COALESCE(SUM(log_pending_policy_count), 0) AS INTEGER) AS pending_policy_count,
+  CAST(COALESCE(SUM(log_policy_count), 0) AS INTEGER) AS policy_count,
+  CAST(COALESCE(SUM(log_approved_policy_count), 0) AS INTEGER) AS approved_policy_count,
+  SUM(log_estimated_cost_reduction_per_hour) AS estimated_cost_per_hour,
+  CAST(COALESCE(SUM(log_estimated_volume_reduction_per_hour), 0.0) AS REAL) AS estimated_volume_per_hour,
+  CAST(COALESCE(SUM(log_estimated_bytes_reduction_per_hour), 0.0) AS REAL) AS estimated_bytes_per_hour,
+  SUM(log_observed_cost_per_hour_before) AS observed_cost_before,
+  SUM(log_observed_cost_per_hour_after) AS observed_cost_after,
+  CAST(COALESCE(SUM(log_observed_volume_per_hour_before), 0.0) AS REAL) AS observed_volume_before,
+  CAST(COALESCE(SUM(log_observed_volume_per_hour_after), 0.0) AS REAL) AS observed_volume_after
+FROM datadog_account_statuses_cache
+`
+
+type GetPolicyStatusRow struct {
+	ReadyForUse            int64
+	PendingPolicyCount     int64
+	PolicyCount            int64
+	ApprovedPolicyCount    int64
+	EstimatedCostPerHour   *float64
+	EstimatedVolumePerHour float64
+	EstimatedBytesPerHour  float64
+	ObservedCostBefore     *float64
+	ObservedCostAfter      *float64
+	ObservedVolumeBefore   float64
+	ObservedVolumeAfter    float64
+}
+
+func (q *Queries) GetPolicyStatus(ctx context.Context) (GetPolicyStatusRow, error) {
+	row := q.db.QueryRowContext(ctx, getPolicyStatus)
+	var i GetPolicyStatusRow
+	err := row.Scan(
+		&i.ReadyForUse,
+		&i.PendingPolicyCount,
+		&i.PolicyCount,
+		&i.ApprovedPolicyCount,
+		&i.EstimatedCostPerHour,
+		&i.EstimatedVolumePerHour,
+		&i.EstimatedBytesPerHour,
+		&i.ObservedCostBefore,
+		&i.ObservedCostAfter,
+		&i.ObservedVolumeBefore,
+		&i.ObservedVolumeAfter,
 	)
 	return i, err
 }

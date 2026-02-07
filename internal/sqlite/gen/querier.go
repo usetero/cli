@@ -15,6 +15,7 @@ type Querier interface {
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)
 	GetLatestMessageByConversation(ctx context.Context, conversationID *string) (Message, error)
 	GetMessage(ctx context.Context, id *string) (Message, error)
+	GetPolicyStatus(ctx context.Context) (GetPolicyStatusRow, error)
 	GetService(ctx context.Context, id *string) (Service, error)
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error

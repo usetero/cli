@@ -10,6 +10,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/statusbar/catalogstatus"
+	"github.com/usetero/cli/internal/app/statusbar/policystatus"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
@@ -22,18 +23,20 @@ const diag = "╱"
 const (
 	TabSync    = 0
 	TabCatalog = 1
-	TabChat    = 2
-	tabCount   = 3
+	TabPolicy  = 2
+	TabChat    = 3
+	tabCount   = 4
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Sync", "Catalog", "Chat"}
+var tabLabels = [tabCount]string{"Sync", "Catalog", "Policy", "Chat"}
 
 // Model renders the app status bar.
 type Model struct {
 	theme         *styles.Theme
 	syncStatus    *syncstatus.Model
 	catalogStatus *catalogstatus.Model
+	policyStatus  *policystatus.Model
 	width         int
 
 	// Account context
@@ -57,12 +60,16 @@ func New(theme *styles.Theme, syncer powersync.Syncer, host string) *Model {
 		theme:         theme,
 		syncStatus:    syncstatus.New(theme, syncer, host),
 		catalogStatus: catalogstatus.New(theme),
+		policyStatus:  policystatus.New(theme),
 	}
 }
 
-// SetDB sets the database for catalog status polling.
+// SetDB sets the database for catalog and policy status polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	return m.catalogStatus.SetDB(db)
+	return tea.Batch(
+		m.catalogStatus.SetDB(db),
+		m.policyStatus.SetDB(db),
+	)
 }
 
 // Init initializes child models.
@@ -70,6 +77,7 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.syncStatus.Init(),
 		m.catalogStatus.Init(),
+		m.policyStatus.Init(),
 	)
 }
 
@@ -78,6 +86,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(
 		m.syncStatus.Update(msg),
 		m.catalogStatus.Update(msg),
+		m.policyStatus.Update(msg),
 	)
 }
 
@@ -149,13 +158,19 @@ func (m *Model) View() string {
 	brandConn := m.renderBrand()
 	segments = append(segments, brandConn)
 
-	// 2. Catalog pulse (phase-aware: services, policies, discovery progress)
+	// 2. Catalog health (dot + service count or discovery phase)
 	catalogView := m.catalogStatus.CompactView()
 	if catalogView != "" {
 		segments = append(segments, catalogView)
 	}
 
-	// 3. Org / workspace (only shown if set)
+	// 3. Policy status (pending count, estimated/observed savings)
+	policyView := m.policyStatus.CompactView()
+	if policyView != "" {
+		segments = append(segments, policyView)
+	}
+
+	// 4. Org / workspace (only shown if set)
 	if m.org != "" {
 		orgWs := m.renderOrgWorkspace()
 		segments = append(segments, orgWs)
@@ -165,7 +180,7 @@ func (m *Model) View() string {
 	baseContent := strings.Join(segments, sep)
 	baseWidth := lipgloss.Width(baseContent)
 
-	// 4. Title (if fits)
+	// 5. Title (if fits)
 	if m.title != "" {
 		titleSeg := m.renderTitle(m.width - baseWidth - 20) // leave room for context
 		if titleSeg != "" {
@@ -176,7 +191,7 @@ func (m *Model) View() string {
 		}
 	}
 
-	// 5. Context window usage (if fits)
+	// 6. Context window usage (if fits)
 	if m.contextPercent > 0 {
 		pctSeg := m.renderContextPercent()
 		testContent := strings.Join(segments, sep) + sep + pctSeg
@@ -219,6 +234,8 @@ func (m *Model) DrawerView(width, height int) string {
 		content = m.syncStatus.ExpandedView()
 	case TabCatalog:
 		content = m.catalogStatus.ExpandedView()
+	case TabPolicy:
+		content = m.policyStatus.ExpandedView()
 	case TabChat:
 		content = m.renderContextPercent()
 	}

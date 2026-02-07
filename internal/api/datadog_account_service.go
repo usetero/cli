@@ -85,7 +85,11 @@ type DatadogAccountStatus struct {
 	BrokenServices      int
 	DisabledServices    int
 	InactiveServices    int
-	SavedCount          int  // Number of log events saved (for progress display)
+	AnalyzedCount       int  // Number of log events analyzed (for progress display)
+	ResolvedCount       int  // Log events with all policies acted on
+	CleanCount          int  // Log events analyzed with no issues
+	PendingCount        int  // Log events with policies awaiting action
+	PendingPolicyCount  int  // Policies awaiting user action
 	ReadyForUse         bool // Whether the account has enough data to proceed
 }
 
@@ -232,7 +236,11 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		BrokenServices:      statusNode.LogBrokenServices,
 		DisabledServices:    statusNode.LogDisabledServices,
 		InactiveServices:    statusNode.LogInactiveServices,
-		SavedCount:          statusNode.LogSavedCount,
+		AnalyzedCount:       statusNode.LogAnalyzedCount,
+		ResolvedCount:       statusNode.LogResolvedCount,
+		CleanCount:          statusNode.LogCleanCount,
+		PendingCount:        statusNode.LogPendingCount,
+		PendingPolicyCount:  statusNode.LogPendingPolicyCount,
 		ReadyForUse:         statusNode.ReadyForUse,
 	}
 

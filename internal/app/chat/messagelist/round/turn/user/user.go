@@ -35,31 +35,17 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// borderWidth is the width consumed by the left border + padding.
-const borderWidth = 2
-
-// View renders the user message.
+// View renders the user message content without border decoration.
+// The border is applied by renderBlock in the message list.
 func (m *Model) View() string {
 	// Tool result messages are not rendered visually
 	if len(m.input.ToolResults) > 0 {
 		return ""
 	}
 
-	colors := m.theme.Colors
-
-	// User message has a colored left border
-	borderColor := colors.Accent
-	if m.focused {
-		borderColor = colors.AccentAlt
-	}
-
 	style := lipgloss.NewStyle().
-		Foreground(colors.Page.Text).
-		Width(m.width - borderWidth).
-		PaddingLeft(1).
-		BorderLeft(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(borderColor)
+		Foreground(m.theme.Colors.Page.Text).
+		Width(m.width)
 
 	return style.Render(m.input.Text)
 }

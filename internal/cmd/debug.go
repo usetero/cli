@@ -114,7 +114,7 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			// Show onboarding readiness
 			fmt.Println()
 			fmt.Println(s.Title.Render("Onboarding"))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Saved Count:"), s.Body.Render(fmt.Sprintf("%d / 50", ddStatus.SavedCount)))
+			fmt.Printf("  %-25s %s\n", s.Help.Render("Analyzed Count:"), s.Body.Render(fmt.Sprintf("%d / 50", ddStatus.AnalyzedCount)))
 			readyForUseStr := fmt.Sprintf("%v", ddStatus.ReadyForUse)
 			if ddStatus.ReadyForUse {
 				fmt.Printf("  %-25s %s\n", s.Help.Render("Ready for Use:"), s.Success.Render(readyForUseStr))

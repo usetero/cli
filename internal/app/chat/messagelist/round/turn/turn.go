@@ -94,7 +94,7 @@ func New(
 		scope:            scope,
 		conversationID:   conversationID,
 		accountID:        accountID,
-		userMessage:      user.New(theme, userMessageID, input, width),
+		userMessage:      user.New(theme, userMessageID, input, width-block.AssistantPadding),
 		assistantMessage: assistantMsg,
 		initCmd:          assistantMsg.Init(), // Start thinking animation immediately
 		state:            StateIdle,
@@ -209,7 +209,9 @@ func (m *Model) Blocks() []block.Block {
 // SetWidth sets the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
-	m.userMessage.SetWidth(width)
+	// User block gets content width minus border+padding, same as assistant blocks.
+	// The border decoration is applied by renderBlock in the message list.
+	m.userMessage.SetWidth(width - block.AssistantPadding)
 	m.assistantMessage.SetWidth(width)
 }
 

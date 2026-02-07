@@ -99,11 +99,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.vp.SetFocusIdx(len(m.blocks) - 1)
 
 	case msgs.AssistantContentUpdated, msgs.StreamCompleted:
+		// Forward to rounds first so streaming state is updated
+		// before rebuildBlocks reads Blocks().
+		for _, r := range m.rounds {
+			if cmd := r.Update(msg); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
 		m.rebuildBlocks()
 		if !m.userScrolled {
 			m.vp.ScrollToBottom()
 			m.vp.SetFocusIdx(len(m.blocks) - 1)
 		}
+		return tea.Batch(cmds...)
 	}
 
 	// Forward to all rounds

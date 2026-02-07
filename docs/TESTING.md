@@ -4,7 +4,7 @@ Test behavior, not implementation. A good test breaks when something stops worki
 
 ## Three Types of Tests
 
-**Unit tests** run fast with no external dependencies. They mock interfaces and test logic in isolation.
+**Unit tests** run fast with no external services. Use real local deps (SQLite, theme), mock remote ones (APIs).
 
 ```bash
 task test
@@ -47,9 +47,23 @@ func TestSync_Connect(t *testing.T) {
 }
 ```
 
+### Real vs Mock
+
+Use real things when they're cheap. Mock only what's expensive or external.
+
+| Dependency | Strategy | Why |
+|------------|----------|-----|
+| SQLite | Real — `sqlitetest.OpenBareDB(t)` or `dbtest.OpenTestDB(t)` | Local, fast, tmpdir-based, auto-cleanup |
+| Theme | Real — `styles.NewTheme(true)` | Just a struct with colors |
+| Logger | Real — `logtest.NewScope(t)` | Writes to `testing.T`, shows on failure |
+| Chat API | Mock — `chattest.MockClient{}` | Hits remote server |
+| Tool registry | `nil` or partial — `&chattools.Registry{Query: ...}` | Only construct what you're testing |
+
+The rule: if you can construct it in a test without network, credentials, or slow setup, use the real thing. Mocks hide bugs.
+
 ### Mock with Structs
 
-Don't use mocking frameworks. Write simple structs:
+When you do need mocks, don't use mocking frameworks. Write simple structs:
 
 ```go
 type mockClient struct {

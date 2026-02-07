@@ -120,14 +120,16 @@ func (m *Model) renderBlock(entry blockEntry) string {
 	b := entry.block
 	cw := m.contentWidth()
 
-	if b.Kind() == block.KindUser {
-		return b.View()
-	}
-
-	// Assistant-type blocks: always render with a left border + padding.
-	// The border is invisible when unfocused, accent-colored when focused.
+	// Determine border color based on block type and focus state.
 	borderColor := m.theme.Colors.Page.Bg
-	if b.Focused() {
+	if b.Kind() == block.KindUser {
+		// User messages: accent border, brighter when focused.
+		borderColor = m.theme.Colors.Accent
+		if b.Focused() {
+			borderColor = m.theme.Colors.AccentAlt
+		}
+	} else if b.Focused() {
+		// Assistant blocks: invisible border, accent when focused.
 		borderColor = m.theme.Colors.AccentAlt
 	}
 

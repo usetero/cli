@@ -7,10 +7,54 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
+	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/teatest"
 )
+
+func countBlockKinds(blocks []block.Block, kind block.Kind) int {
+	n := 0
+	for _, b := range blocks {
+		if b.Kind() == kind {
+			n++
+		}
+	}
+	return n
+}
+
+func TestBlocks_ThinkingAnimation(t *testing.T) {
+	t.Parallel()
+	theme := styles.NewTheme(true)
+	scope := logtest.NewScope(t)
+
+	t.Run("included while streaming", func(t *testing.T) {
+		t.Parallel()
+		m := New(theme, "test-msg", 80, nil, scope)
+		// streaming is true by default from New()
+
+		blocks := m.Blocks()
+		if n := countBlockKinds(blocks, block.KindThinkingAnimation); n != 1 {
+			t.Errorf("expected 1 thinking animation block while streaming, got %d", n)
+		}
+	})
+
+	t.Run("removed after StreamCompleted", func(t *testing.T) {
+		t.Parallel()
+		m := New(theme, "test-msg", 80, nil, scope)
+
+		m.Update(msgs.StreamCompleted{
+			TurnID:  "test-msg",
+			Message: domain.Message{Content: []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}}}},
+		})
+
+		blocks := m.Blocks()
+		if n := countBlockKinds(blocks, block.KindThinkingAnimation); n != 0 {
+			t.Errorf("expected 0 thinking animation blocks after StreamCompleted, got %d", n)
+		}
+	})
+}
 
 func TestBlocksNoWrapping(t *testing.T) {
 	theme := styles.NewTheme(true)

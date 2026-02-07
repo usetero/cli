@@ -47,7 +47,7 @@ const (
 const (
 	horizontalPadding = 1
 	verticalPadding   = 1
-	gapAfterStatusBar = 1
+	gapAfterStatusBar = 2
 	gapBeforeKeyBar   = 1
 
 	minWidth  = 50
