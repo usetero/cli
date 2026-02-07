@@ -121,11 +121,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, m.messageList.Update(msg))
 			return tea.Batch(cmds...)
 		}
-		// Esc cancels the active round when the editor is focused
-		if key.Matches(msg, keymap.Exit) && m.messageList.HasActiveRound() {
-			m.messageList.CancelActiveRound()
-			return nil
-		}
 
 	case msgs.UserSubmittedInput:
 		cmds = append(cmds, m.handleUserInput(msg))
@@ -230,6 +225,16 @@ func (m *Model) ShortHelp() []key.Binding {
 // ConversationID returns the current conversation ID.
 func (m *Model) ConversationID() domain.ConversationID {
 	return m.conversationID
+}
+
+// CancelActiveRound cancels the active round if one exists.
+// Returns true if a round was cancelled.
+func (m *Model) CancelActiveRound() bool {
+	if !m.messageList.HasActiveRound() {
+		return false
+	}
+	m.messageList.CancelActiveRound()
+	return true
 }
 
 // hasMessages returns true if there are messages to display.

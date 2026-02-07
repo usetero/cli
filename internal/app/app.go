@@ -181,10 +181,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusBar.CloseDrawer()
 				return m, nil
 			}
-			if key.Matches(msg, keymap.Quit) {
-				m.quitDlg = newQuitDialog(m.theme)
+			// Esc cancels the active round first; only quit if nothing to cancel
+			if key.Matches(msg, keymap.Exit) && m.chat != nil && m.chat.CancelActiveRound() {
 				return m, nil
 			}
+			m.quitDlg = newQuitDialog(m.theme)
+			return m, nil
 		}
 
 		if key.Matches(msg, keymap.Details) {
