@@ -86,7 +86,7 @@ func New(theme *styles.Theme, index int, toolID string, width int, child Child) 
 		status:   StatusPending,
 		child:    child,
 		thinking: thinking.New(theme, thinking.Settings{Size: 10}),
-		expanded: true,
+		expanded: false,
 	}
 }
 
@@ -169,13 +169,18 @@ func (m *Model) View() string {
 		return header + "\n\n" + body
 
 	case StatusSuccess:
-		// ✓ Query · Found 14 services
+		// ✓ ▶ Query · Found 14 services  (collapsed)
+		// ✓ ▼ Query · Found 14 services  (expanded)
 		//
 		//   <child view if any>
 		result := m.child.Result()
-		header := fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
+		chevron := mutedStyle.Render("▶")
+		if m.expanded {
+			chevron = mutedStyle.Render("▼")
+		}
+		header := fmt.Sprintf("%s %s %s", icon, chevron, nameStyle.Render(m.child.Name()))
 		if result != "" {
-			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+result))
+			header = fmt.Sprintf("%s %s %s %s", icon, chevron, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+result))
 		}
 		if !m.expanded {
 			return header

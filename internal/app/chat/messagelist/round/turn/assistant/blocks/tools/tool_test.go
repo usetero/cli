@@ -71,7 +71,7 @@ func TestStatusRendering(t *testing.T) {
 		}
 	})
 
-	t.Run("success shows result", func(t *testing.T) {
+	t.Run("success shows result with chevron", func(t *testing.T) {
 		t.Parallel()
 		child := &stubChild{name: "Query", state: StateComplete, result: "Found 14 services"}
 		m := newTestTool(t, child)
@@ -83,6 +83,9 @@ func TestStatusRendering(t *testing.T) {
 		}
 		if !strings.Contains(view, "Found 14 services") {
 			t.Error("expected result message in view")
+		}
+		if !strings.Contains(view, "▶") {
+			t.Error("expected collapsed chevron when default collapsed")
 		}
 	})
 
@@ -121,18 +124,26 @@ func TestToggle(t *testing.T) {
 	m := newTestTool(t, child)
 	m.updateStatus()
 
+	// Default is collapsed
+	collapsedView := m.View()
+	if strings.Contains(collapsedView, "detailed output here") {
+		t.Error("expected no body content when collapsed by default")
+	}
+	if !strings.Contains(collapsedView, "▶") {
+		t.Error("expected collapsed chevron")
+	}
+
+	// Toggle to expand
+	m.Toggle()
 	expandedView := m.View()
 	if !strings.Contains(expandedView, "detailed output here") {
 		t.Error("expected body content when expanded")
 	}
-
-	m.Toggle()
-	collapsedView := m.View()
-	if strings.Contains(collapsedView, "detailed output here") {
-		t.Error("expected no body content when collapsed")
+	if !strings.Contains(expandedView, "▼") {
+		t.Error("expected expanded chevron")
 	}
 
-	// Collapsed should be shorter
+	// Expanded should be taller
 	expandedLines := strings.Count(expandedView, "\n")
 	collapsedLines := strings.Count(collapsedView, "\n")
 	if collapsedLines >= expandedLines {

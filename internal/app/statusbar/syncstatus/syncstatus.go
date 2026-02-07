@@ -122,14 +122,14 @@ func (m *Model) stateChanged(current powersync.State) bool {
 
 // CompactView renders the sync status for the statusbar: "● api.usetero.com" or "● syncing 45%"
 func (m *Model) CompactView() string {
-	if m.syncer == nil {
+	if m.lastState == nil {
 		return ""
 	}
 
 	colors := m.theme.Colors
 	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 
-	switch state := m.syncer.State().(type) {
+	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
 		return ""
 

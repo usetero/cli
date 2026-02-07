@@ -221,7 +221,7 @@ func (m *Model) fireCompleted() tea.Cmd {
 
 // Name returns the tool's display name.
 func (m *Model) Name() string {
-	return "query"
+	return "Query"
 }
 
 // ToolID returns the tool's ID.

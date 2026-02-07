@@ -139,12 +139,9 @@ func (m *Model) ExpandedView() string {
 func formatEstimated(s sqlite.PolicyStatus) string {
 	if s.EstimatedCostPerHour != nil {
 		monthly := *s.EstimatedCostPerHour * 730
-		if monthly > 0 {
+		if monthly >= 1 {
 			return formatCost(monthly) + "/mo"
 		}
-	}
-	if s.EstimatedVolumePerHour > 0 {
-		return formatVolume(s.EstimatedVolumePerHour) + " evt/hr"
 	}
 	return ""
 }
@@ -154,7 +151,7 @@ func formatEstimated(s sqlite.PolicyStatus) string {
 func formatObservedSaving(s sqlite.PolicyStatus) string {
 	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
 		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 730
-		if diff > 0 {
+		if diff >= 1 {
 			return formatCost(diff) + "/mo"
 		}
 		return ""

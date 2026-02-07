@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -79,11 +80,15 @@ type Model struct {
 	keyBar     *keybar.Model
 	onboarding *onboarding.Model
 	chat       *chat.Model
+	quitDlg    *quitDialog
 	state      state
 
 	// Dimensions
 	width  int
 	height int
+
+	// Terminal window title (set from conversation title)
+	windowTitle string
 }
 
 // New creates a new app model.
@@ -149,6 +154,15 @@ func (m *Model) Init() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case quitConfirmed:
+		m.shutdown()
+		return m, tea.Quit
+	case quitCanceled:
+		m.quitDlg = nil
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -157,14 +171,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		// When quit dialog is open, forward keys to it and consume
+		if m.quitDlg != nil {
+			return m, m.quitDlg.Update(msg)
+		}
+
 		if key.Matches(msg, keymap.Quit) || key.Matches(msg, keymap.Exit) {
 			if m.statusBar.IsDrawerOpen() {
 				m.statusBar.CloseDrawer()
 				return m, nil
 			}
 			if key.Matches(msg, keymap.Quit) {
-				m.shutdown()
-				return m, tea.Quit
+				m.quitDlg = newQuitDialog(m.theme)
+				return m, nil
 			}
 		}
 
@@ -178,6 +197,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusBar.NextTab()
 			}
 			// Consume all keys when drawer is open
+			return m, nil
+		}
+
+	case msgs.UserSubmittedInput:
+		// Intercept "exit" and "quit" commands
+		text := strings.TrimSpace(msg.Text)
+		if strings.EqualFold(text, "exit") || strings.EqualFold(text, "quit") {
+			m.quitDlg = newQuitDialog(m.theme)
 			return m, nil
 		}
 
@@ -243,6 +270,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgs.StreamCompleted:
 		if msg.Title != "" && m.db != nil {
 			m.statusBar.SetTitle(msg.Title)
+			m.windowTitle = "Tero: " + msg.Title
 			// Persist title in background
 			go func() {
 				ctx := context.Background()
@@ -417,6 +445,7 @@ func (m *Model) View() tea.View {
 			Content:         content,
 			BackgroundColor: colors.Page.Bg,
 			AltScreen:       true,
+			WindowTitle:     m.windowTitle,
 		}
 	}
 
@@ -429,8 +458,8 @@ func (m *Model) View() tea.View {
 		cur.Color = colors.Accent
 	}
 
-	// Suppress cursor when drawer is open
-	if m.statusBar.IsDrawerOpen() {
+	// Suppress cursor when drawer or quit dialog is open
+	if m.statusBar.IsDrawerOpen() || m.quitDlg != nil {
 		cur = nil
 	}
 
@@ -440,6 +469,7 @@ func (m *Model) View() tea.View {
 		AltScreen:       true,
 		Cursor:          cur,
 		MouseMode:       tea.MouseModeCellMotion,
+		WindowTitle:     m.windowTitle,
 	}
 }
 
@@ -516,6 +546,22 @@ func (m *Model) renderContent() string {
 		layers := []*lipgloss.Layer{
 			lipgloss.NewLayer(paddedView).X(0).Y(0),
 			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(toastHeight + statusBarHeight + gapAfterStatusBar),
+		}
+		canvas := lipgloss.NewCompositor(layers...)
+		return canvas.Render()
+	}
+
+	// Overlay quit dialog if open
+	if m.quitDlg != nil {
+		dialog := m.quitDlg.View()
+		dialogW := lipgloss.Width(dialog)
+		dialogH := lipgloss.Height(dialog)
+		centerX := (m.width - dialogW) / 2
+		centerY := (m.height - dialogH) / 2
+
+		layers := []*lipgloss.Layer{
+			lipgloss.NewLayer(paddedView).X(0).Y(0),
+			lipgloss.NewLayer(dialog).X(centerX).Y(centerY),
 		}
 		canvas := lipgloss.NewCompositor(layers...)
 		return canvas.Render()

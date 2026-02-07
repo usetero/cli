@@ -1,12 +1,22 @@
 package blocks
 
 import (
+	"fmt"
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
+)
+
+// Body padding matches the tool block.
+const (
+	thinkingBodyPaddingLeft  = 2
+	thinkingBodyPaddingRight = 1
+	thinkingBodyPaddingH     = thinkingBodyPaddingLeft + thinkingBodyPaddingRight
 )
 
 // ThinkingBlock renders a thinking content block.
@@ -60,10 +70,35 @@ func (m *ThinkingBlock) Index() int {
 
 // View renders the thinking block.
 func (m *ThinkingBlock) View() string {
+	colors := m.theme.Colors
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
+
+	chevron := mutedStyle.Render("▶")
 	if m.expanded {
-		return "▼ Thinking\n" + m.text
+		chevron = mutedStyle.Render("▼")
 	}
-	return "▶ Thinking (collapsed)"
+
+	header := fmt.Sprintf("%s %s", chevron, nameStyle.Render("Thinking"))
+
+	if !m.expanded {
+		return header
+	}
+
+	// Render body with markdown styling, wrapped to available width
+	bodyWidth := m.width - thinkingBodyPaddingH
+	if bodyWidth < 1 {
+		bodyWidth = 1
+	}
+	rendered := styles.RenderMarkdown(m.theme, m.text, bodyWidth)
+	rendered = strings.TrimRight(rendered, "\n")
+
+	body := lipgloss.NewStyle().
+		Padding(1, thinkingBodyPaddingRight, 1, thinkingBodyPaddingLeft).
+		Background(colors.Panel.Bg).
+		Render(rendered)
+
+	return header + "\n\n" + body
 }
 
 // Height returns the number of lines this block renders.
