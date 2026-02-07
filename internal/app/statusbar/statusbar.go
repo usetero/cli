@@ -256,7 +256,7 @@ func (m *Model) DrawerView(width, height int) string {
 		Width(width).
 		Height(height).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colors.Accent).
+		BorderForeground(colors.Brand.GradientEnd).
 		Padding(0, 1)
 
 	return style.Render(inner)

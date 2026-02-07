@@ -572,7 +572,7 @@ func (m *Model) renderContent() string {
 
 		layers := []*lipgloss.Layer{
 			lipgloss.NewLayer(paddedView).X(0).Y(0),
-			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(toastHeight + statusBarHeight + gapAfterStatusBar),
+			lipgloss.NewLayer(drawer).X(horizontalPadding + 1).Y(toastHeight + statusBarHeight),
 		}
 		canvas := lipgloss.NewCompositor(layers...)
 		return canvas.Render()
