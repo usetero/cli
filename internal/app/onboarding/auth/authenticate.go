@@ -35,7 +35,8 @@ type deviceAuthMsg struct {
 
 // authCompleteMsg is sent when auth completes.
 type authCompleteMsg struct {
-	err error
+	result *auth.Result
+	err    error
 }
 
 // AuthenticateModel handles the device code authentication flow.
@@ -100,8 +101,8 @@ func (m *AuthenticateModel) startDeviceAuth() tea.Cmd {
 func (m *AuthenticateModel) pollForAuth() tea.Cmd {
 	return func() tea.Msg {
 		interval := time.Duration(m.device.Interval) * time.Second
-		_, err := m.auth.WaitForAuth(m.ctx, m.device.DeviceCode, interval)
-		return authCompleteMsg{err: err}
+		result, err := m.auth.WaitForAuth(m.ctx, m.device.DeviceCode, interval)
+		return authCompleteMsg{result: result, err: err}
 	}
 }
 
@@ -135,9 +136,9 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 			return appmsg.ErrorCmd("Authentication failed", msg.err, false)
 		}
 		m.state = stateComplete
-		m.scope.Info("user authenticated")
+		m.scope.Info("user authenticated", "user_id", msg.result.User.ID)
 		return func() tea.Msg {
-			return msgs.Authenticated{}
+			return msgs.Authenticated{User: msg.result.User}
 		}
 
 	case spinner.TickMsg:

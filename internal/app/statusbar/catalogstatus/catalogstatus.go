@@ -4,14 +4,18 @@ package catalogstatus
 import (
 	"context"
 	"fmt"
-	"image/color"
+	"math"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/status"
+	"github.com/usetero/cli/internal/tea/components/table"
 )
 
 const pollInterval = 2 * time.Second
@@ -24,7 +28,8 @@ type Model struct {
 	theme *styles.Theme
 	db    sqlite.DB
 
-	status    sqlite.CatalogStatus
+	summary   domain.CatalogSummary
+	services  []domain.ServiceStatus
 	hasData   bool
 	lastState string
 }
@@ -67,20 +72,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		status, err := m.db.DatadogAccountStatuses().GetCatalogStatus(ctx)
+		summary, err := m.db.DatadogAccountStatuses().GetCatalogSummary(ctx)
 		if err != nil {
 			return m.poll()
 		}
 
-		key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%s:%.0f:%s",
-			status.ReadyForUse, status.ServiceCount, status.ActiveServices,
-			status.EventCount, status.AnalyzedCount, status.AnalyzingCount,
-			status.DiscoveringCount, status.BrokenServices,
-			status.WorstStatus, status.PercentComplete, status.LogError)
+		services, err := m.db.ServiceStatuses().ListServiceStatuses(ctx)
+		if err != nil {
+			services = nil
+		}
 
+		key := m.stateKey(summary, services)
 		if key != m.lastState {
-			m.status = status
-			m.hasData = status.ServiceCount > 0
+			m.summary = summary
+			m.services = services
+			m.hasData = summary.ServiceCount > 0
 			m.lastState = key
 		}
 
@@ -90,66 +96,168 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+// stateKey builds a string key for change detection.
+func (m *Model) stateKey(s domain.CatalogSummary, services []domain.ServiceStatus) string {
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%d:%s:%.0f:%s:%d",
+		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
+		s.EventCount, s.AnalyzedCount, s.AnalyzingCount,
+		s.DiscoveringCount, s.BrokenServices, s.StaleServices,
+		s.WorstStatus, s.PercentComplete, s.LogError,
+		len(services))
+
+	for _, svc := range services {
+		key += fmt.Sprintf("|%s:%s:%.0f:%d:%.0f:%.0f:%.2f",
+			svc.Name, svc.Status, svc.PercentComplete, svc.EventCount,
+			svc.VolumePerHour, svc.BytesPerHour, svc.CostPerHourUSD)
+	}
+
+	return key
+}
+
 // CompactView renders the catalog indicator for the statusbar.
 func (m *Model) CompactView() string {
 	if !m.hasData {
 		return ""
 	}
 
-	s := m.status
-	colors := m.theme.Colors
-	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	errStyle := lipgloss.NewStyle().Foreground(colors.Error.Fg)
+	s := m.summary
+	muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	d := status.ServiceDot(m.theme, s.WorstStatus)
+	readyCount := s.ActiveServices - s.AnalyzingCount - s.DiscoveringCount - s.BrokenServices - s.StaleServices
+	ready := fmt.Sprintf("%d/%d svcs", readyCount, s.ActiveServices)
 
-	dotColor := m.dotColor()
-	d := dot(dotColor)
-
-	if s.ReadyForUse {
-		return d + " " + muted.Render(fmt.Sprintf("%d svcs", s.ServiceCount))
-	}
-
-	// Pre-ready: show discovery/analysis phase.
+	var suffix string
 	switch s.WorstStatus {
-	case "DISABLED":
-		return d + " " + errStyle.Render("disabled")
-	case "INACTIVE":
-		return d + " " + errStyle.Render("inactive")
-	case "BROKEN":
-		return d + " " + errStyle.Render("error")
-	case "STALE":
-		return d + " " + lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("stale")
-	case "DISCOVERING":
-		if s.PercentComplete > 0 {
-			return d + " " + muted.Render(fmt.Sprintf("discovering %.0f%%", s.PercentComplete))
-		}
-		return d + " " + muted.Render("discovering")
-	case "ANALYZING":
-		if s.EventCount > 0 {
-			return d + " " + muted.Render(fmt.Sprintf("analyzing · %d events", s.EventCount))
-		}
-		return d + " " + muted.Render("analyzing")
-	default:
-		return d + " " + muted.Render(fmt.Sprintf("%d svcs", s.ServiceCount))
+	case domain.ServiceLogStatusDiscovering:
+		suffix = " · discovering"
+	case domain.ServiceLogStatusAnalyzing:
+		suffix = " · analyzing"
+	case domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive,
+		domain.ServiceLogStatusBroken, domain.ServiceLogStatusStale,
+		domain.ServiceLogStatusReady:
+		// No suffix needed.
 	}
+
+	return d + " " + muted.Render(ready+suffix)
 }
 
 // ExpandedView renders the detailed catalog status for the drawer.
-func (m *Model) ExpandedView() string {
-	return m.CompactView()
+func (m *Model) ExpandedView(width int) string {
+	if !m.hasData {
+		return ""
+	}
+
+	var lines []string
+	lines = append(lines, m.renderSummary())
+	lines = append(lines, "")
+	lines = append(lines, m.renderServiceTable(width))
+	return strings.Join(lines, "\n")
 }
 
-func (m *Model) dotColor() color.Color {
-	colors := m.theme.Colors
-	switch m.status.WorstStatus {
-	case "BROKEN", "DISABLED", "INACTIVE":
-		return colors.Error.Fg
-	case "DISCOVERING", "ANALYZING", "STALE":
-		return colors.Warning.Fg
+// renderSummary renders the top summary line.
+func (m *Model) renderSummary() string {
+	s := m.summary
+	muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+
+	var parts []string
+	parts = append(parts, fmt.Sprintf("%d services", s.ServiceCount))
+	parts = append(parts, fmt.Sprintf("%d log events", s.EventCount))
+	if s.PercentComplete > 0 {
+		parts = append(parts, fmt.Sprintf("%.0f%% coverage", s.PercentComplete))
+	}
+
+	return status.ServiceDot(m.theme, s.WorstStatus) + " " + muted.Render(strings.Join(parts, " · "))
+}
+
+// renderServiceTable renders all services as an aligned table.
+func (m *Model) renderServiceTable(width int) string {
+	if len(m.services) == 0 {
+		return lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted).Render("No services")
+	}
+
+	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
+	tbl.Headers("Status", "Service", "Events", "Volume", "Bytes", "Cost")
+	tbl.SetWidth(width)
+
+	for _, svc := range m.services {
+		row := []string{
+			status.Service(m.theme, svc.Status, true),
+			m.serviceName(svc),
+			fmt.Sprintf("%d", svc.EventCount),
+			formatVolume(svc.VolumePerHour) + "/hr",
+			formatBytes(svc.BytesPerHour) + "/hr",
+			formatMonthlyCost(svc.CostPerHourUSD),
+		}
+		tbl.Row(row...)
+	}
+
+	return tbl.View()
+}
+
+// serviceName returns the service name, with extra context for non-ready services.
+func (m *Model) serviceName(svc domain.ServiceStatus) string {
+	if svc.Status == domain.ServiceLogStatusReady {
+		return svc.Name
+	}
+	switch svc.Status {
+	case domain.ServiceLogStatusBroken:
+		if svc.Error != "" {
+			return svc.Name + " — " + svc.Error
+		}
+	case domain.ServiceLogStatusDiscovering:
+		if svc.PercentComplete > 0 {
+			return svc.Name + fmt.Sprintf(" (%.0f%%)", svc.PercentComplete)
+		}
+	case domain.ServiceLogStatusStale:
+		return svc.Name + " — no recent data"
+	case domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive,
+		domain.ServiceLogStatusAnalyzing, domain.ServiceLogStatusReady:
+		// No extra context needed.
+	}
+	return svc.Name
+}
+
+// formatVolume formats events/hr: 892, 12.4k, 2.1M.
+func formatVolume(v float64) string {
+	abs := math.Abs(v)
+	switch {
+	case abs >= 1_000_000:
+		return fmt.Sprintf("%.1fM", v/1_000_000)
+	case abs >= 1_000:
+		return fmt.Sprintf("%.1fk", v/1_000)
 	default:
-		return colors.Success.Fg
+		return fmt.Sprintf("%.0f", v)
 	}
 }
 
-func dot(c color.Color) string {
-	return lipgloss.NewStyle().Foreground(c).Render("●")
+// formatBytes formats bytes/hr: 540 B, 12.4 KB, 1.2 MB, 3.4 GB.
+func formatBytes(b float64) string {
+	abs := math.Abs(b)
+	switch {
+	case abs >= 1_000_000_000:
+		return fmt.Sprintf("%.1f GB", b/1_000_000_000)
+	case abs >= 1_000_000:
+		return fmt.Sprintf("%.1f MB", b/1_000_000)
+	case abs >= 1_000:
+		return fmt.Sprintf("%.1f KB", b/1_000)
+	default:
+		return fmt.Sprintf("%.0f B", b)
+	}
+}
+
+// formatMonthlyCost formats hourly USD rate as monthly: $0, $142/mo, $9.4k/mo.
+func formatMonthlyCost(costPerHour float64) string {
+	monthly := costPerHour * 730
+	if monthly < 0.5 {
+		return "$0/mo"
+	}
+	abs := math.Abs(monthly)
+	switch {
+	case abs >= 1_000_000:
+		return fmt.Sprintf("$%.1fM/mo", monthly/1_000_000)
+	case abs >= 1_000:
+		return fmt.Sprintf("$%.1fk/mo", monthly/1_000)
+	default:
+		return fmt.Sprintf("$%.0f/mo", monthly)
+	}
 }

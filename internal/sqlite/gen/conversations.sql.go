@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countConversations = `-- name: CountConversations :one
+SELECT COUNT(*) FROM conversations
+`
+
+func (q *Queries) CountConversations(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countConversations)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getConversation = `-- name: GetConversation :one
 SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations WHERE id = ?
 `

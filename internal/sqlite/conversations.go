@@ -10,6 +10,7 @@ import (
 
 // Conversations provides type-safe access to conversations.
 type Conversations interface {
+	Count(ctx context.Context) (int64, error)
 	Create(ctx context.Context, accountID, workspaceID string) (string, error)
 	UpdateTitle(ctx context.Context, id, title string) error
 	List(ctx context.Context, accountID string) ([]gen.Conversation, error)
@@ -19,6 +20,15 @@ type Conversations interface {
 // conversationsImpl implements Conversations.
 type conversationsImpl struct {
 	queries *gen.Queries
+}
+
+// Count returns the total number of conversations.
+func (c *conversationsImpl) Count(ctx context.Context) (int64, error) {
+	count, err := c.queries.CountConversations(ctx)
+	if err != nil {
+		return 0, WrapSQLiteError(err, "count conversations")
+	}
+	return count, nil
 }
 
 // Create creates a new conversation and returns its ID.

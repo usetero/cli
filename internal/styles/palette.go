@@ -7,7 +7,7 @@ type Palette struct {
 	Accent  ColorFamily // Secondary brand for gradients (Lime)
 	Neutral ColorFamily // Grays (Neutral)
 	Error   ColorFamily // Error states (Red)
-	Success ColorFamily // Success states (Green)
+	Success ColorFamily // Success states (Emerald)
 	Warning ColorFamily // Warning states (Amber)
 }
 
@@ -19,7 +19,7 @@ func DefaultPalette() Palette {
 		Accent:  CyanFamily,    // Gradient: Emerald → Cyan
 		Neutral: ZincFamily,
 		Error:   RedFamily,
-		Success: GreenFamily,
+		Success: EmeraldFamily,
 		Warning: AmberFamily,
 	}
 }

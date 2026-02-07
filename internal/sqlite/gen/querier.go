@@ -9,7 +9,12 @@ import (
 )
 
 type Querier interface {
+	CountConversations(ctx context.Context) (int64, error)
+	CountLogEventPolicies(ctx context.Context) (int64, error)
+	CountLogEvents(ctx context.Context) (int64, error)
+	CountMessages(ctx context.Context) (int64, error)
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
+	CountServices(ctx context.Context) (int64, error)
 	GetCatalogStatus(ctx context.Context) (GetCatalogStatusRow, error)
 	GetConversation(ctx context.Context, id *string) (Conversation, error)
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)
@@ -22,6 +27,8 @@ type Querier interface {
 	ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
+	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
+	ListServiceStatuses(ctx context.Context) ([]ListServiceStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error

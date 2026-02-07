@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countServices = `-- name: CountServices :one
+SELECT COUNT(*) FROM services
+`
+
+func (q *Queries) CountServices(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countServices)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getService = `-- name: GetService :one
 SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name, updated_at FROM services WHERE id = ?
 `

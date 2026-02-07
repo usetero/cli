@@ -38,6 +38,7 @@ type Model struct {
 	scope    log.Scope
 
 	// Accumulated state from step completions
+	user      *iauth.User
 	org       *domain.Organization
 	account   *domain.Account
 	workspace *domain.Workspace
@@ -115,7 +116,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.setStep(role.New(m.theme, m.prefs, m.scope))
 
 	case msgs.Authenticated:
-		m.scope.Info("user authenticated")
+		m.scope.Info("user authenticated", "user_id", msg.User.ID)
+		m.user = &msg.User
 		return m.setStep(role.New(m.theme, m.prefs, m.scope))
 
 	// Role messages
@@ -197,6 +199,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		)
 		return func() tea.Msg {
 			return msgs.OnboardingComplete{
+				User:      m.user,
 				Org:       *m.org,
 				Account:   *m.account,
 				Workspace: *m.workspace,

@@ -29,6 +29,20 @@ var (
 		key.WithKeys("ctrl+d"),
 		key.WithHelp("ctrl+d", "details"),
 	)
+	Palette = key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "commands"),
+	)
+	// Drawer bindings (shown when the statusbar drawer is open).
+	NextTab = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "next tab"),
+	)
+	CloseDrawer = key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "close"),
+	)
+
 	// Global is shown in the keybar across all screens.
 	Global = []key.Binding{Quit}
 )

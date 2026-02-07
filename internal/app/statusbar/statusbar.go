@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -15,21 +16,21 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/keymap"
 )
 
 const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabSync    = 0
+	TabPolicy  = 0
 	TabCatalog = 1
-	TabPolicy  = 2
-	TabChat    = 3
-	tabCount   = 4
+	TabSync    = 2
+	tabCount   = 3
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Sync", "Catalog", "Policy", "Chat"}
+var tabLabels = [tabCount]string{"Policy", "Catalog", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
@@ -64,9 +65,10 @@ func New(theme *styles.Theme, syncer powersync.Syncer, host string) *Model {
 	}
 }
 
-// SetDB sets the database for catalog and policy status polling.
+// SetDB sets the database for status polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 	return tea.Batch(
+		m.syncStatus.SetDB(db),
 		m.catalogStatus.SetDB(db),
 		m.policyStatus.SetDB(db),
 	)
@@ -135,6 +137,11 @@ func (m *Model) IsDrawerOpen() bool {
 	return m.drawerOpen
 }
 
+// ShortHelp returns keybindings shown in the keybar when the drawer is open.
+func (m *Model) ShortHelp() []key.Binding {
+	return []key.Binding{keymap.NextTab, keymap.CloseDrawer}
+}
+
 // Height returns the height of the statusbar.
 func (m *Model) Height() int {
 	return 1
@@ -191,8 +198,8 @@ func (m *Model) View() string {
 		}
 	}
 
-	// 6. Context window usage (if fits)
-	if m.contextPercent > 0 {
+	// 6. Context window usage (only shown when high)
+	if m.contextPercent >= 75 {
 		pctSeg := m.renderContextPercent()
 		testContent := strings.Join(segments, sep) + sep + pctSeg
 		if lipgloss.Width(testContent) < m.width-3 {
@@ -228,16 +235,15 @@ func (m *Model) DrawerView(width, height int) string {
 	tabBar := m.renderTabBar(width - 4) // account for border + padding
 
 	// Active tab content
+	contentWidth := width - 4 // border (2) + padding (2)
 	var content string
 	switch m.activeTab {
 	case TabSync:
-		content = m.syncStatus.ExpandedView()
+		content = m.syncStatus.ExpandedView(contentWidth)
 	case TabCatalog:
-		content = m.catalogStatus.ExpandedView()
+		content = m.catalogStatus.ExpandedView(contentWidth)
 	case TabPolicy:
-		content = m.policyStatus.ExpandedView()
-	case TabChat:
-		content = m.renderContextPercent()
+		content = m.policyStatus.ExpandedView(contentWidth)
 	}
 
 	if content == "" {

@@ -12,15 +12,11 @@ func (m *Model) paletteCommands() []palette.Command {
 		{
 			Name: "New Conversation",
 			Handler: func() tea.Cmd {
-				// TODO: implement new conversation
-				return nil
-			},
-		},
-		{
-			Name: "Toggle Details",
-			Handler: func() tea.Cmd {
-				m.statusBar.ToggleDrawer()
-				return nil
+				m.chat = m.newChat()
+				m.statusBar.SetTitle("")
+				m.windowTitle = ""
+				m.updateLayout()
+				return m.chat.Init()
 			},
 		},
 		{

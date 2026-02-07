@@ -36,51 +36,52 @@ type DatadogAccount struct {
 }
 
 type DatadogAccountStatusesCache struct {
-	ID                                 *string
-	AccountID                          *string
-	DatadogAccountID                   *string
-	LogActiveServices                  *int64
-	LogAnalyzedCount                   *int64
-	LogAnalyzingCount                  *int64
-	LogAnalyzingServices               *int64
-	LogApprovedPolicyCount             *int64
-	LogBrokenServices                  *int64
-	LogBytesPerHour                    *float64
-	LogCleanCount                      *int64
-	LogDisabledServices                *int64
-	LogDiscoveredVolumeInWindow        *int64
-	LogDiscoveringCount                *int64
-	LogDiscoveringServices             *int64
-	LogDismissedPolicyCount            *int64
-	LogError                           *string
-	LogErrorAt                         *string
-	LogEstimablePolicyCount            *int64
-	LogEstimatedBytesReductionPerHour  *float64
-	LogEstimatedCostReductionPerHour   *float64
-	LogEstimatedVolumeReductionPerHour *float64
-	LogEventCount                      *int64
-	LogInactiveServices                *int64
-	LogObservedBytesPerHourAfter       *float64
-	LogObservedBytesPerHourBefore      *float64
-	LogObservedCostPerHourAfter        *float64
-	LogObservedCostPerHourBefore       *float64
-	LogObservedVolumePerHourAfter      *float64
-	LogObservedVolumePerHourBefore     *float64
-	LogPendingCount                    *int64
-	LogPendingPolicyCount              *int64
-	LogPercentComplete                 *float64
-	LogPolicyCount                     *int64
-	LogReadyServices                   *int64
-	LogResolvedCount                   *int64
-	LogServiceCount                    *int64
-	LogServiceVolumeInWindow           *int64
-	LogStaleServices                   *int64
-	LogStatus                          *string
-	LogVolumePerHour                   *float64
-	LogWarning                         *string
-	LogWarningAt                       *string
-	ReadyForUse                        *int64
-	RefreshedAt                        *string
+	ID                                  *string
+	AccountID                           *string
+	DatadogAccountID                    *string
+	LogActiveServices                   *int64
+	LogAnalyzedCount                    *int64
+	LogAnalyzingCount                   *int64
+	LogAnalyzingServices                *int64
+	LogApprovedPolicyCount              *int64
+	LogBrokenServices                   *int64
+	LogBytesPerHour                     *float64
+	LogCleanCount                       *int64
+	LogCostPerHourUsd                   *float64
+	LogDisabledServices                 *int64
+	LogDiscoveredVolumeInWindow         *int64
+	LogDiscoveringCount                 *int64
+	LogDiscoveringServices              *int64
+	LogDismissedPolicyCount             *int64
+	LogError                            *string
+	LogErrorAt                          *string
+	LogEstimablePolicyCount             *int64
+	LogEstimatedBytesReductionPerHour   *float64
+	LogEstimatedCostReductionPerHourUsd *float64
+	LogEstimatedVolumeReductionPerHour  *float64
+	LogEventCount                       *int64
+	LogInactiveServices                 *int64
+	LogObservedBytesPerHourAfter        *float64
+	LogObservedBytesPerHourBefore       *float64
+	LogObservedCostPerHourAfterUsd      *float64
+	LogObservedCostPerHourBeforeUsd     *float64
+	LogObservedVolumePerHourAfter       *float64
+	LogObservedVolumePerHourBefore      *float64
+	LogPendingCount                     *int64
+	LogPendingPolicyCount               *int64
+	LogPercentComplete                  *float64
+	LogPolicyCount                      *int64
+	LogReadyServices                    *int64
+	LogResolvedCount                    *int64
+	LogServiceCount                     *int64
+	LogServiceVolumeInWindow            *int64
+	LogStaleServices                    *int64
+	LogStatus                           *string
+	LogVolumePerHour                    *float64
+	LogWarning                          *string
+	LogWarningAt                        *string
+	ReadyForUse                         *int64
+	RefreshedAt                         *string
 }
 
 type DatadogLogIndex struct {
@@ -149,6 +150,7 @@ type LogEventPolicyStatusesCache struct {
 	ApprovedAt                      *string
 	Benefits                        *string
 	Category                        *string
+	CreatedAt                       *string
 	DismissedAt                     *string
 	EstimatedBytesReductionPerHour  *float64
 	EstimatedVolumeReductionPerHour *float64
@@ -162,32 +164,33 @@ type LogEventPolicyStatusesCache struct {
 }
 
 type LogEventStatusesCache struct {
-	ID                              *string
-	AccountID                       *string
-	ApprovedPolicyCount             *int64
-	BytesPerHour                    *float64
-	DatadogAccountID                *string
-	DismissedPolicyCount            *int64
-	Error                           *string
-	EstimablePolicyCount            *int64
-	EstimatedBytesReductionPerHour  *float64
-	EstimatedCostReductionPerHour   *float64
-	EstimatedVolumeReductionPerHour *float64
-	HasBeenAnalyzed                 *int64
-	HasVolumes                      *int64
-	LogEventID                      *string
-	ObservedBytesPerHourAfter       *float64
-	ObservedBytesPerHourBefore      *float64
-	ObservedCostPerHourAfter        *float64
-	ObservedCostPerHourBefore       *float64
-	ObservedVolumePerHourAfter      *float64
-	ObservedVolumePerHourBefore     *float64
-	PendingPolicyCount              *int64
-	PolicyCount                     *int64
-	RefreshedAt                     *string
-	ServiceID                       *string
-	Status                          *string
-	VolumePerHour                   *float64
+	ID                               *string
+	AccountID                        *string
+	ApprovedPolicyCount              *int64
+	BytesPerHour                     *float64
+	CostPerHourUsd                   *float64
+	DatadogAccountID                 *string
+	DismissedPolicyCount             *int64
+	Error                            *string
+	EstimablePolicyCount             *int64
+	EstimatedBytesReductionPerHour   *float64
+	EstimatedCostReductionPerHourUsd *float64
+	EstimatedVolumeReductionPerHour  *float64
+	HasBeenAnalyzed                  *int64
+	HasVolumes                       *int64
+	LogEventID                       *string
+	ObservedBytesPerHourAfter        *float64
+	ObservedBytesPerHourBefore       *float64
+	ObservedCostPerHourAfterUsd      *float64
+	ObservedCostPerHourBeforeUsd     *float64
+	ObservedVolumePerHourAfter       *float64
+	ObservedVolumePerHourBefore      *float64
+	PendingPolicyCount               *int64
+	PolicyCount                      *int64
+	RefreshedAt                      *string
+	ServiceID                        *string
+	Status                           *string
+	VolumePerHour                    *float64
 }
 
 type LogEventVolume struct {
@@ -237,42 +240,43 @@ type ServiceLogVolume struct {
 }
 
 type ServiceStatusesCache struct {
-	ID                                 *string
-	AccountID                          *string
-	DatadogAccountID                   *string
-	LogAnalyzedCount                   *int64
-	LogAnalyzingCount                  *int64
-	LogApprovedPolicyCount             *int64
-	LogBytesPerHour                    *float64
-	LogCleanCount                      *int64
-	LogDiscoveredVolumeInWindow        *int64
-	LogDiscoveringCount                *int64
-	LogDismissedPolicyCount            *int64
-	LogError                           *string
-	LogErrorAt                         *string
-	LogEstimablePolicyCount            *int64
-	LogEstimatedBytesReductionPerHour  *float64
-	LogEstimatedCostReductionPerHour   *float64
-	LogEstimatedVolumeReductionPerHour *float64
-	LogEventCount                      *int64
-	LogObservedBytesPerHourAfter       *float64
-	LogObservedBytesPerHourBefore      *float64
-	LogObservedCostPerHourAfter        *float64
-	LogObservedCostPerHourBefore       *float64
-	LogObservedVolumePerHourAfter      *float64
-	LogObservedVolumePerHourBefore     *float64
-	LogPendingCount                    *int64
-	LogPendingPolicyCount              *int64
-	LogPercentComplete                 *float64
-	LogPolicyCount                     *int64
-	LogResolvedCount                   *int64
-	LogServiceVolumeInWindow           *int64
-	LogStatus                          *string
-	LogVolumePerHour                   *float64
-	LogWarning                         *string
-	LogWarningAt                       *string
-	RefreshedAt                        *string
-	ServiceID                          *string
+	ID                                  *string
+	AccountID                           *string
+	DatadogAccountID                    *string
+	LogAnalyzedCount                    *int64
+	LogAnalyzingCount                   *int64
+	LogApprovedPolicyCount              *int64
+	LogBytesPerHour                     *float64
+	LogCleanCount                       *int64
+	LogCostPerHourUsd                   *float64
+	LogDiscoveredVolumeInWindow         *int64
+	LogDiscoveringCount                 *int64
+	LogDismissedPolicyCount             *int64
+	LogError                            *string
+	LogErrorAt                          *string
+	LogEstimablePolicyCount             *int64
+	LogEstimatedBytesReductionPerHour   *float64
+	LogEstimatedCostReductionPerHourUsd *float64
+	LogEstimatedVolumeReductionPerHour  *float64
+	LogEventCount                       *int64
+	LogObservedBytesPerHourAfter        *float64
+	LogObservedBytesPerHourBefore       *float64
+	LogObservedCostPerHourAfterUsd      *float64
+	LogObservedCostPerHourBeforeUsd     *float64
+	LogObservedVolumePerHourAfter       *float64
+	LogObservedVolumePerHourBefore      *float64
+	LogPendingCount                     *int64
+	LogPendingPolicyCount               *int64
+	LogPercentComplete                  *float64
+	LogPolicyCount                      *int64
+	LogResolvedCount                    *int64
+	LogServiceVolumeInWindow            *int64
+	LogStatus                           *string
+	LogVolumePerHour                    *float64
+	LogWarning                          *string
+	LogWarningAt                        *string
+	RefreshedAt                         *string
+	ServiceID                           *string
 }
 
 type Team struct {

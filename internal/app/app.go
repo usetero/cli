@@ -69,11 +69,14 @@ type Model struct {
 	syncer      powersync.Syncer
 	services    api.APIServices
 
-	// Runtime (created after account selection)
+	// Runtime (created after account selection / onboarding)
 	db           sqlite.DB
 	uploader     upload.Uploader
 	chatClient   chatclient.Client
 	toolRegistry *chattools.Registry
+	user         *auth.User
+	account      domain.Account
+	workspace    domain.Workspace
 
 	// Components
 	statusBar  *statusbar.Model
@@ -265,6 +268,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case onboardingmsg.OnboardingComplete:
 		m.state = stateChat
+		m.user = msg.User
+		m.account = msg.Account
+		m.workspace = msg.Workspace
 		m.scope.Info("onboarding complete",
 			"org", msg.Org.Name,
 			"account", msg.Account.Name,
@@ -272,15 +278,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 		// Create chat model (sizing happens via updateLayout)
-		m.chat = chat.New(
-			msg.Account,
-			msg.Workspace,
-			m.theme,
-			m.db,
-			m.chatClient,
-			m.toolRegistry,
-			m.scope,
-		)
+		m.chat = m.newChat()
 
 		// Size the new chat component
 		m.updateLayout()
@@ -386,14 +384,18 @@ func (m *Model) contentSize() (int, int) {
 func (m *Model) updateKeyBar() {
 	var bindings []key.Binding
 
-	switch m.state {
-	case stateOnboarding:
-		if m.onboarding != nil {
-			bindings = m.onboarding.ShortHelp()
-		}
-	case stateChat:
-		if m.chat != nil {
-			bindings = m.chat.ShortHelp()
+	if m.statusBar.IsDrawerOpen() {
+		bindings = m.statusBar.ShortHelp()
+	} else {
+		switch m.state {
+		case stateOnboarding:
+			if m.onboarding != nil {
+				bindings = m.onboarding.ShortHelp()
+			}
+		case stateChat:
+			if m.chat != nil {
+				bindings = m.chat.ShortHelp()
+			}
 		}
 	}
 
@@ -565,7 +567,7 @@ func (m *Model) renderContent() string {
 	// Overlay drawer if open
 	if m.statusBar.IsDrawerOpen() {
 		drawerWidth := contentWidth - 2
-		drawerHeight := 6
+		drawerHeight := 12
 		drawer := m.statusBar.DrawerView(drawerWidth, drawerHeight)
 
 		layers := []*lipgloss.Layer{
@@ -598,6 +600,20 @@ func (m *Model) renderContent() string {
 	}
 
 	return paddedView
+}
+
+// newChat creates a fresh chat model with current dependencies.
+func (m *Model) newChat() *chat.Model {
+	return chat.New(
+		m.user,
+		m.account,
+		m.workspace,
+		m.theme,
+		m.db,
+		m.chatClient,
+		m.toolRegistry,
+		m.scope,
+	)
 }
 
 // openPalette creates and opens the command palette.

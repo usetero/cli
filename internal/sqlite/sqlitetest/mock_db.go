@@ -19,6 +19,18 @@ type MockDB struct {
 	// DatadogAccountStatusesImpl is the mock Datadog account statuses implementation.
 	DatadogAccountStatusesImpl sqlite.DatadogAccountStatuses
 
+	// ServiceStatusesImpl is the mock service statuses implementation.
+	ServiceStatusesImpl sqlite.ServiceStatuses
+
+	// ServicesImpl is the mock services implementation.
+	ServicesImpl sqlite.Services
+
+	// LogEventsImpl is the mock log events implementation.
+	LogEventsImpl sqlite.LogEvents
+
+	// LogEventPoliciesImpl is the mock log event policies implementation.
+	LogEventPoliciesImpl sqlite.LogEventPolicies
+
 	// SubscriptionImpl is returned by Subscribe.
 	SubscriptionImpl *sqlite.Subscription
 
@@ -58,6 +70,11 @@ func (m *MockDB) DatadogAccountStatuses() sqlite.DatadogAccountStatuses {
 	return m.DatadogAccountStatusesImpl
 }
 
+// ServiceStatuses implements sqlite.DB.
+func (m *MockDB) ServiceStatuses() sqlite.ServiceStatuses {
+	return m.ServiceStatusesImpl
+}
+
 // Subscribe implements sqlite.DB.
 func (m *MockDB) Subscribe() *sqlite.Subscription {
 	return m.SubscriptionImpl
@@ -95,6 +112,26 @@ func (m *MockDB) WithTx(ctx context.Context, fn func(tx *sqlite.Tx) error) error
 // Raw implements sqlite.DB.
 func (m *MockDB) Raw() *sql.DB {
 	return nil
+}
+
+// Services implements sqlite.DB.
+func (m *MockDB) Services() sqlite.Services {
+	return m.ServicesImpl
+}
+
+// LogEvents implements sqlite.DB.
+func (m *MockDB) LogEvents() sqlite.LogEvents {
+	return m.LogEventsImpl
+}
+
+// LogEventPolicies implements sqlite.DB.
+func (m *MockDB) LogEventPolicies() sqlite.LogEventPolicies {
+	return m.LogEventPoliciesImpl
+}
+
+// PendingUploadCounts implements sqlite.DB.
+func (m *MockDB) PendingUploadCounts(_ context.Context) (map[sqlite.Table]int64, error) {
+	return nil, nil
 }
 
 // Close implements sqlite.DB.

@@ -17,6 +17,9 @@ WHERE conversation_id = ?
 ORDER BY created_at DESC
 LIMIT 1;
 
+-- name: CountMessages :one
+SELECT COUNT(*) FROM messages;
+
 -- name: CountMessagesByConversation :one
 SELECT COUNT(*) FROM messages WHERE conversation_id = ?;
 

@@ -47,6 +47,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_broken_services INTEGER, -- Services with BROKEN status
     log_bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window, summed across all services. Same baseline used for policy impact estimates.
     log_clean_count INTEGER, -- Log events with CLEAN status (analyzed, no issues)
+    log_cost_per_hour_usd REAL, -- Current cost in USD/hour (ingestion + indexing combined), summed across all services. Independent of policies.
     log_disabled_services INTEGER, -- Services with DISABLED status
     log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the rolling 7-day window across all active services
     log_discovering_count INTEGER, -- Log events with DISCOVERING status
@@ -56,14 +57,14 @@ CREATE TABLE datadog_account_statuses_cache (
     log_error_at TEXT, -- When the most recent error occurred
     log_estimable_policy_count INTEGER, -- Policies with volume or bytes estimates
     log_estimated_bytes_reduction_per_hour REAL, -- Account-wide estimated bytes reduction
-    log_estimated_cost_reduction_per_hour REAL, -- Account-wide estimated USD/hour savings (ingestion + indexing combined)
+    log_estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated USD/hour savings (ingestion + indexing combined)
     log_estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
     log_event_count INTEGER, -- Total log events across all services
     log_inactive_services INTEGER, -- Services with INACTIVE status
     log_observed_bytes_per_hour_after REAL, -- Account-wide observed current bytes
     log_observed_bytes_per_hour_before REAL, -- Account-wide observed pre-approval bytes
-    log_observed_cost_per_hour_after REAL, -- Account-wide measured USD/hour cost after approval
-    log_observed_cost_per_hour_before REAL, -- Account-wide measured USD/hour cost before approval
+    log_observed_cost_per_hour_after_usd REAL, -- Account-wide measured USD/hour cost after approval
+    log_observed_cost_per_hour_before_usd REAL, -- Account-wide measured USD/hour cost before approval
     log_observed_volume_per_hour_after REAL, -- Account-wide observed current volume
     log_observed_volume_per_hour_before REAL, -- Account-wide observed pre-approval volume
     log_pending_count INTEGER, -- Log events with PENDING status (policies awaiting action)
@@ -151,6 +152,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     approved_at TEXT, -- When the policy was approved
     benefits TEXT, -- What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
     category TEXT, -- Quality issue category (e.g., health_checks, pii_leakage, duplicate_fields)
+    created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When the policy was dismissed
     estimated_bytes_reduction_per_hour REAL, -- Projected bytes/hour eliminated. NULL when not estimable.
     estimated_volume_reduction_per_hour REAL, -- Projected events/hour eliminated. NULL when not estimable (compliance, resilience policies).
@@ -169,20 +171,21 @@ CREATE TABLE log_event_statuses_cache (
     account_id TEXT, -- Account ID for tenant isolation
     approved_policy_count INTEGER, -- Policies approved by user
     bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window. Same baseline used for policy impact estimates, so directly comparable. NULL when no volume data exists.
+    cost_per_hour_usd REAL, -- Current cost in USD/hour (ingestion + indexing combined). Independent of policies. NULL when no volume data exists. Uses custom rates if set, otherwise Datadog published rates.
     datadog_account_id TEXT, -- The Datadog account performing discovery
     dismissed_policy_count INTEGER, -- Policies dismissed by user
     error TEXT, -- Error message if status is BROKEN
-    estimable_policy_count INTEGER, -- Active policies with volume or bytes reduction estimates
+    estimable_policy_count INTEGER, -- Active policies whose category is estimable (deterministic categories where baseline = estimate). See is_estimable_category() in triggers/06_category_functions.sql.
     estimated_bytes_reduction_per_hour REAL, -- Sum of estimated bytes reductions from all active estimable policies
-    estimated_cost_reduction_per_hour REAL, -- Estimated USD/hour savings from active policies (ingestion + indexing combined). Uses custom rates if set, otherwise Datadog published rates.
+    estimated_cost_reduction_per_hour_usd REAL, -- Estimated USD/hour savings from active policies (ingestion + indexing combined). Uses custom rates if set, otherwise Datadog published rates.
     estimated_volume_reduction_per_hour REAL, -- Sum of estimated volume reductions from all active estimable policies
     has_been_analyzed INTEGER, -- Whether this log event has been analyzed for quality issues
     has_volumes INTEGER, -- Whether log_event_volumes exist for this event from this integration
     log_event_id TEXT, -- The log event this status belongs to
     observed_bytes_per_hour_after REAL, -- Measured bytes/hour in recent 7-day window
     observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval
-    observed_cost_per_hour_after REAL, -- Measured USD/hour cost in recent window after policy approval (ingestion + indexing). Only when approved and data is fresh.
-    observed_cost_per_hour_before REAL, -- Measured USD/hour cost before first policy approval (ingestion + indexing). Only when approved and data is fresh.
+    observed_cost_per_hour_after_usd REAL, -- Measured USD/hour cost in recent window after policy approval (ingestion + indexing). Only when approved and data is fresh.
+    observed_cost_per_hour_before_usd REAL, -- Measured USD/hour cost before first policy approval (ingestion + indexing). Only when approved and data is fresh.
     observed_volume_per_hour_after REAL, -- Measured events/hour in recent 7-day window (only when approved and data is fresh)
     observed_volume_per_hour_before REAL, -- Measured events/hour in 7-day window before first policy approval (only when approved and data is fresh)
     pending_policy_count INTEGER, -- Policies awaiting user action
@@ -255,6 +258,7 @@ CREATE TABLE service_statuses_cache (
     log_approved_policy_count INTEGER, -- Policies approved by user
     log_bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window, summed across all log events. Same baseline used for policy impact estimates.
     log_clean_count INTEGER, -- Log events with CLEAN status (analyzed, no issues)
+    log_cost_per_hour_usd REAL, -- Current cost in USD/hour (ingestion + indexing combined), summed across all log events. Independent of policies.
     log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the rolling 7-day window
     log_discovering_count INTEGER, -- Log events with DISCOVERING status
     log_dismissed_policy_count INTEGER, -- Policies dismissed by user
@@ -262,13 +266,13 @@ CREATE TABLE service_statuses_cache (
     log_error_at TEXT, -- When the error occurred
     log_estimable_policy_count INTEGER, -- Policies with volume or bytes reduction estimates
     log_estimated_bytes_reduction_per_hour REAL, -- Sum of estimated bytes reductions across all log events
-    log_estimated_cost_reduction_per_hour REAL, -- Estimated USD/hour savings across all log events (ingestion + indexing combined)
+    log_estimated_cost_reduction_per_hour_usd REAL, -- Estimated USD/hour savings across all log events (ingestion + indexing combined)
     log_estimated_volume_reduction_per_hour REAL, -- Sum of estimated volume reductions across all log events
     log_event_count INTEGER, -- Total number of log events discovered for this service
     log_observed_bytes_per_hour_after REAL, -- Sum of observed current bytes across approved log events
     log_observed_bytes_per_hour_before REAL, -- Sum of observed pre-approval bytes across approved log events
-    log_observed_cost_per_hour_after REAL, -- Measured USD/hour cost after approval across approved log events
-    log_observed_cost_per_hour_before REAL, -- Measured USD/hour cost before approval across approved log events
+    log_observed_cost_per_hour_after_usd REAL, -- Measured USD/hour cost after approval across approved log events
+    log_observed_cost_per_hour_before_usd REAL, -- Measured USD/hour cost before approval across approved log events
     log_observed_volume_per_hour_after REAL, -- Sum of observed current volume across approved log events
     log_observed_volume_per_hour_before REAL, -- Sum of observed pre-approval volume across approved log events
     log_pending_count INTEGER, -- Log events with PENDING status (policies awaiting action)

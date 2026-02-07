@@ -2,6 +2,10 @@ package chat
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -11,6 +15,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/auth"
 	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -56,6 +61,7 @@ type Model struct {
 	// Conversation is created lazily on first message
 	conversationID domain.ConversationID
 
+	user      *auth.User
 	account   domain.Account
 	workspace domain.Workspace
 	theme     *styles.Theme
@@ -64,14 +70,21 @@ type Model struct {
 	originX   int
 	originY   int
 
+	// Empty state
+	policySummary *domain.PolicySummary
+
 	// Dependencies
 	db           sqlite.DB
 	chatClient   chatclient.Client
 	toolRegistry *tools.Registry
 }
 
+// emptyStatePollMsg triggers a policy summary fetch for the empty state.
+type emptyStatePollMsg struct{}
+
 // New creates a new chat model.
 func New(
+	user *auth.User,
 	account domain.Account,
 	workspace domain.Workspace,
 	theme *styles.Theme,
@@ -84,8 +97,9 @@ func New(
 
 	return &Model{
 		scope:        scope,
-		inputBar:     inputbar.New(theme, scope),
+		inputBar:     inputbar.New(user, theme, scope),
 		messageList:  messagelist.New(theme, db, chatClient, toolRegistry, scope),
+		user:         user,
 		account:      account,
 		workspace:    workspace,
 		theme:        theme,
@@ -97,7 +111,16 @@ func New(
 
 // Init initializes the model.
 func (m *Model) Init() tea.Cmd {
-	return m.inputBar.Init()
+	return tea.Batch(
+		m.inputBar.Init(),
+		m.pollEmptyState(),
+	)
+}
+
+func (m *Model) pollEmptyState() tea.Cmd {
+	return tea.Tick(2*time.Second, func(time.Time) tea.Msg {
+		return emptyStatePollMsg{}
+	})
 }
 
 // Update handles messages.
@@ -121,6 +144,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, m.messageList.Update(msg))
 			return tea.Batch(cmds...)
 		}
+
+	case emptyStatePollMsg:
+		if !m.hasMessages() && m.db != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			summary, err := m.db.DatadogAccountStatuses().GetPolicySummary(ctx)
+			if err == nil && summary.ReadyForUse {
+				m.policySummary = &summary
+			}
+			return m.pollEmptyState()
+		}
+		return nil // stop polling once messages exist
 
 	case msgs.UserSubmittedInput:
 		cmds = append(cmds, m.handleUserInput(msg))
@@ -362,21 +397,108 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	colors := m.theme.Colors
-
-	// Empty state: centered prompt + input bar
+	// Empty state: context-aware greeting + suggestions + input bar
 	if !m.hasMessages() {
 		emptyHeight := m.height - m.inputBar.Height()
 		emptyView := lipgloss.NewStyle().
-			Foreground(colors.Page.TextMuted).
 			Width(m.width).
 			Height(emptyHeight).
 			Align(lipgloss.Center, lipgloss.Center).
-			Render("Start a conversation...")
+			Render(m.emptyStateContent())
 
 		return lipgloss.JoinVertical(lipgloss.Left, emptyView, m.inputBar.View())
 	}
 
 	// Normal state: message list + input bar
 	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.inputBar.View())
+}
+
+// emptyStateContent renders the context-aware empty state.
+func (m *Model) emptyStateContent() string {
+	colors := m.theme.Colors
+	text := lipgloss.NewStyle().Foreground(colors.Page.Text)
+	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+
+	name := ""
+	if m.user != nil && m.user.FirstName != "" {
+		name = m.user.FirstName
+	}
+
+	var headline string
+	var suggestions []string
+
+	s := m.policySummary
+	if s == nil || !s.ReadyForUse {
+		// No data yet — generic greeting
+		if name != "" {
+			headline = fmt.Sprintf("Hey %s — loading your environment...", name)
+		} else {
+			headline = "Loading your environment..."
+		}
+		suggestions = []string{
+			"What services are generating the most logs?",
+			"Show me a summary of my environment",
+			"What does Tero do?",
+		}
+	} else if s.PendingPolicyCount > 0 {
+		// Pending work
+		wp := wastePercent(*s)
+		if name != "" {
+			headline = fmt.Sprintf("Hey %s — %d%% waste across your services. Let's dig in:", name, wp)
+		} else {
+			headline = fmt.Sprintf("%d%% waste across your services. Let's dig in:", wp)
+		}
+		suggestions = []string{
+			"Walk me through the pending policies",
+			"Which policies should I approve first?",
+			"Show me what's driving the most waste",
+		}
+	} else if s.ApprovedPolicyCount > 0 {
+		// Mid-journey — approved some, none pending
+		if name != "" {
+			headline = fmt.Sprintf("Nice work, %s — %d policies approved. Let's keep going:", name, s.ApprovedPolicyCount)
+		} else {
+			headline = fmt.Sprintf("%d policies approved. Let's keep going:", s.ApprovedPolicyCount)
+		}
+		suggestions = []string{
+			"How are the approved policies performing?",
+			"Are there any new recommendations?",
+			"Show me observed savings so far",
+		}
+	} else {
+		// All clean — no pending, no approved
+		if name != "" {
+			headline = fmt.Sprintf("Looking good, %s — I'm watching for changes.", name)
+		} else {
+			headline = "Looking good — I'm watching for changes."
+		}
+		suggestions = []string{
+			"What services are generating the most logs?",
+			"Show me a summary of my environment",
+			"Any optimization opportunities?",
+		}
+	}
+
+	var lines []string
+	lines = append(lines, text.Render(headline))
+	lines = append(lines, "")
+	for _, s := range suggestions {
+		lines = append(lines, muted.Render("  → "+s))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// wastePercent computes waste % preferring bytes.
+func wastePercent(s domain.PolicySummary) int {
+	if s.TotalBytesPerHour > 0 && s.EstimatedBytesPerHour > 0 {
+		return int(math.Round(s.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
+	}
+	if s.EstimatedCostPerHour != nil && s.TotalCostPerHour != nil && *s.TotalCostPerHour > 0 {
+		return int(math.Round(*s.EstimatedCostPerHour / *s.TotalCostPerHour * 100))
+	}
+	if s.TotalVolumePerHour > 0 && s.EstimatedVolumePerHour > 0 {
+		return int(math.Round(s.EstimatedVolumePerHour / s.TotalVolumePerHour * 100))
+	}
+	return 0
 }

@@ -1,0 +1,102 @@
+// Package status renders colored status badges for Tero entities.
+//
+// Each entity type has its own renderer with the correct status-to-color
+// mapping. All renderers produce a colored dot (●) followed by an optional
+// label.
+package status
+
+import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+
+	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/styles"
+)
+
+// badge renders ● LABEL or just ● depending on showLabel.
+func badge(c color.Color, label string, showLabel bool) string {
+	style := lipgloss.NewStyle().Foreground(c)
+	if showLabel {
+		return style.Render("● " + label)
+	}
+	return style.Render("●")
+}
+
+// --- Service statuses: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY ---
+
+// Service renders a colored status badge for a service status.
+func Service(theme *styles.Theme, s domain.ServiceLogStatus, showLabel bool) string {
+	return badge(serviceColor(theme, s), s.String(), showLabel)
+}
+
+// ServiceDot renders just the colored dot for a service status.
+func ServiceDot(theme *styles.Theme, s domain.ServiceLogStatus) string {
+	return badge(serviceColor(theme, s), "", false)
+}
+
+func serviceColor(theme *styles.Theme, s domain.ServiceLogStatus) color.Color {
+	colors := theme.Colors
+	switch s {
+	case domain.ServiceLogStatusBroken, domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
+		return colors.Error.Fg
+	case domain.ServiceLogStatusStale, domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
+		return colors.Warning.Fg
+	case domain.ServiceLogStatusReady:
+		return colors.Success.Fg
+	default:
+		return colors.Page.TextMuted
+	}
+}
+
+// --- Log event statuses: BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING ---
+
+// LogEvent renders a colored status badge for a log event status.
+func LogEvent(theme *styles.Theme, s domain.LogEventStatus, showLabel bool) string {
+	return badge(logEventColor(theme, s), s.String(), showLabel)
+}
+
+// LogEventDot renders just the colored dot for a log event status.
+func LogEventDot(theme *styles.Theme, s domain.LogEventStatus) string {
+	return badge(logEventColor(theme, s), "", false)
+}
+
+func logEventColor(theme *styles.Theme, s domain.LogEventStatus) color.Color {
+	colors := theme.Colors
+	switch s {
+	case domain.LogEventStatusBroken:
+		return colors.Error.Fg
+	case domain.LogEventStatusResolved, domain.LogEventStatusClean:
+		return colors.Success.Fg
+	case domain.LogEventStatusPending, domain.LogEventStatusAnalyzing, domain.LogEventStatusDiscovering:
+		return colors.Warning.Fg
+	default:
+		return colors.Page.TextMuted
+	}
+}
+
+// --- Policy statuses: PENDING > APPROVED > DISMISSED ---
+
+// Policy renders a colored status badge for a policy status.
+func Policy(theme *styles.Theme, s domain.PolicyLogStatus, showLabel bool) string {
+	return badge(policyColor(theme, s), s.String(), showLabel)
+}
+
+// PolicyDot renders just the colored dot for a policy status.
+func PolicyDot(theme *styles.Theme, s domain.PolicyLogStatus) string {
+	return badge(policyColor(theme, s), "", false)
+}
+
+func policyColor(theme *styles.Theme, s domain.PolicyLogStatus) color.Color {
+	colors := theme.Colors
+	switch s {
+	case domain.PolicyLogStatusApproved:
+		return colors.Success.Fg
+	case domain.PolicyLogStatusPending:
+		return colors.Warning.Fg
+	case domain.PolicyLogStatusDismissed:
+		return colors.Page.TextMuted
+	default:
+		return colors.Page.TextMuted
+	}
+}

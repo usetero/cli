@@ -4,43 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
 )
 
-// CatalogStatus is the aggregated catalog health across all Datadog accounts.
-type CatalogStatus struct {
-	ReadyForUse      bool
-	ServiceCount     int64
-	ActiveServices   int64
-	EventCount       int64
-	AnalyzedCount    int64
-	AnalyzingCount   int64
-	DiscoveringCount int64
-	BrokenServices   int64
-	PercentComplete  float64
-	WorstStatus      string
-	LogError         string
-}
-
-// PolicyStatus is the aggregated policy/savings status across all Datadog accounts.
-type PolicyStatus struct {
-	ReadyForUse            bool
-	PendingPolicyCount     int64
-	PolicyCount            int64
-	ApprovedPolicyCount    int64
-	EstimatedCostPerHour   *float64 // nil when pricing unavailable
-	EstimatedVolumePerHour float64
-	EstimatedBytesPerHour  float64
-	ObservedCostBefore     *float64 // nil when pricing unavailable
-	ObservedCostAfter      *float64 // nil when pricing unavailable
-	ObservedVolumeBefore   float64
-	ObservedVolumeAfter    float64
-}
-
 // DatadogAccountStatuses provides access to Datadog account status data.
 type DatadogAccountStatuses interface {
-	GetCatalogStatus(ctx context.Context) (CatalogStatus, error)
-	GetPolicyStatus(ctx context.Context) (PolicyStatus, error)
+	GetCatalogSummary(ctx context.Context) (domain.CatalogSummary, error)
+	GetPolicySummary(ctx context.Context) (domain.PolicySummary, error)
 }
 
 // datadogAccountStatusesImpl implements DatadogAccountStatuses.
@@ -48,14 +19,14 @@ type datadogAccountStatusesImpl struct {
 	queries *gen.Queries
 }
 
-// GetCatalogStatus returns aggregated catalog status across all Datadog accounts.
-func (d *datadogAccountStatusesImpl) GetCatalogStatus(ctx context.Context) (CatalogStatus, error) {
+// GetCatalogSummary returns aggregated catalog status across all Datadog accounts.
+func (d *datadogAccountStatusesImpl) GetCatalogSummary(ctx context.Context) (domain.CatalogSummary, error) {
 	row, err := d.queries.GetCatalogStatus(ctx)
 	if err != nil {
-		return CatalogStatus{}, WrapSQLiteError(err, "get catalog status")
+		return domain.CatalogSummary{}, WrapSQLiteError(err, "get catalog summary")
 	}
 
-	return CatalogStatus{
+	return domain.CatalogSummary{
 		ReadyForUse:      row.ReadyForUse != 0,
 		ServiceCount:     row.ServiceCount,
 		ActiveServices:   row.ActiveServices,
@@ -64,20 +35,21 @@ func (d *datadogAccountStatusesImpl) GetCatalogStatus(ctx context.Context) (Cata
 		AnalyzingCount:   row.AnalyzingCount,
 		DiscoveringCount: row.DiscoveringCount,
 		BrokenServices:   row.BrokenServices,
+		StaleServices:    row.StaleServices,
 		PercentComplete:  row.PercentComplete,
-		WorstStatus:      row.WorstStatus,
+		WorstStatus:      domain.ServiceLogStatus(row.WorstStatus),
 		LogError:         fmt.Sprint(row.LogError),
 	}, nil
 }
 
-// GetPolicyStatus returns aggregated policy/savings status across all Datadog accounts.
-func (d *datadogAccountStatusesImpl) GetPolicyStatus(ctx context.Context) (PolicyStatus, error) {
+// GetPolicySummary returns aggregated policy/savings status across all Datadog accounts.
+func (d *datadogAccountStatusesImpl) GetPolicySummary(ctx context.Context) (domain.PolicySummary, error) {
 	row, err := d.queries.GetPolicyStatus(ctx)
 	if err != nil {
-		return PolicyStatus{}, WrapSQLiteError(err, "get policy status")
+		return domain.PolicySummary{}, WrapSQLiteError(err, "get policy summary")
 	}
 
-	return PolicyStatus{
+	return domain.PolicySummary{
 		ReadyForUse:            row.ReadyForUse != 0,
 		PendingPolicyCount:     row.PendingPolicyCount,
 		PolicyCount:            row.PolicyCount,
@@ -89,5 +61,8 @@ func (d *datadogAccountStatusesImpl) GetPolicyStatus(ctx context.Context) (Polic
 		ObservedCostAfter:      row.ObservedCostAfter,
 		ObservedVolumeBefore:   row.ObservedVolumeBefore,
 		ObservedVolumeAfter:    row.ObservedVolumeAfter,
+		TotalCostPerHour:       row.TotalCostPerHour,
+		TotalVolumePerHour:     row.TotalVolumePerHour,
+		TotalBytesPerHour:      row.TotalBytesPerHour,
 	}, nil
 }

@@ -26,10 +26,22 @@ var (
 // DB is the interface for application code.
 // It provides type-safe access to domain data and raw query execution.
 type DB interface {
-	Messages() Messages
+	// Domain entities
 	Conversations() Conversations
+	LogEventPolicies() LogEventPolicies
+	LogEvents() LogEvents
+	Messages() Messages
+	Services() Services
+
+	// Aggregated statuses
 	DatadogAccountStatuses() DatadogAccountStatuses
+	ServiceStatuses() ServiceStatuses
+
+	// Sync
+	PendingUploadCounts(ctx context.Context) (map[Table]int64, error)
 	Subscribe() *Subscription
+
+	// Low-level
 	Query(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) *sql.Row
 	Exec(ctx context.Context, sql string, args ...any) (sql.Result, error)
@@ -154,6 +166,26 @@ func (d *database) DatadogAccountStatuses() DatadogAccountStatuses {
 	return &datadogAccountStatusesImpl{queries: d.Queries()}
 }
 
+// ServiceStatuses returns type-safe service status operations.
+func (d *database) ServiceStatuses() ServiceStatuses {
+	return &serviceStatusesImpl{queries: d.Queries()}
+}
+
+// Services returns type-safe service operations.
+func (d *database) Services() Services {
+	return &servicesImpl{queries: d.Queries()}
+}
+
+// LogEvents returns type-safe log event operations.
+func (d *database) LogEvents() LogEvents {
+	return &logEventsImpl{queries: d.Queries()}
+}
+
+// LogEventPolicies returns type-safe log event policy operations.
+func (d *database) LogEventPolicies() LogEventPolicies {
+	return &logEventPoliciesImpl{queries: d.Queries()}
+}
+
 // Query executes a query and returns the results.
 func (d *database) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return d.db.QueryContext(ctx, query, args...)
@@ -188,6 +220,27 @@ func (d *database) Count(ctx context.Context, table string) (int64, error) {
 		return 0, fmt.Errorf("count %s: %w", table, err)
 	}
 	return count, nil
+}
+
+// PendingUploadCounts returns pending upload counts grouped by entity table.
+func (d *database) PendingUploadCounts(ctx context.Context) (map[Table]int64, error) {
+	rows, err := d.db.QueryContext(ctx,
+		"SELECT json_extract(data, '$.type') AS entity, COUNT(*) AS cnt FROM ps_crud GROUP BY 1")
+	if err != nil {
+		return nil, fmt.Errorf("count pending uploads: %w", err)
+	}
+	defer rows.Close()
+
+	counts := make(map[Table]int64)
+	for rows.Next() {
+		var entity string
+		var count int64
+		if err := rows.Scan(&entity, &count); err != nil {
+			return nil, fmt.Errorf("scan pending upload count: %w", err)
+		}
+		counts[Table(entity)] = count
+	}
+	return counts, rows.Err()
 }
 
 // LoadExtension loads a SQLite extension from the given path.

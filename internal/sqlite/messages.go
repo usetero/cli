@@ -10,6 +10,7 @@ import (
 
 // Messages provides type-safe access to messages.
 type Messages interface {
+	Count(ctx context.Context) (int64, error)
 	Get(ctx context.Context, id domain.MessageID) (*domain.Message, error)
 	CreateUserMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, text string) (domain.MessageID, error)
 	CreateToolResultMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, results []domain.ToolResult) (domain.MessageID, error)
@@ -22,6 +23,15 @@ type Messages interface {
 // messagesImpl implements Messages.
 type messagesImpl struct {
 	queries *gen.Queries
+}
+
+// Count returns the total number of messages.
+func (m *messagesImpl) Count(ctx context.Context) (int64, error) {
+	count, err := m.queries.CountMessages(ctx)
+	if err != nil {
+		return 0, WrapSQLiteError(err, "count messages")
+	}
+	return count, nil
 }
 
 // Get retrieves a message by ID.

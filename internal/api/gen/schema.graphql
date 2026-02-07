@@ -1016,16 +1016,19 @@ type DatadogAccountStatus {
   """Account-wide observed current bytes"""
   logObservedBytesPerHourAfter: Float
 
+  """Account-wide current USD/hour cost (ingestion + indexing combined)"""
+  logCostPerHourUsd: Float
+
   """
   Account-wide estimated USD/hour savings (ingestion + indexing combined)
   """
-  logEstimatedCostReductionPerHour: Float
+  logEstimatedCostReductionPerHourUsd: Float
 
   """Account-wide measured USD/hour cost before approval"""
-  logObservedCostPerHourBefore: Float
+  logObservedCostPerHourBeforeUsd: Float
 
   """Account-wide measured USD/hour cost after approval"""
-  logObservedCostPerHourAfter: Float
+  logObservedCostPerHourAfterUsd: Float
 
   """
   Most recent error message from any broken service or account-level discovery
@@ -1907,6 +1910,9 @@ type LogEventPolicyStatus {
 
   """Projected bytes/hour eliminated. NULL when not estimable."""
   estimatedBytesReductionPerHour: Float
+
+  """When this policy was created"""
+  createdAt: Time!
 }
 
 """How verifiable: factual (user can confirm) or reasoned (AI judgment)"""
@@ -2175,15 +2181,20 @@ type LogEventStatus {
   observedBytesPerHourAfter: Float
 
   """
+  Current USD/hour cost based on volume and bytes throughput (ingestion + indexing combined)
+  """
+  costPerHourUsd: Float
+
+  """
   Estimated USD/hour savings from active policies (ingestion + indexing combined)
   """
-  estimatedCostReductionPerHour: Float
+  estimatedCostReductionPerHourUsd: Float
 
   """Measured USD/hour cost before first policy approval"""
-  observedCostPerHourBefore: Float
+  observedCostPerHourBeforeUsd: Float
 
   """Measured USD/hour cost in recent window after policy approval"""
-  observedCostPerHourAfter: Float
+  observedCostPerHourAfterUsd: Float
 }
 
 """BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING"""
@@ -3290,15 +3301,20 @@ type ServiceStatus {
   logObservedBytesPerHourAfter: Float
 
   """
+  Current USD/hour cost summed across all log events (ingestion + indexing combined)
+  """
+  logCostPerHourUsd: Float
+
+  """
   Estimated USD/hour savings across all log events (ingestion + indexing combined)
   """
-  logEstimatedCostReductionPerHour: Float
+  logEstimatedCostReductionPerHourUsd: Float
 
   """Measured USD/hour cost before approval across approved log events"""
-  logObservedCostPerHourBefore: Float
+  logObservedCostPerHourBeforeUsd: Float
 
   """Measured USD/hour cost after approval across approved log events"""
-  logObservedCostPerHourAfter: Float
+  logObservedCostPerHourAfterUsd: Float
 
   """Most recent error from broken services"""
   logError: String

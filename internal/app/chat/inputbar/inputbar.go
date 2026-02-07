@@ -1,6 +1,7 @@
 package inputbar
 
 import (
+	"math/rand/v2"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/palette"
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/cursor"
@@ -30,13 +32,33 @@ type Model struct {
 	scope    log.Scope
 }
 
+// placeholder returns a random placeholder for the session.
+func placeholder(user *auth.User) string {
+	name := ""
+	if user != nil && user.FirstName != "" {
+		name = user.FirstName
+	}
+
+	pool := []string{
+		"What should we get into?",
+		"What's on your mind?",
+	}
+	if name != "" {
+		pool = append(pool,
+			"Ready when you are, "+name,
+			"Let's get to work, "+name,
+		)
+	}
+	return pool[rand.IntN(len(pool))]
+}
+
 // New creates a new input bar.
-func New(theme *styles.Theme, scope log.Scope) *Model {
+func New(user *auth.User, theme *styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("inputbar")
 	colors := theme.Colors
 
 	ta := textarea.New()
-	ta.Placeholder = "Type a message..."
+	ta.Placeholder = placeholder(user)
 	ta.ShowLineNumbers = false
 	ta.SetHeight(textareaHeight)
 	ta.CharLimit = -1
@@ -100,7 +122,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.scope.Debug("key received", "key", msg.String())
 
 		// "/" on empty input opens the command palette
-		if msg.String() == "/" && m.textarea.Value() == "" {
+		if key.Matches(msg, keymap.Palette) && m.textarea.Value() == "" {
 			return func() tea.Msg { return palette.OpenMsg{} }
 		}
 
@@ -181,5 +203,5 @@ func (m *Model) Focused() bool {
 
 // ShortHelp returns the key bindings for the short help view.
 func (m *Model) ShortHelp() []key.Binding {
-	return []key.Binding{keymap.Send, keymap.Newline}
+	return []key.Binding{keymap.Send, keymap.Newline, keymap.Palette}
 }

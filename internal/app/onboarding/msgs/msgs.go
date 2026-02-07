@@ -2,7 +2,10 @@
 // These are the contracts between steps and the onboarding orchestrator.
 package msgs
 
-import "github.com/usetero/cli/internal/domain"
+import (
+	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
+)
 
 // Role constants.
 const (
@@ -18,7 +21,9 @@ type AuthChecked struct {
 }
 
 // Authenticated is emitted when authentication succeeds.
-type Authenticated struct{}
+type Authenticated struct {
+	User auth.User
+}
 
 // Role messages.
 
@@ -101,6 +106,7 @@ type SyncComplete struct{}
 
 // OnboardingComplete is emitted to the root model when onboarding finishes.
 type OnboardingComplete struct {
+	User      *auth.User
 	Org       domain.Organization
 	Account   domain.Account
 	Workspace domain.Workspace
