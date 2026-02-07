@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/usetero/cli/internal/app/chat/commandbar"
+	"github.com/usetero/cli/internal/app/chat/inputbar"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
@@ -26,9 +26,9 @@ var (
 		key.WithKeys("up"),
 		key.WithHelp("↑↓", "scroll"),
 	)
-	focusCommandBar = key.NewBinding(
+	focusInputBar = key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "focus command bar"),
+		key.WithHelp("tab", "focus input"),
 	)
 	focusChat = key.NewBinding(
 		key.WithKeys("tab"),
@@ -50,7 +50,7 @@ type Model struct {
 	scope log.Scope
 	focus focus
 
-	commandBar  *commandbar.Model
+	inputBar    *inputbar.Model
 	messageList *messagelist.Model
 
 	// Conversation is created lazily on first message
@@ -84,7 +84,7 @@ func New(
 
 	return &Model{
 		scope:        scope,
-		commandBar:   commandbar.New(theme, scope),
+		inputBar:     inputbar.New(theme, scope),
 		messageList:  messagelist.New(theme, db, chatClient, toolRegistry, scope),
 		account:      account,
 		workspace:    workspace,
@@ -97,7 +97,7 @@ func New(
 
 // Init initializes the model.
 func (m *Model) Init() tea.Cmd {
-	return m.commandBar.Init()
+	return m.inputBar.Init()
 }
 
 // Update handles messages.
@@ -136,11 +136,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case tea.MouseClickMsg:
 		// Click on the message list area focuses it
-		if m.hasMessages() && msg.Y >= m.originY && msg.Y < m.originY+m.height-m.commandBar.Height() {
+		if m.hasMessages() && msg.Y >= m.originY && msg.Y < m.originY+m.height-m.inputBar.Height() {
 			if m.focus != focusMessages {
 				cmds = append(cmds, m.setFocus(focusMessages))
 			}
-		} else if msg.Y >= m.originY+m.height-m.commandBar.Height() {
+		} else if msg.Y >= m.originY+m.height-m.inputBar.Height() {
 			if m.focus != focusEditor {
 				cmds = append(cmds, m.setFocus(focusEditor))
 			}
@@ -148,7 +148,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	// Forward to children
-	cmds = append(cmds, m.commandBar.Update(msg))
+	cmds = append(cmds, m.inputBar.Update(msg))
 	cmds = append(cmds, m.messageList.Update(msg))
 
 	return tea.Batch(cmds...)
@@ -173,9 +173,9 @@ func (m *Model) setFocus(f focus) tea.Cmd {
 	switch f {
 	case focusEditor:
 		m.messageList.SetFocused(false)
-		return m.commandBar.Focus()
+		return m.inputBar.Focus()
 	case focusMessages:
-		m.commandBar.Blur()
+		m.inputBar.Blur()
 		m.messageList.SetFocused(true)
 		return nil
 	}
@@ -198,12 +198,12 @@ func (m *Model) SetOrigin(x, y int) {
 
 // updateLayout calculates sizes for children based on current dimensions.
 func (m *Model) updateLayout() {
-	// CommandBar is fixed height
-	m.commandBar.SetWidth(m.width)
-	commandBarHeight := m.commandBar.Height()
+	// Input bar is fixed height
+	m.inputBar.SetWidth(m.width)
+	inputBarHeight := m.inputBar.Height()
 
 	// MessageList is flexible - gets remaining space
-	messageListHeight := m.height - commandBarHeight
+	messageListHeight := m.height - inputBarHeight
 	if messageListHeight < 0 {
 		messageListHeight = 0
 	}
@@ -214,12 +214,12 @@ func (m *Model) updateLayout() {
 // ShortHelp returns the key bindings for the short help view.
 func (m *Model) ShortHelp() []key.Binding {
 	if m.focus == focusMessages {
-		return []key.Binding{scrollUp, focusCommandBar}
+		return []key.Binding{scrollUp, focusInputBar}
 	}
 	if m.hasMessages() {
-		return append(m.commandBar.ShortHelp(), focusChat)
+		return append(m.inputBar.ShortHelp(), focusChat)
 	}
-	return m.commandBar.ShortHelp()
+	return m.inputBar.ShortHelp()
 }
 
 // ConversationID returns the current conversation ID.
@@ -364,9 +364,9 @@ func (m *Model) View() string {
 
 	colors := m.theme.Colors
 
-	// Empty state: centered prompt + command bar
+	// Empty state: centered prompt + input bar
 	if !m.hasMessages() {
-		emptyHeight := m.height - m.commandBar.Height()
+		emptyHeight := m.height - m.inputBar.Height()
 		emptyView := lipgloss.NewStyle().
 			Foreground(colors.Page.TextMuted).
 			Width(m.width).
@@ -374,9 +374,9 @@ func (m *Model) View() string {
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("Start a conversation...")
 
-		return lipgloss.JoinVertical(lipgloss.Left, emptyView, m.commandBar.View())
+		return lipgloss.JoinVertical(lipgloss.Left, emptyView, m.inputBar.View())
 	}
 
-	// Normal state: message list + command bar
-	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.commandBar.View())
+	// Normal state: message list + input bar
+	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.inputBar.View())
 }

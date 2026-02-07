@@ -1,4 +1,4 @@
-package commandbar
+package inputbar
 
 import (
 	"strings"
@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	textareaHeight   = 3                                // visible input lines
-	verticalPadding  = 2                                // 1 top + 1 bottom
-	commandBarHeight = textareaHeight + verticalPadding // total height
+	textareaHeight  = 3                                // visible input lines
+	verticalPadding = 2                                // 1 top + 1 bottom
+	inputBarHeight  = textareaHeight + verticalPadding // total height
 )
 
 // Model handles user input via a textarea.
@@ -29,9 +29,9 @@ type Model struct {
 	scope    log.Scope
 }
 
-// New creates a new command bar.
+// New creates a new input bar.
 func New(theme *styles.Theme, scope log.Scope) *Model {
-	scope = scope.Child("commandbar")
+	scope = scope.Child("inputbar")
 	colors := theme.Colors
 
 	ta := textarea.New()
@@ -83,7 +83,7 @@ func New(theme *styles.Theme, scope log.Scope) *Model {
 	}
 }
 
-// Init initializes the command bar.
+// Init initializes the input bar.
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.textarea.Focus(),
@@ -120,7 +120,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// View renders the command bar.
+// View renders the input bar.
 func (m *Model) View() string {
 	if m.width == 0 {
 		return ""
@@ -153,9 +153,9 @@ func (m *Model) SetWidth(width int) {
 	m.textarea.SetWidth(width)
 }
 
-// Height returns the height of the command bar.
+// Height returns the height of the input bar.
 func (m *Model) Height() int {
-	return commandBarHeight
+	return inputBarHeight
 }
 
 // Focus returns a command to focus the textarea.
