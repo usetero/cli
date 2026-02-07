@@ -65,8 +65,8 @@ func (m *Model) View() string {
 	view := m.input.View()
 	cur := m.input.Cursor()
 
-	if cur != nil && cur.X >= 0 && cur.X <= len(view) {
-		view = view[:cur.X] + cursor.Marker + view[cur.X:]
+	if cur != nil {
+		view = cursor.Insert(view, cur.X, 0)
 	}
 
 	return view

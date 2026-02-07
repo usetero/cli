@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/cursor"
@@ -97,6 +98,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyPressMsg:
 		// DEBUG: log all keys
 		m.scope.Debug("key received", "key", msg.String())
+
+		// "/" on empty input opens the command palette
+		if msg.String() == "/" && m.textarea.Value() == "" {
+			return func() tea.Msg { return palette.OpenMsg{} }
+		}
 
 		// Newline - consume, don't forward to textarea
 		if key.Matches(msg, keymap.Newline) {

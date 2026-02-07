@@ -188,11 +188,28 @@ m.SetWidth(newWidth)
 teatest.AssertMaxWidth(t, newWidth, m.View())
 ```
 
+### ANSI Integrity
+
+Components that render styled text can break ANSI escape sequences when slicing strings by byte offset instead of visible position. Use `AssertNoRawEscapes` to catch this:
+
+```go
+func TestView(t *testing.T) {
+    t.Run("no raw escape sequences", func(t *testing.T) {
+        m := New(theme)
+        m.SetWidth(50)
+
+        teatest.AssertNoRawEscapes(t, m.View())
+    })
+}
+```
+
+This catches bugs like `view[:bytePos]` slicing through a `\x1b[38;2;110;231;183m` color code, leaving raw `38;2;110;231;183m` visible to the user.
+
 ### Test Helpers
 
 | Package | Import | Use |
 |---------|--------|-----|
-| `teatest` | `github.com/usetero/cli/internal/tea/teatest` | `AssertMaxWidth()` — no line exceeds width; `AssertExactWidth()` — widest line equals width |
+| `teatest` | `github.com/usetero/cli/internal/tea/teatest` | `AssertMaxWidth()` — no line exceeds width; `AssertExactWidth()` — widest line equals width; `AssertNoRawEscapes()` — no broken ANSI sequences |
 | `logtest` | `github.com/usetero/cli/internal/log/logtest` | `NewScope(t)` for test loggers |
 | `styles` | `github.com/usetero/cli/internal/styles` | `NewTheme(true)` for dark theme in tests |
 
@@ -200,6 +217,8 @@ teatest.AssertMaxWidth(t, newWidth, m.View())
 
 - `assistant_test.go` — full rendering chain: assistant → tool → query
 - `query_test.go` — single component width testing at multiple widths
+- `palette_test.go` — ANSI integrity + width at multiple sizes
+- `input_test.go` — cursor marker insertion doesn't break escapes
 
 ## What to Test
 

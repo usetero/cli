@@ -18,6 +18,7 @@ import (
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
@@ -81,6 +82,7 @@ type Model struct {
 	onboarding *onboarding.Model
 	chat       *chat.Model
 	quitDlg    *quitDialog
+	palette    *palette.Model
 	state      state
 
 	// Dimensions
@@ -161,6 +163,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case quitCanceled:
 		m.quitDlg = nil
 		return m, nil
+	case palette.OpenMsg:
+		return m, m.openPalette()
+	case palette.CloseMsg:
+		m.palette = nil
+		return m, nil
 	}
 
 	switch msg := msg.(type) {
@@ -171,18 +178,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		// ctrl+c always quits immediately, regardless of overlays
+		if key.Matches(msg, keymap.Quit) {
+			m.shutdown()
+			return m, tea.Quit
+		}
+
 		// When quit dialog is open, forward keys to it and consume
 		if m.quitDlg != nil {
 			return m, m.quitDlg.Update(msg)
 		}
 
-		if key.Matches(msg, keymap.Quit) || key.Matches(msg, keymap.Exit) {
+		// When palette is open, forward keys to it and consume
+		if m.palette != nil {
+			return m, m.palette.Update(msg)
+		}
+
+		if key.Matches(msg, keymap.Exit) {
 			if m.statusBar.IsDrawerOpen() {
 				m.statusBar.CloseDrawer()
 				return m, nil
 			}
-			// Esc cancels the active round first; only quit if nothing to cancel
-			if key.Matches(msg, keymap.Exit) && m.chat != nil && m.chat.CancelActiveRound() {
+			// Esc cancels the active round first; only show dialog if nothing to cancel
+			if m.chat != nil && m.chat.CancelActiveRound() {
 				return m, nil
 			}
 			m.quitDlg = newQuitDialog(m.theme)
@@ -290,6 +308,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward to app-level chrome and current page
 	var cmds []tea.Cmd
+
+	// Palette needs non-key messages (e.g. blink ticks) when open
+	if m.palette != nil {
+		cmds = append(cmds, m.palette.Update(msg))
+	}
 
 	// Status bar listens to all messages
 	if cmd := m.statusBar.Update(msg); cmd != nil {
@@ -460,7 +483,7 @@ func (m *Model) View() tea.View {
 		cur.Color = colors.Accent
 	}
 
-	// Suppress cursor when drawer or quit dialog is open
+	// Suppress cursor when drawer or quit dialog is open (palette keeps its cursor)
 	if m.statusBar.IsDrawerOpen() || m.quitDlg != nil {
 		cur = nil
 	}
@@ -553,6 +576,11 @@ func (m *Model) renderContent() string {
 		return canvas.Render()
 	}
 
+	// Overlay palette if open
+	if m.palette != nil {
+		return m.renderPaletteOverlay(paddedView)
+	}
+
 	// Overlay quit dialog if open
 	if m.quitDlg != nil {
 		dialog := m.quitDlg.View()
@@ -570,6 +598,46 @@ func (m *Model) renderContent() string {
 	}
 
 	return paddedView
+}
+
+// openPalette creates and opens the command palette.
+func (m *Model) openPalette() tea.Cmd {
+	commands := m.paletteCommands()
+	if len(commands) == 0 {
+		return nil
+	}
+
+	contentWidth, _ := m.contentSize()
+	paletteWidth := min(contentWidth, 50)
+
+	m.palette = palette.New(m.theme, commands)
+	m.palette.SetWidth(paletteWidth)
+	return m.palette.Init()
+}
+
+// renderPaletteOverlay renders the palette centered on screen.
+func (m *Model) renderPaletteOverlay(base string) string {
+	paletteView := m.palette.View()
+	paletteW := lipgloss.Width(paletteView)
+	paletteH := lipgloss.Height(paletteView)
+	centerX := (m.width - paletteW) / 2
+	centerY := (m.height - paletteH) / 2
+
+	// Extract cursor marker before compositing (compositor strips OSC sequences)
+	cleanPalette, paletteCur := cursor.Extract(paletteView)
+
+	layers := []*lipgloss.Layer{
+		lipgloss.NewLayer(base).X(0).Y(0),
+		lipgloss.NewLayer(cleanPalette).X(centerX).Y(centerY),
+	}
+	result := lipgloss.NewCompositor(layers...).Render()
+
+	// Re-insert cursor marker at the composited position
+	if paletteCur != nil {
+		result = cursor.Insert(result, paletteCur.X+centerX, paletteCur.Y+centerY)
+	}
+
+	return result
 }
 
 func (m *Model) shutdown() {

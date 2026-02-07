@@ -63,11 +63,11 @@ func (m *quitDialog) View() string {
 	content := lipgloss.JoinVertical(lipgloss.Center, question, "", buttons)
 
 	return lipgloss.NewStyle().
-		Background(colors.Panel.Bg).
+		Background(colors.Page.Bg).
 		Foreground(colors.Page.Text).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(colors.Accent).
-		BorderBackground(colors.Panel.Bg).
+		BorderBackground(colors.Page.Bg).
 		Padding(1, 3).
 		Render(content)
 }
@@ -79,14 +79,14 @@ func (m *quitDialog) renderButton(label string, selected bool) string {
 	if selected {
 		return lipgloss.NewStyle().
 			Background(colors.Accent).
-			Foreground(colors.Panel.Bg).
+			Foreground(colors.Page.Bg).
 			Padding(0, 3).
 			Bold(true).
 			Render(label)
 	}
 
 	return lipgloss.NewStyle().
-		Background(colors.Panel.Bg).
+		Background(colors.Page.Bg).
 		Foreground(colors.Page.TextMuted).
 		Padding(0, 3).
 		Render(label)
