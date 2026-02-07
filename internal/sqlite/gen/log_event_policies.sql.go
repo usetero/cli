@@ -39,13 +39,12 @@ SELECT
     WHEN 1 THEN 'low'
     ELSE ''
   END AS risk_level,
-  CAST(COALESCE(MAX(benefits), '') AS TEXT) AS benefits
+  CAST(COALESCE(GROUP_CONCAT(DISTINCT benefits), '') AS TEXT) AS benefits
 FROM log_event_policy_statuses_cache
 WHERE category IS NOT NULL AND category != ''
 GROUP BY category
 ORDER BY
-  CASE WHEN SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) > 0 THEN 0 ELSE 1 END,
-  SUM(CASE WHEN status = 'PENDING' THEN estimated_volume_reduction_per_hour ELSE 0 END) DESC
+  SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) DESC
 `
 
 type ListPolicyCategoryStatusesRow struct {

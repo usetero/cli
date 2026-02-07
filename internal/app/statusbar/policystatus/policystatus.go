@@ -14,6 +14,7 @@ import (
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/status"
 	"github.com/usetero/cli/internal/tea/components/table"
 )
 
@@ -180,12 +181,9 @@ func (m *Model) renderHeadline() string {
 
 	var parts []string
 
-	text := lipgloss.NewStyle().Foreground(colors.Page.Text)
-
 	// Waste percentage with colored dot.
-	if wp := wastePercent(s); wp > 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("●")
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d%% waste", wp)))
+	if w := status.Waste(m.theme, wastePercent(s)); w != "" {
+		parts = append(parts, w)
 	}
 
 	// Observed savings.
@@ -196,6 +194,7 @@ func (m *Model) renderHeadline() string {
 
 	// Pending count.
 	if s.PendingPolicyCount > 0 {
+		text := lipgloss.NewStyle().Foreground(colors.Page.Text)
 		est := formatEstimated(s)
 		if est != "" {
 			parts = append(parts, text.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount))+sep+muted.Render("~"+est))
@@ -213,34 +212,66 @@ func (m *Model) renderHeadline() string {
 
 // renderCategoryTable renders the per-category breakdown.
 func (m *Model) renderCategoryTable(width int) string {
-	// Only show categories with pending policies.
-	var pending []domain.PolicyCategoryStatus
-	for _, c := range m.categories {
-		if c.PendingCount > 0 {
-			pending = append(pending, c)
-		}
-	}
-
-	if len(pending) == 0 {
+	if len(m.categories) == 0 {
 		muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
-		return muted.Render("No pending policies")
+		return muted.Render("No policy data")
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Impact", "Benefit", "Risk")
+	tbl.Headers("Category", "Pending", "Waste", "Impact", "Risk", "Benefit")
 	tbl.SetWidth(width)
 
-	for _, c := range pending {
+	for _, c := range m.categories {
 		tbl.Row(
 			c.Category,
 			fmt.Sprintf("%d", c.PendingCount),
+			m.formatWaste(c),
 			formatCategoryImpact(c),
+			m.renderRisk(c.RiskLevel),
 			formatBenefitLabel(c.Benefit),
-			c.RiskLevel,
 		)
 	}
 
 	return tbl.View()
+}
+
+// categoryWastePercent computes a single category's waste as a percentage of total.
+func (m *Model) categoryWastePercent(c domain.PolicyCategoryStatus) int {
+	s := m.summary
+	if s.TotalBytesPerHour > 0 && c.EstimatedBytesPerHour > 0 {
+		return int(math.Round(c.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
+	}
+	if s.TotalVolumePerHour > 0 && c.EstimatedVolumePerHour > 0 {
+		return int(math.Round(c.EstimatedVolumePerHour / s.TotalVolumePerHour * 100))
+	}
+	return 0
+}
+
+// formatWaste renders the waste % with a colored dot, matching the statusbar style.
+func (m *Model) formatWaste(c domain.PolicyCategoryStatus) string {
+	if w := status.WasteShort(m.theme, m.categoryWastePercent(c)); w != "" {
+		return w
+	}
+	if c.PendingCount == 0 {
+		return lipgloss.NewStyle().Foreground(m.theme.Colors.Success.Fg).Render("●")
+	}
+	return "—"
+}
+
+// renderRisk returns a color-coded risk label.
+func (m *Model) renderRisk(level domain.RiskLevel) string {
+	colors := m.theme.Colors
+	s := level.String()
+	switch level {
+	case domain.RiskLevelHigh:
+		return lipgloss.NewStyle().Foreground(colors.Error.Fg).Render(s)
+	case domain.RiskLevelMedium:
+		return lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render(s)
+	case domain.RiskLevelLow:
+		return lipgloss.NewStyle().Foreground(colors.Success.Fg).Render(s)
+	default:
+		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render(s)
+	}
 }
 
 // wastePercent computes the estimated waste as a percentage.
@@ -270,22 +301,38 @@ func formatCategoryImpact(c domain.PolicyCategoryStatus) string {
 	return "—"
 }
 
-// formatBenefitLabel returns a human-readable benefit label.
-func formatBenefitLabel(benefit string) string {
-	switch {
-	case strings.Contains(benefit, "volume_reduction"):
-		return "cost"
-	case strings.Contains(benefit, "bytes_reduction"):
-		return "bytes"
-	case strings.Contains(benefit, "signal_quality"):
-		return "signal quality"
-	case strings.Contains(benefit, "compliance"):
-		return "compliance"
-	case strings.Contains(benefit, "resilience"):
-		return "resilience"
-	default:
-		return benefit
+// formatBenefitLabel returns human-readable benefit labels.
+// The input may contain JSON arrays like '["volume_reduction","signal_quality"]'
+// concatenated by GROUP_CONCAT.
+func formatBenefitLabel(benefits string) string {
+	labelFor := map[string]string{
+		"volume_reduction": "cost",
+		"bytes_reduction":  "bytes",
+		"signal_quality":   "signal",
+		"compliance":       "compliance",
+		"resilience":       "resilience",
 	}
+
+	// Strip JSON array noise: brackets, quotes, whitespace
+	cleaned := strings.NewReplacer("[", "", "]", "", "\"", "").Replace(benefits)
+
+	seen := make(map[string]bool)
+	var labels []string
+	for _, part := range strings.Split(cleaned, ",") {
+		key := strings.TrimSpace(part)
+		label, ok := labelFor[key]
+		if !ok {
+			continue
+		}
+		if !seen[label] {
+			seen[label] = true
+			labels = append(labels, label)
+		}
+	}
+	if len(labels) == 0 {
+		return ""
+	}
+	return strings.Join(labels, ", ")
 }
 
 // formatEstimated returns the estimated impact of pending policies.

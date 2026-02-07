@@ -43,7 +43,7 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			DismissedCount:         row.DismissedCount,
 			EstimatedVolumePerHour: derefFloat(row.EstimatedVolumePerHour),
 			EstimatedBytesPerHour:  derefFloat(row.EstimatedBytesPerHour),
-			RiskLevel:              row.RiskLevel,
+			RiskLevel:              domain.RiskLevel(row.RiskLevel),
 			Benefit:                row.Benefits,
 		}
 	}

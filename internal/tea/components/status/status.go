@@ -6,6 +6,7 @@
 package status
 
 import (
+	"fmt"
 	"image/color"
 
 	"charm.land/lipgloss/v2"
@@ -70,6 +71,53 @@ func logEventColor(theme *styles.Theme, s domain.LogEventStatus) color.Color {
 		return colors.Success.Fg
 	case domain.LogEventStatusPending, domain.LogEventStatusAnalyzing, domain.LogEventStatusDiscovering:
 		return colors.Warning.Fg
+	default:
+		return colors.Page.TextMuted
+	}
+}
+
+// --- Waste badge: ● N% ---
+
+// Waste renders a colored dot with a waste percentage.
+// Returns empty string if pct is 0.
+func Waste(theme *styles.Theme, pct int) string {
+	if pct <= 0 {
+		return ""
+	}
+	colors := theme.Colors
+	dot := lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("●")
+	text := lipgloss.NewStyle().Foreground(colors.Page.Text).Render(fmt.Sprintf("%d%% waste", pct))
+	return dot + " " + text
+}
+
+// WasteShort renders a colored dot with just the percentage (no "waste" label).
+// Useful for table cells.
+func WasteShort(theme *styles.Theme, pct int) string {
+	if pct <= 0 {
+		return ""
+	}
+	colors := theme.Colors
+	dot := lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("●")
+	text := lipgloss.NewStyle().Foreground(colors.Page.Text).Render(fmt.Sprintf("%d%%", pct))
+	return dot + " " + text
+}
+
+// --- Risk levels: HIGH > MEDIUM > LOW ---
+
+// Risk renders a colored status badge for a risk level.
+func Risk(theme *styles.Theme, r domain.RiskLevel, showLabel bool) string {
+	return badge(riskColor(theme, r), r.String(), showLabel)
+}
+
+func riskColor(theme *styles.Theme, r domain.RiskLevel) color.Color {
+	colors := theme.Colors
+	switch r {
+	case domain.RiskLevelHigh:
+		return colors.Error.Fg
+	case domain.RiskLevelMedium:
+		return colors.Warning.Fg
+	case domain.RiskLevelLow:
+		return colors.Success.Fg
 	default:
 		return colors.Page.TextMuted
 	}
