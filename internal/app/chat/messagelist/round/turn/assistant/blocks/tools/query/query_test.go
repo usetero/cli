@@ -10,6 +10,7 @@ import (
 )
 
 func TestViewClipsToWidth(t *testing.T) {
+	t.Parallel()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 
@@ -27,6 +28,7 @@ func TestViewClipsToWidth(t *testing.T) {
 }
 
 func TestViewClipsToWidth_NarrowTerminal(t *testing.T) {
+	t.Parallel()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 
@@ -51,6 +53,7 @@ func TestViewClipsToWidth_NarrowTerminal(t *testing.T) {
 }
 
 func TestViewWidthZero(t *testing.T) {
+	t.Parallel()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 

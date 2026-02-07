@@ -99,7 +99,7 @@ func (m *Model) renderVisible() []string {
 	if reachedEnd && len(m.blocks) > 0 {
 		lastEntry := m.blocks[len(m.blocks)-1]
 		lastRound := m.rounds[lastEntry.roundIndex]
-		if lastRound.State() == round.StateComplete {
+		if lastRound.State() != round.StateActive {
 			for range gapBeforeDivider {
 				lines = append(lines, "")
 			}
@@ -162,7 +162,7 @@ func (m *Model) gapLines(idx int) []string {
 	// Different round — blank lines with an optional divider embedded
 	lines := make([]string, 0, n)
 	prevRound := m.rounds[prev.roundIndex]
-	if prevRound.State() == round.StateComplete {
+	if prevRound.State() != round.StateActive {
 		for range gapBeforeDivider {
 			lines = append(lines, "")
 		}
@@ -174,13 +174,13 @@ func (m *Model) gapLines(idx int) []string {
 	return lines
 }
 
-// divider renders "  ◇ Tero 4s ─────────" for a completed round.
+// divider renders "  ◇ Tero 4s ─────────" for a completed round,
+// or "  ◇ Cancelled 1.2s ─────────" for a cancelled round.
 func (m *Model) divider(r *round.Model) string {
 	const indent = block.AssistantPadding
 	cw := m.contentWidth()
 
 	colors := m.theme.Colors
-	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
 	border := lipgloss.NewStyle().Foreground(colors.BorderDefault)
 
 	duration := r.Duration()
@@ -191,7 +191,16 @@ func (m *Model) divider(r *round.Model) string {
 		durationStr = fmt.Sprintf("%.1fm", duration.Minutes())
 	}
 
-	prefix := fmt.Sprintf("◇ Tero %s ", durationStr)
+	var prefix string
+	var prefixStyle lipgloss.Style
+	if r.State() == round.StateCancelled {
+		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error.Fg)
+	} else {
+		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	}
+
 	prefixWidth := lipgloss.Width(prefix)
 
 	lineWidth := cw - indent - prefixWidth
@@ -200,7 +209,7 @@ func (m *Model) divider(r *round.Model) string {
 	}
 	line := strings.Repeat("─", lineWidth)
 
-	return strings.Repeat(" ", indent) + muted.Render(prefix) + border.Render(line)
+	return strings.Repeat(" ", indent) + prefixStyle.Render(prefix) + border.Render(line)
 }
 
 // emptyView renders an empty view padded to height.

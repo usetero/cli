@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	chattools "github.com/usetero/cli/internal/chat/tools"
@@ -15,6 +16,7 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+	"github.com/usetero/cli/internal/tea/components/thinking"
 )
 
 // State represents the current state of a round.
@@ -23,6 +25,7 @@ type State int
 const (
 	StateActive State = iota
 	StateComplete
+	StateCancelled
 )
 
 // Model represents a complete user→assistant exchange, potentially with multiple turns
@@ -37,9 +40,11 @@ type Model struct {
 	conversationID domain.ConversationID
 	accountID      domain.AccountID
 
-	turns     []*turn.Model
-	state     State
-	width     int
+	turns    []*turn.Model
+	thinking *thinking.Model
+	state    State
+	width    int
+
 	startTime time.Time
 	endTime   time.Time
 
@@ -84,6 +89,7 @@ func New(
 		conversationID: conversationID,
 		accountID:      accountID,
 		turns:          []*turn.Model{firstTurn},
+		thinking:       thinking.New(theme, thinking.Settings{Label: "Thinking"}),
 		state:          StateActive,
 		width:          width,
 		startTime:      time.Now(),
@@ -91,6 +97,11 @@ func New(
 		chatClient:     chatClient,
 		toolRegistry:   toolRegistry,
 	}
+}
+
+// Init starts the thinking animation.
+func (m *Model) Init() tea.Cmd {
+	return m.thinking.Init()
 }
 
 // StartStream begins streaming for the first turn.
@@ -103,6 +114,11 @@ func (m *Model) StartStream(messages []domain.Message, context []domain.ContextE
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	// Cancelled rounds are fully stopped — no state transitions, no forwarding.
+	if m.state == StateCancelled {
+		return nil
+	}
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -129,6 +145,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.roundID == m.id {
 			cmds = append(cmds, m.handleNextTurnReady(msg))
 		}
+	}
+
+	// Forward thinking ticks while active
+	if m.state == StateActive {
+		cmds = append(cmds, m.thinking.Update(msg))
 	}
 
 	// Forward to all turns
@@ -225,10 +246,14 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 }
 
 // Blocks returns all visual blocks from all turns in this round.
+// The thinking animation is appended at the end while the round is active.
 func (m *Model) Blocks() []block.Block {
 	var result []block.Block
 	for _, t := range m.turns {
 		result = append(result, t.Blocks()...)
+	}
+	if m.state == StateActive {
+		result = append(result, blocks.NewThinkingAnimBlock(m.thinking))
 	}
 	return result
 }
@@ -239,6 +264,16 @@ func (m *Model) SetWidth(width int) {
 	for _, t := range m.turns {
 		t.SetWidth(width)
 	}
+}
+
+// Cancel stops all in-flight turns and marks the round cancelled.
+func (m *Model) Cancel() {
+	for _, t := range m.turns {
+		t.Cancel()
+	}
+	m.state = StateCancelled
+	m.endTime = time.Now()
+	m.scope.Info("round cancelled")
 }
 
 // State returns the round's current state.

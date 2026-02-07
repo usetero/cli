@@ -112,6 +112,43 @@ func TestStatusRendering(t *testing.T) {
 	})
 }
 
+func TestCancel(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets status to cancelled", func(t *testing.T) {
+		t.Parallel()
+		child := &stubChild{name: "Query", state: StateAccumulating}
+		m := newTestTool(t, child)
+
+		m.Cancel()
+
+		if m.status != StatusCancelled {
+			t.Errorf("expected StatusCancelled, got %d", m.status)
+		}
+	})
+
+	t.Run("renders name without spinner", func(t *testing.T) {
+		t.Parallel()
+		child := &stubChild{name: "Query", state: StateExecuting, status: "Checking"}
+		m := newTestTool(t, child)
+		m.updateStatus()
+
+		m.Cancel()
+		view := m.View()
+
+		if !strings.Contains(view, IconCancelled) {
+			t.Error("expected cancelled icon")
+		}
+		if !strings.Contains(view, "Query") {
+			t.Error("expected tool name")
+		}
+		// Should be a single line — no body, no spinner
+		if strings.Contains(view, "\n") {
+			t.Error("expected single-line render for cancelled tool")
+		}
+	})
+}
+
 func TestToggle(t *testing.T) {
 	t.Parallel()
 

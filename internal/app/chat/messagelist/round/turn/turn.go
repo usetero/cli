@@ -40,10 +40,9 @@ type Model struct {
 	userMessage      *user.Model
 	assistantMessage *assistant.Model
 
-	state   State
-	width   int
-	stream  *streamState
-	initCmd tea.Cmd // Command to start thinking animation
+	state  State
+	width  int
+	stream *streamState
 
 	// Tool result collection
 	pendingTools int
@@ -57,6 +56,7 @@ type Model struct {
 // streamState holds the channel for receiving stream updates.
 type streamState struct {
 	updates chan streamUpdate
+	cancel  context.CancelFunc
 	done    bool
 }
 
@@ -88,15 +88,13 @@ func New(
 	scope log.Scope,
 ) *Model {
 	scope = scope.Child("turn")
-	assistantMsg := assistant.New(theme, "", width, toolRegistry, scope)
 	return &Model{
 		theme:            theme,
 		scope:            scope,
 		conversationID:   conversationID,
 		accountID:        accountID,
 		userMessage:      user.New(theme, userMessageID, input, width-block.AssistantPadding),
-		assistantMessage: assistantMsg,
-		initCmd:          assistantMsg.Init(), // Start thinking animation immediately
+		assistantMessage: assistant.New(theme, "", width, toolRegistry, scope),
 		state:            StateIdle,
 		width:            width,
 		db:               db,
@@ -163,12 +161,9 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 	m.scope.Debug("starting stream", "message_count", len(messages))
 	m.state = StateStreaming
 
-	// Capture init command (starts thinking animation)
-	initCmd := m.initCmd
-	m.initCmd = nil
-
+	ctx, cancel := context.WithCancel(context.Background())
 	updates := make(chan streamUpdate, 10)
-	m.stream = &streamState{updates: updates}
+	m.stream = &streamState{updates: updates, cancel: cancel}
 
 	go func() {
 		defer close(updates)
@@ -180,7 +175,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 		}
 
 		var lastMessage *domain.Message
-		result, err := m.chatClient.Stream(context.Background(), req, func(msg *domain.Message) {
+		result, err := m.chatClient.Stream(ctx, req, func(msg *domain.Message) {
 			lastMessage = msg
 			updates <- streamUpdate{message: msg}
 		})
@@ -192,7 +187,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 		}
 	}()
 
-	return tea.Batch(initCmd, m.nextStreamUpdate())
+	return m.nextStreamUpdate()
 }
 
 // Blocks returns all visual blocks for the viewport.
@@ -225,9 +220,24 @@ func (m *Model) UserMessageID() domain.MessageID {
 	return m.userMessage.ID()
 }
 
+// Cancel stops the in-flight stream and marks the turn complete.
+// The partial content remains rendered but nothing is persisted.
+func (m *Model) Cancel() {
+	if m.stream != nil && !m.stream.done {
+		m.stream.cancel()
+		m.stream.done = true
+	}
+	m.assistantMessage.Cancel()
+	m.state = StateComplete
+}
+
 // handleStreamUpdate processes a stream update and fires messages.
 func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	if update.err != nil {
+		// context.Canceled is expected when Cancel() was called — don't show an error.
+		if m.stream != nil && m.stream.done {
+			return nil
+		}
 		m.scope.Error("stream error", "error", update.err)
 		m.state = StateComplete
 		return appmsg.ErrorCmd("Failed to get response", update.err, false)

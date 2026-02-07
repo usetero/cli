@@ -179,7 +179,7 @@ func (m *Model) gapSize(idx int) int {
 
 	if prev.roundIndex != curr.roundIndex {
 		n := roundGap
-		if m.rounds[prev.roundIndex].State() == round.StateComplete {
+		if m.rounds[prev.roundIndex].State() != round.StateActive {
 			n += gapBeforeDivider + dividerHeight
 		}
 		return n
@@ -195,7 +195,7 @@ func (m *Model) trailingHeight() int {
 		return 0
 	}
 	last := m.blocks[len(m.blocks)-1]
-	if m.rounds[last.roundIndex].State() == round.StateComplete {
+	if m.rounds[last.roundIndex].State() != round.StateActive {
 		return gapBeforeDivider + dividerHeight
 	}
 	return 0

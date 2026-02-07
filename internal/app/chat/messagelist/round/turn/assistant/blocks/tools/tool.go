@@ -28,13 +28,15 @@ const (
 	StatusRunning
 	StatusSuccess
 	StatusError
+	StatusCancelled
 )
 
 // Icons for different statuses.
 const (
-	IconPending = "●"
-	IconSuccess = "✓"
-	IconError   = "×"
+	IconPending   = "●"
+	IconSuccess   = "✓"
+	IconError     = "×"
+	IconCancelled = "○"
 )
 
 // Body padding: left=bodyPaddingLeft, right=bodyPaddingRight, top/bottom=1.
@@ -95,12 +97,19 @@ func (m *Model) Init() tea.Cmd {
 	return m.thinking.Init()
 }
 
+// Cancel stops the tool's thinking animation and marks it cancelled.
+func (m *Model) Cancel() {
+	m.status = StatusCancelled
+}
+
 // Update handles messages - updates status and forwards to child.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
-	// Update thinking animation
-	cmds = append(cmds, m.thinking.Update(msg))
+	// Only tick the thinking animation while still pending/running
+	if m.status == StatusPending || m.status == StatusRunning {
+		cmds = append(cmds, m.thinking.Update(msg))
+	}
 
 	// Update status based on child state changes
 	m.updateStatus()
@@ -210,6 +219,10 @@ func (m *Model) View() string {
 			PaddingLeft(bodyPaddingLeft).
 			Render(errTag + " " + mutedStyle.Render(errMsg))
 		return header + "\n\n" + body
+
+	case StatusCancelled:
+		// ○ Query
+		return fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
 	}
 
 	return ""
@@ -236,6 +249,8 @@ func (m *Model) renderIcon() string {
 		return lipgloss.NewStyle().Foreground(colors.Success.Fg).Render(IconSuccess)
 	case StatusError:
 		return lipgloss.NewStyle().Foreground(colors.Error.Fg).Render(IconError)
+	case StatusCancelled:
+		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render(IconCancelled)
 	default:
 		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render(IconPending)
 	}

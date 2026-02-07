@@ -2,61 +2,19 @@ package assistant
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
-	"github.com/usetero/cli/internal/app/chat/msgs"
-	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/teatest"
 )
 
-func countBlockKinds(blocks []block.Block, kind block.Kind) int {
-	n := 0
-	for _, b := range blocks {
-		if b.Kind() == kind {
-			n++
-		}
-	}
-	return n
-}
-
-func TestBlocks_ThinkingAnimation(t *testing.T) {
-	t.Parallel()
-	theme := styles.NewTheme(true)
-	scope := logtest.NewScope(t)
-
-	t.Run("included while streaming", func(t *testing.T) {
-		t.Parallel()
-		m := New(theme, "test-msg", 80, nil, scope)
-		// streaming is true by default from New()
-
-		blocks := m.Blocks()
-		if n := countBlockKinds(blocks, block.KindThinkingAnimation); n != 1 {
-			t.Errorf("expected 1 thinking animation block while streaming, got %d", n)
-		}
-	})
-
-	t.Run("removed after StreamCompleted", func(t *testing.T) {
-		t.Parallel()
-		m := New(theme, "test-msg", 80, nil, scope)
-
-		m.Update(msgs.StreamCompleted{
-			TurnID:  "test-msg",
-			Message: domain.Message{Content: []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}}}},
-		})
-
-		blocks := m.Blocks()
-		if n := countBlockKinds(blocks, block.KindThinkingAnimation); n != 0 {
-			t.Errorf("expected 0 thinking animation blocks after StreamCompleted, got %d", n)
-		}
-	})
-}
-
 func TestBlocksNoWrapping(t *testing.T) {
+	t.Parallel()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 
@@ -77,8 +35,6 @@ func TestBlocksNoWrapping(t *testing.T) {
 
 			// Real assistant model
 			m := New(theme, "test-msg", assistantWidth, nil, scope)
-			m.streaming = false
-
 			// Real query model — pass contentWidth (same as production in newToolBlock)
 			q := query.New(theme, 0, "tool-1", contentWidth, nil, scope)
 			q.SetRows(rows)
@@ -100,4 +56,41 @@ func TestBlocksNoWrapping(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCancel(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cancels tool blocks", func(t *testing.T) {
+		t.Parallel()
+		theme := styles.NewTheme(true)
+		scope := logtest.NewScope(t)
+
+		m := New(theme, "test-msg", 80, nil, scope)
+
+		// Add a tool block in pending state
+		q := query.New(theme, 0, "tool-1", 78, nil, scope)
+		tool := tools.New(theme, 0, "tool-1", 78, q)
+		m.AddBlock(tool)
+
+		m.Cancel()
+
+		// Tool should render as cancelled — no spinner, just icon + name
+		view := tool.View()
+		if strings.Contains(view, "\n") {
+			t.Error("expected single-line render for cancelled tool")
+		}
+		if !strings.Contains(view, "Query") {
+			t.Error("expected tool name in cancelled view")
+		}
+	})
+
+	t.Run("no-op with no tool blocks", func(t *testing.T) {
+		t.Parallel()
+		theme := styles.NewTheme(true)
+		scope := logtest.NewScope(t)
+
+		m := New(theme, "test-msg", 80, nil, scope)
+		m.Cancel() // should not panic
+	})
 }

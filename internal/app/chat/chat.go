@@ -121,6 +121,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, m.messageList.Update(msg))
 			return tea.Batch(cmds...)
 		}
+		// Esc cancels the active round when the editor is focused
+		if key.Matches(msg, keymap.Exit) && m.messageList.HasActiveRound() {
+			m.messageList.CancelActiveRound()
+			return nil
+		}
 
 	case msgs.UserSubmittedInput:
 		cmds = append(cmds, m.handleUserInput(msg))
@@ -239,6 +244,9 @@ func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 	} else {
 		m.scope.Info("user submitted tool results", "count", len(input.ToolResults))
 	}
+
+	// Cancel any in-flight round before starting a new one.
+	m.messageList.CancelActiveRound()
 
 	// If no conversation yet, create one first (only for text input)
 	if m.conversationID == "" {

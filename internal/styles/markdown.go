@@ -3,6 +3,7 @@ package styles
 import (
 	"fmt"
 	"image/color"
+	"sync"
 
 	"charm.land/glamour/v2"
 	"charm.land/glamour/v2/ansi"
@@ -25,11 +26,14 @@ type cachedRenderer struct {
 	width    int
 }
 
-var rendererCache *cachedRenderer
+var (
+	rendererCache *cachedRenderer
+	rendererMu    sync.Mutex
+)
 
-// MarkdownRenderer returns a glamour renderer configured with theme colors.
-// The renderer is cached and reused for the same width.
-func MarkdownRenderer(theme *Theme, width int) *glamour.TermRenderer {
+// getRenderer returns a cached glamour renderer, creating one if the width changed.
+// Must be called with rendererMu held.
+func getRenderer(theme *Theme, width int) *glamour.TermRenderer {
 	if rendererCache != nil && rendererCache.width == width {
 		return rendererCache.renderer
 	}
@@ -43,8 +47,11 @@ func MarkdownRenderer(theme *Theme, width int) *glamour.TermRenderer {
 
 // RenderMarkdown renders markdown text with theme styling.
 func RenderMarkdown(theme *Theme, text string, width int) string {
-	r := MarkdownRenderer(theme, width)
+	rendererMu.Lock()
+	r := getRenderer(theme, width)
 	out, err := r.Render(text)
+	rendererMu.Unlock()
+
 	if err != nil {
 		return text // fallback to plain text
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/thinking"
 )
 
 // Model renders an assistant message and manages its content blocks.
@@ -23,8 +22,6 @@ type Model struct {
 	blocks       []blocks.Block
 	width        int
 	toolRegistry *chattools.Registry
-	thinking     *thinking.Model
-	streaming    bool
 }
 
 // New creates a new assistant message view.
@@ -36,14 +33,7 @@ func New(theme *styles.Theme, id domain.MessageID, width int, toolRegistry *chat
 		id:           id,
 		width:        width,
 		toolRegistry: toolRegistry,
-		thinking:     thinking.New(theme, thinking.Settings{Label: "Thinking"}),
-		streaming:    true,
 	}
-}
-
-// Init starts the thinking animation.
-func (m *Model) Init() tea.Cmd {
-	return m.thinking.Init()
 }
 
 // Update handles messages. Turn filters by TurnID before forwarding.
@@ -55,12 +45,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.ensureBlocks(msg.Message.Content))
 	case msgs.StreamCompleted:
 		cmds = append(cmds, m.ensureBlocks(msg.Message.Content))
-		m.streaming = false
-	}
-
-	// Update thinking animation while streaming
-	if m.streaming {
-		cmds = append(cmds, m.thinking.Update(msg))
 	}
 
 	for _, b := range m.blocks {
@@ -100,15 +84,20 @@ func (m *Model) SetID(id domain.MessageID) {
 	m.id = id
 }
 
+// Cancel stops all in-progress tool animations.
+func (m *Model) Cancel() {
+	for _, b := range m.blocks {
+		if t, ok := b.(*tools.Model); ok {
+			t.Cancel()
+		}
+	}
+}
+
 // Blocks returns all visual blocks for the viewport.
-// Content blocks are returned first, followed by the thinking animation if streaming.
 func (m *Model) Blocks() []block.Block {
 	var result []block.Block
 	for _, b := range m.blocks {
 		result = append(result, b)
-	}
-	if m.streaming {
-		result = append(result, blocks.NewThinkingAnimBlock(m.thinking))
 	}
 	return result
 }

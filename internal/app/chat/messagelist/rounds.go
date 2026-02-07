@@ -7,6 +7,26 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
+// HasActiveRound returns true if the last round is still active.
+func (m *Model) HasActiveRound() bool {
+	if len(m.rounds) == 0 {
+		return false
+	}
+	return m.rounds[len(m.rounds)-1].State() == round.StateActive
+}
+
+// CancelActiveRound cancels the last round if it is still active.
+func (m *Model) CancelActiveRound() {
+	if len(m.rounds) == 0 {
+		return
+	}
+	last := m.rounds[len(m.rounds)-1]
+	if last.State() == round.StateActive {
+		last.Cancel()
+		m.rebuildBlocks()
+	}
+}
+
 // StartTurn creates a new round and begins streaming.
 func (m *Model) StartTurn(
 	conversationID domain.ConversationID,
@@ -31,7 +51,6 @@ func (m *Model) StartTurn(
 		m.scope,
 	)
 
-	cmd := r.StartStream(messages, context)
 	m.rounds = append(m.rounds, r)
 	m.rebuildBlocks()
 
@@ -42,7 +61,7 @@ func (m *Model) StartTurn(
 		}
 	}
 
-	return tea.Batch(cmd, startCmd)
+	return tea.Batch(r.Init(), r.StartStream(messages, context), startCmd)
 }
 
 // rebuildBlocks collects blocks from the round hierarchy into a flat list

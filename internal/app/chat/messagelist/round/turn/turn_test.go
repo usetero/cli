@@ -127,6 +127,57 @@ func TestHandleStreamUpdate(t *testing.T) {
 	})
 }
 
+func TestCancel(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets state to complete", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateStreaming
+
+		m.Cancel()
+
+		if m.state != StateComplete {
+			t.Errorf("expected StateComplete after Cancel, got %d", m.state)
+		}
+	})
+
+	t.Run("suppresses stream error after cancel", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateStreaming
+		m.stream = &streamState{
+			updates: make(chan streamUpdate),
+			cancel:  func() {},
+			done:    false,
+		}
+
+		m.Cancel()
+
+		// Simulate the error that arrives after context cancellation
+		cmd := m.handleStreamUpdate(streamUpdate{
+			err:  errors.New("context canceled"),
+			done: true,
+		})
+
+		// Should return nil (no error toast), not an error command
+		if cmd != nil {
+			t.Error("expected nil command after cancel, got non-nil (error was not suppressed)")
+		}
+	})
+
+	t.Run("idempotent on idle turn", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+
+		m.Cancel() // no stream, no panic
+
+		if m.state != StateComplete {
+			t.Errorf("expected StateComplete, got %d", m.state)
+		}
+	})
+}
+
 func TestHandleToolCompleted(t *testing.T) {
 	t.Parallel()
 
