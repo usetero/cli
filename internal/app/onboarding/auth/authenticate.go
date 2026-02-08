@@ -67,7 +67,7 @@ func NewAuthenticate(ctx context.Context, theme styles.Theme, authService auth.A
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent).Background(theme.Bg)
 
 	return &AuthenticateModel{
 		ctx:     ctx,
@@ -209,7 +209,7 @@ func (m *AuthenticateModel) View() string {
 		"",
 	)
 
-	mutedStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
+	mutedStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
 	switch {
 	case m.state == statePolling:

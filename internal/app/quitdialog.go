@@ -53,6 +53,7 @@ func (m *quitDialog) View() string {
 
 	question := lipgloss.NewStyle().
 		Foreground(colors.Text).
+		Background(colors.Bg).
 		Bold(true).
 		Render("Are you sure you want to quit?")
 

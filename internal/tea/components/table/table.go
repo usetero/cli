@@ -105,23 +105,25 @@ func (m *Model) Clear() {
 
 // View renders the table.
 func (m *Model) View() string {
+	bg := m.theme.Bg
+	if m.bg != nil {
+		bg = m.bg
+	}
+
 	headerStyle := lipgloss.NewStyle().
 		Foreground(m.theme.Text).
+		Background(bg).
 		Bold(true).
 		Padding(0, 1)
 
 	cellStyle := lipgloss.NewStyle().
 		Foreground(m.theme.TextMuted).
+		Background(bg).
 		Padding(0, 1)
 
 	borderStyle := lipgloss.NewStyle().
-		Foreground(m.theme.Border)
-
-	if m.bg != nil {
-		headerStyle = headerStyle.Background(m.bg)
-		cellStyle = cellStyle.Background(m.bg)
-		borderStyle = borderStyle.Background(m.bg)
-	}
+		Foreground(m.theme.Border).
+		Background(bg)
 
 	headers := m.headers
 	if m.fitHeaders && len(m.rows) > 0 {

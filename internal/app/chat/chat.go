@@ -416,8 +416,8 @@ func (m *Model) View() string {
 // emptyStateContent renders the context-aware empty state.
 func (m *Model) emptyStateContent() string {
 	colors := m.theme
-	text := lipgloss.NewStyle().Foreground(colors.Text)
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 
 	name := ""
 	if m.user != nil && m.user.FirstName != "" {

@@ -126,14 +126,14 @@ func (m *Model) CompactView() string {
 
 	s := m.summary
 	colors := m.theme
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	sep := muted.Render(" · ")
 
 	var segments []string
 
 	// Waste percentage with colored dot and pending count.
 	if wp := wastePercent(s); wp > 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.WarningFg).Render("●")
+		dot := lipgloss.NewStyle().Foreground(colors.WarningFg).Background(colors.Bg).Render("●")
 		waste := fmt.Sprintf("%d%% waste", wp)
 		if s.PendingPolicyCount > 0 {
 			waste += fmt.Sprintf(" (%d)", s.PendingPolicyCount)
@@ -141,18 +141,18 @@ func (m *Model) CompactView() string {
 		segments = append(segments, dot+" "+muted.Render(waste))
 	} else if s.PendingPolicyCount > 0 {
 		// No waste % but pending policies.
-		dot := lipgloss.NewStyle().Foreground(colors.WarningFg).Render("●")
+		dot := lipgloss.NewStyle().Foreground(colors.WarningFg).Background(colors.Bg).Render("●")
 		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount)))
 	}
 
 	// Observed savings from approved policies.
 	if saving := formatObservedSaving(s); saving != "" {
-		savingStyle := lipgloss.NewStyle().Foreground(colors.SuccessFg)
+		savingStyle := lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(colors.Bg)
 		segments = append(segments, savingStyle.Render("saving "+saving))
 	}
 
 	if len(segments) == 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.SuccessFg).Render("●")
+		dot := lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(colors.Bg).Render("●")
 		return dot + " " + muted.Render("healthy")
 	}
 
@@ -176,7 +176,7 @@ func (m *Model) ExpandedView(width int) string {
 func (m *Model) renderHeadline() string {
 	s := m.summary
 	colors := m.theme
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	sep := muted.Render(" · ")
 
 	var parts []string
@@ -188,13 +188,13 @@ func (m *Model) renderHeadline() string {
 
 	// Observed savings.
 	if saving := formatObservedSaving(s); saving != "" {
-		savingStyle := lipgloss.NewStyle().Foreground(colors.SuccessFg)
+		savingStyle := lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(colors.Bg)
 		parts = append(parts, savingStyle.Render("saving "+saving))
 	}
 
 	// Pending count.
 	if s.PendingPolicyCount > 0 {
-		text := lipgloss.NewStyle().Foreground(colors.Text)
+		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 		est := formatEstimated(s)
 		if est != "" {
 			parts = append(parts, text.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount))+sep+muted.Render("~"+est))
@@ -213,7 +213,7 @@ func (m *Model) renderHeadline() string {
 // renderCategoryTable renders the per-category breakdown.
 func (m *Model) renderCategoryTable(width int) string {
 	if len(m.categories) == 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 		return muted.Render("No policy data")
 	}
 
@@ -253,9 +253,9 @@ func (m *Model) formatWaste(c domain.PolicyCategoryStatus) string {
 		return w
 	}
 	if c.PendingCount == 0 {
-		return lipgloss.NewStyle().Foreground(m.theme.SuccessFg).Render("●")
+		return lipgloss.NewStyle().Foreground(m.theme.SuccessFg).Background(m.theme.Bg).Render("●")
 	}
-	return "—"
+	return lipgloss.NewStyle().Background(m.theme.Bg).Render("—")
 }
 
 // renderRisk returns a color-coded risk label.
@@ -264,13 +264,13 @@ func (m *Model) renderRisk(level domain.RiskLevel) string {
 	s := level.String()
 	switch level {
 	case domain.RiskLevelHigh:
-		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Render(s)
+		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(colors.Bg).Render(s)
 	case domain.RiskLevelMedium:
-		return lipgloss.NewStyle().Foreground(colors.WarningFg).Render(s)
+		return lipgloss.NewStyle().Foreground(colors.WarningFg).Background(colors.Bg).Render(s)
 	case domain.RiskLevelLow:
-		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Render(s)
+		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(colors.Bg).Render(s)
 	default:
-		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render(s)
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render(s)
 	}
 }
 

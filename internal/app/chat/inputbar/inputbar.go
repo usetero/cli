@@ -65,7 +65,7 @@ func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 	ta.SetVirtualCursor(false)
 	ta.Focus()
 
-	base := lipgloss.NewStyle().Foreground(colors.Text)
+	base := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 	ta.SetStyles(textarea.Styles{
 		Focused: textarea.StyleState{
 			Base:        base,
@@ -94,9 +94,9 @@ func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 			return "::: "
 		}
 		if info.Focused {
-			return lipgloss.NewStyle().Foreground(colors.Accent).Render("::: ")
+			return lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Render("::: ")
 		}
-		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render("::: ")
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render("::: ")
 	})
 
 	return &Model{

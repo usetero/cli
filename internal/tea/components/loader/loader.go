@@ -20,7 +20,7 @@ type Model struct {
 func New(theme styles.Theme, message string) *Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(theme.Accent)
+	s.Style = lipgloss.NewStyle().Foreground(theme.Accent).Background(theme.Bg)
 
 	return &Model{
 		theme:   theme,
@@ -43,8 +43,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the loading indicator.
 func (m *Model) View() string {
-	style := lipgloss.NewStyle().Foreground(m.theme.Accent)
-	return m.spinner.View() + " " + style.Render(m.message+"...")
+	style := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
+	return m.spinner.View() + style.Render(" "+m.message+"...")
 }
 
 // SetMessage updates the loading message.

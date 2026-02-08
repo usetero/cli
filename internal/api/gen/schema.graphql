@@ -973,6 +973,9 @@ type DatadogAccountStatus {
   """Log events with DISCOVERING status"""
   logDiscoveringCount: Int!
 
+  """Log events with QUARANTINED status (repeated AI analysis failures)"""
+  logQuarantinedCount: Int!
+
   """Total active policies"""
   logPolicyCount: Int!
 
@@ -2121,7 +2124,9 @@ type LogEventStatus {
   """The Datadog account performing discovery"""
   datadogAccountId: ID!
 
-  """BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING"""
+  """
+  BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING
+  """
   status: LogEventStatusState!
 
   """Whether log_event_volumes exist for this event from this integration"""
@@ -2197,7 +2202,9 @@ type LogEventStatus {
   observedCostPerHourAfterUsd: Float
 }
 
-"""BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING"""
+"""
+BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING
+"""
 enum LogEventStatusState {
   """Discovery is failing repeatedly (5+ consecutive errors)"""
   BROKEN
@@ -2208,6 +2215,7 @@ enum LogEventStatusState {
   PENDING
   ANALYZING
   DISCOVERING
+  QUARANTINED
 }
 
 """
@@ -3256,6 +3264,9 @@ type ServiceStatus {
 
   """Log events with DISCOVERING status"""
   logDiscoveringCount: Int!
+
+  """Log events with QUARANTINED status (repeated AI analysis failures)"""
+  logQuarantinedCount: Int!
 
   """Total active policies across all log events"""
   logPolicyCount: Int!

@@ -21,7 +21,9 @@ func NewThinkingAnimBlock(t *thinking.Model) *ThinkingAnimBlock {
 
 // View implements block.Block.
 func (m *ThinkingAnimBlock) View() string {
-	return m.thinking.View()
+	return lipgloss.NewStyle().
+		Padding(0, block.PaddingX).
+		Render(m.thinking.View())
 }
 
 // Height implements block.Block.

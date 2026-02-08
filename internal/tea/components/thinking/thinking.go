@@ -134,7 +134,7 @@ func (m *Model) View() string {
 	var b strings.Builder
 	elapsed := time.Since(m.startTime)
 	labelRunes := []rune(m.label)
-	labelStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
+	labelStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 	allBorn := elapsed >= birthDuration
 
 	totalWidth := m.size
@@ -145,7 +145,7 @@ func (m *Model) View() string {
 	for i := range totalWidth {
 		// Not yet born - show nothing
 		if !allBorn && elapsed < m.birthOffsets[i] {
-			b.WriteRune(' ')
+			b.WriteString(labelStyle.Render(" "))
 			continue
 		}
 
@@ -153,10 +153,10 @@ func (m *Model) View() string {
 			// Scramble region
 			colorIdx := (i + m.frame) % len(m.colorRamp)
 			char := scrambleChars[rand.IntN(len(scrambleChars))]
-			b.WriteString(m.colorRamp[colorIdx].Render(string(char)))
+			b.WriteString(m.colorRamp[colorIdx].Background(m.theme.Bg).Render(string(char)))
 		} else if i == m.size {
 			// Space between scramble and label
-			b.WriteRune(' ')
+			b.WriteString(labelStyle.Render(" "))
 		} else {
 			// Label region
 			labelIdx := i - m.size - 1

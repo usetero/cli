@@ -205,33 +205,33 @@ func (m *Model) CompactView() string {
 	}
 
 	colors := m.theme
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
 		return ""
 
 	case *powersync.Connecting:
-		return dot(colors.WarningFg) + " " + muted.Render("connecting...")
+		return dot(colors.WarningFg, colors.Bg) + " " + muted.Render("connecting...")
 
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			return dot(colors.WarningFg) + " " + muted.Render(fmt.Sprintf("syncing %d%%", pct))
+			return dot(colors.WarningFg, colors.Bg) + " " + muted.Render(fmt.Sprintf("syncing %d%%", pct))
 		}
-		return dot(colors.WarningFg) + " " + muted.Render("syncing...")
+		return dot(colors.WarningFg, colors.Bg) + " " + muted.Render("syncing...")
 
 	case *powersync.Ready:
-		return dot(colors.SuccessFg) + " " + muted.Render(m.host)
+		return dot(colors.SuccessFg, colors.Bg) + " " + muted.Render(m.host)
 
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			return dot(colors.ErrorFg) + " " + muted.Render("reconnecting...")
+			return dot(colors.ErrorFg, colors.Bg) + " " + muted.Render("reconnecting...")
 		}
-		return dot(colors.WarningFg) + " " + muted.Render("reconnecting...")
+		return dot(colors.WarningFg, colors.Bg) + " " + muted.Render("reconnecting...")
 
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg)
+		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(colors.Bg)
 		return errStyle.Render("○") + " " + errStyle.Render("error")
 
 	default:
@@ -255,37 +255,37 @@ func (m *Model) ExpandedView(width int) string {
 // renderStatusLine renders sync and upload status on one line.
 func (m *Model) renderStatusLine() string {
 	colors := m.theme
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 
 	var syncPart string
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
-		syncPart = dot(colors.TextSubtle) + " " + muted.Render("Disconnected")
+		syncPart = dot(colors.TextSubtle, colors.Bg) + " " + muted.Render("Disconnected")
 	case *powersync.Connecting:
-		syncPart = dot(colors.WarningFg) + " " + muted.Render("Connecting")
+		syncPart = dot(colors.WarningFg, colors.Bg) + " " + muted.Render("Connecting")
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			syncPart = dot(colors.WarningFg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
+			syncPart = dot(colors.WarningFg, colors.Bg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
 		} else {
-			syncPart = dot(colors.WarningFg) + " " + muted.Render("Syncing")
+			syncPart = dot(colors.WarningFg, colors.Bg) + " " + muted.Render("Syncing")
 		}
 	case *powersync.Ready:
-		syncPart = dot(colors.SuccessFg) + " " + muted.Render("Connected")
+		syncPart = dot(colors.SuccessFg, colors.Bg) + " " + muted.Render("Connected")
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			syncPart = dot(colors.ErrorFg) + " " + muted.Render("Reconnecting (degraded)")
+			syncPart = dot(colors.ErrorFg, colors.Bg) + " " + muted.Render("Reconnecting (degraded)")
 		} else {
-			syncPart = dot(colors.WarningFg) + " " + muted.Render("Reconnecting")
+			syncPart = dot(colors.WarningFg, colors.Bg) + " " + muted.Render("Reconnecting")
 		}
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg)
+		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(colors.Bg)
 		syncPart = errStyle.Render("○") + " " + errStyle.Render(state.Err.Error())
 	}
 
 	var uploadPart string
 	if m.totalPending > 0 {
-		warn := lipgloss.NewStyle().Foreground(colors.WarningFg)
+		warn := lipgloss.NewStyle().Foreground(colors.WarningFg).Background(colors.Bg)
 		uploadPart = warn.Render(fmt.Sprintf("%d uploading", m.totalPending))
 	} else {
 		uploadPart = muted.Render("Upload queue empty")
@@ -322,6 +322,6 @@ func (m *Model) renderEntityTable(width int) string {
 	return tbl.View()
 }
 
-func dot(c color.Color) string {
-	return lipgloss.NewStyle().Foreground(c).Render("●")
+func dot(c color.Color, bg color.Color) string {
+	return lipgloss.NewStyle().Foreground(c).Background(bg).Render("●")
 }

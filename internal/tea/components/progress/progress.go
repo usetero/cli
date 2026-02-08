@@ -24,7 +24,7 @@ func New(theme styles.Theme, width int) *Model {
 	)
 
 	p.PercentFormat = " %.1f%%"
-	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Text)
+	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Text).Background(theme.Bg)
 	p.EmptyColor = theme.TextMuted
 
 	return &Model{

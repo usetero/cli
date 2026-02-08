@@ -112,6 +112,12 @@ func (m *TextBlock) render() {
 		m.rendered = ""
 		return
 	}
-	rendered := styles.RenderMarkdown(m.theme, m.text, m.width)
-	m.rendered = strings.TrimRight(rendered, "\n")
+	rendered := styles.RenderMarkdown(m.theme, m.text, m.width-block.PaddingX*2)
+	rendered = strings.TrimRight(rendered, "\n")
+	m.rendered = lipgloss.NewStyle().
+		Background(m.theme.Bg).
+		Foreground(m.theme.Text).
+		Padding(block.PaddingY, block.PaddingX).
+		Width(m.width).
+		Render(rendered)
 }

@@ -71,6 +71,7 @@ CREATE TABLE datadog_account_statuses_cache (
     log_pending_policy_count INTEGER, -- Policies awaiting user action
     log_percent_complete REAL, -- Overall coverage percentage (discovered / service volume * 100)
     log_policy_count INTEGER, -- Total active policies
+    log_quarantined_count INTEGER, -- Log events with QUARANTINED status (repeated AI analysis failures)
     log_ready_services INTEGER, -- Services with READY status
     log_resolved_count INTEGER, -- Log events with RESOLVED status (all policies acted on)
     log_service_count INTEGER, -- Total number of services
@@ -165,7 +166,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
--- Pipeline status for each log event with estimated and observed impact. Status: BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING.
+-- Pipeline status for each log event with estimated and observed impact. Status: BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING.
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
@@ -192,7 +193,7 @@ CREATE TABLE log_event_statuses_cache (
     policy_count INTEGER, -- Total active (non-dismissed) policies on this log event
     refreshed_at TEXT,
     service_id TEXT, -- Service ID (denormalized from log_event)
-    status TEXT, -- BROKEN: discovery errors, RESOLVED: all policies acted on, CLEAN: analyzed with no issues, PENDING: has policies awaiting action, ANALYZING: AI working, DISCOVERING: collecting data
+    status TEXT, -- BROKEN: discovery errors, QUARANTINED: repeated AI analysis failures, RESOLVED: all policies acted on, CLEAN: analyzed with no issues, PENDING: has policies awaiting action, ANALYZING: AI working, DISCOVERING: collecting data
     volume_per_hour REAL -- Current throughput in events/hour from the rolling 7-day window. Same baseline used for policy impact estimates, so directly comparable. NULL when no volume data exists.
 );
 
@@ -279,6 +280,7 @@ CREATE TABLE service_statuses_cache (
     log_pending_policy_count INTEGER, -- Policies awaiting user action
     log_percent_complete REAL, -- Coverage percentage (discovered_volume / service_volume * 100)
     log_policy_count INTEGER, -- Total active policies across all log events
+    log_quarantined_count INTEGER, -- Log events with QUARANTINED status (repeated AI analysis failures)
     log_resolved_count INTEGER, -- Log events with RESOLVED status (all policies acted on)
     log_service_volume_in_window INTEGER, -- Total service log volume in the rolling 7-day window
     log_status TEXT, -- Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY

@@ -93,7 +93,7 @@ func New(
 		scope:            scope,
 		conversationID:   conversationID,
 		accountID:        accountID,
-		userMessage:      user.New(theme, userMessageID, input, width-block.AssistantPadding),
+		userMessage:      user.New(theme.WithBg(theme.BgElevated), userMessageID, input, width-block.BorderWidth),
 		assistantMessage: assistant.New(theme, "", width, toolRegistry, scope),
 		state:            StateIdle,
 		width:            width,
@@ -206,7 +206,7 @@ func (m *Model) SetWidth(width int) {
 	m.width = width
 	// User block gets content width minus border+padding, same as assistant blocks.
 	// The border decoration is applied by renderBlock in the message list.
-	m.userMessage.SetWidth(width - block.AssistantPadding)
+	m.userMessage.SetWidth(width - block.BorderWidth)
 	m.assistantMessage.SetWidth(width)
 }
 

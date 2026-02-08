@@ -20,10 +20,11 @@ func colorToHex(c color.Color) string {
 	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
 }
 
-// cachedRenderer holds a cached glamour renderer for a specific width.
+// cachedRenderer holds a cached glamour renderer for a specific width and bg.
 type cachedRenderer struct {
 	renderer *glamour.TermRenderer
 	width    int
+	bgHex    string
 }
 
 var (
@@ -31,17 +32,18 @@ var (
 	rendererMu    sync.Mutex
 )
 
-// getRenderer returns a cached glamour renderer, creating one if the width changed.
+// getRenderer returns a cached glamour renderer, creating one if the width or bg changed.
 // Must be called with rendererMu held.
 func getRenderer(theme Theme, width int) *glamour.TermRenderer {
-	if rendererCache != nil && rendererCache.width == width {
+	bgHex := colorToHex(theme.Bg)
+	if rendererCache != nil && rendererCache.width == width && rendererCache.bgHex == bgHex {
 		return rendererCache.renderer
 	}
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithStyles(markdownStyle(theme)),
 		glamour.WithWordWrap(width),
 	)
-	rendererCache = &cachedRenderer{renderer: r, width: width}
+	rendererCache = &cachedRenderer{renderer: r, width: width, bgHex: bgHex}
 	return r
 }
 
@@ -65,10 +67,13 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 	accent := stringPtr(colorToHex(t.Accent))
 	codeBg := stringPtr(colorToHex(t.BgElevated))
 
+	bg := stringPtr(colorToHex(t.Bg))
+
 	return ansi.StyleConfig{
 		Document: ansi.StyleBlock{
 			StylePrimitive: ansi.StylePrimitive{
-				Color: text,
+				Color:           text,
+				BackgroundColor: bg,
 			},
 			Margin: uintPtr(0),
 		},

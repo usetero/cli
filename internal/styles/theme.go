@@ -62,8 +62,8 @@ func buildTokens(p Palette, isDark bool) Tokens {
 		return Tokens{
 			IsDark: true,
 
-			Bg:         MustHex(p.Neutral[S900]),
-			BgElevated: MustHex(p.Neutral[S800]),
+			Bg:         MustHex(p.Neutral[S950]),
+			BgElevated: MustHex(p.Neutral[S900]),
 
 			Text:       MustHex(p.Neutral[S200]),
 			TextMuted:  MustHex(p.Neutral[S400]),
@@ -239,14 +239,15 @@ func themeFromTokens(t Tokens) Theme {
 }
 
 // buildStyles creates pre-built styles from the active theme.
+// Every style includes Background so terminal cells are always filled.
 func buildStyles(t Theme) Styles {
 	return Styles{
-		Title:   lipgloss.NewStyle().Foreground(t.Accent).Bold(true),
-		Body:    lipgloss.NewStyle().Foreground(t.Text),
-		Help:    lipgloss.NewStyle().Foreground(t.TextMuted),
-		Action:  lipgloss.NewStyle().Foreground(t.Accent),
-		URL:     lipgloss.NewStyle().Foreground(t.TextMuted),
-		Success: lipgloss.NewStyle().Foreground(t.SuccessFg).Bold(true),
-		Error:   lipgloss.NewStyle().Foreground(t.ErrorFg),
+		Title:   lipgloss.NewStyle().Foreground(t.Accent).Background(t.Bg).Bold(true),
+		Body:    lipgloss.NewStyle().Foreground(t.Text).Background(t.Bg),
+		Help:    lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
+		Action:  lipgloss.NewStyle().Foreground(t.Accent).Background(t.Bg),
+		URL:     lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
+		Success: lipgloss.NewStyle().Foreground(t.SuccessFg).Background(t.Bg).Bold(true),
+		Error:   lipgloss.NewStyle().Foreground(t.ErrorFg).Background(t.Bg),
 	}
 }

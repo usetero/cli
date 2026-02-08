@@ -27,14 +27,14 @@ func New(theme styles.Theme) *Model {
 
 	ti.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.InputText),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.Accent),
+			Text:        lipgloss.NewStyle().Foreground(theme.InputText).Background(theme.Bg),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder).Background(theme.Bg),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.Accent).Background(theme.Bg),
 		},
 		Blurred: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(theme.TextMuted),
-			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder),
-			Prompt:      lipgloss.NewStyle().Foreground(theme.TextMuted),
+			Text:        lipgloss.NewStyle().Foreground(theme.TextMuted).Background(theme.Bg),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder).Background(theme.Bg),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.TextMuted).Background(theme.Bg),
 		},
 		Cursor: textinput.CursorStyle{
 			Color: theme.Accent,

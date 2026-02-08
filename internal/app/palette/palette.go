@@ -189,6 +189,7 @@ func (m *Model) View() string {
 	// Separator between input and items
 	sep := lipgloss.NewStyle().
 		Foreground(colors.Border).
+		Background(colors.Bg).
 		Render(strings.Repeat("─", contentWidth))
 
 	// Stack: header + gap + input + separator + items
@@ -215,7 +216,7 @@ func (m *Model) View() string {
 // renderHeader renders "Commands ╱╱╱╱╱╱╱╱" with gradient slashes.
 func (m *Model) renderHeader(width int) string {
 	colors := m.theme
-	title := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true).Render("Commands")
+	title := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true).Render("Commands")
 	titleWidth := lipgloss.Width(title)
 
 	remaining := width - titleWidth - 1 // 1 for space

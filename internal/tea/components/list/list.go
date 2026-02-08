@@ -34,9 +34,9 @@ func (d *delegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d *delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	name := item.FilterValue()
 	if index == m.Index() {
-		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Accent).Bold(true).Render("> "+name))
+		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg).Bold(true).Render("> "+name))
 	} else {
-		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Text).Render("  "+name))
+		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Text).Background(d.theme.Bg).Render("  "+name))
 	}
 }
 

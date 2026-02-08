@@ -5,6 +5,7 @@ type LogEventStatus string
 
 const (
 	LogEventStatusBroken      LogEventStatus = "BROKEN"
+	LogEventStatusQuarantined LogEventStatus = "QUARANTINED"
 	LogEventStatusResolved    LogEventStatus = "RESOLVED"
 	LogEventStatusClean       LogEventStatus = "CLEAN"
 	LogEventStatusPending     LogEventStatus = "PENDING"

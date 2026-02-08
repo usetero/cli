@@ -25,13 +25,13 @@ func New(theme styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("keybar")
 	h := help.New()
 	h.Styles = help.Styles{
-		ShortKey:       lipgloss.NewStyle().Foreground(theme.TextMuted),
-		ShortDesc:      lipgloss.NewStyle().Foreground(theme.TextSubtle),
-		ShortSeparator: lipgloss.NewStyle().Foreground(theme.Border),
-		Ellipsis:       lipgloss.NewStyle().Foreground(theme.Border),
-		FullKey:        lipgloss.NewStyle().Foreground(theme.TextMuted),
-		FullDesc:       lipgloss.NewStyle().Foreground(theme.TextSubtle),
-		FullSeparator:  lipgloss.NewStyle().Foreground(theme.Border),
+		ShortKey:       lipgloss.NewStyle().Foreground(theme.TextMuted).Background(theme.Bg),
+		ShortDesc:      lipgloss.NewStyle().Foreground(theme.TextSubtle).Background(theme.Bg),
+		ShortSeparator: lipgloss.NewStyle().Foreground(theme.Border).Background(theme.Bg),
+		Ellipsis:       lipgloss.NewStyle().Foreground(theme.Border).Background(theme.Bg),
+		FullKey:        lipgloss.NewStyle().Foreground(theme.TextMuted).Background(theme.Bg),
+		FullDesc:       lipgloss.NewStyle().Foreground(theme.TextSubtle).Background(theme.Bg),
+		FullSeparator:  lipgloss.NewStyle().Foreground(theme.Border).Background(theme.Bg),
 	}
 
 	return &Model{

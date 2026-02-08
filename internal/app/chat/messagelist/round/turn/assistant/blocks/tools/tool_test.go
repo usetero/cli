@@ -142,9 +142,9 @@ func TestCancel(t *testing.T) {
 		if !strings.Contains(view, "Query") {
 			t.Error("expected tool name")
 		}
-		// Should be a single line — no body, no spinner
-		if strings.Contains(view, "\n") {
-			t.Error("expected single-line render for cancelled tool")
+		// Should be 3 lines: top padding + content + bottom padding (no body, no spinner)
+		if lines := strings.Count(view, "\n"); lines != 2 {
+			t.Errorf("expected 3-line render (padding + content + padding) for cancelled tool, got %d lines", lines+1)
 		}
 	})
 }

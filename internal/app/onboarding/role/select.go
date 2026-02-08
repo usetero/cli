@@ -105,7 +105,7 @@ func (m *Model) View() string {
 	for i, opt := range options {
 		var view string
 		if i == m.selected {
-			nameStyle := lipgloss.NewStyle().Foreground(m.theme.Accent).Bold(true)
+			nameStyle := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg).Bold(true)
 			view = nameStyle.Render("> "+opt.name) + "\n  " + s.Help.Render(opt.desc)
 		} else {
 			view = s.Body.Render("  "+opt.name) + "\n  " + s.Help.Render(opt.desc)

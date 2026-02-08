@@ -4,10 +4,15 @@ package block
 
 import tea "charm.land/bubbletea/v2"
 
-// AssistantPadding is the left padding width for assistant content blocks.
-// Shared between the messagelist viewport (which wraps blocks with padding)
-// and the assistant model (which sets block widths minus padding).
-const AssistantPadding = 2
+// BorderWidth is the width of the left border on blocks.
+// The messagelist applies a left border; blocks handle their own internal padding.
+const BorderWidth = 1
+
+// PaddingX is the horizontal padding inside each block.
+const PaddingX = 2
+
+// PaddingY is the vertical padding inside elevated blocks (text, tools, user).
+const PaddingY = 1
 
 // Kind identifies the type of a block for layout and styling decisions.
 type Kind int

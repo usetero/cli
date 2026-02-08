@@ -71,6 +71,7 @@ type DatadogAccountStatusesCache struct {
 	LogPendingPolicyCount               *int64
 	LogPercentComplete                  *float64
 	LogPolicyCount                      *int64
+	LogQuarantinedCount                 *int64
 	LogReadyServices                    *int64
 	LogResolvedCount                    *int64
 	LogServiceCount                     *int64
@@ -269,6 +270,7 @@ type ServiceStatusesCache struct {
 	LogPendingPolicyCount               *int64
 	LogPercentComplete                  *float64
 	LogPolicyCount                      *int64
+	LogQuarantinedCount                 *int64
 	LogResolvedCount                    *int64
 	LogServiceVolumeInWindow            *int64
 	LogStatus                           *string

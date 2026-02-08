@@ -154,7 +154,7 @@ func (m *Model) View() string {
 	}
 
 	colors := m.theme
-	diagStyle := lipgloss.NewStyle().Foreground(colors.GradientEnd)
+	diagStyle := lipgloss.NewStyle().Foreground(colors.GradientEnd).Background(colors.Bg)
 
 	sep := diagStyle.Render(" " + diag + " ")
 
@@ -247,7 +247,7 @@ func (m *Model) DrawerView(width, height int) string {
 	}
 
 	if content == "" {
-		content = lipgloss.NewStyle().Foreground(colors.TextSubtle).Render("No data")
+		content = lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg).Render("No data")
 	}
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, tabBar, "", content)
@@ -265,9 +265,9 @@ func (m *Model) DrawerView(width, height int) string {
 // renderTabBar renders the tab selector for the drawer.
 func (m *Model) renderTabBar(width int) string {
 	colors := m.theme
-	activeStyle := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
-	inactiveStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
-	sepStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle)
+	activeStyle := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true)
+	inactiveStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	sepStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg)
 
 	var tabs []string
 	for i, label := range tabLabels {
@@ -284,8 +284,8 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	colors := m.theme
-	keyStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
-	tipStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle)
+	keyStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	tipStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg)
 
 	tip := " open "
 	if m.drawerOpen {
@@ -312,8 +312,7 @@ func (m *Model) renderBrand() string {
 // renderOrgWorkspace renders "org / workspace".
 func (m *Model) renderOrgWorkspace() string {
 	colors := m.theme
-	style := lipgloss.NewStyle().Foreground(colors.TextMuted)
-
+	style := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	if m.workspace != "" {
 		return style.Render(m.org + " / " + m.workspace)
 	}
@@ -327,7 +326,7 @@ func (m *Model) renderTitle(maxWidth int) string {
 	}
 
 	colors := m.theme
-	style := lipgloss.NewStyle().Foreground(colors.Text)
+	style := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 
 	title := m.title
 	if len(title) > maxWidth-2 {
@@ -351,6 +350,6 @@ func (m *Model) renderContextPercent() string {
 		fg = colors.TextMuted
 	}
 
-	style := lipgloss.NewStyle().Foreground(fg)
+	style := lipgloss.NewStyle().Foreground(fg).Background(colors.Bg)
 	return style.Render(fmt.Sprintf("ctx: %d%%", m.contextPercent))
 }

@@ -417,6 +417,96 @@ func New(theme *styles.Theme, db sqlite.DB) *Model {
 }
 ```
 
+## Theming and Backgrounds
+
+Every styled text must explicitly set `Background(theme.Bg)`. Terminals have no layers — a parent's background does not propagate to child-rendered ANSI sequences. Every character cell needs its own background escape sequence, or the terminal default punches through.
+
+### The Rule
+
+When you have a theme, set the background. Always.
+
+```go
+// WRONG - terminal default bg punches through
+lipgloss.NewStyle().Foreground(theme.Text).Render("hello")
+
+// RIGHT - explicit bg on every style
+lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render("hello")
+```
+
+This applies everywhere: components, inline styles, pre-built theme styles, markdown renderers. If it renders visible text, it sets a background.
+
+### Pre-Built Styles
+
+The theme's pre-built styles (`theme.Styles.Body`, `theme.Styles.Title`, etc.) already include `Background(theme.Bg)`. Use them directly:
+
+```go
+theme.Styles.Body.Render("some text")    // bg is already set
+theme.Styles.Title.Render("heading")     // bg is already set
+```
+
+### Surface Boundaries with WithBg
+
+Some areas render on an elevated surface (e.g., assistant message blocks sit on a lighter background). Use `theme.WithBg()` to create a theme copy with a different background:
+
+```go
+// In assistant.go — a surface boundary
+func New(theme styles.Theme, ...) *Model {
+    return &Model{
+        theme:      theme,
+        blockTheme: theme.WithBg(theme.BgElevated),  // elevated surface
+    }
+}
+
+// Pass blockTheme to child blocks
+func (m *Model) ensureBlocks() {
+    m.textBlock = text.New(m.blockTheme, m.width)
+    m.toolBlock = tool.New(m.blockTheme, m.width)
+}
+```
+
+`WithBg()` returns a new theme with `Bg` set to the given color and all `Styles` rebuilt. Child components just use `theme.Bg` as usual — they don't know which surface they're on:
+
+```go
+// In a child block — just uses theme.Bg, unaware it's elevated
+func (m *TextBlock) View() string {
+    return lipgloss.NewStyle().
+        Background(m.theme.Bg).   // resolves to BgElevated
+        Foreground(m.theme.Text).
+        Width(m.width).
+        Render(m.content)
+}
+```
+
+### Components
+
+Components that accept a theme must use `theme.Bg` in their rendered styles. See `internal/tea/components/` — every component (input, list, loader, progress, status, table, thinking) sets bg on all styled output.
+
+```go
+// Component with theme
+func (m *Model) View() string {
+    label := lipgloss.NewStyle().
+        Foreground(m.theme.TextMuted).
+        Background(m.theme.Bg).       // always set bg
+        Render(m.label)
+    
+    value := lipgloss.NewStyle().
+        Foreground(m.theme.Text).
+        Background(m.theme.Bg).       // always set bg
+        Render(m.value)
+    
+    return lipgloss.JoinHorizontal(lipgloss.Top, label, value)
+}
+```
+
+### Why This Matters
+
+Without explicit backgrounds, you get visual glitches:
+- Terminal default bg bleeds through styled areas
+- Elevated surfaces (panels, assistant blocks) show gaps of the wrong color
+- `WithBg()` has no effect because children ignore `theme.Bg`
+
+With explicit backgrounds, `WithBg()` becomes powerful — a parent can change the surface color and all children automatically pick it up through `theme.Bg`.
+
 ## Messages
 
 State flows down (constructors, setters). Events flow up (messages).
@@ -585,6 +675,16 @@ func (m *Model) View() string {
 return lipgloss.JoinVertical(lipgloss.Top, prev, "", m.View())
 ```
 
+### Don't forget Background on styled text
+
+```go
+// WRONG - terminal default bg punches through
+lipgloss.NewStyle().Foreground(theme.Accent).Render("label")
+
+// RIGHT - always set bg when you have a theme
+lipgloss.NewStyle().Foreground(theme.Accent).Background(theme.Bg).Render("label")
+```
+
 ### Don't use Height without MaxHeight for flexible content
 
 ```go
@@ -602,7 +702,7 @@ style := lipgloss.NewStyle().Height(10).MaxHeight(10)
 3. Implement `New(deps)` constructor
 4. Implement `Init() tea.Cmd`
 5. Implement `Update(msg tea.Msg) tea.Cmd`
-6. Implement `View() string`
+6. Implement `View() string` — set `Background(theme.Bg)` on every style
 7. Implement `SetSize(w, h)` or `SetWidth(w)` + `Height() int`
 8. Add message types to `internal/app/msgs/` if it emits events
 9. Wire into parent's constructor, Update (forward messages), View (compose), and SetSize (propagate)

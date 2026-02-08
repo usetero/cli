@@ -17,6 +17,7 @@ import (
 // It is a fixed-height component - height is determined by content.
 type Model struct {
 	theme        styles.Theme
+	blockTheme   styles.Theme // theme with elevated bg for blocks
 	scope        log.Scope
 	id           domain.MessageID
 	blocks       []blocks.Block
@@ -29,6 +30,7 @@ func New(theme styles.Theme, id domain.MessageID, width int, toolRegistry *chatt
 	scope = scope.Child("assistant")
 	return &Model{
 		theme:        theme,
+		blockTheme:   theme.WithBg(theme.BgElevated),
 		scope:        scope,
 		id:           id,
 		width:        width,
@@ -57,8 +59,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // SetWidth sets the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
-	// Blocks get the content width (minus padding)
-	contentWidth := width - block.AssistantPadding
+	// Blocks get the width inside the border; they handle their own internal padding.
+	contentWidth := width - block.BorderWidth
 	for _, b := range m.blocks {
 		b.SetWidth(contentWidth)
 	}
@@ -106,7 +108,7 @@ func (m *Model) Blocks() []block.Block {
 // Returns a command to initialize any new tool animations.
 func (m *Model) ensureBlocks(content []domain.Block) tea.Cmd {
 	var cmds []tea.Cmd
-	contentWidth := m.width - block.AssistantPadding
+	contentWidth := m.width - block.BorderWidth
 	for _, b := range content {
 		if m.hasBlock(b.Index) {
 			continue // Block exists, handles its own updates
@@ -116,7 +118,7 @@ func (m *Model) ensureBlocks(content []domain.Block) tea.Cmd {
 		switch b.Type {
 		case domain.BlockTypeText:
 			if b.Text != nil {
-				m.blocks = append(m.blocks, blocks.NewTextBlock(m.theme, b.Index, b.Text.Content, contentWidth))
+				m.blocks = append(m.blocks, blocks.NewTextBlock(m.blockTheme, b.Index, b.Text.Content, contentWidth))
 			}
 		case domain.BlockTypeThinking:
 			if b.Thinking != nil {
@@ -150,9 +152,9 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	var child tools.Child
 	switch toolUse.Name {
 	case m.toolRegistry.Query.Name():
-		child = query.New(m.theme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
+		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
 	default:
-		child = query.New(m.theme, index, toolUse.ID, width, nil, m.scope)
+		child = query.New(m.blockTheme, index, toolUse.ID, width, nil, m.scope)
 	}
-	return tools.New(m.theme, index, toolUse.ID, width, child)
+	return tools.New(m.blockTheme, index, toolUse.ID, width, child)
 }

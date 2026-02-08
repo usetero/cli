@@ -135,8 +135,6 @@ func (m *Model) renderBlock(entry blockEntry) string {
 
 	return lipgloss.NewStyle().
 		Width(cw).
-		Background(m.theme.BgElevated).
-		PaddingLeft(block.AssistantPadding - 1).
 		BorderLeft(true).
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(borderColor).
@@ -178,11 +176,11 @@ func (m *Model) gapLines(idx int) []string {
 // divider renders "  ◇ Tero 4s ─────────" for a completed round,
 // or "  ◇ Cancelled 1.2s ─────────" for a cancelled round.
 func (m *Model) divider(r *round.Model) string {
-	const indent = block.AssistantPadding
+	const indent = block.BorderWidth + block.PaddingX
 	cw := m.contentWidth()
 
 	colors := m.theme
-	border := lipgloss.NewStyle().Foreground(colors.Border)
+	border := lipgloss.NewStyle().Foreground(colors.Border).Background(colors.Bg)
 
 	duration := r.Duration()
 	var durationStr string
@@ -196,10 +194,10 @@ func (m *Model) divider(r *round.Model) string {
 	var prefixStyle lipgloss.Style
 	if r.State() == round.StateCancelled {
 		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorFg)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(colors.Bg)
 	} else {
 		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	}
 
 	prefixWidth := lipgloss.Width(prefix)

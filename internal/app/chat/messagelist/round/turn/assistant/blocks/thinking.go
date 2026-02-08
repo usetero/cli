@@ -71,8 +71,8 @@ func (m *ThinkingBlock) Index() int {
 // View renders the thinking block.
 func (m *ThinkingBlock) View() string {
 	colors := m.theme
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
-	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg)
 
 	chevron := mutedStyle.Render("▶")
 	if m.expanded {
@@ -81,24 +81,30 @@ func (m *ThinkingBlock) View() string {
 
 	header := fmt.Sprintf("%s %s", chevron, nameStyle.Render("Thinking"))
 
+	var content string
 	if !m.expanded {
-		return header
+		content = header
+	} else {
+		// Render body with markdown styling, wrapped to available width
+		bodyWidth := m.width - thinkingBodyPaddingH
+		if bodyWidth < 1 {
+			bodyWidth = 1
+		}
+		rendered := styles.RenderMarkdown(m.theme, m.text, bodyWidth)
+		rendered = strings.TrimRight(rendered, "\n")
+
+		body := lipgloss.NewStyle().
+			Padding(1, thinkingBodyPaddingRight, 1, thinkingBodyPaddingLeft).
+			Render(rendered)
+
+		content = header + "\n\n" + body
 	}
 
-	// Render body with markdown styling, wrapped to available width
-	bodyWidth := m.width - thinkingBodyPaddingH
-	if bodyWidth < 1 {
-		bodyWidth = 1
-	}
-	rendered := styles.RenderMarkdown(m.theme, m.text, bodyWidth)
-	rendered = strings.TrimRight(rendered, "\n")
-
-	body := lipgloss.NewStyle().
-		Padding(1, thinkingBodyPaddingRight, 1, thinkingBodyPaddingLeft).
-		Background(colors.BgElevated).
-		Render(rendered)
-
-	return header + "\n\n" + body
+	return lipgloss.NewStyle().
+		Background(colors.Bg).
+		Padding(0, block.PaddingX).
+		Width(m.width).
+		Render(content)
 }
 
 // Height returns the number of lines this block renders.

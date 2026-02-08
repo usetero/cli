@@ -31,7 +31,7 @@ func TestBlocksNoWrapping(t *testing.T) {
 		t.Run(fmt.Sprintf("term_%d", termWidth), func(t *testing.T) {
 			// Real width chain: app subtracts 2 for horizontal padding
 			assistantWidth := termWidth - 2
-			contentWidth := assistantWidth - block.AssistantPadding
+			contentWidth := assistantWidth - block.BorderWidth
 
 			// Real assistant model
 			m := New(theme, "test-msg", assistantWidth, nil, scope)
@@ -47,8 +47,8 @@ func TestBlocksNoWrapping(t *testing.T) {
 			m.AddBlock(tool)
 
 			// Verify each block renders within contentWidth.
-			// The viewport wraps blocks with PaddingLeft(block.AssistantPadding), so
-			// blocks themselves must fit within contentWidth.
+			// The viewport applies a border; blocks handle their own internal padding.
+			// Blocks must fit within contentWidth.
 			for _, b := range m.Blocks() {
 				b.SetWidth(contentWidth)
 				output := b.View()
@@ -75,10 +75,10 @@ func TestCancel(t *testing.T) {
 
 		m.Cancel()
 
-		// Tool should render as cancelled — no spinner, just icon + name
+		// Tool should render as cancelled — padding + icon/name + padding (3 lines)
 		view := tool.View()
-		if strings.Contains(view, "\n") {
-			t.Error("expected single-line render for cancelled tool")
+		if lines := strings.Count(view, "\n"); lines != 2 {
+			t.Errorf("expected 3-line render for cancelled tool, got %d lines", lines+1)
 		}
 		if !strings.Contains(view, "Query") {
 			t.Error("expected tool name in cancelled view")

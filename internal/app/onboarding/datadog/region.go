@@ -70,7 +70,7 @@ func (m *RegionModel) View() string {
 	for i, r := range domain.DatadogRegions {
 		var view string
 		if i == m.selected {
-			nameStyle := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
+			nameStyle := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true)
 			view = nameStyle.Render("> " + r.Name)
 		} else {
 			view = s.Body.Render("  " + r.Name)

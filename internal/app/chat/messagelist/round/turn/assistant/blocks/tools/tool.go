@@ -1,8 +1,6 @@
 package tools
 
 import (
-	"fmt"
-
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
@@ -78,8 +76,8 @@ type Model struct {
 
 // New creates a new tool model wrapping the given child.
 func New(theme styles.Theme, index int, toolID string, width int, child Child) *Model {
-	// Child gets width minus body horizontal padding
-	child.SetWidth(width - bodyPaddingH)
+	// Child gets width minus outer padding and body padding
+	child.SetWidth(width - block.PaddingX*2 - bodyPaddingH)
 	return &Model{
 		theme:    theme,
 		index:    index,
@@ -153,29 +151,29 @@ func (m *Model) updateStatus() {
 func (m *Model) View() string {
 	colors := m.theme
 	icon := m.renderIcon()
-	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg)
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	sp := mutedStyle.Render(" ")
+
+	var content string
 
 	switch m.status {
 	case StatusPending:
 		// ● Query ████████████
-		return fmt.Sprintf("%s %s %s",
-			icon,
-			nameStyle.Render(m.child.Name()),
-			m.thinking.View())
+		content = icon + sp + nameStyle.Render(m.child.Name()) + sp + m.thinking.View()
 
 	case StatusRunning:
 		// ● Query · Checking service status
 		//
 		//   ████████████
-		header := fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
+		header := icon + sp + nameStyle.Render(m.child.Name())
 		if status := m.child.Status(); status != "" {
-			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
+			header = icon + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+status)
 		}
 		body := lipgloss.NewStyle().
 			PaddingLeft(bodyPaddingLeft).
 			Render(m.thinking.View())
-		return header + "\n\n" + body
+		content = header + "\n\n" + body
 
 	case StatusSuccess:
 		// ✓ ▶ Query · Found 14 services  (collapsed)
@@ -187,27 +185,24 @@ func (m *Model) View() string {
 		if m.expanded {
 			chevron = mutedStyle.Render("▼")
 		}
-		header := fmt.Sprintf("%s %s %s", icon, chevron, nameStyle.Render(m.child.Name()))
+		header := icon + sp + chevron + sp + nameStyle.Render(m.child.Name())
 		if result != "" {
-			header = fmt.Sprintf("%s %s %s %s", icon, chevron, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+result))
+			header = icon + sp + chevron + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+result)
 		}
-		if !m.expanded {
-			return header
+		if !m.expanded || m.child.View() == "" {
+			content = header
+		} else {
+			body := m.bodyStyle().Render(m.child.View())
+			content = header + "\n\n" + body
 		}
-		childView := m.child.View()
-		if childView == "" {
-			return header
-		}
-		body := m.bodyStyle().Render(childView)
-		return header + "\n\n" + body
 
 	case StatusError:
 		// × Query · Checking service status
 		//
 		//   ERROR  Connection timeout
-		header := fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
+		header := icon + sp + nameStyle.Render(m.child.Name())
 		if status := m.child.Status(); status != "" {
-			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
+			header = icon + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+status)
 		}
 		errTag := lipgloss.NewStyle().
 			Background(colors.ErrorBg).
@@ -217,15 +212,19 @@ func (m *Model) View() string {
 		errMsg := m.child.Err().Error()
 		body := lipgloss.NewStyle().
 			PaddingLeft(bodyPaddingLeft).
-			Render(errTag + " " + mutedStyle.Render(errMsg))
-		return header + "\n\n" + body
+			Render(errTag + sp + mutedStyle.Render(errMsg))
+		content = header + "\n\n" + body
 
 	case StatusCancelled:
 		// ○ Query
-		return fmt.Sprintf("%s %s", icon, nameStyle.Render(m.child.Name()))
+		content = icon + sp + nameStyle.Render(m.child.Name())
 	}
 
-	return ""
+	return lipgloss.NewStyle().
+		Background(colors.Bg).
+		Padding(block.PaddingY, block.PaddingX).
+		Width(m.width).
+		Render(content)
 }
 
 // Height returns the number of lines this block renders.
@@ -237,22 +236,23 @@ func (m *Model) Height() int {
 func (m *Model) bodyStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Padding(1, bodyPaddingRight, 1, bodyPaddingLeft).
-		Background(m.theme.BgElevated)
+		Background(m.theme.Bg)
 }
 
 // renderIcon returns the colored status icon.
 func (m *Model) renderIcon() string {
 	colors := m.theme
+	bg := colors.Bg
 
 	switch m.status {
 	case StatusSuccess:
-		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Render(IconSuccess)
+		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(bg).Render(IconSuccess)
 	case StatusError:
-		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Render(IconError)
+		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(bg).Render(IconError)
 	case StatusCancelled:
-		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render(IconCancelled)
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(bg).Render(IconCancelled)
 	default:
-		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render(IconPending)
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(bg).Render(IconPending)
 	}
 }
 
@@ -264,7 +264,7 @@ func (m *Model) ForceStatus(status Status) {
 // SetWidth sets the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
-	m.child.SetWidth(width - bodyPaddingH)
+	m.child.SetWidth(width - block.PaddingX*2 - bodyPaddingH)
 }
 
 // Index returns the block index.

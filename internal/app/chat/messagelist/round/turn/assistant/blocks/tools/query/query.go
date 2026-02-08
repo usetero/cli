@@ -134,7 +134,7 @@ func (m *Model) View() string {
 	}
 
 	// Build table — no explicit width so columns size to content
-	tbl := table.New(m.theme, table.WithFitHeaders(), table.WithBackground(m.theme.BgElevated))
+	tbl := table.New(m.theme, table.WithFitHeaders(), table.WithBackground(m.theme.Bg))
 	tbl.Headers(headers...)
 
 	for _, row := range showRows {
@@ -148,7 +148,7 @@ func (m *Model) View() string {
 	result := tbl.View()
 
 	if truncatedRows > 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).PaddingLeft(1)
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).PaddingLeft(1)
 		result += "\n\n" + muted.Render(fmt.Sprintf("+%d more rows", truncatedRows))
 	}
 

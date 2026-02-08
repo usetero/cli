@@ -16,8 +16,8 @@ import (
 )
 
 // badge renders ● LABEL or just ● depending on showLabel.
-func badge(c color.Color, label string, showLabel bool) string {
-	style := lipgloss.NewStyle().Foreground(c)
+func badge(c color.Color, bg color.Color, label string, showLabel bool) string {
+	style := lipgloss.NewStyle().Foreground(c).Background(bg)
 	if showLabel {
 		return style.Render("● " + label)
 	}
@@ -28,12 +28,12 @@ func badge(c color.Color, label string, showLabel bool) string {
 
 // Service renders a colored status badge for a service status.
 func Service(theme styles.Theme, s domain.ServiceLogStatus, showLabel bool) string {
-	return badge(serviceColor(theme, s), s.String(), showLabel)
+	return badge(serviceColor(theme, s), theme.Bg, s.String(), showLabel)
 }
 
 // ServiceDot renders just the colored dot for a service status.
 func ServiceDot(theme styles.Theme, s domain.ServiceLogStatus) string {
-	return badge(serviceColor(theme, s), "", false)
+	return badge(serviceColor(theme, s), theme.Bg, "", false)
 }
 
 func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
@@ -53,17 +53,17 @@ func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
 
 // LogEvent renders a colored status badge for a log event status.
 func LogEvent(theme styles.Theme, s domain.LogEventStatus, showLabel bool) string {
-	return badge(logEventColor(theme, s), s.String(), showLabel)
+	return badge(logEventColor(theme, s), theme.Bg, s.String(), showLabel)
 }
 
 // LogEventDot renders just the colored dot for a log event status.
 func LogEventDot(theme styles.Theme, s domain.LogEventStatus) string {
-	return badge(logEventColor(theme, s), "", false)
+	return badge(logEventColor(theme, s), theme.Bg, "", false)
 }
 
 func logEventColor(theme styles.Theme, s domain.LogEventStatus) color.Color {
 	switch s {
-	case domain.LogEventStatusBroken:
+	case domain.LogEventStatusBroken, domain.LogEventStatusQuarantined:
 		return theme.ErrorFg
 	case domain.LogEventStatusResolved, domain.LogEventStatusClean:
 		return theme.SuccessFg
@@ -82,9 +82,9 @@ func Waste(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Render("●")
-	text := lipgloss.NewStyle().Foreground(theme.Text).Render(fmt.Sprintf("%d%% waste", pct))
-	return dot + " " + text
+	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Background(theme.Bg).Render("●")
+	text := lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render(fmt.Sprintf(" %d%% waste", pct))
+	return dot + text
 }
 
 // WasteShort renders a colored dot with just the percentage (no "waste" label).
@@ -93,16 +93,16 @@ func WasteShort(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Render("●")
-	text := lipgloss.NewStyle().Foreground(theme.Text).Render(fmt.Sprintf("%d%%", pct))
-	return dot + " " + text
+	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Background(theme.Bg).Render("●")
+	text := lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render(fmt.Sprintf(" %d%%", pct))
+	return dot + text
 }
 
 // --- Risk levels: HIGH > MEDIUM > LOW ---
 
 // Risk renders a colored status badge for a risk level.
 func Risk(theme styles.Theme, r domain.RiskLevel, showLabel bool) string {
-	return badge(riskColor(theme, r), r.String(), showLabel)
+	return badge(riskColor(theme, r), theme.Bg, r.String(), showLabel)
 }
 
 func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
@@ -122,12 +122,12 @@ func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
 
 // Policy renders a colored status badge for a policy status.
 func Policy(theme styles.Theme, s domain.PolicyLogStatus, showLabel bool) string {
-	return badge(policyColor(theme, s), s.String(), showLabel)
+	return badge(policyColor(theme, s), theme.Bg, s.String(), showLabel)
 }
 
 // PolicyDot renders just the colored dot for a policy status.
 func PolicyDot(theme styles.Theme, s domain.PolicyLogStatus) string {
-	return badge(policyColor(theme, s), "", false)
+	return badge(policyColor(theme, s), theme.Bg, "", false)
 }
 
 func policyColor(theme styles.Theme, s domain.PolicyLogStatus) color.Color {
