@@ -194,7 +194,7 @@ func (m *Model) divider(r *round.Model) string {
 	var prefixStyle lipgloss.Style
 	if r.State() == round.StateCancelled {
 		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(colors.Bg)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(colors.Bg)
 	} else {
 		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)
 		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)

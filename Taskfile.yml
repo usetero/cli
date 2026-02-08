@@ -160,6 +160,20 @@ tasks:
       - doppler run -- go run ./cmd/tero auth status
 
   # ===========================================================================
+  # Admin (internal tooling, not shipped)
+  # ===========================================================================
+
+  admin:join-org:
+    desc: Join a client organization (for support/debugging)
+    cmds:
+      - doppler run -- go run ./cmd/admin join-org {{.CLI_ARGS}}
+
+  admin:leave-org:
+    desc: Leave a client organization
+    cmds:
+      - doppler run -- go run ./cmd/admin leave-org {{.CLI_ARGS}}
+
+  # ===========================================================================
   # Dependencies
   # ===========================================================================
 

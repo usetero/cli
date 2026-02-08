@@ -5,7 +5,7 @@ import (
 )
 
 // version is set via ldflags during build
-var version = "dev"
+var version = "0.0.1" // TODO: revert to "dev"
 
 func main() {
 	cmd.Execute(version)

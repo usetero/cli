@@ -80,7 +80,7 @@ Just run 'tero' to start an interactive chat session.`,
 
 			// Create and run the TUI
 			p := tea.NewProgram(
-				app.New(ctx, cliConfig, theme, services, authService, prefs, storage, syncer, scope),
+				app.New(ctx, cliConfig, theme, version, services, authService, prefs, storage, syncer, scope),
 				tea.WithContext(ctx),
 				tea.WithEnvironment(os.Environ()),
 				tea.WithFilter(filter.Mouse),

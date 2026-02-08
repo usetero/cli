@@ -343,9 +343,9 @@ func (m *Model) renderContextPercent() string {
 	var fg color.Color
 	switch {
 	case m.contextPercent >= 90:
-		fg = colors.ErrorFg
+		fg = colors.ErrorBg
 	case m.contextPercent >= 75:
-		fg = colors.WarningFg
+		fg = colors.WarningBg
 	default:
 		fg = colors.TextMuted
 	}

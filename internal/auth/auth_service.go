@@ -15,6 +15,7 @@ type Auth interface {
 	WaitForAuth(ctx context.Context, deviceCode string, interval time.Duration) (*Result, error)
 	IsAuthenticated() bool
 	GetAccessToken(ctx context.Context) (string, error)
+	GetUserID(ctx context.Context) (string, error)
 	ClearTokens() error
 	RefreshTokenWithoutOrganization(ctx context.Context) (string, error)
 	RefreshTokenWithOrganization(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error)
@@ -172,6 +173,22 @@ func (s *Service) IsAuthenticated() bool {
 	return accessToken != ""
 }
 
+// GetUserID returns the WorkOS user ID from the current access token.
+func (s *Service) GetUserID(ctx context.Context) (string, error) {
+	token, err := s.GetAccessToken(ctx)
+	if err != nil {
+		return "", err
+	}
+	claims, err := ParseToken(token)
+	if err != nil {
+		return "", err
+	}
+	if claims.Sub == "" {
+		return "", errors.New("token has no user ID")
+	}
+	return claims.Sub, nil
+}
+
 // GetAccessToken retrieves the stored access token, refreshing if expired.
 func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	accessToken, err := s.storage.Get("access_token")
@@ -184,7 +201,8 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	}
 
 	// Check if token is expired
-	if isTokenExpired(accessToken) {
+	claims, err := ParseToken(accessToken)
+	if err != nil || claims.IsExpired() {
 		s.scope.Debug("access token expired, refreshing")
 		refreshToken, err := s.storage.Get("refresh_token")
 		if err != nil {

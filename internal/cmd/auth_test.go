@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"testing"
+
+	"github.com/usetero/cli/internal/auth"
 )
 
-func TestParseTokenClaims(t *testing.T) {
+func TestParseToken(t *testing.T) {
 	t.Parallel()
 	t.Run("parses valid JWT", func(t *testing.T) {
 		t.Parallel()
@@ -12,25 +14,25 @@ func TestParseTokenClaims(t *testing.T) {
 		// Header: {"alg":"HS256","typ":"JWT"}
 		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwib3JnX2lkIjoib3JnNDU2IiwiZXhwIjoxMjM0NTY3ODkwfQ.signature"
 
-		claims, err := parseTokenClaims(token)
+		claims, err := auth.ParseToken(token)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if claims["sub"] != "user123" {
-			t.Errorf("expected sub=user123, got %v", claims["sub"])
+		if claims.Sub != "user123" {
+			t.Errorf("expected sub=user123, got %v", claims.Sub)
 		}
-		if claims["email"] != "test@example.com" {
-			t.Errorf("expected email=test@example.com, got %v", claims["email"])
+		if claims.Email != "test@example.com" {
+			t.Errorf("expected email=test@example.com, got %v", claims.Email)
 		}
-		if claims["org_id"] != "org456" {
-			t.Errorf("expected org_id=org456, got %v", claims["org_id"])
+		if claims.OrgID != "org456" {
+			t.Errorf("expected org_id=org456, got %v", claims.OrgID)
 		}
 	})
 
 	t.Run("returns error for invalid token format", func(t *testing.T) {
 		t.Parallel()
-		_, err := parseTokenClaims("not-a-jwt")
+		_, err := auth.ParseToken("not-a-jwt")
 		if err == nil {
 			t.Error("expected error for invalid token")
 		}
@@ -38,7 +40,7 @@ func TestParseTokenClaims(t *testing.T) {
 
 	t.Run("returns error for invalid base64", func(t *testing.T) {
 		t.Parallel()
-		_, err := parseTokenClaims("header.!!!invalid-base64!!!.signature")
+		_, err := auth.ParseToken("header.!!!invalid-base64!!!.signature")
 		if err == nil {
 			t.Error("expected error for invalid base64")
 		}
@@ -47,7 +49,7 @@ func TestParseTokenClaims(t *testing.T) {
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		t.Parallel()
 		// "notjson" base64 encoded
-		_, err := parseTokenClaims("header.bm90anNvbg.signature")
+		_, err := auth.ParseToken("header.bm90anNvbg.signature")
 		if err == nil {
 			t.Error("expected error for invalid JSON")
 		}

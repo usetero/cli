@@ -14,6 +14,7 @@ type MockAuth struct {
 	WaitForAuthFunc                     func(ctx context.Context, deviceCode string, interval time.Duration) (*auth.Result, error)
 	IsAuthenticatedFunc                 func() bool
 	GetAccessTokenFunc                  func(ctx context.Context) (string, error)
+	GetUserIDFunc                       func(ctx context.Context) (string, error)
 	ClearTokensFunc                     func() error
 	RefreshTokenWithoutOrganizationFunc func(ctx context.Context) (string, error)
 	RefreshTokenWithOrganizationFunc    func(ctx context.Context, workosOrgID domain.WorkosOrganizationID) (string, error)
@@ -43,6 +44,13 @@ func (m *MockAuth) IsAuthenticated() bool {
 func (m *MockAuth) GetAccessToken(ctx context.Context) (string, error) {
 	if m.GetAccessTokenFunc != nil {
 		return m.GetAccessTokenFunc(ctx)
+	}
+	return "", nil
+}
+
+func (m *MockAuth) GetUserID(ctx context.Context) (string, error) {
+	if m.GetUserIDFunc != nil {
+		return m.GetUserIDFunc(ctx)
 	}
 	return "", nil
 }

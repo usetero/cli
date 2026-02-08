@@ -54,6 +54,8 @@ type Tokens struct {
 	SuccessBg color.Color
 	WarningFg color.Color
 	WarningBg color.Color
+	InfoFg    color.Color
+	InfoBg    color.Color
 }
 
 // buildTokens resolves semantic tokens from a palette and color mode.
@@ -85,12 +87,14 @@ func buildTokens(p Palette, isDark bool) Tokens {
 			InputBorder:      MustHex(p.Neutral[S500]),
 			InputBorderFocus: MustHex(p.Brand[S300]),
 
-			ErrorFg:   MustHex(p.Error[S400]),
-			ErrorBg:   MustHex(p.Error[S800]),
-			SuccessFg: MustHex(p.Success[S400]),
-			SuccessBg: MustHex(p.Success[S800]),
-			WarningFg: MustHex(p.Warning[S400]),
-			WarningBg: MustHex(p.Warning[S800]),
+			ErrorFg:   MustHex(p.Error[S950]),
+			ErrorBg:   MustHex(p.Error[S400]),
+			SuccessFg: MustHex(p.Success[S950]),
+			SuccessBg: MustHex(p.Success[S400]),
+			WarningFg: MustHex(p.Warning[S950]),
+			WarningBg: MustHex(p.Warning[S400]),
+			InfoFg:    MustHex(p.Info[S950]),
+			InfoBg:    MustHex(p.Info[S400]),
 		}
 	}
 
@@ -126,6 +130,8 @@ func buildTokens(p Palette, isDark bool) Tokens {
 		SuccessBg: MustHex(p.Success[S100]),
 		WarningFg: MustHex(p.Warning[S600]),
 		WarningBg: MustHex(p.Warning[S100]),
+		InfoFg:    MustHex(p.Info[S600]),
+		InfoBg:    MustHex(p.Info[S100]),
 	}
 }
 
@@ -164,6 +170,8 @@ type Theme struct {
 	SuccessBg color.Color
 	WarningFg color.Color
 	WarningBg color.Color
+	InfoFg    color.Color
+	InfoBg    color.Color
 
 	// Brand (gradient rendering)
 	GradientStart color.Color
@@ -228,6 +236,8 @@ func themeFromTokens(t Tokens) Theme {
 		SuccessBg: t.SuccessBg,
 		WarningFg: t.WarningFg,
 		WarningBg: t.WarningBg,
+		InfoFg:    t.InfoFg,
+		InfoBg:    t.InfoBg,
 
 		GradientStart: t.GradientStart,
 		GradientEnd:   t.GradientEnd,
@@ -247,7 +257,7 @@ func buildStyles(t Theme) Styles {
 		Help:    lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
 		Action:  lipgloss.NewStyle().Foreground(t.Accent).Background(t.Bg),
 		URL:     lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
-		Success: lipgloss.NewStyle().Foreground(t.SuccessFg).Background(t.Bg).Bold(true),
-		Error:   lipgloss.NewStyle().Foreground(t.ErrorFg).Background(t.Bg),
+		Success: lipgloss.NewStyle().Foreground(t.SuccessBg).Background(t.Bg).Bold(true),
+		Error:   lipgloss.NewStyle().Foreground(t.ErrorBg).Background(t.Bg),
 	}
 }

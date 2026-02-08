@@ -108,7 +108,7 @@ func (m *Model) View() string {
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
 			Background(t.ErrorBg).
-			Foreground(t.Text).
+			Foreground(t.ErrorFg).
 			Padding(0, 1)
 	case toastWarning:
 		label = "WARNING"
@@ -119,7 +119,7 @@ func (m *Model) View() string {
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
 			Background(t.WarningBg).
-			Foreground(t.Text).
+			Foreground(t.WarningFg).
 			Padding(0, 1)
 	case toastSuccess:
 		label = "OK"
@@ -130,18 +130,18 @@ func (m *Model) View() string {
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
 			Background(t.SuccessBg).
-			Foreground(t.Text).
+			Foreground(t.SuccessFg).
 			Padding(0, 1)
 	case toastInfo:
 		label = "INFO"
 		labelStyle = lipgloss.NewStyle().
-			Background(t.BgElevated).
-			Foreground(t.Accent).
+			Background(t.InfoBg).
+			Foreground(t.InfoFg).
 			Padding(0, 1).
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
-			Background(t.BgElevated).
-			Foreground(t.Text).
+			Background(t.InfoBg).
+			Foreground(t.InfoFg).
 			Padding(0, 1)
 	}
 

@@ -9,6 +9,7 @@ type Palette struct {
 	Error   ColorFamily // Error states (Red)
 	Success ColorFamily // Success states (Emerald)
 	Warning ColorFamily // Warning states (Amber)
+	Info    ColorFamily // Info states (Cyan)
 }
 
 // DefaultPalette returns the Tero brand palette.
@@ -21,5 +22,6 @@ func DefaultPalette() Palette {
 		Error:   RedFamily,
 		Success: EmeraldFamily,
 		Warning: AmberFamily,
+		Info:    CyanFamily,
 	}
 }

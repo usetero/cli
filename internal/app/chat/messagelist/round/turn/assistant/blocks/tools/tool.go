@@ -246,9 +246,9 @@ func (m *Model) renderIcon() string {
 
 	switch m.status {
 	case StatusSuccess:
-		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Background(bg).Render(IconSuccess)
+		return lipgloss.NewStyle().Foreground(colors.SuccessBg).Background(bg).Render(IconSuccess)
 	case StatusError:
-		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Background(bg).Render(IconError)
+		return lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(bg).Render(IconError)
 	case StatusCancelled:
 		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(bg).Render(IconCancelled)
 	default:

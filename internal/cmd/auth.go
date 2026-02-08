@@ -3,8 +3,6 @@ package cmd
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -283,7 +281,7 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Parse token to get claims
-			claims, err := parseTokenClaims(token)
+			claims, err := auth.ParseToken(token)
 			if err != nil {
 				// Token exists but can't be parsed - still authenticated, just can't show details
 				fmt.Println(s.Body.Render("Authenticated (invalid token format)"))
@@ -291,16 +289,12 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Check expiration
-			expired := false
-			var expiresAt time.Time
-			if exp, ok := claims["exp"].(float64); ok {
-				expiresAt = time.Unix(int64(exp), 0)
-				expired = time.Now().After(expiresAt)
-			}
+			expiresAt := claims.ExpiresAt()
+			expired := claims.IsExpired()
 
 			// Extract user info
-			email, _ := claims["email"].(string)
-			workosOrgID, _ := claims["org_id"].(string)
+			email := claims.Email
+			workosOrgID := claims.OrgID
 
 			fmt.Println(s.Success.Render("✓ Authenticated"))
 			if email != "" {
@@ -381,24 +375,4 @@ func promptOrgSelection(orgs []org) (*org, error) {
 	}
 
 	return &orgs[num-1], nil
-}
-
-// parseTokenClaims extracts claims from a JWT token without verification.
-func parseTokenClaims(token string) (map[string]interface{}, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid token format")
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode token: %w", err)
-	}
-
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, fmt.Errorf("failed to parse token: %w", err)
-	}
-
-	return claims, nil
 }

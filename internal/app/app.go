@@ -34,6 +34,7 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/cursor"
 	"github.com/usetero/cli/internal/tea/keymap"
+	"github.com/usetero/cli/internal/update"
 	"github.com/usetero/cli/internal/upload"
 )
 
@@ -58,9 +59,10 @@ const (
 
 // Model is the root application model.
 type Model struct {
-	ctx   context.Context
-	theme styles.Theme
-	scope log.Scope
+	ctx     context.Context
+	theme   styles.Theme
+	scope   log.Scope
+	version string
 
 	// Dependencies
 	cfg         *config.CLIConfig
@@ -101,6 +103,7 @@ func New(
 	ctx context.Context,
 	cfg *config.CLIConfig,
 	theme styles.Theme,
+	version string,
 	services api.APIServices,
 	authService auth.Auth,
 	prefs preferences.Preferences,
@@ -133,6 +136,7 @@ func New(
 		ctx:         ctx,
 		theme:       theme,
 		scope:       scope,
+		version:     version,
 		cfg:         cfg,
 		storage:     storage,
 		authService: authService,
@@ -151,7 +155,30 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.statusBar.Init(),
 		m.onboarding.Init(),
+		m.checkForUpdate(),
 	)
+}
+
+// checkForUpdate returns a command that checks GitHub for a newer release.
+// Skips the check for dev builds. Errors are logged, never shown to the user.
+func (m *Model) checkForUpdate() tea.Cmd {
+	if m.version == "" || m.version == "dev" {
+		return nil
+	}
+	version := m.version
+	ctx := m.ctx
+	scope := m.scope
+	return func() tea.Msg {
+		result, err := update.Check(ctx, version, "")
+		if err != nil {
+			scope.Debug("update check failed", "error", err)
+			return nil
+		}
+		if result == nil {
+			return nil
+		}
+		return appmsg.Info{Message: fmt.Sprintf("Tero CLI update available: %s → %s", result.Current, result.Latest)}
+	}
 }
 
 // Update handles messages.
