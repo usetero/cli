@@ -97,12 +97,11 @@ func (m *Model) getOrBuildColorRamp() []lipgloss.Style {
 		return ramp
 	}
 
-	colors := m.theme.Colors
 	blended := styles.BlendColors(
 		m.size*2,
-		colors.Brand.GradientStart,
-		colors.Brand.GradientEnd,
-		colors.Brand.GradientStart,
+		m.theme.GradientStart,
+		m.theme.GradientEnd,
+		m.theme.GradientStart,
 	)
 	ramp = make([]lipgloss.Style, len(blended))
 	for i, c := range blended {
@@ -135,7 +134,7 @@ func (m *Model) View() string {
 	var b strings.Builder
 	elapsed := time.Since(m.startTime)
 	labelRunes := []rune(m.label)
-	labelStyle := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	labelStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
 	allBorn := elapsed >= birthDuration
 
 	totalWidth := m.size

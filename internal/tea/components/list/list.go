@@ -33,11 +33,10 @@ func (d *delegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d *delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	name := item.FilterValue()
-	colors := d.theme.Colors
 	if index == m.Index() {
-		fmt.Fprint(w, lipgloss.NewStyle().Foreground(colors.Accent).Bold(true).Render("> "+name))
+		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Accent).Bold(true).Render("> "+name))
 	} else {
-		fmt.Fprint(w, lipgloss.NewStyle().Foreground(colors.Page.Text).Render("  "+name))
+		fmt.Fprint(w, lipgloss.NewStyle().Foreground(d.theme.Text).Render("  "+name))
 	}
 }
 
@@ -49,7 +48,6 @@ type Model struct {
 
 // New creates a new themed list.
 func New(theme styles.Theme, items []Item) *Model {
-	colors := theme.Colors
 	d := &delegate{theme: theme}
 
 	l := list.New(items, d, 0, 0)
@@ -60,11 +58,11 @@ func New(theme styles.Theme, items []Item) *Model {
 	l.SetShowPagination(false)
 
 	l.Styles.Title = lipgloss.NewStyle().
-		Foreground(colors.Accent).
+		Foreground(theme.Accent).
 		Bold(true)
 
 	l.Styles.TitleBar = lipgloss.NewStyle().
-		Foreground(colors.Accent)
+		Foreground(theme.Accent)
 
 	itemCount := len(items)
 	listHeight := itemCount

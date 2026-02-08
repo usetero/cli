@@ -17,17 +17,15 @@ type Model struct {
 
 // New creates a new progress bar.
 func New(theme styles.Theme, width int) *Model {
-	colors := theme.Colors
-
 	p := progress.New(
-		progress.WithColors(colors.Brand.GradientStart, colors.Brand.GradientEnd),
+		progress.WithColors(theme.GradientStart, theme.GradientEnd),
 		progress.WithWidth(width),
 		progress.WithFillCharacters('█', '░'),
 	)
 
 	p.PercentFormat = " %.1f%%"
-	p.PercentageStyle = p.PercentageStyle.Foreground(colors.Page.Text)
-	p.EmptyColor = colors.Page.TextMuted
+	p.PercentageStyle = p.PercentageStyle.Foreground(theme.Text)
+	p.EmptyColor = theme.TextMuted
 
 	return &Model{
 		theme:    theme,

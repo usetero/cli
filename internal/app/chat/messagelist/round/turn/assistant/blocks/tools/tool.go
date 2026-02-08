@@ -151,10 +151,10 @@ func (m *Model) updateStatus() {
 
 // View renders the tool with chrome.
 func (m *Model) View() string {
-	colors := m.theme.Colors
+	colors := m.theme
 	icon := m.renderIcon()
 	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
 
 	switch m.status {
 	case StatusPending:
@@ -210,8 +210,8 @@ func (m *Model) View() string {
 			header = fmt.Sprintf("%s %s %s", icon, nameStyle.Render(m.child.Name()), mutedStyle.Render("· "+status))
 		}
 		errTag := lipgloss.NewStyle().
-			Background(colors.Error.Bg).
-			Foreground(colors.Error.Fg).
+			Background(colors.ErrorBg).
+			Foreground(colors.ErrorFg).
 			Padding(0, 1).
 			Render("ERROR")
 		errMsg := m.child.Err().Error()
@@ -237,22 +237,22 @@ func (m *Model) Height() int {
 func (m *Model) bodyStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Padding(1, bodyPaddingRight, 1, bodyPaddingLeft).
-		Background(m.theme.Colors.Panel.Bg)
+		Background(m.theme.BgElevated)
 }
 
 // renderIcon returns the colored status icon.
 func (m *Model) renderIcon() string {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	switch m.status {
 	case StatusSuccess:
-		return lipgloss.NewStyle().Foreground(colors.Success.Fg).Render(IconSuccess)
+		return lipgloss.NewStyle().Foreground(colors.SuccessFg).Render(IconSuccess)
 	case StatusError:
-		return lipgloss.NewStyle().Foreground(colors.Error.Fg).Render(IconError)
+		return lipgloss.NewStyle().Foreground(colors.ErrorFg).Render(IconError)
 	case StatusCancelled:
-		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render(IconCancelled)
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render(IconCancelled)
 	default:
-		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render(IconPending)
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render(IconPending)
 	}
 }
 

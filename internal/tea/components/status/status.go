@@ -37,16 +37,15 @@ func ServiceDot(theme styles.Theme, s domain.ServiceLogStatus) string {
 }
 
 func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
-	colors := theme.Colors
 	switch s {
 	case domain.ServiceLogStatusBroken, domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
-		return colors.Error.Fg
+		return theme.ErrorFg
 	case domain.ServiceLogStatusStale, domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
-		return colors.Warning.Fg
+		return theme.WarningFg
 	case domain.ServiceLogStatusReady:
-		return colors.Success.Fg
+		return theme.SuccessFg
 	default:
-		return colors.Page.TextMuted
+		return theme.TextMuted
 	}
 }
 
@@ -63,16 +62,15 @@ func LogEventDot(theme styles.Theme, s domain.LogEventStatus) string {
 }
 
 func logEventColor(theme styles.Theme, s domain.LogEventStatus) color.Color {
-	colors := theme.Colors
 	switch s {
 	case domain.LogEventStatusBroken:
-		return colors.Error.Fg
+		return theme.ErrorFg
 	case domain.LogEventStatusResolved, domain.LogEventStatusClean:
-		return colors.Success.Fg
+		return theme.SuccessFg
 	case domain.LogEventStatusPending, domain.LogEventStatusAnalyzing, domain.LogEventStatusDiscovering:
-		return colors.Warning.Fg
+		return theme.WarningFg
 	default:
-		return colors.Page.TextMuted
+		return theme.TextMuted
 	}
 }
 
@@ -84,9 +82,8 @@ func Waste(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	colors := theme.Colors
-	dot := lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("●")
-	text := lipgloss.NewStyle().Foreground(colors.Page.Text).Render(fmt.Sprintf("%d%% waste", pct))
+	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Render("●")
+	text := lipgloss.NewStyle().Foreground(theme.Text).Render(fmt.Sprintf("%d%% waste", pct))
 	return dot + " " + text
 }
 
@@ -96,9 +93,8 @@ func WasteShort(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	colors := theme.Colors
-	dot := lipgloss.NewStyle().Foreground(colors.Warning.Fg).Render("●")
-	text := lipgloss.NewStyle().Foreground(colors.Page.Text).Render(fmt.Sprintf("%d%%", pct))
+	dot := lipgloss.NewStyle().Foreground(theme.WarningFg).Render("●")
+	text := lipgloss.NewStyle().Foreground(theme.Text).Render(fmt.Sprintf("%d%%", pct))
 	return dot + " " + text
 }
 
@@ -110,16 +106,15 @@ func Risk(theme styles.Theme, r domain.RiskLevel, showLabel bool) string {
 }
 
 func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
-	colors := theme.Colors
 	switch r {
 	case domain.RiskLevelHigh:
-		return colors.Error.Fg
+		return theme.ErrorFg
 	case domain.RiskLevelMedium:
-		return colors.Warning.Fg
+		return theme.WarningFg
 	case domain.RiskLevelLow:
-		return colors.Success.Fg
+		return theme.SuccessFg
 	default:
-		return colors.Page.TextMuted
+		return theme.TextMuted
 	}
 }
 
@@ -136,15 +131,14 @@ func PolicyDot(theme styles.Theme, s domain.PolicyLogStatus) string {
 }
 
 func policyColor(theme styles.Theme, s domain.PolicyLogStatus) color.Color {
-	colors := theme.Colors
 	switch s {
 	case domain.PolicyLogStatusApproved:
-		return colors.Success.Fg
+		return theme.SuccessFg
 	case domain.PolicyLogStatusPending:
-		return colors.Warning.Fg
+		return theme.WarningFg
 	case domain.PolicyLogStatusDismissed:
-		return colors.Page.TextMuted
+		return theme.TextMuted
 	default:
-		return colors.Page.TextMuted
+		return theme.TextMuted
 	}
 }

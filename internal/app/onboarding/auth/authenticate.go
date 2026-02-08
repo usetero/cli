@@ -67,7 +67,7 @@ func NewAuthenticate(ctx context.Context, theme styles.Theme, authService auth.A
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &AuthenticateModel{
 		ctx:     ctx,
@@ -184,7 +184,6 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 // View renders the authenticate UI.
 func (m *AuthenticateModel) View() string {
 	s := m.theme.Styles
-	colors := m.theme.Colors
 
 	if m.state == stateInitializing {
 		return s.Title.Render("Initializing authentication...")
@@ -210,7 +209,7 @@ func (m *AuthenticateModel) View() string {
 		"",
 	)
 
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	mutedStyle := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
 
 	switch {
 	case m.state == statePolling:

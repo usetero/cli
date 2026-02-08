@@ -38,7 +38,7 @@ func New(theme styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &Model{
 		theme:    theme,

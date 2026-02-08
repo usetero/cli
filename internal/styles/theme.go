@@ -6,202 +6,247 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Surface defines colors for a background surface.
-// Text colors are guaranteed to have good contrast with Bg.
-type Surface struct {
-	Bg         color.Color
-	Text       color.Color // primary text
-	TextMuted  color.Color // secondary (keys, labels)
-	TextSubtle color.Color // tertiary (descriptions, hints)
-}
+// --- Layer 1: Palette (raw color scales) ---
+// Already defined in palette.go and colors.go.
+// Palette holds ColorFamily maps keyed by Shade.
 
-// InputSurface defines colors for input elements.
-type InputSurface struct {
-	Bg          color.Color
-	Text        color.Color
-	Placeholder color.Color
-	Border      color.Color
-	BorderFocus color.Color
-}
+// --- Layer 2: Tokens (semantic names, resolved from palette + dark/light) ---
 
-// BrandColors defines brand gradient colors.
-type BrandColors struct {
-	GradientStart color.Color // Lime - start of gradient
-	GradientEnd   color.Color // Emerald - end of gradient
-}
-
-// StatusColors defines colors for a status type.
-type StatusColors struct {
-	Fg color.Color // Foreground (text/icon)
-	Bg color.Color // Background
-}
-
-// Colors holds all semantic color tokens, organized by surface/context.
-type Colors struct {
+// Tokens holds all semantic color assignments for a color mode.
+// This is the full vocabulary of colors available to the app.
+// Built once from a Palette, never mutated.
+type Tokens struct {
 	IsDark bool
 
-	// Surfaces - colors grouped by where they appear
-	Page     Surface      // Background surface (text colors + bg)
-	Elevated color.Color  // Raised background (blocks, cards, toasts) — use WithBg to apply
-	Input    InputSurface // Input fields
+	// Backgrounds
+	Bg         color.Color // Default page/app background
+	BgElevated color.Color // Raised surfaces (blocks, cards, toasts)
+
+	// Text
+	Text       color.Color // Primary text
+	TextMuted  color.Color // Secondary text (keys, labels)
+	TextSubtle color.Color // Tertiary text (descriptions, hints)
 
 	// Brand
-	Brand       BrandColors // Logo gradient, header diagonals
-	Accent      color.Color // Interactive: links, selections, prompts (Emerald)
-	AccentAlt   color.Color // Alternate accent: focus rings, highlights (Cyan)
-	SelectionBg color.Color // Text selection background
-	SelectionFg color.Color // Text selection foreground
+	GradientStart color.Color // Brand gradient start
+	GradientEnd   color.Color // Brand gradient end
+	Accent        color.Color // Interactive: links, selections, prompts
+	AccentAlt     color.Color // Alternate accent: focus rings, highlights
+
+	// Selection
+	SelectionBg color.Color
+	SelectionFg color.Color
 
 	// Borders
-	BorderDefault color.Color // Dividers, separators
+	Border color.Color // Dividers, separators
+
+	// Input
+	InputBg          color.Color
+	InputText        color.Color
+	InputPlaceholder color.Color
+	InputBorder      color.Color
+	InputBorderFocus color.Color
 
 	// Status
-	Error   StatusColors
-	Success StatusColors
-	Warning StatusColors
+	ErrorFg   color.Color
+	ErrorBg   color.Color
+	SuccessFg color.Color
+	SuccessBg color.Color
+	WarningFg color.Color
+	WarningBg color.Color
 }
 
-// Styles holds pre-built lipgloss styles derived from colors.
-type Styles struct {
-	Title    lipgloss.Style // Page/step titles (Accent + Bold)
-	Subtitle lipgloss.Style // Subtitle/explanatory text (TextMuted)
-	Body     lipgloss.Style // Main text content (Text)
-	Help     lipgloss.Style // Secondary help text (TextMuted)
-	Action   lipgloss.Style // User action prompts (Accent)
-	URL      lipgloss.Style // URL displays (TextMuted)
-	Success  lipgloss.Style // Success messages (Success + Bold)
-	Error    lipgloss.Style // Error messages (Error)
-}
-
-// Theme holds colors and pre-built styles. Created once at startup.
-type Theme struct {
-	Colors Colors
-	Styles Styles
-}
-
-// WithBg returns a copy of the theme with Page.Bg changed.
-// Use this at surface boundaries so children render on the new background
-// using the same Page.Text, Page.TextMuted, etc.
-func (t Theme) WithBg(bg color.Color) Theme {
-	c := t.Colors
-	c.Page.Bg = bg
-	return Theme{
-		Colors: c,
-		Styles: buildStyles(c),
-	}
-}
-
-// NewTheme creates a new theme. Use isDark=true for dark mode.
-func NewTheme(isDark bool) Theme {
-	colors := buildColors(DefaultPalette(), isDark)
-	return Theme{
-		Colors: colors,
-		Styles: buildStyles(colors),
-	}
-}
-
-// buildColors constructs colors from a palette
-func buildColors(p Palette, isDark bool) Colors {
+// buildTokens resolves semantic tokens from a palette and color mode.
+func buildTokens(p Palette, isDark bool) Tokens {
 	if isDark {
-		return Colors{
+		return Tokens{
 			IsDark: true,
 
-			Page: Surface{
-				Bg:         MustHex(p.Neutral[S900]),
-				Text:       MustHex(p.Neutral[S200]),
-				TextMuted:  MustHex(p.Neutral[S400]),
-				TextSubtle: MustHex(p.Neutral[S500]),
-			},
-			Elevated: MustHex(p.Neutral[S800]),
-			Input: InputSurface{
-				Bg:          MustHex(p.Neutral[S800]),
-				Text:        MustHex(p.Neutral[S50]),
-				Placeholder: MustHex(p.Neutral[S400]),
-				Border:      MustHex(p.Neutral[S500]),
-				BorderFocus: MustHex(p.Brand[S300]),
-			},
+			Bg:         MustHex(p.Neutral[S900]),
+			BgElevated: MustHex(p.Neutral[S800]),
 
-			Brand: BrandColors{
-				GradientStart: MustHex(p.Brand[S300]),  // Emerald-300 (bright)
-				GradientEnd:   MustHex(p.Accent[S600]), // Cyan-600 (darker)
-			},
-			Accent:      MustHex(p.Brand[S300]),  // Emerald-300
-			AccentAlt:   MustHex(p.Accent[S600]), // Cyan-600
-			SelectionBg: MustHex(p.Brand[S600]),  // Emerald-600
-			SelectionFg: MustHex(p.Neutral[S50]), // White
+			Text:       MustHex(p.Neutral[S200]),
+			TextMuted:  MustHex(p.Neutral[S400]),
+			TextSubtle: MustHex(p.Neutral[S500]),
 
-			BorderDefault: MustHex(p.Neutral[S600]),
+			GradientStart: MustHex(p.Brand[S300]),
+			GradientEnd:   MustHex(p.Accent[S600]),
+			Accent:        MustHex(p.Brand[S300]),
+			AccentAlt:     MustHex(p.Accent[S600]),
 
-			Error: StatusColors{
-				Fg: MustHex(p.Error[S400]),
-				Bg: MustHex(p.Error[S800]),
-			},
-			Success: StatusColors{
-				Fg: MustHex(p.Success[S400]),
-				Bg: MustHex(p.Success[S800]),
-			},
-			Warning: StatusColors{
-				Fg: MustHex(p.Warning[S400]),
-				Bg: MustHex(p.Warning[S800]),
-			},
+			SelectionBg: MustHex(p.Brand[S600]),
+			SelectionFg: MustHex(p.Neutral[S50]),
+
+			Border: MustHex(p.Neutral[S600]),
+
+			InputBg:          MustHex(p.Neutral[S800]),
+			InputText:        MustHex(p.Neutral[S50]),
+			InputPlaceholder: MustHex(p.Neutral[S400]),
+			InputBorder:      MustHex(p.Neutral[S500]),
+			InputBorderFocus: MustHex(p.Brand[S300]),
+
+			ErrorFg:   MustHex(p.Error[S400]),
+			ErrorBg:   MustHex(p.Error[S800]),
+			SuccessFg: MustHex(p.Success[S400]),
+			SuccessBg: MustHex(p.Success[S800]),
+			WarningFg: MustHex(p.Warning[S400]),
+			WarningBg: MustHex(p.Warning[S800]),
 		}
 	}
 
-	// Light theme - flip the shade numbers
-	return Colors{
+	return Tokens{
 		IsDark: false,
 
-		Page: Surface{
-			Bg:         MustHex(p.Neutral[S50]),
-			Text:       MustHex(p.Neutral[S900]),
-			TextMuted:  MustHex(p.Neutral[S600]),
-			TextSubtle: MustHex(p.Neutral[S500]),
-		},
-		SurfaceBg: MustHex(p.Neutral[S100]),
-		Input: InputSurface{
-			Bg:          MustHex(White),
-			Text:        MustHex(p.Neutral[S900]),
-			Placeholder: MustHex(p.Neutral[S400]),
-			Border:      MustHex(p.Neutral[S300]),
-			BorderFocus: MustHex(p.Brand[S600]),
-		},
+		Bg:         MustHex(p.Neutral[S50]),
+		BgElevated: MustHex(p.Neutral[S100]),
 
-		Brand: BrandColors{
-			GradientStart: MustHex(p.Brand[S600]),  // Emerald-600
-			GradientEnd:   MustHex(p.Accent[S800]), // Cyan-800 (darker for light bg)
-		},
-		Accent:      MustHex(p.Brand[S600]),   // Emerald-600
-		AccentAlt:   MustHex(p.Accent[S600]),  // Cyan-600
-		SelectionBg: MustHex(p.Brand[S500]),   // Emerald-500
-		SelectionFg: MustHex(p.Neutral[S950]), // Near black
+		Text:       MustHex(p.Neutral[S900]),
+		TextMuted:  MustHex(p.Neutral[S600]),
+		TextSubtle: MustHex(p.Neutral[S500]),
 
-		BorderDefault: MustHex(p.Neutral[S300]),
+		GradientStart: MustHex(p.Brand[S600]),
+		GradientEnd:   MustHex(p.Accent[S800]),
+		Accent:        MustHex(p.Brand[S600]),
+		AccentAlt:     MustHex(p.Accent[S600]),
 
-		Error: StatusColors{
-			Fg: MustHex(p.Error[S600]),
-			Bg: MustHex(p.Error[S100]),
-		},
-		Success: StatusColors{
-			Fg: MustHex(p.Success[S600]),
-			Bg: MustHex(p.Success[S100]),
-		},
-		Warning: StatusColors{
-			Fg: MustHex(p.Warning[S600]),
-			Bg: MustHex(p.Warning[S100]),
-		},
+		SelectionBg: MustHex(p.Brand[S500]),
+		SelectionFg: MustHex(p.Neutral[S950]),
+
+		Border: MustHex(p.Neutral[S300]),
+
+		InputBg:          MustHex(White),
+		InputText:        MustHex(p.Neutral[S900]),
+		InputPlaceholder: MustHex(p.Neutral[S400]),
+		InputBorder:      MustHex(p.Neutral[S300]),
+		InputBorderFocus: MustHex(p.Brand[S600]),
+
+		ErrorFg:   MustHex(p.Error[S600]),
+		ErrorBg:   MustHex(p.Error[S100]),
+		SuccessFg: MustHex(p.Success[S600]),
+		SuccessBg: MustHex(p.Success[S100]),
+		WarningFg: MustHex(p.Warning[S600]),
+		WarningBg: MustHex(p.Warning[S100]),
 	}
 }
 
-// buildStyles creates pre-built styles from colors
-func buildStyles(c Colors) Styles {
+// --- Layer 3: Theme (active context, flows through the component tree) ---
+
+// Theme is the active color context passed to every component.
+// Components use theme.Bg, theme.Text, etc. without knowing what surface they're on.
+// Use WithBg at surface boundaries to change the background for children.
+type Theme struct {
+	// Active context — what components render with
+	Bg         color.Color
+	Text       color.Color
+	TextMuted  color.Color
+	TextSubtle color.Color
+	Accent     color.Color
+	AccentAlt  color.Color
+
+	// Selection
+	SelectionBg color.Color
+	SelectionFg color.Color
+
+	// Border
+	Border color.Color
+
+	// Input
+	InputBg          color.Color
+	InputText        color.Color
+	InputPlaceholder color.Color
+	InputBorder      color.Color
+	InputBorderFocus color.Color
+
+	// Status
+	ErrorFg   color.Color
+	ErrorBg   color.Color
+	SuccessFg color.Color
+	SuccessBg color.Color
+	WarningFg color.Color
+	WarningBg color.Color
+
+	// Brand (gradient rendering)
+	GradientStart color.Color
+	GradientEnd   color.Color
+
+	// Available backgrounds (not active — options for WithBg)
+	BgElevated color.Color
+
+	// Pre-built styles
+	Styles Styles
+}
+
+// WithBg returns a copy of the theme with Bg changed.
+// Use at surface boundaries so children render on the new background.
+func (t Theme) WithBg(bg color.Color) Theme {
+	t.Bg = bg
+	t.Styles = buildStyles(t)
+	return t
+}
+
+// Styles holds pre-built lipgloss styles derived from the theme.
+type Styles struct {
+	Title   lipgloss.Style // Accent + Bold
+	Body    lipgloss.Style // Text
+	Help    lipgloss.Style // TextMuted
+	Action  lipgloss.Style // Accent
+	URL     lipgloss.Style // TextMuted
+	Success lipgloss.Style // SuccessFg + Bold
+	Error   lipgloss.Style // ErrorFg
+}
+
+// NewTheme creates a new theme from the default palette. Use isDark=true for dark mode.
+func NewTheme(isDark bool) Theme {
+	tokens := buildTokens(DefaultPalette(), isDark)
+	return themeFromTokens(tokens)
+}
+
+// themeFromTokens creates a Theme from resolved tokens.
+func themeFromTokens(t Tokens) Theme {
+	theme := Theme{
+		Bg:         t.Bg,
+		Text:       t.Text,
+		TextMuted:  t.TextMuted,
+		TextSubtle: t.TextSubtle,
+		Accent:     t.Accent,
+		AccentAlt:  t.AccentAlt,
+
+		SelectionBg: t.SelectionBg,
+		SelectionFg: t.SelectionFg,
+
+		Border: t.Border,
+
+		InputBg:          t.InputBg,
+		InputText:        t.InputText,
+		InputPlaceholder: t.InputPlaceholder,
+		InputBorder:      t.InputBorder,
+		InputBorderFocus: t.InputBorderFocus,
+
+		ErrorFg:   t.ErrorFg,
+		ErrorBg:   t.ErrorBg,
+		SuccessFg: t.SuccessFg,
+		SuccessBg: t.SuccessBg,
+		WarningFg: t.WarningFg,
+		WarningBg: t.WarningBg,
+
+		GradientStart: t.GradientStart,
+		GradientEnd:   t.GradientEnd,
+
+		BgElevated: t.BgElevated,
+	}
+	theme.Styles = buildStyles(theme)
+	return theme
+}
+
+// buildStyles creates pre-built styles from the active theme.
+func buildStyles(t Theme) Styles {
 	return Styles{
-		Title:    lipgloss.NewStyle().Foreground(c.Accent).Bold(true),
-		Subtitle: lipgloss.NewStyle().Foreground(c.Page.TextMuted),
-		Body:     lipgloss.NewStyle().Foreground(c.Page.Text),
-		Help:     lipgloss.NewStyle().Foreground(c.Page.TextMuted),
-		Action:   lipgloss.NewStyle().Foreground(c.Accent),
-		URL:      lipgloss.NewStyle().Foreground(c.Page.TextMuted),
-		Success:  lipgloss.NewStyle().Foreground(c.Success.Fg).Bold(true),
-		Error:    lipgloss.NewStyle().Foreground(c.Error.Fg),
+		Title:   lipgloss.NewStyle().Foreground(t.Accent).Bold(true),
+		Body:    lipgloss.NewStyle().Foreground(t.Text),
+		Help:    lipgloss.NewStyle().Foreground(t.TextMuted),
+		Action:  lipgloss.NewStyle().Foreground(t.Accent),
+		URL:     lipgloss.NewStyle().Foreground(t.TextMuted),
+		Success: lipgloss.NewStyle().Foreground(t.SuccessFg).Bold(true),
+		Error:   lipgloss.NewStyle().Foreground(t.ErrorFg),
 	}
 }

@@ -60,7 +60,7 @@ func NewDiscovery(
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)
+	sp.Style = lipgloss.NewStyle().Foreground(theme.Accent)
 
 	return &DiscoveryModel{
 		ctx:              ctx,

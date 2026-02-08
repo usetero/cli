@@ -169,7 +169,7 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	colors := m.theme.Colors
+	colors := m.theme
 	innerWidth := m.width - 2 // borders
 	contentWidth := innerWidth - 2*paddingH
 
@@ -188,7 +188,7 @@ func (m *Model) View() string {
 
 	// Separator between input and items
 	sep := lipgloss.NewStyle().
-		Foreground(colors.BorderDefault).
+		Foreground(colors.Border).
 		Render(strings.Repeat("─", contentWidth))
 
 	// Stack: header + gap + input + separator + items
@@ -203,18 +203,18 @@ func (m *Model) View() string {
 
 	return lipgloss.NewStyle().
 		Width(m.width).
-		Background(colors.Page.Bg).
-		Foreground(colors.Page.Text).
+		Background(colors.Bg).
+		Foreground(colors.Text).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(colors.Accent).
-		BorderBackground(colors.Page.Bg).
+		BorderBackground(colors.Bg).
 		Padding(0, paddingH).
 		Render(content)
 }
 
 // renderHeader renders "Commands ╱╱╱╱╱╱╱╱" with gradient slashes.
 func (m *Model) renderHeader(width int) string {
-	colors := m.theme.Colors
+	colors := m.theme
 	title := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true).Render("Commands")
 	titleWidth := lipgloss.Width(title)
 
@@ -231,7 +231,7 @@ func (m *Model) renderHeader(width int) string {
 
 // renderItem renders a single list item.
 func (m *Model) renderItem(index, width int) string {
-	colors := m.theme.Colors
+	colors := m.theme
 	item := m.matches[index]
 	name := item.command.Name
 	isSelected := index == m.selected
@@ -242,25 +242,25 @@ func (m *Model) renderItem(index, width int) string {
 	if isSelected {
 		// Highlight matched characters in selected item
 		styled := m.highlightMatches(name, item.matchIndexes,
-			lipgloss.NewStyle().Foreground(colors.Page.Bg).Background(colors.Accent).Bold(true),
-			lipgloss.NewStyle().Foreground(colors.Page.Bg).Background(colors.Accent),
+			lipgloss.NewStyle().Foreground(colors.Bg).Background(colors.Accent).Bold(true),
+			lipgloss.NewStyle().Foreground(colors.Bg).Background(colors.Accent),
 		)
 		return lipgloss.NewStyle().
 			Width(width).
 			Background(colors.Accent).
-			Foreground(colors.Page.Bg).
+			Foreground(colors.Bg).
 			Render(styled)
 	}
 
 	// Highlight matched characters in normal item
 	styled := m.highlightMatches(name, item.matchIndexes,
-		lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Page.Bg).Bold(true),
-		lipgloss.NewStyle().Foreground(colors.Page.Text).Background(colors.Page.Bg),
+		lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true),
+		lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg),
 	)
 	return lipgloss.NewStyle().
 		Width(width).
-		Background(colors.Page.Bg).
-		Foreground(colors.Page.Text).
+		Background(colors.Bg).
+		Foreground(colors.Text).
 		Render(styled)
 }
 

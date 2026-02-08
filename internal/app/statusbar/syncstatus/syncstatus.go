@@ -204,34 +204,34 @@ func (m *Model) CompactView() string {
 		return ""
 	}
 
-	colors := m.theme.Colors
-	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	colors := m.theme
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
 
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
 		return ""
 
 	case *powersync.Connecting:
-		return dot(colors.Warning.Fg) + " " + muted.Render("connecting...")
+		return dot(colors.WarningFg) + " " + muted.Render("connecting...")
 
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			return dot(colors.Warning.Fg) + " " + muted.Render(fmt.Sprintf("syncing %d%%", pct))
+			return dot(colors.WarningFg) + " " + muted.Render(fmt.Sprintf("syncing %d%%", pct))
 		}
-		return dot(colors.Warning.Fg) + " " + muted.Render("syncing...")
+		return dot(colors.WarningFg) + " " + muted.Render("syncing...")
 
 	case *powersync.Ready:
-		return dot(colors.Success.Fg) + " " + muted.Render(m.host)
+		return dot(colors.SuccessFg) + " " + muted.Render(m.host)
 
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			return dot(colors.Error.Fg) + " " + muted.Render("reconnecting...")
+			return dot(colors.ErrorFg) + " " + muted.Render("reconnecting...")
 		}
-		return dot(colors.Warning.Fg) + " " + muted.Render("reconnecting...")
+		return dot(colors.WarningFg) + " " + muted.Render("reconnecting...")
 
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.Error.Fg)
+		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg)
 		return errStyle.Render("○") + " " + errStyle.Render("error")
 
 	default:
@@ -254,38 +254,38 @@ func (m *Model) ExpandedView(width int) string {
 
 // renderStatusLine renders sync and upload status on one line.
 func (m *Model) renderStatusLine() string {
-	colors := m.theme.Colors
-	muted := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	colors := m.theme
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted)
 
 	var syncPart string
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
-		syncPart = dot(colors.Page.TextSubtle) + " " + muted.Render("Disconnected")
+		syncPart = dot(colors.TextSubtle) + " " + muted.Render("Disconnected")
 	case *powersync.Connecting:
-		syncPart = dot(colors.Warning.Fg) + " " + muted.Render("Connecting")
+		syncPart = dot(colors.WarningFg) + " " + muted.Render("Connecting")
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			syncPart = dot(colors.Warning.Fg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
+			syncPart = dot(colors.WarningFg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
 		} else {
-			syncPart = dot(colors.Warning.Fg) + " " + muted.Render("Syncing")
+			syncPart = dot(colors.WarningFg) + " " + muted.Render("Syncing")
 		}
 	case *powersync.Ready:
-		syncPart = dot(colors.Success.Fg) + " " + muted.Render("Connected")
+		syncPart = dot(colors.SuccessFg) + " " + muted.Render("Connected")
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			syncPart = dot(colors.Error.Fg) + " " + muted.Render("Reconnecting (degraded)")
+			syncPart = dot(colors.ErrorFg) + " " + muted.Render("Reconnecting (degraded)")
 		} else {
-			syncPart = dot(colors.Warning.Fg) + " " + muted.Render("Reconnecting")
+			syncPart = dot(colors.WarningFg) + " " + muted.Render("Reconnecting")
 		}
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.Error.Fg)
+		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorFg)
 		syncPart = errStyle.Render("○") + " " + errStyle.Render(state.Err.Error())
 	}
 
 	var uploadPart string
 	if m.totalPending > 0 {
-		warn := lipgloss.NewStyle().Foreground(colors.Warning.Fg)
+		warn := lipgloss.NewStyle().Foreground(colors.WarningFg)
 		uploadPart = warn.Render(fmt.Sprintf("%d uploading", m.totalPending))
 	} else {
 		uploadPart = muted.Render("Upload queue empty")

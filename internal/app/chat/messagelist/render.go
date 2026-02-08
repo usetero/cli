@@ -48,7 +48,7 @@ func (m *Model) renderVisible() []string {
 	// Highlight state
 	startBlock, startLine, startCol, endBlock, endLine, endCol := m.getHighlightRange()
 	hasHL := m.hasHighlight()
-	highlighter := highlight.WithColors(m.theme.Colors.SelectionBg, m.theme.Colors.SelectionFg)
+	highlighter := highlight.WithColors(m.theme.SelectionBg, m.theme.SelectionFg)
 
 	for idx := offsetIdx; idx < len(m.blocks); idx++ {
 		// Insert gap/divider before this block (except the first visible block)
@@ -121,21 +121,21 @@ func (m *Model) renderBlock(entry blockEntry) string {
 	cw := m.contentWidth()
 
 	// Determine border color based on block type and focus state.
-	borderColor := m.theme.Colors.Page.Bg
+	borderColor := m.theme.Bg
 	if b.Kind() == block.KindUser {
 		// User messages: accent border, brighter when focused.
-		borderColor = m.theme.Colors.Accent
+		borderColor = m.theme.Accent
 		if b.Focused() {
-			borderColor = m.theme.Colors.AccentAlt
+			borderColor = m.theme.AccentAlt
 		}
 	} else if b.Focused() {
 		// Assistant blocks: invisible border, accent when focused.
-		borderColor = m.theme.Colors.AccentAlt
+		borderColor = m.theme.AccentAlt
 	}
 
 	return lipgloss.NewStyle().
 		Width(cw).
-		Background(m.theme.Colors.Panel.Bg).
+		Background(m.theme.BgElevated).
 		PaddingLeft(block.AssistantPadding - 1).
 		BorderLeft(true).
 		BorderStyle(lipgloss.NormalBorder()).
@@ -181,8 +181,8 @@ func (m *Model) divider(r *round.Model) string {
 	const indent = block.AssistantPadding
 	cw := m.contentWidth()
 
-	colors := m.theme.Colors
-	border := lipgloss.NewStyle().Foreground(colors.BorderDefault)
+	colors := m.theme
+	border := lipgloss.NewStyle().Foreground(colors.Border)
 
 	duration := r.Duration()
 	var durationStr string
@@ -196,10 +196,10 @@ func (m *Model) divider(r *round.Model) string {
 	var prefixStyle lipgloss.Style
 	if r.State() == round.StateCancelled {
 		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error.Fg)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorFg)
 	} else {
 		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted)
 	}
 
 	prefixWidth := lipgloss.Width(prefix)

@@ -61,7 +61,7 @@ func (m *RegionModel) Update(msg tea.Msg) tea.Cmd {
 // View renders the region selection UI.
 func (m *RegionModel) View() string {
 	s := m.theme.Styles
-	colors := m.theme.Colors
+	colors := m.theme
 
 	title := s.Title.Render("Select your Datadog region")
 	subtitle := s.Help.Render("Choose the region where your Datadog account is hosted")

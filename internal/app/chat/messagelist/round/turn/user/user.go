@@ -44,8 +44,8 @@ func (m *Model) View() string {
 	}
 
 	style := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.Panel.Text).
-		Background(m.theme.Colors.Panel.Bg).
+		Foreground(m.theme.Text).
+		Background(m.theme.Bg).
 		Width(m.width)
 
 	return style.Render(m.input.Text)

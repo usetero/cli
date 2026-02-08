@@ -49,10 +49,10 @@ func (m *quitDialog) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the dialog box. The caller positions it via compositor layers.
 func (m *quitDialog) View() string {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	question := lipgloss.NewStyle().
-		Foreground(colors.Page.Text).
+		Foreground(colors.Text).
 		Bold(true).
 		Render("Are you sure you want to quit?")
 
@@ -63,31 +63,31 @@ func (m *quitDialog) View() string {
 	content := lipgloss.JoinVertical(lipgloss.Center, question, "", buttons)
 
 	return lipgloss.NewStyle().
-		Background(colors.Page.Bg).
-		Foreground(colors.Page.Text).
+		Background(colors.Bg).
+		Foreground(colors.Text).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(colors.Accent).
-		BorderBackground(colors.Page.Bg).
+		BorderBackground(colors.Bg).
 		Padding(1, 3).
 		Render(content)
 }
 
 // renderButton renders a single button with selected/unselected styling.
 func (m *quitDialog) renderButton(label string, selected bool) string {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	if selected {
 		return lipgloss.NewStyle().
 			Background(colors.Accent).
-			Foreground(colors.Page.Bg).
+			Foreground(colors.Bg).
 			Padding(0, 3).
 			Bold(true).
 			Render(label)
 	}
 
 	return lipgloss.NewStyle().
-		Background(colors.Page.Bg).
-		Foreground(colors.Page.TextMuted).
+		Background(colors.Bg).
+		Foreground(colors.TextMuted).
 		Padding(0, 3).
 		Render(label)
 }

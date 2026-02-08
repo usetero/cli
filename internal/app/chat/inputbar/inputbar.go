@@ -55,7 +55,7 @@ func placeholder(user *auth.User) string {
 // New creates a new input bar.
 func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("inputbar")
-	colors := theme.Colors
+	colors := theme
 
 	ta := textarea.New()
 	ta.Placeholder = placeholder(user)
@@ -65,19 +65,19 @@ func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 	ta.SetVirtualCursor(false)
 	ta.Focus()
 
-	base := lipgloss.NewStyle().Foreground(colors.Page.Text)
+	base := lipgloss.NewStyle().Foreground(colors.Text)
 	ta.SetStyles(textarea.Styles{
 		Focused: textarea.StyleState{
 			Base:        base,
 			Text:        base,
-			Placeholder: base.Foreground(colors.Page.TextMuted),
+			Placeholder: base.Foreground(colors.TextMuted),
 			Prompt:      base.Foreground(colors.Accent),
 		},
 		Blurred: textarea.StyleState{
-			Base:        base.Foreground(colors.Page.TextMuted),
-			Text:        base.Foreground(colors.Page.TextMuted),
-			Placeholder: base.Foreground(colors.Page.TextMuted),
-			Prompt:      base.Foreground(colors.Page.TextMuted),
+			Base:        base.Foreground(colors.TextMuted),
+			Text:        base.Foreground(colors.TextMuted),
+			Placeholder: base.Foreground(colors.TextMuted),
+			Prompt:      base.Foreground(colors.TextMuted),
 		},
 		Cursor: textarea.CursorStyle{
 			Color: colors.Accent,
@@ -96,7 +96,7 @@ func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 		if info.Focused {
 			return lipgloss.NewStyle().Foreground(colors.Accent).Render("::: ")
 		}
-		return lipgloss.NewStyle().Foreground(colors.Page.TextMuted).Render("::: ")
+		return lipgloss.NewStyle().Foreground(colors.TextMuted).Render("::: ")
 	})
 
 	return &Model{

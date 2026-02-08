@@ -153,8 +153,8 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	colors := m.theme.Colors
-	diagStyle := lipgloss.NewStyle().Foreground(colors.Brand.GradientEnd)
+	colors := m.theme
+	diagStyle := lipgloss.NewStyle().Foreground(colors.GradientEnd)
 
 	sep := diagStyle.Render(" " + diag + " ")
 
@@ -229,7 +229,7 @@ func (m *Model) View() string {
 
 // DrawerView renders the drawer overlay.
 func (m *Model) DrawerView(width, height int) string {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	// Tab bar
 	tabBar := m.renderTabBar(width - 4) // account for border + padding
@@ -247,7 +247,7 @@ func (m *Model) DrawerView(width, height int) string {
 	}
 
 	if content == "" {
-		content = lipgloss.NewStyle().Foreground(colors.Page.TextSubtle).Render("No data")
+		content = lipgloss.NewStyle().Foreground(colors.TextSubtle).Render("No data")
 	}
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, tabBar, "", content)
@@ -256,7 +256,7 @@ func (m *Model) DrawerView(width, height int) string {
 		Width(width).
 		Height(height).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colors.Brand.GradientEnd).
+		BorderForeground(colors.GradientEnd).
 		Padding(0, 1)
 
 	return style.Render(inner)
@@ -264,10 +264,10 @@ func (m *Model) DrawerView(width, height int) string {
 
 // renderTabBar renders the tab selector for the drawer.
 func (m *Model) renderTabBar(width int) string {
-	colors := m.theme.Colors
+	colors := m.theme
 	activeStyle := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
-	inactiveStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	sepStyle := lipgloss.NewStyle().Foreground(colors.Page.TextSubtle)
+	inactiveStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	sepStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle)
 
 	var tabs []string
 	for i, label := range tabLabels {
@@ -283,9 +283,9 @@ func (m *Model) renderTabBar(width int) string {
 
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
-	colors := m.theme.Colors
-	keyStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
-	tipStyle := lipgloss.NewStyle().Foreground(colors.Page.TextSubtle)
+	colors := m.theme
+	keyStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
+	tipStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle)
 
 	tip := " open "
 	if m.drawerOpen {
@@ -297,9 +297,9 @@ func (m *Model) renderDrawerHint() string {
 
 // renderBrand renders "TERO" with optional sync status.
 func (m *Model) renderBrand() string {
-	colors := m.theme.Colors
+	colors := m.theme
 
-	brand := styles.ApplyBoldForegroundGrad("TERO", colors.Brand.GradientStart, colors.Brand.GradientEnd)
+	brand := styles.ApplyBoldForegroundGrad("TERO", colors.GradientStart, colors.GradientEnd)
 
 	syncView := m.syncStatus.CompactView()
 	if syncView == "" {
@@ -311,8 +311,8 @@ func (m *Model) renderBrand() string {
 
 // renderOrgWorkspace renders "org / workspace".
 func (m *Model) renderOrgWorkspace() string {
-	colors := m.theme.Colors
-	style := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	colors := m.theme
+	style := lipgloss.NewStyle().Foreground(colors.TextMuted)
 
 	if m.workspace != "" {
 		return style.Render(m.org + " / " + m.workspace)
@@ -326,8 +326,8 @@ func (m *Model) renderTitle(maxWidth int) string {
 		return ""
 	}
 
-	colors := m.theme.Colors
-	style := lipgloss.NewStyle().Foreground(colors.Page.Text)
+	colors := m.theme
+	style := lipgloss.NewStyle().Foreground(colors.Text)
 
 	title := m.title
 	if len(title) > maxWidth-2 {
@@ -339,16 +339,16 @@ func (m *Model) renderTitle(maxWidth int) string {
 
 // renderContextPercent renders "ctx: N%" with color based on usage level.
 func (m *Model) renderContextPercent() string {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	var fg color.Color
 	switch {
 	case m.contextPercent >= 90:
-		fg = colors.Error.Fg
+		fg = colors.ErrorFg
 	case m.contextPercent >= 75:
-		fg = colors.Warning.Fg
+		fg = colors.WarningFg
 	default:
-		fg = colors.Page.TextMuted
+		fg = colors.TextMuted
 	}
 
 	style := lipgloss.NewStyle().Foreground(fg)

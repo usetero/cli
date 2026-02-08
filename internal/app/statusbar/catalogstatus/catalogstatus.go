@@ -121,7 +121,7 @@ func (m *Model) CompactView() string {
 	}
 
 	s := m.summary
-	muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
 	d := status.ServiceDot(m.theme, s.WorstStatus)
 	readyCount := s.ActiveServices - s.AnalyzingCount - s.DiscoveringCount - s.BrokenServices - s.StaleServices
 	ready := fmt.Sprintf("%d/%d svcs", readyCount, s.ActiveServices)
@@ -157,7 +157,7 @@ func (m *Model) ExpandedView(width int) string {
 // renderSummary renders the top summary line.
 func (m *Model) renderSummary() string {
 	s := m.summary
-	muted := lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted)
+	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted)
 
 	var parts []string
 	parts = append(parts, fmt.Sprintf("%d services", s.ServiceCount))
@@ -172,7 +172,7 @@ func (m *Model) renderSummary() string {
 // renderServiceTable renders all services as an aligned table.
 func (m *Model) renderServiceTable(width int) string {
 	if len(m.services) == 0 {
-		return lipgloss.NewStyle().Foreground(m.theme.Colors.Page.TextMuted).Render("No services")
+		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Render("No services")
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))

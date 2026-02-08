@@ -38,7 +38,7 @@ func getRenderer(theme Theme, width int) *glamour.TermRenderer {
 		return rendererCache.renderer
 	}
 	r, _ := glamour.NewTermRenderer(
-		glamour.WithStyles(markdownStyle(theme.Colors)),
+		glamour.WithStyles(markdownStyle(theme)),
 		glamour.WithWordWrap(width),
 	)
 	rendererCache = &cachedRenderer{renderer: r, width: width}
@@ -58,12 +58,12 @@ func RenderMarkdown(theme Theme, text string, width int) string {
 	return out
 }
 
-// markdownStyle builds a glamour StyleConfig from our theme colors.
-func markdownStyle(c Colors) ansi.StyleConfig {
-	text := stringPtr(colorToHex(c.Page.Text))
-	muted := stringPtr(colorToHex(c.Page.TextMuted))
-	accent := stringPtr(colorToHex(c.Accent))
-	codeBg := stringPtr(colorToHex(c.Panel.Bg))
+// markdownStyle builds a glamour StyleConfig from the active theme.
+func markdownStyle(t Theme) ansi.StyleConfig {
+	text := stringPtr(colorToHex(t.Text))
+	muted := stringPtr(colorToHex(t.TextMuted))
+	accent := stringPtr(colorToHex(t.Accent))
+	codeBg := stringPtr(colorToHex(t.BgElevated))
 
 	return ansi.StyleConfig{
 		Document: ansi.StyleBlock{
@@ -199,10 +199,10 @@ func markdownStyle(c Colors) ansi.StyleConfig {
 					Color: accent,
 				},
 				LiteralString: ansi.StylePrimitive{
-					Color: stringPtr(colorToHex(c.Success.Fg)),
+					Color: stringPtr(colorToHex(t.SuccessFg)),
 				},
 				LiteralNumber: ansi.StylePrimitive{
-					Color: stringPtr(colorToHex(c.Warning.Fg)),
+					Color: stringPtr(colorToHex(t.WarningFg)),
 				},
 				Comment: ansi.StylePrimitive{
 					Color:  muted,

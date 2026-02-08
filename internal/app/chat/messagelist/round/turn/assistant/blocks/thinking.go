@@ -70,8 +70,8 @@ func (m *ThinkingBlock) Index() int {
 
 // View renders the thinking block.
 func (m *ThinkingBlock) View() string {
-	colors := m.theme.Colors
-	mutedStyle := lipgloss.NewStyle().Foreground(colors.Page.TextMuted)
+	colors := m.theme
+	mutedStyle := lipgloss.NewStyle().Foreground(colors.TextMuted)
 	nameStyle := lipgloss.NewStyle().Foreground(colors.Accent)
 
 	chevron := mutedStyle.Render("▶")
@@ -95,7 +95,7 @@ func (m *ThinkingBlock) View() string {
 
 	body := lipgloss.NewStyle().
 		Padding(1, thinkingBodyPaddingRight, 1, thinkingBodyPaddingLeft).
-		Background(colors.Panel.Bg).
+		Background(colors.BgElevated).
 		Render(rendered)
 
 	return header + "\n\n" + body

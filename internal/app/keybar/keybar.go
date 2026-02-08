@@ -23,17 +23,15 @@ type Model struct {
 // New creates a new keybar.
 func New(theme styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("keybar")
-	colors := theme.Colors
-
 	h := help.New()
 	h.Styles = help.Styles{
-		ShortKey:       lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
-		ShortDesc:      lipgloss.NewStyle().Foreground(colors.Page.TextSubtle),
-		ShortSeparator: lipgloss.NewStyle().Foreground(colors.BorderDefault),
-		Ellipsis:       lipgloss.NewStyle().Foreground(colors.BorderDefault),
-		FullKey:        lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
-		FullDesc:       lipgloss.NewStyle().Foreground(colors.Page.TextSubtle),
-		FullSeparator:  lipgloss.NewStyle().Foreground(colors.BorderDefault),
+		ShortKey:       lipgloss.NewStyle().Foreground(theme.TextMuted),
+		ShortDesc:      lipgloss.NewStyle().Foreground(theme.TextSubtle),
+		ShortSeparator: lipgloss.NewStyle().Foreground(theme.Border),
+		Ellipsis:       lipgloss.NewStyle().Foreground(theme.Border),
+		FullKey:        lipgloss.NewStyle().Foreground(theme.TextMuted),
+		FullDesc:       lipgloss.NewStyle().Foreground(theme.TextSubtle),
+		FullSeparator:  lipgloss.NewStyle().Foreground(theme.Border),
 	}
 
 	return &Model{

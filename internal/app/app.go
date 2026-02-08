@@ -449,7 +449,7 @@ func (m *Model) startSync(accountID string) error {
 
 // View renders the app.
 func (m *Model) View() tea.View {
-	colors := m.theme.Colors
+	colors := m.theme
 
 	// Show message if window is too small
 	if m.width < minWidth || m.height < minHeight {
@@ -460,14 +460,14 @@ func (m *Model) View() tea.View {
 			Render(
 				lipgloss.NewStyle().
 					Padding(0, 2).
-					Foreground(colors.Page.Text).
+					Foreground(colors.Text).
 					BorderStyle(lipgloss.RoundedBorder()).
 					BorderForeground(colors.Accent).
 					Render("Window too small"),
 			)
 		return tea.View{
 			Content:         content,
-			BackgroundColor: colors.Page.Bg,
+			BackgroundColor: colors.Bg,
 			AltScreen:       true,
 			WindowTitle:     m.windowTitle,
 		}
@@ -489,7 +489,7 @@ func (m *Model) View() tea.View {
 
 	return tea.View{
 		Content:         cleanView,
-		BackgroundColor: colors.Page.Bg,
+		BackgroundColor: colors.Bg,
 		AltScreen:       true,
 		Cursor:          cur,
 		MouseMode:       tea.MouseModeCellMotion,

@@ -19,8 +19,6 @@ type Model struct {
 
 // New creates a new themed text input.
 func New(theme styles.Theme) *Model {
-	colors := theme.Colors
-
 	ti := textinput.New()
 	ti.SetVirtualCursor(false)
 	ti.Prompt = "> "
@@ -29,17 +27,17 @@ func New(theme styles.Theme) *Model {
 
 	ti.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(colors.Input.Text),
-			Placeholder: lipgloss.NewStyle().Foreground(colors.Input.Placeholder),
-			Prompt:      lipgloss.NewStyle().Foreground(colors.Accent),
+			Text:        lipgloss.NewStyle().Foreground(theme.InputText),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.Accent),
 		},
 		Blurred: textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
-			Placeholder: lipgloss.NewStyle().Foreground(colors.Input.Placeholder),
-			Prompt:      lipgloss.NewStyle().Foreground(colors.Page.TextMuted),
+			Text:        lipgloss.NewStyle().Foreground(theme.TextMuted),
+			Placeholder: lipgloss.NewStyle().Foreground(theme.InputPlaceholder),
+			Prompt:      lipgloss.NewStyle().Foreground(theme.TextMuted),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: colors.Accent,
+			Color: theme.Accent,
 			Shape: tea.CursorBar,
 			Blink: true,
 		},

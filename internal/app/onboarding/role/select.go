@@ -90,7 +90,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // View renders the role selection UI.
 func (m *Model) View() string {
 	s := m.theme.Styles
-	colors := m.theme.Colors
 
 	title := s.Title.Render("What's your role?")
 
@@ -106,7 +105,7 @@ func (m *Model) View() string {
 	for i, opt := range options {
 		var view string
 		if i == m.selected {
-			nameStyle := lipgloss.NewStyle().Foreground(colors.Accent).Bold(true)
+			nameStyle := lipgloss.NewStyle().Foreground(m.theme.Accent).Bold(true)
 			view = nameStyle.Render("> "+opt.name) + "\n  " + s.Help.Render(opt.desc)
 		} else {
 			view = s.Body.Render("  "+opt.name) + "\n  " + s.Help.Render(opt.desc)
