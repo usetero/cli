@@ -41,7 +41,7 @@ type Settings struct {
 // Model is an animated thinking indicator with gradient scrambled characters.
 type Model struct {
 	id           int
-	theme        *styles.Theme
+	theme        styles.Theme
 	size         int
 	label        string
 	startTime    time.Time
@@ -58,7 +58,7 @@ var (
 )
 
 // New creates a new thinking indicator.
-func New(theme *styles.Theme, settings Settings) *Model {
+func New(theme styles.Theme, settings Settings) *Model {
 	size := settings.Size
 	if size <= 0 {
 		size = defaultSize

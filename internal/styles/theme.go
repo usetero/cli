@@ -41,9 +41,9 @@ type Colors struct {
 	IsDark bool
 
 	// Surfaces - colors grouped by where they appear
-	Page  Surface      // Main page background
-	Panel Surface      // Cards, sidebar, footer, modals
-	Input InputSurface // Input fields
+	Page     Surface      // Background surface (text colors + bg)
+	Elevated color.Color  // Raised background (blocks, cards, toasts) — use WithBg to apply
+	Input    InputSurface // Input fields
 
 	// Brand
 	Brand       BrandColors // Logo gradient, header diagonals
@@ -75,23 +75,35 @@ type Styles struct {
 
 // Theme holds colors and pre-built styles. Created once at startup.
 type Theme struct {
-	Colors *Colors
-	Styles *Styles
+	Colors Colors
+	Styles Styles
+}
+
+// WithBg returns a copy of the theme with Page.Bg changed.
+// Use this at surface boundaries so children render on the new background
+// using the same Page.Text, Page.TextMuted, etc.
+func (t Theme) WithBg(bg color.Color) Theme {
+	c := t.Colors
+	c.Page.Bg = bg
+	return Theme{
+		Colors: c,
+		Styles: buildStyles(c),
+	}
 }
 
 // NewTheme creates a new theme. Use isDark=true for dark mode.
-func NewTheme(isDark bool) *Theme {
+func NewTheme(isDark bool) Theme {
 	colors := buildColors(DefaultPalette(), isDark)
-	return &Theme{
+	return Theme{
 		Colors: colors,
 		Styles: buildStyles(colors),
 	}
 }
 
 // buildColors constructs colors from a palette
-func buildColors(p Palette, isDark bool) *Colors {
+func buildColors(p Palette, isDark bool) Colors {
 	if isDark {
-		return &Colors{
+		return Colors{
 			IsDark: true,
 
 			Page: Surface{
@@ -100,12 +112,7 @@ func buildColors(p Palette, isDark bool) *Colors {
 				TextMuted:  MustHex(p.Neutral[S400]),
 				TextSubtle: MustHex(p.Neutral[S500]),
 			},
-			Panel: Surface{
-				Bg:         MustHex(p.Neutral[S800]),
-				Text:       MustHex(p.Neutral[S50]),
-				TextMuted:  MustHex(p.Neutral[S300]),
-				TextSubtle: MustHex(p.Neutral[S400]),
-			},
+			Elevated: MustHex(p.Neutral[S800]),
 			Input: InputSurface{
 				Bg:          MustHex(p.Neutral[S800]),
 				Text:        MustHex(p.Neutral[S50]),
@@ -141,7 +148,7 @@ func buildColors(p Palette, isDark bool) *Colors {
 	}
 
 	// Light theme - flip the shade numbers
-	return &Colors{
+	return Colors{
 		IsDark: false,
 
 		Page: Surface{
@@ -150,12 +157,7 @@ func buildColors(p Palette, isDark bool) *Colors {
 			TextMuted:  MustHex(p.Neutral[S600]),
 			TextSubtle: MustHex(p.Neutral[S500]),
 		},
-		Panel: Surface{
-			Bg:         MustHex(p.Neutral[S100]),
-			Text:       MustHex(p.Neutral[S900]),
-			TextMuted:  MustHex(p.Neutral[S600]),
-			TextSubtle: MustHex(p.Neutral[S500]),
-		},
+		SurfaceBg: MustHex(p.Neutral[S100]),
 		Input: InputSurface{
 			Bg:          MustHex(White),
 			Text:        MustHex(p.Neutral[S900]),
@@ -191,8 +193,8 @@ func buildColors(p Palette, isDark bool) *Colors {
 }
 
 // buildStyles creates pre-built styles from colors
-func buildStyles(c *Colors) *Styles {
-	return &Styles{
+func buildStyles(c Colors) Styles {
+	return Styles{
 		Title:    lipgloss.NewStyle().Foreground(c.Accent).Bold(true),
 		Subtitle: lipgloss.NewStyle().Foreground(c.Page.TextMuted),
 		Body:     lipgloss.NewStyle().Foreground(c.Page.Text),

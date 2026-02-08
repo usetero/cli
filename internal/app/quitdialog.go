@@ -16,12 +16,12 @@ type quitCanceled struct{}
 
 // quitDialog is a quit confirmation dialog with Yes/No buttons.
 type quitDialog struct {
-	theme       *styles.Theme
+	theme       styles.Theme
 	selectedYes bool
 }
 
 // newQuitDialog creates a new quit dialog. Defaults to "No" selected.
-func newQuitDialog(theme *styles.Theme) *quitDialog {
+func newQuitDialog(theme styles.Theme) *quitDialog {
 	return &quitDialog{theme: theme}
 }
 

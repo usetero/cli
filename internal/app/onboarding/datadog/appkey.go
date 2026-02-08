@@ -27,7 +27,7 @@ type accountCreatedMsg struct {
 // AppKeyModel handles Datadog Application key entry and account creation.
 type AppKeyModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	scope    log.Scope
 	account  domain.Account
@@ -44,7 +44,7 @@ type AppKeyModel struct {
 // NewAppKey creates a new App key entry step.
 func NewAppKey(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	account domain.Account,
 	site domain.DatadogSite,
 	apiKey string,
@@ -53,9 +53,6 @@ func NewAppKey(
 ) *AppKeyModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if site == "" {
 		panic("site is empty")

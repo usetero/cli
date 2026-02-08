@@ -21,7 +21,7 @@ import (
 // SelectModel handles account selection.
 type SelectModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
 	scope    log.Scope
@@ -36,7 +36,7 @@ type SelectModel struct {
 // NewSelect creates a new account select step.
 func NewSelect(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	org domain.Organization,
 	services api.APIServices,
 	prefs preferences.Preferences,
@@ -44,9 +44,6 @@ func NewSelect(
 ) *SelectModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")

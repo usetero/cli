@@ -27,7 +27,7 @@ type apiKeyValidatedMsg struct {
 // APIKeyModel handles Datadog API key entry.
 type APIKeyModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	scope    log.Scope
 	account  domain.Account
@@ -43,7 +43,7 @@ type APIKeyModel struct {
 // NewAPIKey creates a new API key entry step.
 func NewAPIKey(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	account domain.Account,
 	site domain.DatadogSite,
 	services api.APIServices,
@@ -51,9 +51,6 @@ func NewAPIKey(
 ) *APIKeyModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if site == "" {
 		panic("site is empty")

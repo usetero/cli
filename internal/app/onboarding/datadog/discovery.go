@@ -30,7 +30,7 @@ type statusMsg struct {
 // DiscoveryModel polls for Datadog discovery status.
 type DiscoveryModel struct {
 	ctx              context.Context
-	theme            *styles.Theme
+	theme            styles.Theme
 	services         api.APIServices
 	scope            log.Scope
 	datadogAccountID domain.DatadogAccountID
@@ -46,16 +46,13 @@ type DiscoveryModel struct {
 // NewDiscovery creates a new discovery step.
 func NewDiscovery(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	datadogAccountID domain.DatadogAccountID,
 	services api.APIServices,
 	scope log.Scope,
 ) *DiscoveryModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if datadogAccountID == "" {
 		panic("datadogAccountID is empty")

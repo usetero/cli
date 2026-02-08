@@ -135,6 +135,7 @@ func (m *Model) renderBlock(entry blockEntry) string {
 
 	return lipgloss.NewStyle().
 		Width(cw).
+		Background(m.theme.Colors.Panel.Bg).
 		PaddingLeft(block.AssistantPadding - 1).
 		BorderLeft(true).
 		BorderStyle(lipgloss.NormalBorder()).

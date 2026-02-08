@@ -13,7 +13,7 @@ import (
 // It is a fixed-height component - height is determined by content.
 // Implements block.Block.
 type Model struct {
-	theme   *styles.Theme
+	theme   styles.Theme
 	id      domain.MessageID
 	input   msgs.UserSubmittedInput
 	width   int
@@ -21,7 +21,7 @@ type Model struct {
 }
 
 // New creates a new user message view.
-func New(theme *styles.Theme, id domain.MessageID, input msgs.UserSubmittedInput, width int) *Model {
+func New(theme styles.Theme, id domain.MessageID, input msgs.UserSubmittedInput, width int) *Model {
 	return &Model{
 		theme: theme,
 		id:    id,
@@ -44,7 +44,8 @@ func (m *Model) View() string {
 	}
 
 	style := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.Page.Text).
+		Foreground(m.theme.Colors.Panel.Text).
+		Background(m.theme.Colors.Panel.Bg).
 		Width(m.width)
 
 	return style.Render(m.input.Text)

@@ -24,7 +24,7 @@ type checkResultMsg struct {
 // CheckModel checks if Datadog is configured for the account.
 type CheckModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	scope    log.Scope
 	account  domain.Account
@@ -34,16 +34,13 @@ type CheckModel struct {
 // NewCheck creates a new datadog check step.
 func NewCheck(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	account domain.Account,
 	services api.APIServices,
 	scope log.Scope,
 ) *CheckModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 
 	return &CheckModel{

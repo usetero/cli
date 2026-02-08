@@ -16,7 +16,7 @@ import (
 // Model renders an assistant message and manages its content blocks.
 // It is a fixed-height component - height is determined by content.
 type Model struct {
-	theme        *styles.Theme
+	theme        styles.Theme
 	scope        log.Scope
 	id           domain.MessageID
 	blocks       []blocks.Block
@@ -25,7 +25,7 @@ type Model struct {
 }
 
 // New creates a new assistant message view.
-func New(theme *styles.Theme, id domain.MessageID, width int, toolRegistry *chattools.Registry, scope log.Scope) *Model {
+func New(theme styles.Theme, id domain.MessageID, width int, toolRegistry *chattools.Registry, scope log.Scope) *Model {
 	scope = scope.Child("assistant")
 	return &Model{
 		theme:        theme,

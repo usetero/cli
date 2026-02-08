@@ -46,7 +46,7 @@ const (
 
 // Model is the command palette.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	input    *input.Model
 	commands []Command // all commands
 	matches  []match   // filtered results
@@ -61,7 +61,7 @@ type match struct {
 }
 
 // New creates a new command palette.
-func New(theme *styles.Theme, commands []Command) *Model {
+func New(theme styles.Theme, commands []Command) *Model {
 	ti := input.New(theme)
 	ti.SetPlaceholder("Type a command...")
 	ti.SetCharLimit(128)

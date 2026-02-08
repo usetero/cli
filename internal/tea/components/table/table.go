@@ -18,7 +18,7 @@ const (
 
 // Model wraps lipgloss/table with theme-aware styling.
 type Model struct {
-	theme          *styles.Theme
+	theme          styles.Theme
 	headers        []string
 	rows           [][]string
 	width          int
@@ -67,7 +67,7 @@ func WithBackground(c color.Color) Option {
 }
 
 // New creates a new table.
-func New(theme *styles.Theme, opts ...Option) *Model {
+func New(theme styles.Theme, opts ...Option) *Model {
 	m := &Model{
 		theme:         theme,
 		maxValueWidth: defaultMaxValueWidth,

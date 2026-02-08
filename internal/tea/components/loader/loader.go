@@ -11,13 +11,13 @@ import (
 
 // Model is a loading indicator with an animated spinner.
 type Model struct {
-	theme   *styles.Theme
+	theme   styles.Theme
 	spinner spinner.Model
 	message string
 }
 
 // New creates a new loader with the given message.
-func New(theme *styles.Theme, message string) *Model {
+func New(theme styles.Theme, message string) *Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(theme.Colors.Accent)

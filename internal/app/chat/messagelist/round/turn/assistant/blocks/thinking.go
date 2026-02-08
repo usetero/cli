@@ -23,7 +23,7 @@ const (
 // Can be expanded or collapsed. It is a fixed-height component.
 // Implements block.Block.
 type ThinkingBlock struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	index    int
 	text     string
 	expanded bool
@@ -32,7 +32,7 @@ type ThinkingBlock struct {
 }
 
 // NewThinkingBlock creates a new thinking block with the given content.
-func NewThinkingBlock(theme *styles.Theme, index int, text string, width int) *ThinkingBlock {
+func NewThinkingBlock(theme styles.Theme, index int, text string, width int) *ThinkingBlock {
 	return &ThinkingBlock{
 		theme:    theme,
 		index:    index,

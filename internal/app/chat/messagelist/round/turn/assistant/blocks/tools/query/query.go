@@ -23,7 +23,7 @@ import (
 // Model handles query tool execution and content rendering.
 // Chrome (icon, name) is handled by the parent tools.Model.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	scope    log.Scope
 	index    int
 	toolID   string
@@ -45,7 +45,7 @@ type Model struct {
 }
 
 // New creates a new query tool model.
-func New(theme *styles.Theme, index int, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
+func New(theme styles.Theme, index int, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
 	scope = scope.Child("query")
 	return &Model{
 		theme:    theme,

@@ -64,7 +64,7 @@ type Model struct {
 	user      *auth.User
 	account   domain.Account
 	workspace domain.Workspace
-	theme     *styles.Theme
+	theme     styles.Theme
 	width     int
 	height    int
 	originX   int
@@ -87,7 +87,7 @@ func New(
 	user *auth.User,
 	account domain.Account,
 	workspace domain.Workspace,
-	theme *styles.Theme,
+	theme styles.Theme,
 	db sqlite.DB,
 	chatClient chatclient.Client,
 	toolRegistry *tools.Registry,

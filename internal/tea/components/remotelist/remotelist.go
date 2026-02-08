@@ -29,7 +29,7 @@ type LoadResult struct {
 
 // Model is a list that loads items asynchronously.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	list     *list.Model
 	loader   *loader.Model
 	loadFunc tea.Cmd
@@ -38,7 +38,7 @@ type Model struct {
 }
 
 // New creates a new remotelist.
-func New(theme *styles.Theme, loadingMessage string) *Model {
+func New(theme styles.Theme, loadingMessage string) *Model {
 	return &Model{
 		theme:  theme,
 		list:   list.New(theme, []list.Item{}),

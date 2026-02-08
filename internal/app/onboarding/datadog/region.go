@@ -13,7 +13,7 @@ import (
 
 // RegionModel handles Datadog region selection.
 type RegionModel struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	scope    log.Scope
 	selected int
 	width    int
@@ -21,10 +21,7 @@ type RegionModel struct {
 }
 
 // NewRegion creates a new region selection step.
-func NewRegion(theme *styles.Theme, scope log.Scope) *RegionModel {
-	if theme == nil {
-		panic("theme is nil")
-	}
+func NewRegion(theme styles.Theme, scope log.Scope) *RegionModel {
 
 	return &RegionModel{
 		theme: theme,

@@ -24,7 +24,7 @@ type (
 
 // delegate is the default item delegate using theme colors.
 type delegate struct {
-	theme *styles.Theme
+	theme styles.Theme
 }
 
 func (d *delegate) Height() int                             { return 1 }
@@ -43,12 +43,12 @@ func (d *delegate) Render(w io.Writer, m list.Model, index int, item list.Item) 
 
 // Model wraps bubbles list with consistent theming.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	list  list.Model
 }
 
 // New creates a new themed list.
-func New(theme *styles.Theme, items []Item) *Model {
+func New(theme styles.Theme, items []Item) *Model {
 	colors := theme.Colors
 	d := &delegate{theme: theme}
 

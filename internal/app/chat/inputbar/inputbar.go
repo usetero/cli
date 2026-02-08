@@ -26,7 +26,7 @@ const (
 
 // Model handles user input via a textarea.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	textarea textarea.Model
 	width    int
 	scope    log.Scope
@@ -53,7 +53,7 @@ func placeholder(user *auth.User) string {
 }
 
 // New creates a new input bar.
-func New(user *auth.User, theme *styles.Theme, scope log.Scope) *Model {
+func New(user *auth.User, theme styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("inputbar")
 	colors := theme.Colors
 

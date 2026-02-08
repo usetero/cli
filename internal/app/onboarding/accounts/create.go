@@ -27,7 +27,7 @@ type accountCreatedMsg struct {
 // CreateModel handles account creation.
 type CreateModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
 	scope    log.Scope
@@ -43,7 +43,7 @@ type CreateModel struct {
 // NewCreate creates a new account creation step.
 func NewCreate(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	org domain.Organization,
 	services api.APIServices,
 	prefs preferences.Preferences,
@@ -51,9 +51,6 @@ func NewCreate(
 ) *CreateModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")

@@ -42,7 +42,7 @@ type authCompleteMsg struct {
 // AuthenticateModel handles the device code authentication flow.
 type AuthenticateModel struct {
 	ctx    context.Context
-	theme  *styles.Theme
+	theme  styles.Theme
 	auth   auth.Auth
 	scope  log.Scope
 	state  authState
@@ -57,12 +57,9 @@ type AuthenticateModel struct {
 }
 
 // NewAuthenticate creates a new authenticate step.
-func NewAuthenticate(ctx context.Context, theme *styles.Theme, authService auth.Auth, scope log.Scope) *AuthenticateModel {
+func NewAuthenticate(ctx context.Context, theme styles.Theme, authService auth.Auth, scope log.Scope) *AuthenticateModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if authService == nil {
 		panic("authService is nil")

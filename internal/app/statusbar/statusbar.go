@@ -34,7 +34,7 @@ var tabLabels = [tabCount]string{"Policy", "Catalog", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
-	theme         *styles.Theme
+	theme         styles.Theme
 	syncStatus    *syncstatus.Model
 	catalogStatus *catalogstatus.Model
 	policyStatus  *policystatus.Model
@@ -56,7 +56,7 @@ type Model struct {
 }
 
 // New creates a new statusbar.
-func New(theme *styles.Theme, syncer powersync.Syncer, host string) *Model {
+func New(theme styles.Theme, syncer powersync.Syncer, host string) *Model {
 	return &Model{
 		theme:         theme,
 		syncStatus:    syncstatus.New(theme, syncer, host),

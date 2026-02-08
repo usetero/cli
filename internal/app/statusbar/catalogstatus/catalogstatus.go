@@ -25,7 +25,7 @@ type pollMsg struct{}
 
 // Model renders the catalog health: dot color + service count or discovery phase.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	db    sqlite.DB
 
 	summary   domain.CatalogSummary
@@ -35,7 +35,7 @@ type Model struct {
 }
 
 // New creates a new catalog status model.
-func New(theme *styles.Theme) *Model {
+func New(theme styles.Theme) *Model {
 	return &Model{
 		theme: theme,
 	}

@@ -56,7 +56,7 @@ type blockEntry struct {
 //   - mouse.go        click routing, text selection
 //   - rounds.go       round lifecycle, block collection
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	scope log.Scope
 
 	// Data hierarchy (owns the blocks, routes updates)
@@ -100,7 +100,7 @@ type Model struct {
 
 // New creates a new message list.
 func New(
-	theme *styles.Theme,
+	theme styles.Theme,
 	db sqlite.DB,
 	chatClient chatclient.Client,
 	toolRegistry *tools.Registry,

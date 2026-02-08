@@ -15,7 +15,7 @@ import (
 // It is a fixed-height component - height is determined by content.
 // Implements block.Block.
 type TextBlock struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	index    int
 	text     string
 	width    int
@@ -24,7 +24,7 @@ type TextBlock struct {
 }
 
 // NewTextBlock creates a new text block with the given content.
-func NewTextBlock(theme *styles.Theme, index int, text string, width int) *TextBlock {
+func NewTextBlock(theme styles.Theme, index int, text string, width int) *TextBlock {
 	b := &TextBlock{
 		theme: theme,
 		index: index,

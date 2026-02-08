@@ -13,12 +13,12 @@ import (
 
 // Model wraps textinput.Model with themed defaults.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	input textinput.Model
 }
 
 // New creates a new themed text input.
-func New(theme *styles.Theme) *Model {
+func New(theme styles.Theme) *Model {
 	colors := theme.Colors
 
 	ti := textinput.New()

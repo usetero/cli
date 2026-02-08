@@ -33,7 +33,7 @@ var (
 
 // getRenderer returns a cached glamour renderer, creating one if the width changed.
 // Must be called with rendererMu held.
-func getRenderer(theme *Theme, width int) *glamour.TermRenderer {
+func getRenderer(theme Theme, width int) *glamour.TermRenderer {
 	if rendererCache != nil && rendererCache.width == width {
 		return rendererCache.renderer
 	}
@@ -46,7 +46,7 @@ func getRenderer(theme *Theme, width int) *glamour.TermRenderer {
 }
 
 // RenderMarkdown renders markdown text with theme styling.
-func RenderMarkdown(theme *Theme, text string, width int) string {
+func RenderMarkdown(theme Theme, text string, width int) string {
 	rendererMu.Lock()
 	r := getRenderer(theme, width)
 	out, err := r.Render(text)
@@ -59,7 +59,7 @@ func RenderMarkdown(theme *Theme, text string, width int) string {
 }
 
 // markdownStyle builds a glamour StyleConfig from our theme colors.
-func markdownStyle(c *Colors) ansi.StyleConfig {
+func markdownStyle(c Colors) ansi.StyleConfig {
 	text := stringPtr(colorToHex(c.Page.Text))
 	muted := stringPtr(colorToHex(c.Page.TextMuted))
 	accent := stringPtr(colorToHex(c.Accent))

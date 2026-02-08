@@ -30,7 +30,7 @@ import (
 type Model struct {
 	// Dependencies available from start
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
 	auth     iauth.Auth
@@ -54,7 +54,7 @@ type Model struct {
 // New creates a new onboarding model.
 func New(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	services api.APIServices,
 	prefs preferences.Preferences,
 	authService iauth.Auth,
@@ -63,9 +63,6 @@ func New(
 ) *Model {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")

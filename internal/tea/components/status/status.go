@@ -27,16 +27,16 @@ func badge(c color.Color, label string, showLabel bool) string {
 // --- Service statuses: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY ---
 
 // Service renders a colored status badge for a service status.
-func Service(theme *styles.Theme, s domain.ServiceLogStatus, showLabel bool) string {
+func Service(theme styles.Theme, s domain.ServiceLogStatus, showLabel bool) string {
 	return badge(serviceColor(theme, s), s.String(), showLabel)
 }
 
 // ServiceDot renders just the colored dot for a service status.
-func ServiceDot(theme *styles.Theme, s domain.ServiceLogStatus) string {
+func ServiceDot(theme styles.Theme, s domain.ServiceLogStatus) string {
 	return badge(serviceColor(theme, s), "", false)
 }
 
-func serviceColor(theme *styles.Theme, s domain.ServiceLogStatus) color.Color {
+func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
 	colors := theme.Colors
 	switch s {
 	case domain.ServiceLogStatusBroken, domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
@@ -53,16 +53,16 @@ func serviceColor(theme *styles.Theme, s domain.ServiceLogStatus) color.Color {
 // --- Log event statuses: BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING ---
 
 // LogEvent renders a colored status badge for a log event status.
-func LogEvent(theme *styles.Theme, s domain.LogEventStatus, showLabel bool) string {
+func LogEvent(theme styles.Theme, s domain.LogEventStatus, showLabel bool) string {
 	return badge(logEventColor(theme, s), s.String(), showLabel)
 }
 
 // LogEventDot renders just the colored dot for a log event status.
-func LogEventDot(theme *styles.Theme, s domain.LogEventStatus) string {
+func LogEventDot(theme styles.Theme, s domain.LogEventStatus) string {
 	return badge(logEventColor(theme, s), "", false)
 }
 
-func logEventColor(theme *styles.Theme, s domain.LogEventStatus) color.Color {
+func logEventColor(theme styles.Theme, s domain.LogEventStatus) color.Color {
 	colors := theme.Colors
 	switch s {
 	case domain.LogEventStatusBroken:
@@ -80,7 +80,7 @@ func logEventColor(theme *styles.Theme, s domain.LogEventStatus) color.Color {
 
 // Waste renders a colored dot with a waste percentage.
 // Returns empty string if pct is 0.
-func Waste(theme *styles.Theme, pct int) string {
+func Waste(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
@@ -92,7 +92,7 @@ func Waste(theme *styles.Theme, pct int) string {
 
 // WasteShort renders a colored dot with just the percentage (no "waste" label).
 // Useful for table cells.
-func WasteShort(theme *styles.Theme, pct int) string {
+func WasteShort(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
@@ -105,11 +105,11 @@ func WasteShort(theme *styles.Theme, pct int) string {
 // --- Risk levels: HIGH > MEDIUM > LOW ---
 
 // Risk renders a colored status badge for a risk level.
-func Risk(theme *styles.Theme, r domain.RiskLevel, showLabel bool) string {
+func Risk(theme styles.Theme, r domain.RiskLevel, showLabel bool) string {
 	return badge(riskColor(theme, r), r.String(), showLabel)
 }
 
-func riskColor(theme *styles.Theme, r domain.RiskLevel) color.Color {
+func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
 	colors := theme.Colors
 	switch r {
 	case domain.RiskLevelHigh:
@@ -126,16 +126,16 @@ func riskColor(theme *styles.Theme, r domain.RiskLevel) color.Color {
 // --- Policy statuses: PENDING > APPROVED > DISMISSED ---
 
 // Policy renders a colored status badge for a policy status.
-func Policy(theme *styles.Theme, s domain.PolicyLogStatus, showLabel bool) string {
+func Policy(theme styles.Theme, s domain.PolicyLogStatus, showLabel bool) string {
 	return badge(policyColor(theme, s), s.String(), showLabel)
 }
 
 // PolicyDot renders just the colored dot for a policy status.
-func PolicyDot(theme *styles.Theme, s domain.PolicyLogStatus) string {
+func PolicyDot(theme styles.Theme, s domain.PolicyLogStatus) string {
 	return badge(policyColor(theme, s), "", false)
 }
 
-func policyColor(theme *styles.Theme, s domain.PolicyLogStatus) color.Color {
+func policyColor(theme styles.Theme, s domain.PolicyLogStatus) color.Color {
 	colors := theme.Colors
 	switch s {
 	case domain.PolicyLogStatusApproved:

@@ -38,13 +38,13 @@ type toast struct {
 // Model holds the toast state and renders it.
 // It is a fixed-height component - height is 0 when no toast, 1 when showing.
 type Model struct {
-	theme   *styles.Theme
+	theme   styles.Theme
 	current *toast
 	width   int
 }
 
 // New creates a new toast model.
-func New(theme *styles.Theme) *Model {
+func New(theme styles.Theme) *Model {
 	return &Model{
 		theme: theme,
 	}

@@ -23,18 +23,15 @@ type checkResultMsg struct {
 // CheckModel checks if the user has a valid auth token.
 type CheckModel struct {
 	ctx   context.Context
-	theme *styles.Theme
+	theme styles.Theme
 	auth  auth.Auth
 	scope log.Scope
 }
 
 // NewCheck creates a new auth check step.
-func NewCheck(ctx context.Context, theme *styles.Theme, authService auth.Auth, scope log.Scope) *CheckModel {
+func NewCheck(ctx context.Context, theme styles.Theme, authService auth.Auth, scope log.Scope) *CheckModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if authService == nil {
 		panic("authService is nil")

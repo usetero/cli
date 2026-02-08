@@ -33,7 +33,7 @@ const (
 // assistant stops (no more tool calls).
 // It is a fixed-height component - height is determined by content.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	scope log.Scope
 
 	id             domain.MessageID // first user message ID, identifies the round
@@ -55,7 +55,7 @@ type Model struct {
 
 // New creates a new round from explicit user input.
 func New(
-	theme *styles.Theme,
+	theme styles.Theme,
 	conversationID domain.ConversationID,
 	accountID domain.AccountID,
 	userMessageID domain.MessageID,

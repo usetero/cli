@@ -28,7 +28,7 @@ type tokenRefreshedMsg struct {
 // SelectModel handles organization selection.
 type SelectModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
 	auth     auth.Auth
@@ -46,7 +46,7 @@ type SelectModel struct {
 // NewSelect creates a new organization select step.
 func NewSelect(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	services api.APIServices,
 	prefs preferences.Preferences,
 	authService auth.Auth,
@@ -54,9 +54,6 @@ func NewSelect(
 ) *SelectModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")

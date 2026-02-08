@@ -59,7 +59,7 @@ const (
 // Model is the root application model.
 type Model struct {
 	ctx   context.Context
-	theme *styles.Theme
+	theme styles.Theme
 	scope log.Scope
 
 	// Dependencies
@@ -100,7 +100,7 @@ type Model struct {
 func New(
 	ctx context.Context,
 	cfg *config.CLIConfig,
-	theme *styles.Theme,
+	theme styles.Theme,
 	services api.APIServices,
 	authService auth.Auth,
 	prefs preferences.Preferences,
@@ -113,9 +113,6 @@ func New(
 	}
 	if cfg == nil {
 		panic("cfg is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if authService == nil {
 		panic("authService is nil")

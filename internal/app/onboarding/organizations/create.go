@@ -26,7 +26,7 @@ type orgCreatedMsg struct {
 // CreateModel handles organization creation.
 type CreateModel struct {
 	ctx      context.Context
-	theme    *styles.Theme
+	theme    styles.Theme
 	services api.APIServices
 	prefs    preferences.Preferences
 	scope    log.Scope
@@ -41,16 +41,13 @@ type CreateModel struct {
 // NewCreate creates a new organization creation step.
 func NewCreate(
 	ctx context.Context,
-	theme *styles.Theme,
+	theme styles.Theme,
 	services api.APIServices,
 	prefs preferences.Preferences,
 	scope log.Scope,
 ) *CreateModel {
 	if ctx == nil {
 		panic("ctx is nil")
-	}
-	if theme == nil {
-		panic("theme is nil")
 	}
 	if prefs == nil {
 		panic("prefs is nil")

@@ -25,7 +25,7 @@ type pollMsg struct{}
 
 // Model renders the policy status: pending count, estimated savings, observed savings.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	db    sqlite.DB
 
 	summary    domain.PolicySummary
@@ -35,7 +35,7 @@ type Model struct {
 }
 
 // New creates a new policy status model.
-func New(theme *styles.Theme) *Model {
+func New(theme styles.Theme) *Model {
 	return &Model{
 		theme: theme,
 	}

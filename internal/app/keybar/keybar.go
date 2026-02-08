@@ -13,7 +13,7 @@ import (
 
 // Model renders keybinding hints.
 type Model struct {
-	theme  *styles.Theme
+	theme  styles.Theme
 	scope  log.Scope
 	help   help.Model
 	keyMap help.KeyMap
@@ -21,7 +21,7 @@ type Model struct {
 }
 
 // New creates a new keybar.
-func New(theme *styles.Theme, scope log.Scope) *Model {
+func New(theme styles.Theme, scope log.Scope) *Model {
 	scope = scope.Child("keybar")
 	colors := theme.Colors
 

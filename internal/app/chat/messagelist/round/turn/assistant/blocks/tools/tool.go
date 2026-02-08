@@ -64,7 +64,7 @@ type Child interface {
 // The actual tool logic lives in the embedded child.
 // It is a fixed-height component. Implements block.Block.
 type Model struct {
-	theme  *styles.Theme
+	theme  styles.Theme
 	index  int
 	toolID string
 	width  int
@@ -77,7 +77,7 @@ type Model struct {
 }
 
 // New creates a new tool model wrapping the given child.
-func New(theme *styles.Theme, index int, toolID string, width int, child Child) *Model {
+func New(theme styles.Theme, index int, toolID string, width int, child Child) *Model {
 	// Child gets width minus body horizontal padding
 	child.SetWidth(width - bodyPaddingH)
 	return &Model{

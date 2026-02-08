@@ -10,13 +10,13 @@ import (
 
 // Model wraps the Bubbles progress component with theming.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	progress progress.Model
 	width    int
 }
 
 // New creates a new progress bar.
-func New(theme *styles.Theme, width int) *Model {
+func New(theme styles.Theme, width int) *Model {
 	colors := theme.Colors
 
 	p := progress.New(

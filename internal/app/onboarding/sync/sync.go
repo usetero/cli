@@ -19,7 +19,7 @@ import (
 
 // Model waits for sync to complete.
 type Model struct {
-	theme    *styles.Theme
+	theme    styles.Theme
 	syncer   powersync.Syncer
 	scope    log.Scope
 	spinner  spinner.Model
@@ -29,10 +29,7 @@ type Model struct {
 }
 
 // New creates a new sync step.
-func New(theme *styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
-	if theme == nil {
-		panic("theme is nil")
-	}
+func New(theme styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
 	if syncer == nil {
 		panic("syncer is nil")
 	}

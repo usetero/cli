@@ -34,7 +34,7 @@ type entityRow struct {
 
 // Model renders sync connection status.
 type Model struct {
-	theme  *styles.Theme
+	theme  styles.Theme
 	syncer powersync.Syncer
 	db     sqlite.DB
 	host   string
@@ -47,7 +47,7 @@ type Model struct {
 }
 
 // New creates a new sync status model.
-func New(theme *styles.Theme, syncer powersync.Syncer, endpoint string) *Model {
+func New(theme styles.Theme, syncer powersync.Syncer, endpoint string) *Model {
 	host := endpoint
 	if u, err := url.Parse(endpoint); err == nil && u.Host != "" {
 		host = u.Host

@@ -31,7 +31,7 @@ const (
 // Model represents a single user→assistant exchange.
 // It is a fixed-height component - height is determined by content.
 type Model struct {
-	theme *styles.Theme
+	theme styles.Theme
 	scope log.Scope
 
 	conversationID domain.ConversationID
@@ -76,7 +76,7 @@ type streamUpdateMsg struct {
 
 // New creates a new turn from a user submission.
 func New(
-	theme *styles.Theme,
+	theme styles.Theme,
 	conversationID domain.ConversationID,
 	accountID domain.AccountID,
 	userMessageID domain.MessageID,
