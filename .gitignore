@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+!internal/powersync/extension/extensions/*.so
+!internal/powersync/extension/extensions/*.dylib
 
 # Test binary, built with `go test -c`
 *.test
