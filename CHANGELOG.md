@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.0](https://github.com/usetero/cli/compare/v1.9.0...v1.10.0) (2026-02-09)
+
+
+### Features
+
+* replace goreleaser with native CGO builds on platform runners ([8a59146](https://github.com/usetero/cli/commit/8a591462ae94f559d74ef89873fab9154fd92d8e))
+
+
+### Bug Fixes
+
+* mark prerelease tags, skip homebrew update for rc tags ([4f80be8](https://github.com/usetero/cli/commit/4f80be80d60f5003ccbc345fd4867c2bb3caa2d0))
+* use macos-latest with cross-compile for darwin/amd64 ([66e9dce](https://github.com/usetero/cli/commit/66e9dce3c8a471989b8e8a02ef7514606cb17fe2))
+
 ## [1.9.0](https://github.com/usetero/cli/compare/tero-v1.8.0...tero-v1.9.0) (2026-02-09)
 
 
