@@ -35,7 +35,7 @@ func LoadCLIConfig() *CLIConfig {
 		APIEndpoint:       getEnvOrDefault("TERO_API_ENDPOINT", productionEndpoint),
 		PowerSyncEndpoint: getEnvOrDefault("TERO_POWERSYNC_ENDPOINT", productionPowerSyncEndpoint),
 		ChatEndpoint:      getEnvOrDefault("TERO_CHAT_ENDPOINT", productionChatEndpoint),
-		WorkOSClientID:    getEnvOrDefault("TERO_WORKOS_CLIENT_ID", "client_01JQCC2D06JF9ASFA6GRHMFA3N"),
+		WorkOSClientID:    getEnvOrDefault("WORKOS_CLIENT_ID", "client_01JQCC2D06JF9ASFA6GRHMFA3N"),
 		Debug:             os.Getenv("TERO_DEBUG") == "true" || os.Getenv("TERO_DEBUG") == "1",
 	}
 }

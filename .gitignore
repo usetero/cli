@@ -42,4 +42,4 @@ dist/
 docs/VISION.md
 .hermit/
 tmp/
-admin
+/admin

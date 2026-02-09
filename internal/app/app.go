@@ -73,13 +73,14 @@ type Model struct {
 	prefs       preferences.Preferences
 
 	// Runtime (created after account selection / onboarding)
-	db           sqlite.DB
-	uploader     upload.Uploader
-	chatClient   chatclient.Client
-	toolRegistry *chattools.Registry
-	user         *auth.User
-	account      domain.Account
-	workspace    domain.Workspace
+	sessionCancel context.CancelFunc
+	db            sqlite.DB
+	uploader      upload.Uploader
+	chatClient    chatclient.Client
+	toolRegistry  *chattools.Registry
+	user          *auth.User
+	account       domain.Account
+	workspace     domain.Workspace
 
 	// Components
 	statusBar  *statusbar.Model
@@ -453,7 +454,13 @@ func (m *Model) startSync(accountID string) error {
 		return fmt.Errorf("database not open")
 	}
 
-	if err := m.syncer.Start(m.ctx, m.db, accountID, nil); err != nil {
+	// Create a session context that is cancelled on shutdown.
+	sessionCtx, cancel := context.WithCancel(m.ctx)
+	m.sessionCancel = cancel
+
+	if err := m.syncer.Start(sessionCtx, m.db, accountID, nil); err != nil {
+		cancel()
+		m.sessionCancel = nil
 		return err
 	}
 	m.scope.Info("syncer started", "account_id", accountID)
@@ -467,7 +474,7 @@ func (m *Model) startSync(accountID string) error {
 	// Create and start uploader
 	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.scope)
 	go func() {
-		if err := m.uploader.Run(m.ctx); err != nil && !errors.Is(err, context.Canceled) {
+		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
 			m.scope.Error("uploader error", "error", err)
 		}
 	}()
@@ -683,6 +690,10 @@ func (m *Model) renderPaletteOverlay(base string) string {
 }
 
 func (m *Model) shutdown() {
+	if m.sessionCancel != nil {
+		m.sessionCancel()
+		m.sessionCancel = nil
+	}
 	if m.syncer != nil {
 		m.syncer.Stop()
 	}

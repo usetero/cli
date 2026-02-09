@@ -5,6 +5,15 @@ vars:
     sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"
   PARALLEL_COUNT:
     sh: echo $(({{.CPU_COUNT}} * 2))
+  TERO_ENV: '{{.TERO_ENV | default "local"}}'
+  # Wrap commands with doppler for non-local environments.
+  ENV_PREFIX:
+    sh: |
+      if [ "{{.TERO_ENV}}" = "local" ]; then
+        echo ""
+      else
+        echo "doppler run -c {{.TERO_ENV}} --"
+      fi
 
 tasks:
   # ===========================================================================
@@ -24,12 +33,6 @@ tasks:
     deps: [do, check, build]
     cmds:
       - gh signoff
-
-  dev:
-    desc: Generate code and build
-    deps: [generate]
-    cmds:
-      - task: build
 
   # ===========================================================================
   # Code generation
@@ -120,14 +123,14 @@ tasks:
       - gotestsum --format short-verbose -- -race -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} -skip "^TestIntegration_|^TestCorrectness_" ./...
 
   test:integration:
-    desc: Run integration tests (requires doppler)
+    desc: Run integration tests (TERO_ENV=dev|prd)
     cmds:
-      - doppler run -- gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...
+      - '{{.ENV_PREFIX}} gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...'
 
   test:correctness:
-    desc: Run correctness tests (requires doppler)
+    desc: Run correctness tests (TERO_ENV=dev|prd)
     cmds:
-      - doppler run -- gotestsum --format short-verbose -- -v -tags=correctness -run "^TestCorrectness_" ./...
+      - '{{.ENV_PREFIX}} gotestsum --format short-verbose -- -v -tags=correctness -run "^TestCorrectness_" ./...'
 
   test:all:
     desc: Run all tests (unit + integration)
@@ -140,38 +143,44 @@ tasks:
   # ===========================================================================
 
   run:
-    desc: Run tero without building
+    desc: Run tero (TERO_ENV=local|dev|prd)
     cmds:
-      - go run ./cmd/tero {{.CLI_ARGS}}
+      - "{{.ENV_PREFIX}} go run ./cmd/tero {{.CLI_ARGS}}"
+
+  dev:
+    desc: Generate code and build
+    deps: [generate]
+    cmds:
+      - task: build
 
   auth:login:
-    desc: Login to Tero (dev)
+    desc: Login to Tero (TERO_ENV=local|dev|prd)
     cmds:
-      - doppler run -- go run ./cmd/tero auth login
+      - "{{.ENV_PREFIX}} go run ./cmd/tero auth login"
 
   auth:token:
-    desc: Print current access token
+    desc: Print current access token (TERO_ENV=local|dev|prd)
     cmds:
-      - doppler run -- go run ./cmd/tero auth token
+      - "{{.ENV_PREFIX}} go run ./cmd/tero auth token"
 
   auth:status:
-    desc: Show auth status
+    desc: Show auth status (TERO_ENV=local|dev|prd)
     cmds:
-      - doppler run -- go run ./cmd/tero auth status
+      - "{{.ENV_PREFIX}} go run ./cmd/tero auth status"
 
   # ===========================================================================
   # Admin (internal tooling, not shipped)
   # ===========================================================================
 
   admin:join-org:
-    desc: Join a client organization (for support/debugging)
+    desc: Join a client organization (TERO_ENV=dev|prd)
     cmds:
-      - doppler run -- go run ./cmd/admin join-org {{.CLI_ARGS}}
+      - "{{.ENV_PREFIX}} go run ./cmd/admin join-org {{.CLI_ARGS}}"
 
   admin:leave-org:
-    desc: Leave a client organization
+    desc: Leave a client organization (TERO_ENV=dev|prd)
     cmds:
-      - doppler run -- go run ./cmd/admin leave-org {{.CLI_ARGS}}
+      - "{{.ENV_PREFIX}} go run ./cmd/admin leave-org {{.CLI_ARGS}}"
 
   # ===========================================================================
   # Dependencies
