@@ -1,6 +1,15 @@
 package msgs
 
-import tea "charm.land/bubbletea/v2"
+import (
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/usetero/cli/internal/preferences"
+)
+
+// SetTheme requests a theme change.
+type SetTheme struct {
+	Theme preferences.Theme
+}
 
 // Error signals an error to show to the user.
 type Error struct {

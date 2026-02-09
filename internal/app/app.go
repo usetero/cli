@@ -192,7 +192,7 @@ func (m *Model) checkForUpdate() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case quitConfirmed:
 		m.shutdown()
 		return m, tea.Quit
@@ -204,6 +204,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case palette.CloseMsg:
 		m.palette = nil
 		return m, nil
+	case appmsg.SetTheme:
+		return m, m.setTheme(msg.Theme)
 	}
 
 	switch msg := msg.(type) {
@@ -736,6 +738,24 @@ func (m *Model) activateOrg(orgID domain.OrganizationID, msg tea.Msg) tea.Cmd {
 		return m.onboarding.Update(msg)
 	}
 	return nil
+}
+
+// setTheme persists the user's theme preference and shows a toast.
+func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
+	if err := m.userPrefs.SetTheme(theme); err != nil {
+		m.scope.Error("failed to set theme", "error", err)
+		return appmsg.ErrorCmd("Failed to save theme", err, false)
+	}
+	label := "Auto"
+	switch theme {
+	case preferences.ThemeAuto:
+		// default
+	case preferences.ThemeDark:
+		label = "Dark"
+	case preferences.ThemeLight:
+		label = "Light"
+	}
+	return appmsg.SuccessCmd("Theme set to " + label + ". Restart to apply.")
 }
 
 // switchOrganization re-enters onboarding at org selection.

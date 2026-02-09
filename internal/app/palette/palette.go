@@ -16,9 +16,12 @@ import (
 )
 
 // Command is a single palette entry.
+// If Children is set, selecting this command drills into the sub-commands
+// instead of executing Handler.
 type Command struct {
-	Name    string         // Display name (e.g. "New Conversation")
-	Handler func() tea.Cmd // What to do when selected
+	Name     string         // Display name (e.g. "New Conversation")
+	Handler  func() tea.Cmd // What to do when selected (leaf commands)
+	Children []Command      // Sub-commands (selecting drills down)
 }
 
 // OpenMsg requests the palette to open.
@@ -48,10 +51,17 @@ const (
 type Model struct {
 	theme    styles.Theme
 	input    *input.Model
-	commands []Command // all commands
+	commands []Command // current command list (top-level or children)
+	stack    []level   // previous levels for back navigation
 	matches  []match   // filtered results
 	selected int       // index into matches
 	width    int       // available width (set by caller)
+}
+
+// level captures the state of a palette level for back navigation.
+type level struct {
+	commands []Command
+	title    string
 }
 
 // match pairs a command with its fuzzy match positions.
@@ -86,14 +96,24 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, closeKey):
+			// If nested, go back one level instead of closing
+			if len(m.stack) > 0 {
+				m.popLevel()
+				return nil
+			}
 			return func() tea.Msg { return CloseMsg{} }
 
 		case key.Matches(msg, selectKey):
 			if len(m.matches) > 0 {
-				handler := m.matches[m.selected].command.Handler
+				cmd := m.matches[m.selected].command
+				// If command has children, drill down
+				if len(cmd.Children) > 0 {
+					m.pushLevel(cmd.Name, cmd.Children)
+					return nil
+				}
 				return tea.Sequence(
 					func() tea.Msg { return CloseMsg{} },
-					handler(),
+					cmd.Handler(),
 				)
 			}
 			return nil
@@ -119,6 +139,29 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.filter()
 	}
 	return cmd
+}
+
+// pushLevel saves the current level and drills into children.
+// title is the name of the command being drilled into (shown as header).
+func (m *Model) pushLevel(title string, children []Command) {
+	m.stack = append(m.stack, level{
+		commands: m.commands,
+		title:    title,
+	})
+	m.commands = children
+	m.selected = 0
+	m.input.SetValue("")
+	m.filter()
+}
+
+// popLevel returns to the previous level.
+func (m *Model) popLevel() {
+	prev := m.stack[len(m.stack)-1]
+	m.stack = m.stack[:len(m.stack)-1]
+	m.commands = prev.commands
+	m.selected = 0
+	m.input.SetValue("")
+	m.filter()
 }
 
 // filter updates the match list based on current input.
@@ -214,9 +257,15 @@ func (m *Model) View() string {
 }
 
 // renderHeader renders "Commands ╱╱╱╱╱╱╱╱" with gradient slashes.
+// When nested, shows the parent command name instead.
 func (m *Model) renderHeader(width int) string {
 	colors := m.theme
-	title := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true).Render("Commands")
+	titleText := "Commands"
+	if len(m.stack) > 0 {
+		// Show the name of the command we drilled into
+		titleText = m.stack[len(m.stack)-1].title
+	}
+	title := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true).Render(titleText)
 	titleWidth := lipgloss.Width(title)
 
 	remaining := width - titleWidth - 1 // 1 for space
@@ -235,10 +284,17 @@ func (m *Model) renderItem(index, width int) string {
 	colors := m.theme
 	item := m.matches[index]
 	name := item.command.Name
+	hasChildren := len(item.command.Children) > 0
 	isSelected := index == m.selected
 
+	// Reserve space for "›" suffix on parent commands
+	nameWidth := width
+	if hasChildren {
+		nameWidth = width - 2 // space + "›"
+	}
+
 	// Truncate name to fit
-	name = ansi.Truncate(name, width, "…")
+	name = ansi.Truncate(name, nameWidth, "…")
 
 	if isSelected {
 		// Highlight matched characters in selected item
@@ -246,6 +302,10 @@ func (m *Model) renderItem(index, width int) string {
 			lipgloss.NewStyle().Foreground(colors.Bg).Background(colors.Accent).Bold(true),
 			lipgloss.NewStyle().Foreground(colors.Bg).Background(colors.Accent),
 		)
+		if hasChildren {
+			suffix := lipgloss.NewStyle().Foreground(colors.Bg).Background(colors.Accent).Render(" ›")
+			styled += suffix
+		}
 		return lipgloss.NewStyle().
 			Width(width).
 			Background(colors.Accent).
@@ -258,6 +318,10 @@ func (m *Model) renderItem(index, width int) string {
 		lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true),
 		lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg),
 	)
+	if hasChildren {
+		suffix := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render(" ›")
+		styled += suffix
+	}
 	return lipgloss.NewStyle().
 		Width(width).
 		Background(colors.Bg).

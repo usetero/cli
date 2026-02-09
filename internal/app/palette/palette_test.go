@@ -15,6 +15,11 @@ func testCommands() []Command {
 	return []Command{
 		{Name: "New Conversation", Handler: noop},
 		{Name: "Toggle Details", Handler: noop},
+		{Name: "Theme", Children: []Command{
+			{Name: "Auto", Handler: noop},
+			{Name: "Dark", Handler: noop},
+			{Name: "Light", Handler: noop},
+		}},
 		{Name: "Quit", Handler: noop},
 	}
 }
@@ -60,5 +65,52 @@ func TestView(t *testing.T) {
 
 		output := m.View()
 		teatest.AssertNoRawEscapes(t, output)
+	})
+
+	t.Run("drill into children shows child commands", func(t *testing.T) {
+		t.Parallel()
+		m := New(theme, testCommands())
+		m.SetWidth(50)
+
+		// Select "Theme" (index 2) and press enter to drill in
+		m.selected = 2
+		m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+		// Should now show 3 child commands
+		if len(m.matches) != 3 {
+			t.Fatalf("expected 3 children, got %d", len(m.matches))
+		}
+		if m.matches[0].command.Name != "Auto" {
+			t.Fatalf("expected first child 'Auto', got %q", m.matches[0].command.Name)
+		}
+
+		output := m.View()
+		teatest.AssertNoRawEscapes(t, output)
+		teatest.AssertMaxWidth(t, 50, output)
+	})
+
+	t.Run("escape from children returns to parent", func(t *testing.T) {
+		t.Parallel()
+		m := New(theme, testCommands())
+		m.SetWidth(50)
+
+		// Drill into Theme
+		m.selected = 2
+		m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		if len(m.stack) != 1 {
+			t.Fatalf("expected stack depth 1, got %d", len(m.stack))
+		}
+
+		// Escape should go back, not close
+		cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+		if cmd != nil {
+			t.Fatal("expected nil cmd (back), got non-nil (would close)")
+		}
+		if len(m.stack) != 0 {
+			t.Fatalf("expected stack depth 0, got %d", len(m.stack))
+		}
+		if len(m.matches) != len(testCommands()) {
+			t.Fatalf("expected %d top-level matches, got %d", len(testCommands()), len(m.matches))
+		}
 	})
 }

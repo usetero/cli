@@ -3,7 +3,9 @@ package app
 import (
 	tea "charm.land/bubbletea/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/palette"
+	"github.com/usetero/cli/internal/preferences"
 )
 
 // paletteCommands returns the list of commands available in the command palette.
@@ -32,11 +34,29 @@ func (m *Model) paletteCommands() []palette.Command {
 			},
 		},
 		{
+			Name:     "Theme",
+			Children: m.themeCommands(),
+		},
+		{
 			Name: "Quit",
 			Handler: func() tea.Cmd {
 				m.quitDlg = newQuitDialog(m.theme)
 				return nil
 			},
 		},
+	}
+}
+
+// themeCommands returns sub-commands for theme selection.
+func (m *Model) themeCommands() []palette.Command {
+	set := func(theme preferences.Theme) func() tea.Cmd {
+		return func() tea.Cmd {
+			return func() tea.Msg { return appmsg.SetTheme{Theme: theme} }
+		}
+	}
+	return []palette.Command{
+		{Name: "Auto (detect from terminal)", Handler: set(preferences.ThemeAuto)},
+		{Name: "Dark", Handler: set(preferences.ThemeDark)},
+		{Name: "Light", Handler: set(preferences.ThemeLight)},
 	}
 }
