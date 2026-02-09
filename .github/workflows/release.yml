@@ -80,9 +80,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PRERELEASE=""
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            PRERELEASE="--prerelease"
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
             --generate-notes \
+            ${PRERELEASE} \
             artifacts/*.tar.gz \
             artifacts/checksums.txt \
             scripts/install.sh
@@ -97,6 +102,7 @@ jobs:
           repositories: homebrew-tap
 
       - name: Update Homebrew formula
+        if: ${{ !contains(github.ref_name, '-') }}
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
