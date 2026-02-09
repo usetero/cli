@@ -19,6 +19,7 @@ type PolicyCategoryStatus struct {
 	DismissedCount         int64
 	EstimatedVolumePerHour float64
 	EstimatedBytesPerHour  float64
+	EstimatedCostPerHour   float64
 	RiskLevel              RiskLevel
 	Benefit                string
 }

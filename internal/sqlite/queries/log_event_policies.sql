@@ -9,6 +9,7 @@ SELECT
   CAST(COALESCE(SUM(CASE WHEN status = 'DISMISSED' THEN 1 ELSE 0 END), 0) AS INTEGER) AS dismissed_count,
   SUM(CASE WHEN status = 'PENDING' THEN estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
   SUM(CASE WHEN status = 'PENDING' THEN estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
+  SUM(CASE WHEN status = 'PENDING' THEN estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
   CASE MAX(CASE risk_level
     WHEN 'high' THEN 3
     WHEN 'medium' THEN 2

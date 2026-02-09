@@ -109,9 +109,9 @@ func (m *Model) stateKey(s domain.PolicySummary, cats []domain.PolicyCategorySta
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%s:%s",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%s:%s",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
-			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour,
+			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
 			c.RiskLevel, c.Benefit)
 	}
 
@@ -218,7 +218,7 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Risk", "Benefit", "Waste", "Impact")
+	tbl.Headers("Category", "Pending", "Risk", "Benefit", "Waste", "Cost", "Impact")
 	tbl.SetWidth(width)
 
 	for _, c := range m.categories {
@@ -228,6 +228,7 @@ func (m *Model) renderCategoryTable(width int) string {
 			m.renderRisk(c.RiskLevel),
 			formatBenefitLabel(c.Benefit),
 			m.formatWaste(c),
+			formatCategoryCost(c),
 			formatCategoryImpact(c),
 		)
 	}
@@ -287,6 +288,17 @@ func wastePercent(s domain.PolicySummary) int {
 		return int(math.Round(s.EstimatedVolumePerHour / s.TotalVolumePerHour * 100))
 	}
 	return 0
+}
+
+// formatCategoryCost returns estimated monthly cost reduction for a category.
+func formatCategoryCost(c domain.PolicyCategoryStatus) string {
+	if c.EstimatedCostPerHour > 0 {
+		monthly := c.EstimatedCostPerHour * 730
+		if monthly >= 1 {
+			return "~" + formatCost(monthly) + "/mo"
+		}
+	}
+	return "—"
 }
 
 // formatCategoryImpact returns the best available impact string for a category.
