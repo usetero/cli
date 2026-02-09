@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Pre-commit hook to prevent large files from being committed.
+# Installed via: task setup
+#
+
+set -e
+
+MAX_SIZE_KB=1000  # 1MB
+MAX_SIZE_BYTES=$((MAX_SIZE_KB * 1024))
+
+# Check staged files
+while IFS= read -r -d '' file; do
+    if [ -f "$file" ]; then
+        size=$(wc -c < "$file" | tr -d ' ')
+        if [ "$size" -gt "$MAX_SIZE_BYTES" ]; then
+            size_mb=$(echo "scale=2; $size / 1048576" | bc)
+            echo "Error: $file is ${size_mb}MB (max ${MAX_SIZE_KB}KB)"
+            echo "If this is intentional, use: git commit --no-verify"
+            exit 1
+        fi
+    fi
+done < <(git diff --cached --name-only -z --diff-filter=ACM)
+
+exit 0

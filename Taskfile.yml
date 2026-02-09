@@ -20,6 +20,11 @@ tasks:
   # Primary workflows (what you'll use most)
   # ===========================================================================
 
+  setup:
+    desc: One-time local dev setup (git hooks)
+    cmds:
+      - git config core.hooksPath .githooks
+
   do:
     desc: Format, lint, and test (pre-commit check)
     cmds:
@@ -109,9 +114,9 @@ tasks:
       - shellcheck scripts/*.sh
 
   check:
-    desc: Validate release configuration
+    desc: Validate build
     cmds:
-      - goreleaser check
+      - go vet ./...
 
   # ===========================================================================
   # Testing
@@ -231,9 +236,11 @@ tasks:
   release:snapshot:
     desc: Test release build locally
     cmds:
-      - goreleaser release --snapshot --clean --skip=publish
-      - echo ""
-      - ls -lh dist/*.tar.gz dist/*.zip 2>/dev/null || true
+      - |
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        CGO_ENABLED=1 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o dist/tero ./cmd/tero
+        echo "Built dist/tero ${VERSION}"
+        ls -lh dist/tero
 
   release:test-install:
     desc: Test install.sh script against latest release

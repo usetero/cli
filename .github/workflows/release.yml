@@ -8,44 +8,166 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-13
+            goos: darwin
+            goarch: amd64
+          - runner: macos-latest
+            goos: darwin
+            goarch: arm64
+          - runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
         with:
           go-version-file: go.mod
           cache: true
 
-      - name: Generate a token for homebrew-tap
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o tero ./cmd/tero
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCHIVE="tero_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
+          tar czf "${ARCHIVE}" tero LICENSE
+          shasum -a 256 "${ARCHIVE}" > "${ARCHIVE}.sha256"
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tero-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            tero_*.tar.gz
+            tero_*.tar.gz.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: artifacts
+        run: |
+          cat *.sha256 > checksums.txt
+          rm *.sha256
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            artifacts/*.tar.gz \
+            artifacts/checksums.txt \
+            scripts/install.sh
+
+      - name: Generate a token
         id: generate-token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
         with:
           app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
           private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: homebrew-tap,scoop-bucket
+          repositories: homebrew-tap
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+      - name: Update Homebrew formula
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BASE_URL="https://github.com/usetero/cli/releases/download/${GITHUB_REF_NAME}"
+
+          darwin_amd64_sha=$(awk '/darwin_amd64/ {print $1}' artifacts/checksums.txt)
+          darwin_arm64_sha=$(awk '/darwin_arm64/ {print $1}' artifacts/checksums.txt)
+          linux_amd64_sha=$(awk '/linux_amd64/ {print $1}' artifacts/checksums.txt)
+          linux_arm64_sha=$(awk '/linux_arm64/ {print $1}' artifacts/checksums.txt)
+
+          cat > /tmp/tero.rb <<EOF
+          # typed: false
+          # frozen_string_literal: true
+
+          class Tero < Formula
+            desc "Improve your observability data quality from the terminal"
+            homepage "https://usetero.com"
+            version "${VERSION}"
+            license "Apache-2.0"
+
+            on_macos do
+              if Hardware::CPU.intel?
+                url "${BASE_URL}/tero_${VERSION}_darwin_amd64.tar.gz"
+                sha256 "${darwin_amd64_sha}"
+
+                def install
+                  bin.install "tero"
+                end
+              end
+              if Hardware::CPU.arm?
+                url "${BASE_URL}/tero_${VERSION}_darwin_arm64.tar.gz"
+                sha256 "${darwin_arm64_sha}"
+
+                def install
+                  bin.install "tero"
+                end
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
+                url "${BASE_URL}/tero_${VERSION}_linux_amd64.tar.gz"
+                sha256 "${linux_amd64_sha}"
+                def install
+                  bin.install "tero"
+                end
+              end
+              if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+                url "${BASE_URL}/tero_${VERSION}_linux_arm64.tar.gz"
+                sha256 "${linux_arm64_sha}"
+                def install
+                  bin.install "tero"
+                end
+              end
+            end
+
+            test do
+              system "#{bin}/tero", "--version"
+            end
+          end
+          EOF
+
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' /tmp/tero.rb
+
+          cd "$(mktemp -d)"
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/usetero/homebrew-tap.git" .
+          cp /tmp/tero.rb Formula/tero.rb
+          git config user.name "tero-bot[bot]"
+          git config user.email "tero-bot[bot]@users.noreply.github.com"
+          git add Formula/tero.rb
+          git commit -m "tero ${VERSION}"
+          git push
