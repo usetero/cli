@@ -6,7 +6,8 @@
   "packages": {
     ".": {
       "release-type": "go",
-      "package-name": "tero"
+      "package-name": "tero",
+      "include-component-in-tag": false
     }
   }
 }
