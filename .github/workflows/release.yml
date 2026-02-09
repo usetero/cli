@@ -78,21 +78,27 @@ jobs:
           cat *.sha256 > checksums.txt
           rm *.sha256
 
-      - name: Create GitHub release
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PRERELEASE=""
-          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
-            PRERELEASE="--prerelease"
+          # Release-please creates the release; we just upload assets.
+          # If the release doesn't exist yet (e.g. rc tags), create it.
+          if ! gh release view "${GITHUB_REF_NAME}" &>/dev/null; then
+            PRERELEASE=""
+            if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+              PRERELEASE="--prerelease"
+            fi
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes \
+              ${PRERELEASE}
           fi
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes \
-            ${PRERELEASE} \
+          gh release upload "${GITHUB_REF_NAME}" \
             artifacts/*.tar.gz \
             artifacts/checksums.txt \
-            scripts/install.sh
+            scripts/install.sh \
+            --clobber
 
       - name: Generate a token
         id: generate-token
