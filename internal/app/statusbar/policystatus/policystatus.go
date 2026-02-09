@@ -218,17 +218,17 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Waste", "Impact", "Risk", "Benefit")
+	tbl.Headers("Category", "Pending", "Risk", "Benefit", "Waste", "Impact")
 	tbl.SetWidth(width)
 
 	for _, c := range m.categories {
 		tbl.Row(
 			c.Category,
 			fmt.Sprintf("%d", c.PendingCount),
-			m.formatWaste(c),
-			formatCategoryImpact(c),
 			m.renderRisk(c.RiskLevel),
 			formatBenefitLabel(c.Benefit),
+			m.formatWaste(c),
+			formatCategoryImpact(c),
 		)
 	}
 

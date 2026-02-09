@@ -176,13 +176,13 @@ func (m *Model) renderServiceTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Status", "Service", "Events", "Volume", "Bytes", "Cost")
+	tbl.Headers("Service", "Status", "Events", "Volume", "Bytes", "Cost")
 	tbl.SetWidth(width)
 
 	for _, svc := range m.services {
 		row := []string{
-			status.Service(m.theme, svc.Status, true),
 			m.serviceName(svc),
+			status.Service(m.theme, svc.Status, true),
 			fmt.Sprintf("%d", svc.EventCount),
 			formatVolume(svc.VolumePerHour) + "/hr",
 			formatBytes(svc.BytesPerHour) + "/hr",

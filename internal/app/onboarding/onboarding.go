@@ -93,6 +93,15 @@ func (m *Model) Init() tea.Cmd {
 	return m.setStep(auth.NewCheck(m.ctx, m.theme, m.auth, m.scope))
 }
 
+// StartFromOrgSelect starts the onboarding flow at the organization selection
+// step, skipping auth check and role selection. Used when switching orgs or
+// accounts — the caller clears the relevant preferences so onboarding prompts
+// for selection instead of auto-selecting.
+func (m *Model) StartFromOrgSelect() tea.Cmd {
+	m.scope.Info("onboarding started from org select")
+	return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.scope))
+}
+
 // Update handles messages and orchestrates step transitions.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {

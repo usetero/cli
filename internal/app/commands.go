@@ -20,6 +20,18 @@ func (m *Model) paletteCommands() []palette.Command {
 			},
 		},
 		{
+			Name: "Switch Organization",
+			Handler: func() tea.Cmd {
+				return m.switchOrganization()
+			},
+		},
+		{
+			Name: "Switch Account",
+			Handler: func() tea.Cmd {
+				return m.switchAccount()
+			},
+		},
+		{
 			Name: "Quit",
 			Handler: func() tea.Cmd {
 				m.quitDlg = newQuitDialog(m.theme)

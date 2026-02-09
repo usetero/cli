@@ -70,6 +70,7 @@ type Model struct {
 	authService auth.Auth
 	syncer      powersync.Syncer
 	services    api.APIServices
+	prefs       preferences.Preferences
 
 	// Runtime (created after account selection / onboarding)
 	db           sqlite.DB
@@ -142,6 +143,7 @@ func New(
 		authService: authService,
 		syncer:      syncer,
 		services:    services,
+		prefs:       prefs,
 		statusBar:   statusbar.New(theme, syncer, cfg.APIEndpoint),
 		toast:       toast.New(theme),
 		keyBar:      keybar.New(theme, scope),
@@ -687,4 +689,42 @@ func (m *Model) shutdown() {
 	if m.db != nil {
 		m.db.Close()
 	}
+}
+
+// switchOrganization clears org preference (cascades to account and workspace)
+// and re-enters onboarding. Onboarding will prompt for all choices.
+func (m *Model) switchOrganization() tea.Cmd {
+	m.scope.Info("switching organization")
+	_ = m.prefs.ClearDefaultOrgID()
+	return m.restartOnboarding()
+}
+
+// switchAccount clears account preference (cascades to workspace) and
+// re-enters onboarding. The saved org auto-selects, then prompts for account.
+func (m *Model) switchAccount() tea.Cmd {
+	m.scope.Info("switching account")
+	_ = m.prefs.ClearDefaultAccountID()
+	return m.restartOnboarding()
+}
+
+// restartOnboarding tears down the current session and re-enters onboarding
+// at the org selection step. Onboarding auto-selects any saved preferences
+// and prompts for anything that was cleared.
+func (m *Model) restartOnboarding() tea.Cmd {
+	m.shutdown()
+
+	m.db = nil
+	m.uploader = nil
+	m.chatClient = nil
+	m.toolRegistry = nil
+	m.chat = nil
+
+	m.statusBar = statusbar.New(m.theme, m.syncer, m.cfg.APIEndpoint)
+	m.windowTitle = ""
+
+	m.onboarding = onboarding.New(m.ctx, m.theme, m.services, m.prefs, m.authService, m.syncer, m.scope)
+	m.state = stateOnboarding
+	m.updateLayout()
+
+	return m.onboarding.StartFromOrgSelect()
 }

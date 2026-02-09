@@ -4,29 +4,31 @@ import "github.com/usetero/cli/internal/domain"
 
 // MockPreferences implements preferences.Preferences for testing.
 type MockPreferences struct {
-	GetEmailFunc              func() string
-	SetEmailFunc              func(email string) error
-	GetDatadogAPIKeyFunc      func() string
-	SetDatadogAPIKeyFunc      func(key string) error
-	GetDefaultOrgIDFunc       func() domain.OrganizationID
-	SetDefaultOrgIDFunc       func(orgID domain.OrganizationID) error
-	GetDefaultOrgNameFunc     func() string
-	SetDefaultOrgNameFunc     func(orgName string) error
-	GetDefaultAccountIDFunc   func() domain.AccountID
-	SetDefaultAccountIDFunc   func(accountID domain.AccountID) error
-	GetDefaultWorkspaceIDFunc func() domain.WorkspaceID
-	SetDefaultWorkspaceIDFunc func(workspaceID domain.WorkspaceID) error
-	ClearEmailFunc            func() error
-	ClearDatadogAPIKeyFunc    func() error
-	ClearDefaultOrgIDFunc     func() error
-	GetHasSeenGreetingFunc    func() bool
-	SetHasSeenGreetingFunc    func(seen bool) error
-	GetRoleFunc               func() string
-	SetRoleFunc               func(role string) error
-	GetServicesFunc           func() []string
-	SetServicesFunc           func(services []string) error
-	ClearRoleFunc             func() error
-	ClearServicesFunc         func() error
+	GetEmailFunc                func() string
+	SetEmailFunc                func(email string) error
+	GetDatadogAPIKeyFunc        func() string
+	SetDatadogAPIKeyFunc        func(key string) error
+	GetDefaultOrgIDFunc         func() domain.OrganizationID
+	SetDefaultOrgIDFunc         func(orgID domain.OrganizationID) error
+	GetDefaultOrgNameFunc       func() string
+	SetDefaultOrgNameFunc       func(orgName string) error
+	GetDefaultAccountIDFunc     func() domain.AccountID
+	SetDefaultAccountIDFunc     func(accountID domain.AccountID) error
+	GetDefaultWorkspaceIDFunc   func() domain.WorkspaceID
+	SetDefaultWorkspaceIDFunc   func(workspaceID domain.WorkspaceID) error
+	ClearEmailFunc              func() error
+	ClearDatadogAPIKeyFunc      func() error
+	ClearDefaultOrgIDFunc       func() error
+	ClearDefaultAccountIDFunc   func() error
+	ClearDefaultWorkspaceIDFunc func() error
+	GetHasSeenGreetingFunc      func() bool
+	SetHasSeenGreetingFunc      func(seen bool) error
+	GetRoleFunc                 func() string
+	SetRoleFunc                 func(role string) error
+	GetServicesFunc             func() []string
+	SetServicesFunc             func(services []string) error
+	ClearRoleFunc               func() error
+	ClearServicesFunc           func() error
 }
 
 // NewMockPreferences creates a MockPreferences with sensible defaults.
@@ -136,6 +138,20 @@ func (m *MockPreferences) ClearDatadogAPIKey() error {
 func (m *MockPreferences) ClearDefaultOrgID() error {
 	if m.ClearDefaultOrgIDFunc != nil {
 		return m.ClearDefaultOrgIDFunc()
+	}
+	return nil
+}
+
+func (m *MockPreferences) ClearDefaultAccountID() error {
+	if m.ClearDefaultAccountIDFunc != nil {
+		return m.ClearDefaultAccountIDFunc()
+	}
+	return nil
+}
+
+func (m *MockPreferences) ClearDefaultWorkspaceID() error {
+	if m.ClearDefaultWorkspaceIDFunc != nil {
+		return m.ClearDefaultWorkspaceIDFunc()
 	}
 	return nil
 }

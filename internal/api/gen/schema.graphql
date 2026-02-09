@@ -631,6 +631,12 @@ input CreateDatadogAccountInput {
   ($0.10/GB). Set to override with actual contract rate.
   """
   costPerGBIngested: Float
+
+  """
+  Fraction of the API rate limit to consume (0.0-1.0). NULL = default (0.8 =
+  80%). Leaves headroom for the customer's own API usage.
+  """
+  rateLimitUtilization: Float
   accountID: ID!
 
   """
@@ -830,6 +836,12 @@ type DatadogAccount implements Node {
   ($0.10/GB). Set to override with actual contract rate.
   """
   costPerGBIngested: Float
+
+  """
+  Fraction of the API rate limit to consume (0.0-1.0). NULL = default (0.8 =
+  80%). Leaves headroom for the customer's own API usage.
+  """
+  rateLimitUtilization: Float
 
   """Account this Datadog configuration belongs to"""
   account: Account!
@@ -1149,6 +1161,18 @@ input DatadogAccountWhereInput {
   costPerGBIngestedLTE: Float
   costPerGBIngestedIsNil: Boolean
   costPerGBIngestedNotNil: Boolean
+
+  """rate_limit_utilization field predicates"""
+  rateLimitUtilization: Float
+  rateLimitUtilizationNEQ: Float
+  rateLimitUtilizationIn: [Float!]
+  rateLimitUtilizationNotIn: [Float!]
+  rateLimitUtilizationGT: Float
+  rateLimitUtilizationGTE: Float
+  rateLimitUtilizationLT: Float
+  rateLimitUtilizationLTE: Float
+  rateLimitUtilizationIsNil: Boolean
+  rateLimitUtilizationNotNil: Boolean
 
   """account edge predicates"""
   hasAccount: Boolean
@@ -3723,6 +3747,13 @@ input UpdateDatadogAccountInput {
   """
   costPerGBIngested: Float
   clearCostPerGBIngested: Boolean
+
+  """
+  Fraction of the API rate limit to consume (0.0-1.0). NULL = default (0.8 =
+  80%). Leaves headroom for the customer's own API usage.
+  """
+  rateLimitUtilization: Float
+  clearRateLimitUtilization: Boolean
   accountID: ID
 }
 

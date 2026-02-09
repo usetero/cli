@@ -175,7 +175,10 @@ type CreateDatadogAccountInput struct {
 	// Cost per GB of log data ingested (USD). NULL = using Datadog's published rate
 	// ($0.10/GB). Set to override with actual contract rate.
 	CostPerGBIngested *float64 `json:"costPerGBIngested"`
-	AccountID         string   `json:"accountID"`
+	// Fraction of the API rate limit to consume (0.0-1.0). NULL = default (0.8 =
+	// 80%). Leaves headroom for the customer's own API usage.
+	RateLimitUtilization *float64 `json:"rateLimitUtilization"`
+	AccountID            string   `json:"accountID"`
 	// Optional client-provided UUID for offline-first sync.
 	// If provided and a record with this ID exists, returns the existing record.
 	Id *string `json:"id"`
@@ -189,6 +192,9 @@ func (v *CreateDatadogAccountInput) GetSite() DatadogAccountSite { return v.Site
 
 // GetCostPerGBIngested returns CreateDatadogAccountInput.CostPerGBIngested, and is useful for accessing the field via an interface.
 func (v *CreateDatadogAccountInput) GetCostPerGBIngested() *float64 { return v.CostPerGBIngested }
+
+// GetRateLimitUtilization returns CreateDatadogAccountInput.RateLimitUtilization, and is useful for accessing the field via an interface.
+func (v *CreateDatadogAccountInput) GetRateLimitUtilization() *float64 { return v.RateLimitUtilization }
 
 // GetAccountID returns CreateDatadogAccountInput.AccountID, and is useful for accessing the field via an interface.
 func (v *CreateDatadogAccountInput) GetAccountID() string { return v.AccountID }

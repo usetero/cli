@@ -5,6 +5,19 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// Store keys.
+const (
+	keyEmail              = "email"
+	keyDatadogAPIKey      = "datadog_api_key"
+	keyDefaultOrgID       = "default_org_id"
+	keyDefaultOrgName     = "default_org_name"
+	keyDefaultAccountID   = "default_account_id"
+	keyDefaultWorkspaceID = "default_workspace_id"
+	keyHasSeenGreeting    = "has_seen_greeting"
+	keyRole               = "role"
+	keyServices           = "services"
+)
+
 // Preferences provides access to user preferences.
 type Preferences interface {
 	GetEmail() string
@@ -22,6 +35,8 @@ type Preferences interface {
 	ClearEmail() error
 	ClearDatadogAPIKey() error
 	ClearDefaultOrgID() error
+	ClearDefaultAccountID() error
+	ClearDefaultWorkspaceID() error
 	GetHasSeenGreeting() bool
 	SetHasSeenGreeting(seen bool) error
 	GetRole() string
@@ -51,132 +66,128 @@ func NewService(store Store, scope log.Scope) *Service {
 	}
 }
 
-// GetEmail returns the user's email
 func (s *Service) GetEmail() string {
-	return s.store.Get("email")
+	return s.store.Get(keyEmail)
 }
 
-// SetEmail saves the user's email
 func (s *Service) SetEmail(email string) error {
-	s.store.Set("email", email)
+	s.store.Set(keyEmail, email)
 	return s.store.Save()
 }
 
-// GetDatadogAPIKey returns the Datadog API key
 func (s *Service) GetDatadogAPIKey() string {
-	return s.store.Get("datadog_api_key")
+	return s.store.Get(keyDatadogAPIKey)
 }
 
-// SetDatadogAPIKey saves the Datadog API key
 func (s *Service) SetDatadogAPIKey(key string) error {
-	s.store.Set("datadog_api_key", key)
+	s.store.Set(keyDatadogAPIKey, key)
 	return s.store.Save()
 }
 
-// GetDefaultOrgID returns the default organization ID
 func (s *Service) GetDefaultOrgID() domain.OrganizationID {
-	return domain.OrganizationID(s.store.Get("default_org_id"))
+	return domain.OrganizationID(s.store.Get(keyDefaultOrgID))
 }
 
-// SetDefaultOrgID saves the default organization ID
 func (s *Service) SetDefaultOrgID(orgID domain.OrganizationID) error {
-	s.store.Set("default_org_id", orgID.String())
+	s.store.Set(keyDefaultOrgID, orgID.String())
 	return s.store.Save()
 }
 
-// GetDefaultOrgName returns the default organization name
 func (s *Service) GetDefaultOrgName() string {
-	return s.store.Get("default_org_name")
+	return s.store.Get(keyDefaultOrgName)
 }
 
-// SetDefaultOrgName saves the default organization name
 func (s *Service) SetDefaultOrgName(orgName string) error {
-	s.store.Set("default_org_name", orgName)
+	s.store.Set(keyDefaultOrgName, orgName)
 	return s.store.Save()
 }
 
-// GetDefaultAccountID returns the default account ID
 func (s *Service) GetDefaultAccountID() domain.AccountID {
-	return domain.AccountID(s.store.Get("default_account_id"))
+	return domain.AccountID(s.store.Get(keyDefaultAccountID))
 }
 
-// SetDefaultAccountID saves the default account ID
 func (s *Service) SetDefaultAccountID(accountID domain.AccountID) error {
-	s.store.Set("default_account_id", accountID.String())
+	s.store.Set(keyDefaultAccountID, accountID.String())
 	return s.store.Save()
 }
 
-// GetDefaultWorkspaceID returns the default workspace ID
 func (s *Service) GetDefaultWorkspaceID() domain.WorkspaceID {
-	return domain.WorkspaceID(s.store.Get("default_workspace_id"))
+	return domain.WorkspaceID(s.store.Get(keyDefaultWorkspaceID))
 }
 
-// SetDefaultWorkspaceID saves the default workspace ID
 func (s *Service) SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error {
-	s.store.Set("default_workspace_id", workspaceID.String())
+	s.store.Set(keyDefaultWorkspaceID, workspaceID.String())
 	return s.store.Save()
 }
 
-// ClearEmail clears the user's email (for going back in onboarding)
 func (s *Service) ClearEmail() error {
-	s.store.Set("email", "")
+	s.store.Set(keyEmail, "")
 	return s.store.Save()
 }
 
-// ClearDatadogAPIKey clears the Datadog API key (for going back in onboarding)
 func (s *Service) ClearDatadogAPIKey() error {
-	s.store.Set("datadog_api_key", "")
+	s.store.Set(keyDatadogAPIKey, "")
 	return s.store.Save()
 }
 
-// ClearDefaultOrgID clears the default organization ID (for going back in onboarding)
+// ClearDefaultOrgID clears the default organization ID and cascades to
+// account and workspace since they are org-scoped.
 func (s *Service) ClearDefaultOrgID() error {
-	s.store.Set("default_org_id", "")
+	s.store.Set(keyDefaultOrgID, "")
+	s.store.Set(keyDefaultOrgName, "")
+	s.store.Set(keyDefaultAccountID, "")
+	s.store.Set(keyDefaultWorkspaceID, "")
 	return s.store.Save()
 }
 
-// GetHasSeenGreeting returns whether the user has seen the greeting
+// ClearDefaultAccountID clears the default account ID and cascades to
+// workspace since it is account-scoped.
+func (s *Service) ClearDefaultAccountID() error {
+	s.store.Set(keyDefaultAccountID, "")
+	s.store.Set(keyDefaultWorkspaceID, "")
+	return s.store.Save()
+}
+
+// ClearDefaultWorkspaceID clears the default workspace ID.
+func (s *Service) ClearDefaultWorkspaceID() error {
+	s.store.Set(keyDefaultWorkspaceID, "")
+	return s.store.Save()
+}
+
 func (s *Service) GetHasSeenGreeting() bool {
-	return s.store.GetBool("has_seen_greeting")
+	return s.store.GetBool(keyHasSeenGreeting)
 }
 
-// SetHasSeenGreeting saves whether the user has seen the greeting
 func (s *Service) SetHasSeenGreeting(seen bool) error {
-	s.store.SetBool("has_seen_greeting", seen)
+	s.store.SetBool(keyHasSeenGreeting, seen)
 	return s.store.Save()
 }
 
-// GetRole returns the user's role in this org
 func (s *Service) GetRole() string {
-	return s.store.Get("role")
+	return s.store.Get(keyRole)
 }
 
-// SetRole saves the user's role in this org
 func (s *Service) SetRole(role string) error {
-	s.store.Set("role", role)
+	s.store.Set(keyRole, role)
 	return s.store.Save()
 }
 
-// GetServices returns the services the user owns (if engineer role)
 func (s *Service) GetServices() []string {
-	return s.store.GetList("services")
+	return s.store.GetList(keyServices)
 }
 
-// SetServices saves the services the user owns (if engineer role)
 func (s *Service) SetServices(services []string) error {
-	s.store.SetList("services", services)
+	s.store.SetList(keyServices, services)
 	return s.store.Save()
 }
 
-// ClearRole clears the user's role (for going back in onboarding)
 func (s *Service) ClearRole() error {
-	s.store.Set("role", "")
+	s.store.Set(keyRole, "")
 	return s.store.Save()
 }
 
-// ClearServices clears the user's services (for going back in onboarding)
 func (s *Service) ClearServices() error {
-	s.store.SetList("services", nil)
+	s.store.SetList(keyServices, nil)
 	return s.store.Save()
 }
 
