@@ -70,7 +70,8 @@ type Model struct {
 	authService auth.Auth
 	syncer      powersync.Syncer
 	services    api.APIServices
-	prefs       preferences.Preferences
+	userPrefs   preferences.UserPreferences
+	orgPrefs    preferences.OrgPreferences
 
 	// Runtime (created after account selection / onboarding)
 	sessionCancel context.CancelFunc
@@ -108,7 +109,8 @@ func New(
 	version string,
 	services api.APIServices,
 	authService auth.Auth,
-	prefs preferences.Preferences,
+	userPrefs preferences.UserPreferences,
+	orgPrefs preferences.OrgPreferences,
 	storage sqlite.Storage,
 	syncer powersync.Syncer,
 	scope log.Scope,
@@ -122,8 +124,11 @@ func New(
 	if authService == nil {
 		panic("authService is nil")
 	}
-	if prefs == nil {
-		panic("prefs is nil")
+	if userPrefs == nil {
+		panic("userPrefs is nil")
+	}
+	if orgPrefs == nil {
+		panic("orgPrefs is nil")
 	}
 	if storage == nil {
 		panic("storage is nil")
@@ -144,11 +149,12 @@ func New(
 		authService: authService,
 		syncer:      syncer,
 		services:    services,
-		prefs:       prefs,
+		userPrefs:   userPrefs,
+		orgPrefs:    orgPrefs,
 		statusBar:   statusbar.New(theme, syncer, cfg.APIEndpoint),
 		toast:       toast.New(theme),
 		keyBar:      keybar.New(theme, scope),
-		onboarding:  onboarding.New(ctx, theme, services, prefs, authService, syncer, scope),
+		onboarding:  onboarding.New(ctx, theme, services, userPrefs, orgPrefs, authService, syncer, scope),
 		state:       stateOnboarding,
 	}
 }
@@ -259,10 +265,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case onboardingmsg.OrgSelected:
-		return m, m.activateOrg(msg.Org.ID.String(), msg)
+		return m, m.activateOrg(msg.Org.ID, msg)
 
 	case onboardingmsg.OrgCreated:
-		return m, m.activateOrg(msg.Org.ID.String(), msg)
+		return m, m.activateOrg(msg.Org.ID, msg)
 
 	case onboardingmsg.AccountSelected:
 		// Open database and start syncer when account is selected
@@ -708,21 +714,21 @@ func (m *Model) shutdown() {
 	}
 }
 
-// activateOrg sets the active org, reloads config/prefs/storage for the new
+// activateOrg sets the active org, reloads org prefs/storage for the new
 // org's isolated data directory, and forwards the message to onboarding.
-func (m *Model) activateOrg(orgID string, msg tea.Msg) tea.Cmd {
+func (m *Model) activateOrg(orgID domain.OrganizationID, msg tea.Msg) tea.Cmd {
 	env := m.cfg.Environment()
 	m.scope.Info("setting active org", "org_id", orgID)
-	_ = config.SetActiveOrgID(env, orgID)
+	_ = m.userPrefs.SetActiveOrgID(orgID)
 
-	cfg, err := config.Load(env, orgID)
+	cfg, err := config.LoadOrgPreferences(env, orgID)
 	if err != nil {
 		m.scope.Error("failed to reload config for org", "error", err)
 	} else {
-		m.prefs = preferences.NewService(cfg, m.scope)
+		m.orgPrefs = preferences.NewOrgService(cfg, m.scope)
 		m.storage = sqlite.NewStorageService(cfg)
 		if m.onboarding != nil {
-			m.onboarding.SetPreferences(m.prefs)
+			m.onboarding.SetOrgPreferences(m.orgPrefs)
 		}
 	}
 
@@ -744,7 +750,7 @@ func (m *Model) switchOrganization() tea.Cmd {
 // re-enters onboarding. The saved org auto-selects, then prompts for account.
 func (m *Model) switchAccount() tea.Cmd {
 	m.scope.Info("switching account")
-	_ = m.prefs.ClearDefaultAccountID()
+	_ = m.orgPrefs.ClearDefaultAccountID()
 	return m.restartOnboarding()
 }
 
@@ -763,7 +769,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.statusBar = statusbar.New(m.theme, m.syncer, m.cfg.APIEndpoint)
 	m.windowTitle = ""
 
-	m.onboarding = onboarding.New(m.ctx, m.theme, m.services, m.prefs, m.authService, m.syncer, m.scope)
+	m.onboarding = onboarding.New(m.ctx, m.theme, m.services, m.userPrefs, m.orgPrefs, m.authService, m.syncer, m.scope)
 	m.state = stateOnboarding
 	m.updateLayout()
 

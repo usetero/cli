@@ -45,15 +45,15 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			s := theme.Styles
 			env := cliConfig.Environment()
 
-			// Load preferences to get account ID
+			// Load org preferences to get account ID
 			orgID := config.ActiveOrgID(env)
-			cfg, err := config.Load(env, orgID)
+			orgCfg, err := config.LoadOrgPreferences(env, orgID)
 			if err != nil {
-				return fmt.Errorf("failed to load config: %w", err)
+				return fmt.Errorf("failed to load org preferences: %w", err)
 			}
-			prefs := preferences.NewService(cfg, scope)
+			orgPrefs := preferences.NewOrgService(orgCfg, scope)
 
-			accountID := prefs.GetDefaultAccountID()
+			accountID := orgPrefs.GetDefaultAccountID()
 			if accountID == "" {
 				fmt.Println(s.Help.Render("No account configured"))
 				fmt.Println(s.Help.Render("Run 'tero' to complete onboarding"))
@@ -132,19 +132,6 @@ func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 			s := theme.Styles
 			env := cliConfig.Environment()
 
-			orgID := config.ActiveOrgID(env)
-			cfg, err := config.Load(env, orgID)
-			if err != nil {
-				return fmt.Errorf("failed to load config: %w", err)
-			}
-			prefs := preferences.NewService(cfg, scope)
-
-			// Get config path for display
-			configPath, _ := config.ConfigPath(env, orgID)
-
-			fmt.Println(s.Title.Render("Preferences"))
-			fmt.Println(s.Help.Render("Path: " + configPath))
-
 			printPref := func(label, value string) {
 				if value == "" {
 					fmt.Println(kvStyled(s, label, s.Help.Render("(not set)")))
@@ -153,21 +140,36 @@ func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 				}
 			}
 
-			printPref("Organization ID", prefs.GetDefaultOrgID().String())
-			printPref("Organization Name", prefs.GetDefaultOrgName())
-			printPref("Account ID", prefs.GetDefaultAccountID().String())
-			printPref("Workspace ID", prefs.GetDefaultWorkspaceID().String())
-			printPref("Role", prefs.GetRole())
-			printPref("Email", prefs.GetEmail())
-
-			services := prefs.GetServices()
-			if len(services) == 0 {
-				fmt.Println(kvStyled(s, "Services", s.Help.Render("(none)")))
-			} else {
-				fmt.Println(kv(s, "Services", fmt.Sprintf("%v", services)))
+			// User preferences (env-level)
+			userCfg, err := config.LoadUserPreferences(env)
+			if err != nil {
+				return fmt.Errorf("failed to load user preferences: %w", err)
 			}
+			userPrefs := preferences.NewUserService(userCfg, scope)
 
-			fmt.Println(kv(s, "Has Seen Greeting", fmt.Sprintf("%v", prefs.GetHasSeenGreeting())))
+			userPrefsPath, _ := config.UserPreferencesPath(env)
+			fmt.Println(s.Title.Render("User Preferences"))
+			fmt.Println(s.Help.Render("Path: " + userPrefsPath))
+			printPref("Theme", string(userPrefs.GetTheme()))
+			printPref("Active Org ID", userPrefs.GetActiveOrgID().String())
+			printPref("Role", userPrefs.GetRole())
+
+			// Org preferences (org-level)
+			orgID := userPrefs.GetActiveOrgID()
+			if orgID != "" {
+				orgCfg, err := config.LoadOrgPreferences(env, orgID)
+				if err != nil {
+					return fmt.Errorf("failed to load org preferences: %w", err)
+				}
+				orgPrefs := preferences.NewOrgService(orgCfg, scope)
+
+				orgPrefsPath, _ := config.OrgPreferencesPath(env, orgID)
+				fmt.Println()
+				fmt.Println(s.Title.Render("Org Preferences"))
+				fmt.Println(s.Help.Render("Path: " + orgPrefsPath))
+				printPref("Account ID", orgPrefs.GetDefaultAccountID().String())
+				printPref("Workspace ID", orgPrefs.GetDefaultWorkspaceID().String())
+			}
 
 			return nil
 		},
@@ -202,10 +204,10 @@ func newDebugGraphQLCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Com
 
 			// Set account ID header if available
 			env := cliConfig.Environment()
-			cfg, _ := config.Load(env, config.ActiveOrgID(env))
-			if cfg != nil {
-				prefs := preferences.NewService(cfg, scope)
-				if accountID := prefs.GetDefaultAccountID(); accountID != "" {
+			orgCfg, _ := config.LoadOrgPreferences(env, config.ActiveOrgID(env))
+			if orgCfg != nil {
+				orgPrefs := preferences.NewOrgService(orgCfg, scope)
+				if accountID := orgPrefs.GetDefaultAccountID(); accountID != "" {
 					services.SetAccountID(accountID)
 				}
 			}
@@ -248,22 +250,27 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 			fmt.Println(s.Title.Render("Tero Paths"))
 			fmt.Println(kv(s, "Environment", env))
 			if orgID != "" {
-				fmt.Println(kv(s, "Active Org", orgID))
+				fmt.Println(kv(s, "Active Org", orgID.String()))
 			}
 
-			configPath, _ := config.ConfigPath(env, orgID)
-			fmt.Println(kv(s, "Config", configPath))
+			userPrefsPath, _ := config.UserPreferencesPath(env)
+			fmt.Println(kv(s, "User Prefs", userPrefsPath))
 
-			cfg, err := config.Load(env, orgID)
-			if err == nil {
-				baseDir, _ := cfg.BaseDir()
-				fmt.Println(kv(s, "Base Dir", baseDir))
+			if orgID != "" {
+				orgPrefsPath, _ := config.OrgPreferencesPath(env, orgID)
+				fmt.Println(kv(s, "Org Prefs", orgPrefsPath))
 
-				accountID := cfg.Get("account_id")
-				if accountID != "" {
-					storage := sqlite.NewStorageService(cfg)
-					dbPath, _ := storage.DatabasePath(accountID)
-					fmt.Println(kv(s, "Database", dbPath))
+				orgCfg, err := config.LoadOrgPreferences(env, orgID)
+				if err == nil {
+					baseDir, _ := orgCfg.BaseDir()
+					fmt.Println(kv(s, "Base Dir", baseDir))
+
+					orgPrefs := preferences.NewOrgService(orgCfg, scope)
+					if accountID := orgPrefs.GetDefaultAccountID(); accountID != "" {
+						storage := sqlite.NewStorageService(orgCfg)
+						dbPath, _ := storage.DatabasePath(accountID.String())
+						fmt.Println(kv(s, "Database", dbPath))
+					}
 				}
 			}
 

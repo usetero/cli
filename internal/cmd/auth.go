@@ -136,7 +136,7 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Set active org so preferences and databases are org-scoped
-			_ = config.SetActiveOrgID(env, selectedOrg.ID.String())
+			_ = config.SetActiveOrgID(env, selectedOrg.ID)
 
 			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
@@ -210,7 +210,7 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Set active org so preferences and databases are org-scoped
-			_ = config.SetActiveOrgID(env, selectedOrg.ID.String())
+			_ = config.SetActiveOrgID(env, selectedOrg.ID)
 
 			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil

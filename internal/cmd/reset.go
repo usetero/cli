@@ -27,15 +27,27 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			s := theme.Styles
 			env := cliConfig.Environment()
 
-			// Clear preferences
+			// Clear org preferences
 			orgID := config.ActiveOrgID(env)
-			cfg, err := config.Load(env, orgID)
-			if err != nil {
-				return fmt.Errorf("failed to load config: %w", err)
+			if orgID != "" {
+				orgCfg, err := config.LoadOrgPreferences(env, orgID)
+				if err != nil {
+					return fmt.Errorf("failed to load org preferences: %w", err)
+				}
+				orgPrefs := preferences.NewOrgService(orgCfg, scope)
+				if err := orgPrefs.Clear(); err != nil {
+					return fmt.Errorf("failed to clear org preferences: %w", err)
+				}
 			}
-			prefs := preferences.NewService(cfg, scope)
-			if err := prefs.Clear(); err != nil {
-				return fmt.Errorf("failed to clear preferences: %w", err)
+
+			// Clear user preferences
+			userCfg, err := config.LoadUserPreferences(env)
+			if err != nil {
+				return fmt.Errorf("failed to load user preferences: %w", err)
+			}
+			userPrefs := preferences.NewUserService(userCfg, scope)
+			if err := userPrefs.Clear(); err != nil {
+				return fmt.Errorf("failed to clear user preferences: %w", err)
 			}
 
 			// Clear auth tokens
@@ -47,14 +59,21 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Clear database if requested
-			if includeDB {
-				storage := sqlite.NewStorageService(cfg)
-				if err := storage.Clear(); err != nil {
-					return fmt.Errorf("failed to clear database: %w", err)
+			if includeDB && orgID != "" {
+				orgCfg, err := config.Load(env, orgID)
+				if err == nil {
+					storage := sqlite.NewStorageService(orgCfg)
+					if err := storage.Clear(); err != nil {
+						return fmt.Errorf("failed to clear database: %w", err)
+					}
 				}
 
 				fmt.Println(s.Success.Render("✓ Reset complete"))
 				fmt.Println(s.Help.Render("Cleared preferences, authentication, and database for: " + env))
+			} else if includeDB {
+				fmt.Println(s.Success.Render("✓ Reset complete"))
+				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
+				fmt.Println(s.Help.Render("No active org — skipped database"))
 			} else {
 				fmt.Println(s.Success.Render("✓ Reset complete"))
 				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))

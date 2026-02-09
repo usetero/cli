@@ -28,7 +28,7 @@ type CreateModel struct {
 	ctx      context.Context
 	theme    styles.Theme
 	services api.APIServices
-	prefs    preferences.Preferences
+	prefs    preferences.UserPreferences
 	scope    log.Scope
 
 	input    *input.Model
@@ -43,7 +43,7 @@ func NewCreate(
 	ctx context.Context,
 	theme styles.Theme,
 	services api.APIServices,
-	prefs preferences.Preferences,
+	prefs preferences.UserPreferences,
 	scope log.Scope,
 ) *CreateModel {
 	if ctx == nil {
@@ -82,7 +82,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 			m.err = msg.err
 			return appmsg.ErrorCmd("Failed to create organization", msg.err, false)
 		}
-		_ = m.prefs.SetDefaultOrgID(msg.result.Organization.ID)
+		_ = m.prefs.SetActiveOrgID(msg.result.Organization.ID)
 		org := *msg.result.Organization
 		m.scope.Info("organization created", "id", org.ID, "name", org.Name)
 		return func() tea.Msg { return msgs.OrgCreated{Org: org} }

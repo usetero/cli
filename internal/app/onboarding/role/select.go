@@ -20,7 +20,7 @@ type savedRoleMsg struct {
 // Model handles role selection.
 type Model struct {
 	theme    styles.Theme
-	prefs    preferences.Preferences
+	prefs    preferences.UserPreferences
 	scope    log.Scope
 	selected int
 	width    int
@@ -28,7 +28,7 @@ type Model struct {
 }
 
 // New creates a new role selection step.
-func New(theme styles.Theme, prefs preferences.Preferences, scope log.Scope) *Model {
+func New(theme styles.Theme, prefs preferences.UserPreferences, scope log.Scope) *Model {
 	if prefs == nil {
 		panic("prefs is nil")
 	}

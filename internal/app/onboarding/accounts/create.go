@@ -29,7 +29,7 @@ type CreateModel struct {
 	ctx      context.Context
 	theme    styles.Theme
 	services api.APIServices
-	prefs    preferences.Preferences
+	prefs    preferences.OrgPreferences
 	scope    log.Scope
 	org      domain.Organization
 
@@ -46,7 +46,7 @@ func NewCreate(
 	theme styles.Theme,
 	org domain.Organization,
 	services api.APIServices,
-	prefs preferences.Preferences,
+	prefs preferences.OrgPreferences,
 	scope log.Scope,
 ) *CreateModel {
 	if ctx == nil {

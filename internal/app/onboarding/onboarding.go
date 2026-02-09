@@ -29,13 +29,14 @@ import (
 // Model is the onboarding orchestrator.
 type Model struct {
 	// Dependencies available from start
-	ctx      context.Context
-	theme    styles.Theme
-	services api.APIServices
-	prefs    preferences.Preferences
-	auth     iauth.Auth
-	syncer   powersync.Syncer
-	scope    log.Scope
+	ctx       context.Context
+	theme     styles.Theme
+	services  api.APIServices
+	userPrefs preferences.UserPreferences
+	orgPrefs  preferences.OrgPreferences
+	auth      iauth.Auth
+	syncer    powersync.Syncer
+	scope     log.Scope
 
 	// Accumulated state from step completions
 	user      *iauth.User
@@ -56,7 +57,8 @@ func New(
 	ctx context.Context,
 	theme styles.Theme,
 	services api.APIServices,
-	prefs preferences.Preferences,
+	userPrefs preferences.UserPreferences,
+	orgPrefs preferences.OrgPreferences,
 	authService iauth.Auth,
 	syncer powersync.Syncer,
 	scope log.Scope,
@@ -64,8 +66,11 @@ func New(
 	if ctx == nil {
 		panic("ctx is nil")
 	}
-	if prefs == nil {
-		panic("prefs is nil")
+	if userPrefs == nil {
+		panic("userPrefs is nil")
+	}
+	if orgPrefs == nil {
+		panic("orgPrefs is nil")
 	}
 	if authService == nil {
 		panic("authService is nil")
@@ -77,20 +82,21 @@ func New(
 	scope = scope.Child("onboarding")
 
 	return &Model{
-		ctx:      ctx,
-		theme:    theme,
-		services: services,
-		prefs:    prefs,
-		auth:     authService,
-		syncer:   syncer,
-		scope:    scope,
+		ctx:       ctx,
+		theme:     theme,
+		services:  services,
+		userPrefs: userPrefs,
+		orgPrefs:  orgPrefs,
+		auth:      authService,
+		syncer:    syncer,
+		scope:     scope,
 	}
 }
 
-// SetPreferences replaces the preferences used by subsequent onboarding steps.
-// Called by the app when switching to a different org-scoped config.
-func (m *Model) SetPreferences(prefs preferences.Preferences) {
-	m.prefs = prefs
+// SetOrgPreferences replaces the org preferences used by subsequent onboarding steps.
+// Called by the app when switching to a different organization.
+func (m *Model) SetOrgPreferences(prefs preferences.OrgPreferences) {
+	m.orgPrefs = prefs
 }
 
 // Init starts the onboarding flow with auth check.
@@ -105,7 +111,7 @@ func (m *Model) Init() tea.Cmd {
 // for selection instead of auto-selecting.
 func (m *Model) StartFromOrgSelect() tea.Cmd {
 	m.scope.Info("onboarding started from org select")
-	return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.scope))
+	return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.userPrefs, m.auth, m.scope))
 }
 
 // Update handles messages and orchestrates step transitions.
@@ -125,32 +131,32 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.NeedsAuth {
 			return m.setStep(auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.scope))
 		}
-		return m.setStep(role.New(m.theme, m.prefs, m.scope))
+		return m.setStep(role.New(m.theme, m.userPrefs, m.scope))
 
 	case msgs.Authenticated:
 		m.scope.Info("user authenticated", "user_id", msg.User.ID)
 		m.user = &msg.User
-		return m.setStep(role.New(m.theme, m.prefs, m.scope))
+		return m.setStep(role.New(m.theme, m.userPrefs, m.scope))
 
 	// Role messages
 	case msgs.RoleSelected:
 		m.scope.Info("role selected", slog.String("role", msg.Role))
-		return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.prefs, m.auth, m.scope))
+		return m.setStep(organizations.NewSelect(m.ctx, m.theme, m.services, m.userPrefs, m.auth, m.scope))
 
 	// Organization messages
 	case msgs.OrgSelected:
 		m.scope.Info("organization selected", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
-		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
+		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.orgPrefs, m.scope))
 
 	case msgs.NoOrgs:
 		m.scope.Debug("no organizations found")
-		return m.setStep(organizations.NewCreate(m.ctx, m.theme, m.services, m.prefs, m.scope))
+		return m.setStep(organizations.NewCreate(m.ctx, m.theme, m.services, m.userPrefs, m.scope))
 
 	case msgs.OrgCreated:
 		m.scope.Info("organization created", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
-		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
+		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.orgPrefs, m.scope))
 
 	// Account messages
 	case msgs.AccountSelected:
@@ -161,7 +167,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case msgs.NoAccounts:
 		m.scope.Debug("no accounts found")
-		return m.setStep(accounts.NewCreate(m.ctx, m.theme, msg.Org, m.services, m.prefs, m.scope))
+		return m.setStep(accounts.NewCreate(m.ctx, m.theme, msg.Org, m.services, m.orgPrefs, m.scope))
 
 	case msgs.AccountCreated:
 		m.scope.Info("account created", slog.String("account_id", msg.Account.ID.String()))
@@ -172,7 +178,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	// Datadog messages
 	case msgs.DatadogReady:
 		m.scope.Debug("datadog ready")
-		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.scope))
+		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.orgPrefs, m.scope))
 
 	case msgs.DatadogNeeded:
 		m.scope.Debug("datadog setup needed")
@@ -194,7 +200,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case msgs.DatadogDiscoveryComplete:
 		m.scope.Info("datadog discovery complete")
-		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.prefs, m.scope))
+		return m.setStep(workspaces.NewSelect(m.ctx, m.theme, *m.account, m.services, m.orgPrefs, m.scope))
 
 	// Workspace messages
 	case msgs.WorkspaceSelected:

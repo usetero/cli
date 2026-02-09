@@ -47,12 +47,12 @@ func TestIntegration_Syncer(t *testing.T) {
 	}
 
 	// Get account ID from preferences
-	cfg, err := config.Load(env, config.ActiveOrgID(env))
+	orgCfg, err := config.LoadOrgPreferences(env, config.ActiveOrgID(env))
 	if err != nil {
-		t.Fatalf("Config not found: %v (run: task run)", err)
+		t.Fatalf("Org preferences not found: %v (run: task run)", err)
 	}
-	prefs := preferences.NewService(cfg, logger)
-	accountID := prefs.GetDefaultAccountID()
+	orgPrefs := preferences.NewOrgService(orgCfg, logger)
+	accountID := orgPrefs.GetDefaultAccountID()
 	if accountID == "" {
 		t.Fatalf("No default account (run: task run)")
 	}

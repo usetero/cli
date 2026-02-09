@@ -50,13 +50,23 @@ Just run 'tero' to start an interactive chat session.`,
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			// Load user preferences
-			orgID := config.ActiveOrgID(env)
-			cfg, err := config.Load(env, orgID)
+			// Load user preferences (env-level)
+			userCfg, err := config.LoadUserPreferences(env)
 			if err != nil {
 				return err
 			}
-			prefs := preferences.NewService(cfg, scope)
+			userPrefs := preferences.NewUserService(userCfg, scope)
+
+			// Resolve theme from user preference
+			theme := resolveTheme(userPrefs.GetTheme())
+
+			// Load org preferences (org-level)
+			orgID := userPrefs.GetActiveOrgID()
+			orgCfg, err := config.LoadOrgPreferences(env, orgID)
+			if err != nil {
+				return err
+			}
+			orgPrefs := preferences.NewOrgService(orgCfg, scope)
 
 			// Create token store
 			tokenStore := keyring.New(env)
@@ -67,21 +77,18 @@ Just run 'tero' to start an interactive chat session.`,
 			// Create auth service
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
-			// Create theme
-			theme := styles.DetectTheme()
-
 			// Create API services
 			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 
 			// Create storage for SQLite databases
-			storage := sqlite.NewStorageService(cfg)
+			storage := sqlite.NewStorageService(orgCfg)
 
 			// Create PowerSync syncer
 			syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authService, scope)
 
 			// Create and run the TUI
 			p := tea.NewProgram(
-				app.New(ctx, cliConfig, theme, version, services, authService, prefs, storage, syncer, scope),
+				app.New(ctx, cliConfig, theme, version, services, authService, userPrefs, orgPrefs, storage, syncer, scope),
 				tea.WithContext(ctx),
 				tea.WithEnvironment(os.Environ()),
 				tea.WithFilter(filter.Mouse),
@@ -99,4 +106,16 @@ Just run 'tero' to start an interactive chat session.`,
 	rootCmd.PersistentFlags().BoolP("debug", "d", cliConfig.Debug, "Enable debug logging")
 
 	return rootCmd
+}
+
+// resolveTheme creates a theme from the user's preference.
+func resolveTheme(pref preferences.Theme) styles.Theme {
+	switch pref {
+	case preferences.ThemeDark:
+		return styles.NewTheme(true)
+	case preferences.ThemeLight:
+		return styles.NewTheme(false)
+	default:
+		return styles.DetectTheme()
+	}
 }

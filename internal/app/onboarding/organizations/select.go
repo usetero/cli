@@ -30,7 +30,7 @@ type SelectModel struct {
 	ctx      context.Context
 	theme    styles.Theme
 	services api.APIServices
-	prefs    preferences.Preferences
+	prefs    preferences.UserPreferences
 	auth     auth.Auth
 	scope    log.Scope
 
@@ -48,7 +48,7 @@ func NewSelect(
 	ctx context.Context,
 	theme styles.Theme,
 	services api.APIServices,
-	prefs preferences.Preferences,
+	prefs preferences.UserPreferences,
 	authService auth.Auth,
 	scope log.Scope,
 ) *SelectModel {
@@ -123,7 +123,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			return func() tea.Msg { return msgs.NoOrgs{} }
 		}
 
-		prefID := m.prefs.GetDefaultOrgID()
+		prefID := m.prefs.GetActiveOrgID()
 		if prefID != "" {
 			for _, org := range m.orgs {
 				if org.ID == prefID {
@@ -135,7 +135,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 
 		if len(m.orgs) == 1 {
 			m.scope.Debug("auto-selected organization (only one)")
-			_ = m.prefs.SetDefaultOrgID(m.orgs[0].ID)
+			_ = m.prefs.SetActiveOrgID(m.orgs[0].ID)
 			return m.selectOrg(m.orgs[0])
 		}
 
@@ -158,7 +158,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		case "enter":
 			if item := m.list.SelectedItem(); item != nil {
 				if org, ok := item.(domain.Organization); ok {
-					_ = m.prefs.SetDefaultOrgID(org.ID)
+					_ = m.prefs.SetActiveOrgID(org.ID)
 					return m.selectOrg(org)
 				}
 			}

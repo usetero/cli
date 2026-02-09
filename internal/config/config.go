@@ -4,16 +4,17 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/usetero/cli/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 
-// Config is the Tero CLI configuration stored as YAML.
-// It implements the app.Store interface using a map-based structure for flexibility.
-// Each org gets its own config file at ~/.tero/environments/{env}/orgs/{orgID}/config.yaml.
+// Config is a YAML-backed key-value store.
+// It implements the preferences.Store interface using a map-based structure.
 type Config struct {
-	data  map[string]interface{}
+	data  map[string]any
+	path  string // absolute path to the YAML file
 	env   string
-	orgID string
+	orgID domain.OrganizationID
 }
 
 // Get retrieves a string value by key
@@ -44,7 +45,7 @@ func (c *Config) SetBool(key string, value bool) {
 
 // GetList retrieves a list of strings by key
 func (c *Config) GetList(key string) []string {
-	if v, ok := c.data[key].([]interface{}); ok {
+	if v, ok := c.data[key].([]any); ok {
 		result := make([]string, 0, len(v))
 		for _, item := range v {
 			if s, ok := item.(string); ok {
@@ -76,13 +77,13 @@ func envDir(env string) (string, error) {
 // baseDir returns the base directory for org-scoped data.
 // With orgID: ~/.tero/environments/{env}/orgs/{orgID}/
 // Without orgID: ~/.tero/environments/{env}/ (fallback for first run)
-func baseDir(env, orgID string) (string, error) {
+func baseDir(env string, orgID domain.OrganizationID) (string, error) {
 	dir, err := envDir(env)
 	if err != nil {
 		return "", err
 	}
 	if orgID != "" {
-		return filepath.Join(dir, "orgs", orgID), nil
+		return filepath.Join(dir, "orgs", orgID.String()), nil
 	}
 	return dir, nil
 }
@@ -93,7 +94,7 @@ func (c *Config) BaseDir() (string, error) {
 }
 
 // ConfigPath returns the config file path for the given env and orgID.
-func ConfigPath(env, orgID string) (string, error) {
+func ConfigPath(env string, orgID domain.OrganizationID) (string, error) {
 	dir, err := baseDir(env, orgID)
 	if err != nil {
 		return "", err
@@ -101,8 +102,26 @@ func ConfigPath(env, orgID string) (string, error) {
 	return filepath.Join(dir, "config.yaml"), nil
 }
 
-// Load reads the config from disk, migrating from the old layout if needed.
-func Load(env, orgID string) (*Config, error) {
+// UserPreferencesPath returns the env-level user preferences path.
+func UserPreferencesPath(env string) (string, error) {
+	dir, err := envDir(env)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "preferences.yaml"), nil
+}
+
+// OrgPreferencesPath returns the org-level preferences path.
+func OrgPreferencesPath(env string, orgID domain.OrganizationID) (string, error) {
+	dir, err := baseDir(env, orgID)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "preferences.yaml"), nil
+}
+
+// Load reads an org-scoped config from disk, migrating from old layouts if needed.
+func Load(env string, orgID domain.OrganizationID) (*Config, error) {
 	migrate(env)
 
 	path, err := ConfigPath(env, orgID)
@@ -110,31 +129,54 @@ func Load(env, orgID string) (*Config, error) {
 		return nil, err
 	}
 
+	return loadFromPath(path, env, orgID)
+}
+
+// LoadUserPreferences reads the env-level user preferences from disk.
+func LoadUserPreferences(env string) (*Config, error) {
+	migrate(env)
+
+	path, err := UserPreferencesPath(env)
+	if err != nil {
+		return nil, err
+	}
+
+	return loadFromPath(path, env, "")
+}
+
+// LoadOrgPreferences reads org-scoped preferences from disk.
+func LoadOrgPreferences(env string, orgID domain.OrganizationID) (*Config, error) {
+	migrate(env)
+
+	path, err := OrgPreferencesPath(env, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return loadFromPath(path, env, orgID)
+}
+
+// loadFromPath reads a YAML config from the given path.
+func loadFromPath(path, env string, orgID domain.OrganizationID) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return &Config{data: make(map[string]interface{}), env: env, orgID: orgID}, nil
+		return &Config{data: make(map[string]any), path: path, env: env, orgID: orgID}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	var cfgData map[string]interface{}
+	var cfgData map[string]any
 	if err := yaml.Unmarshal(data, &cfgData); err != nil {
 		return nil, err
 	}
 
-	return &Config{data: cfgData, env: env, orgID: orgID}, nil
+	return &Config{data: cfgData, path: path, env: env, orgID: orgID}, nil
 }
 
-// Save writes the config to disk
+// Save writes the config to disk.
 func (c *Config) Save() error {
-	path, err := ConfigPath(c.env, c.orgID)
-	if err != nil {
-		return err
-	}
-
-	// Create directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(c.path), 0o755); err != nil {
 		return err
 	}
 
@@ -143,189 +185,53 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0o600)
+	return os.WriteFile(c.path, data, 0o600)
 }
 
-// Clear removes the config file from disk
+// Clear removes the config file from disk.
 func (c *Config) Clear() error {
-	path, err := ConfigPath(c.env, c.orgID)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(path)
+	err := os.Remove(c.path)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	return err
 }
 
-// ActiveOrgID reads the active org ID for the given environment.
+// ActiveOrgID reads the active org ID from env-level user preferences.
 // Returns "" if no active org is set (first run or after reset).
-func ActiveOrgID(env string) string {
-	dir, err := envDir(env)
+func ActiveOrgID(env string) domain.OrganizationID {
+	path, err := UserPreferencesPath(env)
 	if err != nil {
 		return ""
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "active.yaml"))
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
 
-	var active struct {
-		OrgID string `yaml:"org_id"`
-	}
-	if err := yaml.Unmarshal(data, &active); err != nil {
+	var prefs map[string]any
+	if err := yaml.Unmarshal(data, &prefs); err != nil {
 		return ""
 	}
-	return active.OrgID
+
+	if id, ok := prefs["active_org_id"].(string); ok {
+		return domain.OrganizationID(id)
+	}
+	return ""
 }
 
-// SetActiveOrgID writes the active org ID for the given environment.
-func SetActiveOrgID(env, orgID string) error {
-	dir, err := envDir(env)
+// SetActiveOrgID writes the active org ID to env-level user preferences.
+func SetActiveOrgID(env string, orgID domain.OrganizationID) error {
+	cfg, err := LoadUserPreferences(env)
 	if err != nil {
 		return err
 	}
-
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-
-	active := struct {
-		OrgID string `yaml:"org_id"`
-	}{OrgID: orgID}
-
-	data, err := yaml.Marshal(active)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(dir, "active.yaml"), data, 0o600)
+	cfg.Set("active_org_id", orgID.String())
+	return cfg.Save()
 }
 
-// migrate runs all migration steps in order.
+// migrate is called by Load/LoadPreferences before reading config files.
 func migrate(env string) {
-	migrateToEnvLayout(env)
-	migrateToOrgLayout(env)
-}
-
-// migrateToEnvLayout moves data from the old layout to the environments/ layout.
-// Old layout: ~/.tero/config.yaml (production), ~/.tero/{host}/config.yaml (others)
-// New layout: ~/.tero/environments/{env}/config.yaml
-// This is idempotent — if the new layout already exists, it's a no-op.
-func migrateToEnvLayout(env string) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return
-	}
-
-	teroDir := filepath.Join(homeDir, ".tero")
-	envDir, err := envDir(env)
-	if err != nil {
-		return
-	}
-
-	// Already migrated — new layout exists.
-	if _, err := os.Stat(filepath.Join(envDir, "config.yaml")); err == nil {
-		return
-	}
-
-	// Determine old directory based on environment name.
-	var oldDir string
-	if env == "prd" {
-		// Production was at ~/.tero/ (root level).
-		oldDir = teroDir
-	} else {
-		// Non-production was at ~/.tero/{env}/ (env was the host string).
-		oldDir = filepath.Join(teroDir, env)
-	}
-
-	oldConfig := filepath.Join(oldDir, "config.yaml")
-	if _, err := os.Stat(oldConfig); os.IsNotExist(err) {
-		return // Nothing to migrate.
-	}
-
-	// Create new directory.
-	if err := os.MkdirAll(envDir, 0o755); err != nil {
-		return
-	}
-
-	// Move config.yaml.
-	_ = os.Rename(oldConfig, filepath.Join(envDir, "config.yaml"))
-
-	// Move databases (old: data/, new: databases/).
-	oldDataDir := filepath.Join(oldDir, "data")
-	newDBDir := filepath.Join(envDir, "databases")
-	if files, _ := filepath.Glob(filepath.Join(oldDataDir, "*.sqlite")); len(files) > 0 {
-		_ = os.MkdirAll(newDBDir, 0o755)
-		for _, f := range files {
-			_ = os.Rename(f, filepath.Join(newDBDir, filepath.Base(f)))
-		}
-		_ = os.Remove(oldDataDir) // Remove empty old data dir.
-	}
-
-	// Clean up stale files at root.
-	_ = os.Remove(filepath.Join(teroDir, "tero.db"))
-
-	// Remove old non-production directory if empty.
-	if env != "prd" {
-		_ = os.Remove(oldDir)
-	}
-}
-
-// migrateToOrgLayout moves data from the flat env layout to per-org layout.
-// Old layout: ~/.tero/environments/{env}/config.yaml (with default_org_id inside)
-// New layout: ~/.tero/environments/{env}/orgs/{orgID}/config.yaml + active.yaml
-// Idempotent: skips if orgs/ directory already exists or if no default_org_id is set.
-func migrateToOrgLayout(env string) {
-	dir, err := envDir(env)
-	if err != nil {
-		return
-	}
-
-	// Already migrated — orgs/ directory exists.
-	if _, err := os.Stat(filepath.Join(dir, "orgs")); err == nil {
-		return
-	}
-
-	// Read the env-level config to get default_org_id.
-	configPath := filepath.Join(dir, "config.yaml")
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return // No config to migrate.
-	}
-
-	var cfgData map[string]interface{}
-	if err := yaml.Unmarshal(data, &cfgData); err != nil {
-		return
-	}
-
-	orgID, _ := cfgData["default_org_id"].(string)
-	if orgID == "" {
-		return // Never completed onboarding — nothing to move.
-	}
-
-	// Create org directory.
-	orgDir := filepath.Join(dir, "orgs", orgID)
-	if err := os.MkdirAll(orgDir, 0o755); err != nil {
-		return
-	}
-
-	// Move config.yaml → orgs/{orgID}/config.yaml
-	_ = os.Rename(configPath, filepath.Join(orgDir, "config.yaml"))
-
-	// Move databases/ → orgs/{orgID}/databases/
-	oldDBDir := filepath.Join(dir, "databases")
-	newDBDir := filepath.Join(orgDir, "databases")
-	if files, _ := filepath.Glob(filepath.Join(oldDBDir, "*.sqlite")); len(files) > 0 {
-		_ = os.MkdirAll(newDBDir, 0o755)
-		for _, f := range files {
-			_ = os.Rename(f, filepath.Join(newDBDir, filepath.Base(f)))
-		}
-		_ = os.Remove(oldDBDir) // Remove empty old databases dir.
-	}
-
-	// Write active.yaml with the org ID.
-	_ = SetActiveOrgID(env, orgID)
+	Migrate(env)
 }

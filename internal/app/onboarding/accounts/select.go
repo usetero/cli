@@ -23,7 +23,7 @@ type SelectModel struct {
 	ctx      context.Context
 	theme    styles.Theme
 	services api.APIServices
-	prefs    preferences.Preferences
+	prefs    preferences.OrgPreferences
 	scope    log.Scope
 	org      domain.Organization
 
@@ -39,7 +39,7 @@ func NewSelect(
 	theme styles.Theme,
 	org domain.Organization,
 	services api.APIServices,
-	prefs preferences.Preferences,
+	prefs preferences.OrgPreferences,
 	scope log.Scope,
 ) *SelectModel {
 	if ctx == nil {
