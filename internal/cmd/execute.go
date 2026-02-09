@@ -19,7 +19,7 @@ func Execute(version string) {
 		level = log.LevelDebug
 	}
 
-	scope := log.RootScope(log.New(level))
+	scope := log.RootScope(log.New(cliConfig.Environment(), level))
 
 	defer func() {
 		if r := recover(); r != nil {

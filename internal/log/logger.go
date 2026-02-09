@@ -1,8 +1,10 @@
 package log
 
 import (
+	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 // Re-export slog attribute constructors so callers don't need to import log/slog
@@ -53,12 +55,39 @@ func Wrap(l *slog.Logger) Logger {
 	return &logger{l}
 }
 
-// New creates a new logger that writes to /tmp/tero.log
-// Appends to existing log file, with a clear session separator.
-func New(level Level) Logger {
-	logFile, err := os.OpenFile("/tmp/tero.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+// LogPath returns the log file path for the given environment.
+func LogPath(env string) (string, error) {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		panic(err)
+		return "", err
+	}
+	return filepath.Join(homeDir, ".tero", "environments", env, "tero.log"), nil
+}
+
+const maxLogSize = 5 * 1024 * 1024 // 5MB
+
+// New creates a new logger that writes to ~/.tero/environments/{env}/tero.log.
+// Appends to existing log file, with a clear session separator.
+// Truncates the file at session start if it exceeds 5MB.
+// Falls back to a no-op logger if the log file cannot be opened.
+func New(env string, level Level) Logger {
+	logPath, err := LogPath(env)
+	if err != nil {
+		return &logger{slog.New(slog.NewTextHandler(io.Discard, nil))}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+		return &logger{slog.New(slog.NewTextHandler(io.Discard, nil))}
+	}
+
+	// Truncate if over size limit before opening for append.
+	if info, err := os.Stat(logPath); err == nil && info.Size() > maxLogSize {
+		_ = os.Truncate(logPath, 0)
+	}
+
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return &logger{slog.New(slog.NewTextHandler(io.Discard, nil))}
 	}
 
 	// Write session separator (ignore errors - best effort logging)

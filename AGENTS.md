@@ -53,5 +53,5 @@ internal/auth/       Authentication.
 ```bash
 task do              # Format, lint, test - run before commits
 task run             # Fast iteration
-tail -f /tmp/tero.log  # Watch logs
+tail -f ~/.tero/environments/prd/tero.log  # Watch logs
 ```

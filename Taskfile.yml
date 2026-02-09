@@ -217,7 +217,7 @@ tasks:
     desc: Reset dev environment (auth, config, database, logs)
     cmds:
       - go run ./cmd/tero reset --db
-      - rm -f /tmp/tero.log
+      - rm -f ~/.tero/environments/*/tero.log
       - echo "Reset complete"
 
   # ===========================================================================
