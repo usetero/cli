@@ -96,7 +96,7 @@ func setup(cmd *cobra.Command) (*workosadmin.Client, string, error) {
 	scope := log.RootScope(logger)
 
 	cliConfig := config.LoadCLIConfig()
-	tokenStore := keyring.New(cliConfig.Namespace())
+	tokenStore := keyring.New(cliConfig.Environment())
 	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 	authService := auth.NewService(workosClient, tokenStore, scope)
 

@@ -258,6 +258,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+	case onboardingmsg.OrgSelected:
+		return m, m.activateOrg(msg.Org.ID.String(), msg)
+
+	case onboardingmsg.OrgCreated:
+		return m, m.activateOrg(msg.Org.ID.String(), msg)
+
 	case onboardingmsg.AccountSelected:
 		// Open database and start syncer when account is selected
 		m.scope.Info("account selected", "account_id", msg.Account.ID.String())
@@ -702,11 +708,35 @@ func (m *Model) shutdown() {
 	}
 }
 
-// switchOrganization clears org preference (cascades to account and workspace)
-// and re-enters onboarding. Onboarding will prompt for all choices.
+// activateOrg sets the active org, reloads config/prefs/storage for the new
+// org's isolated data directory, and forwards the message to onboarding.
+func (m *Model) activateOrg(orgID string, msg tea.Msg) tea.Cmd {
+	env := m.cfg.Environment()
+	m.scope.Info("setting active org", "org_id", orgID)
+	_ = config.SetActiveOrgID(env, orgID)
+
+	cfg, err := config.Load(env, orgID)
+	if err != nil {
+		m.scope.Error("failed to reload config for org", "error", err)
+	} else {
+		m.prefs = preferences.NewService(cfg, m.scope)
+		m.storage = sqlite.NewStorageService(cfg)
+		if m.onboarding != nil {
+			m.onboarding.SetPreferences(m.prefs)
+		}
+	}
+
+	if m.onboarding != nil {
+		return m.onboarding.Update(msg)
+	}
+	return nil
+}
+
+// switchOrganization re-enters onboarding at org selection.
+// Each org has its own config/prefs/databases, so no need to clear preferences —
+// selecting a new org loads that org's isolated data.
 func (m *Model) switchOrganization() tea.Cmd {
 	m.scope.Info("switching organization")
-	_ = m.prefs.ClearDefaultOrgID()
 	return m.restartOnboarding()
 }
 

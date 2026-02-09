@@ -44,21 +44,22 @@ your observability data across all your tools.
 
 Just run 'tero' to start an interactive chat session.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			namespace := cliConfig.Namespace()
+			env := cliConfig.Environment()
 
 			// Create context
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			// Load user preferences
-			cfg, err := config.Load(namespace)
+			orgID := config.ActiveOrgID(env)
+			cfg, err := config.Load(env, orgID)
 			if err != nil {
 				return err
 			}
 			prefs := preferences.NewService(cfg, scope)
 
 			// Create token store
-			tokenStore := keyring.New(namespace)
+			tokenStore := keyring.New(env)
 
 			// Create WorkOS client for OAuth
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
@@ -67,7 +68,7 @@ Just run 'tero' to start an interactive chat session.`,
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			// Create theme
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 
 			// Create API services
 			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)

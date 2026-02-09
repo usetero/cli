@@ -33,7 +33,7 @@ func (s *StorageService) dataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(baseDir, "data"), nil
+	return filepath.Join(baseDir, "databases"), nil
 }
 
 // DatabasePath returns the path to the SQLite database for a specific account.

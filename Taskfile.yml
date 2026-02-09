@@ -168,6 +168,11 @@ tasks:
     cmds:
       - "{{.ENV_PREFIX}} go run ./cmd/tero auth status"
 
+  auth:switch:
+    desc: Switch organization (TERO_ENV=local|dev|prd)
+    cmds:
+      - "{{.ENV_PREFIX}} go run ./cmd/tero auth switch {{.CLI_ARGS}}"
+
   # ===========================================================================
   # Admin (internal tooling, not shipped)
   # ===========================================================================

@@ -13,10 +13,10 @@ import (
 func TestStorageService_DatabasePath(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns path in data directory", func(t *testing.T) {
+	t.Run("returns path in databases directory", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-storage-path")
+		cfg, _ := config.Load("test-storage-path", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		path, err := storage.DatabasePath("acc_123")
@@ -24,8 +24,8 @@ func TestStorageService_DatabasePath(t *testing.T) {
 			t.Fatalf("DatabasePath() error = %v", err)
 		}
 
-		if !strings.Contains(path, "data") {
-			t.Errorf("path should contain 'data' directory: %s", path)
+		if !strings.Contains(path, "databases") {
+			t.Errorf("path should contain 'databases' directory: %s", path)
 		}
 		if !strings.HasSuffix(path, "acc_123.sqlite") {
 			t.Errorf("path should end with account ID and .sqlite extension: %s", path)
@@ -35,7 +35,7 @@ func TestStorageService_DatabasePath(t *testing.T) {
 	t.Run("different accounts have different paths", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-storage-diff")
+		cfg, _ := config.Load("test-storage-diff", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		path1, _ := storage.DatabasePath("acc_1")
@@ -53,7 +53,7 @@ func TestStorageService_ClearDatabase(t *testing.T) {
 	t.Run("removes existing database file", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-clear-db")
+		cfg, _ := config.Load("test-clear-db", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		// Create the file first
@@ -91,7 +91,7 @@ func TestStorageService_ClearDatabase(t *testing.T) {
 	t.Run("succeeds when file does not exist", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-clear-nonexistent")
+		cfg, _ := config.Load("test-clear-nonexistent", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		err := storage.ClearDatabase("nonexistent_account")
@@ -108,7 +108,7 @@ func TestStorageService_Clear(t *testing.T) {
 	t.Run("removes all sqlite files", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-clear-all")
+		cfg, _ := config.Load("test-clear-all", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		// Create multiple files
@@ -148,7 +148,7 @@ func TestStorageService_Clear(t *testing.T) {
 	t.Run("succeeds when directory is empty", func(t *testing.T) {
 		t.Parallel()
 
-		cfg, _ := config.Load("test-clear-empty")
+		cfg, _ := config.Load("test-clear-empty", "")
 		storage := sqlite.NewStorageService(cfg)
 
 		err := storage.Clear()

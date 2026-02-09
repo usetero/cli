@@ -146,22 +146,23 @@ type LogEventPolicy struct {
 }
 
 type LogEventPolicyStatusesCache struct {
-	ID                              *string
-	AccountID                       *string
-	ApprovedAt                      *string
-	Benefits                        *string
-	Category                        *string
-	CreatedAt                       *string
-	DismissedAt                     *string
-	EstimatedBytesReductionPerHour  *float64
-	EstimatedVolumeReductionPerHour *float64
-	LogEventID                      *string
-	Objectivity                     *string
-	PolicyID                        *string
-	RefreshedAt                     *string
-	RiskLevel                       *string
-	Status                          *string
-	WorkspaceID                     *string
+	ID                               *string
+	AccountID                        *string
+	ApprovedAt                       *string
+	Benefits                         *string
+	Category                         *string
+	CreatedAt                        *string
+	DismissedAt                      *string
+	EstimatedBytesReductionPerHour   *float64
+	EstimatedCostReductionPerHourUsd *float64
+	EstimatedVolumeReductionPerHour  *float64
+	LogEventID                       *string
+	Objectivity                      *string
+	PolicyID                         *string
+	RefreshedAt                      *string
+	RiskLevel                        *string
+	Status                           *string
+	WorkspaceID                      *string
 }
 
 type LogEventStatusesCache struct {

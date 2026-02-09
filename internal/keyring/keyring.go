@@ -15,15 +15,44 @@ type Keyring struct {
 	service string
 }
 
-// New creates a new keyring.
-// If namespace is non-empty, credentials are stored separately (e.g., for non-production environments).
-func New(namespace string) *Keyring {
-	service := baseServiceName
-	if namespace != "" {
-		service = baseServiceName + ":" + namespace
+// New creates a new keyring scoped to the given environment.
+// Migrates credentials from the old service name on first use.
+func New(env string) *Keyring {
+	k := &Keyring{
+		service: baseServiceName + ":" + env,
 	}
-	return &Keyring{
-		service: service,
+	k.migrate(env)
+	return k
+}
+
+// migrate copies credentials from the old service name to the new one.
+// Old: "tero-cli" (production), "tero-cli:{host}" (non-production)
+// New: "tero-cli:prd", "tero-cli:local", etc.
+// Idempotent — skips if new service already has credentials.
+func (k *Keyring) migrate(env string) {
+	// If we already have credentials, nothing to do.
+	if v, _ := keyring.Get(k.service, "access_token"); v != "" {
+		return
+	}
+
+	// Determine old service name.
+	var oldService string
+	if env == "prd" {
+		oldService = baseServiceName // was "tero-cli" with no suffix
+	} else {
+		// Can't know the old host — skip migration for non-prd.
+		// Developers will just re-login.
+		return
+	}
+
+	// Copy each key from old to new.
+	for _, key := range []string{"access_token", "refresh_token"} {
+		val, err := keyring.Get(oldService, key)
+		if err != nil || val == "" {
+			continue
+		}
+		_ = keyring.Set(k.service, key, val)
+		_ = keyring.Delete(oldService, key)
 	}
 }
 

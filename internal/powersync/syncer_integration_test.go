@@ -30,18 +30,14 @@ func TestIntegration_Syncer(t *testing.T) {
 	cliConfig := config.LoadCLIConfig()
 	logger := logtest.NewScope(t)
 
-	// Derive namespace from API endpoint (empty for production, host for dev)
-	namespace := cliConfig.Namespace()
-	if namespace == "" {
-		namespace = "api.usetero.com" // production keyring namespace
-	}
+	env := cliConfig.Environment()
 
-	t.Logf("Namespace: %s", namespace)
+	t.Logf("Environment: %s", env)
 	t.Logf("API Endpoint: %s", cliConfig.APIEndpoint)
 	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
 
 	// Get auth service
-	storage := keyring.New(namespace)
+	storage := keyring.New(env)
 	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
@@ -51,7 +47,7 @@ func TestIntegration_Syncer(t *testing.T) {
 	}
 
 	// Get account ID from preferences
-	cfg, err := config.Load(namespace)
+	cfg, err := config.Load(env, config.ActiveOrgID(env))
 	if err != nil {
 		t.Fatalf("Config not found: %v (run: task run)", err)
 	}

@@ -40,20 +40,21 @@ func LoadCLIConfig() *CLIConfig {
 	}
 }
 
-// IsProduction returns true if the CLI is configured for production.
-func (c *CLIConfig) IsProduction() bool {
-	return c.APIEndpoint == productionEndpoint
-}
-
-// Namespace returns a namespace string for non-production environments.
-// Returns empty string for production, host for other environments.
-func (c *CLIConfig) Namespace() string {
-	if c.IsProduction() {
-		return ""
+// Environment returns the environment name for data isolation.
+// Resolution order:
+//  1. TERO_ENV env var (explicit: "local", "dev", "prd", or any custom value)
+//  2. Production API endpoint → "prd"
+//  3. Non-production → derive from URL host (fallback for custom setups)
+func (c *CLIConfig) Environment() string {
+	if env := os.Getenv("TERO_ENV"); env != "" {
+		return env
+	}
+	if c.APIEndpoint == productionEndpoint {
+		return "prd"
 	}
 	u, err := url.Parse(c.APIEndpoint)
 	if err != nil {
-		return ""
+		return "prd"
 	}
 	return u.Host
 }

@@ -54,10 +54,10 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Authenticate with Tero",
 		Long:  "Authenticate with Tero using the device authorization flow.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
-			tokenStore := keyring.New(namespace)
+			env := cliConfig.Environment()
+			tokenStore := keyring.New(env)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
@@ -135,6 +135,9 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 				return fmt.Errorf("failed to select organization: %w", err)
 			}
 
+			// Set active org so preferences and databases are org-scoped
+			_ = config.SetActiveOrgID(env, selectedOrg.ID.String())
+
 			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
 		},
@@ -152,10 +155,10 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Long:  "Switch to a different organization. Lists available orgs if none specified.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
-			tokenStore := keyring.New(namespace)
+			env := cliConfig.Environment()
+			tokenStore := keyring.New(env)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
@@ -206,6 +209,9 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 				return fmt.Errorf("failed to switch organization: %w", err)
 			}
 
+			// Set active org so preferences and databases are org-scoped
+			_ = config.SetActiveOrgID(env, selectedOrg.ID.String())
+
 			fmt.Println(s.Success.Render("✓ Switched to organization: " + selectedOrg.Name))
 			return nil
 		},
@@ -218,8 +224,8 @@ func newTokenCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Print the current access token",
 		Long:  "Print the current access token to stdout. Refreshes the token if expired.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			namespace := cliConfig.Namespace()
-			tokenStore := keyring.New(namespace)
+			env := cliConfig.Environment()
+			tokenStore := keyring.New(env)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
@@ -240,10 +246,10 @@ func newLogoutCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Clear stored credentials",
 		Long:  "Remove stored authentication credentials.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
-			tokenStore := keyring.New(namespace)
+			env := cliConfig.Environment()
+			tokenStore := keyring.New(env)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
@@ -263,10 +269,10 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Show authentication status",
 		Long:  "Show current authentication status including user and token state.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
-			tokenStore := keyring.New(namespace)
+			env := cliConfig.Environment()
+			tokenStore := keyring.New(env)
 
 			// Get raw token to check status
 			token, err := tokenStore.Get("access_token")
@@ -298,7 +304,7 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 
 			fmt.Println(s.Success.Render("✓ Authenticated"))
 			if email != "" {
-				fmt.Println(s.Help.Render("  User: ") + s.Body.Render(email))
+				fmt.Println(kv(s, "User", email))
 			}
 
 			// Try to get org name from API
@@ -315,17 +321,17 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 						}
 					}
 				}
-				fmt.Println(s.Help.Render("  Organization: ") + s.Body.Render(orgName))
+				fmt.Println(kv(s, "Organization", orgName))
 			} else {
-				fmt.Println(s.Help.Render("  Organization: ") + s.Help.Render("(none)"))
+				fmt.Println(kvStyled(s, "Organization", s.Help.Render("(none)")))
 			}
 
 			if !expiresAt.IsZero() {
 				if expired {
-					fmt.Println(s.Help.Render("  Token: ") + s.Error.Render("expired at "+expiresAt.Format(time.RFC3339)))
-					fmt.Println(s.Help.Render("  Run 'tero auth login' to re-authenticate"))
+					fmt.Println(kvStyled(s, "Token", s.Error.Render("expired at "+expiresAt.Format(time.RFC3339))))
+					fmt.Println(s.Help.Render("Run 'tero auth login' to re-authenticate"))
 				} else {
-					fmt.Println(s.Help.Render("  Token: ") + s.Body.Render("valid until "+expiresAt.Format(time.RFC3339)))
+					fmt.Println(kv(s, "Token", "valid until "+expiresAt.Format(time.RFC3339)))
 				}
 			}
 
@@ -354,11 +360,11 @@ func fetchOrganizations(ctx context.Context, services api.APIServices) ([]org, e
 
 // promptOrgSelection prompts the user to select an organization
 func promptOrgSelection(orgs []org) (*org, error) {
-	theme := styles.NewTheme(true)
+	theme := styles.DetectTheme()
 	s := theme.Styles
 	fmt.Println(s.Title.Render("\nSelect an organization:"))
 	for i, o := range orgs {
-		fmt.Printf("  %d. %s\n", i+1, o.Name)
+		fmt.Printf("  %s %s\n", s.Help.Render(fmt.Sprintf("%d.", i+1)), s.Body.Render(o.Name))
 	}
 	fmt.Print(s.Action.Render("Enter number: "))
 

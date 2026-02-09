@@ -156,6 +156,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When the policy was dismissed
     estimated_bytes_reduction_per_hour REAL, -- Projected bytes/hour eliminated. NULL when not estimable.
+    estimated_cost_reduction_per_hour_usd REAL, -- Projected USD/hour savings from this policy (ingestion + indexing). Aggregated across all datadog accounts. NULL when not estimable.
     estimated_volume_reduction_per_hour REAL, -- Projected events/hour eliminated. NULL when not estimable (compliance, resilience policies).
     log_event_id TEXT, -- The log event this policy applies to
     objectivity TEXT, -- How verifiable: factual (user can confirm) or reasoned (AI judgment)
@@ -201,7 +202,7 @@ CREATE TABLE log_event_statuses_cache (
 CREATE TABLE log_event_volumes (
     id TEXT, -- Unique identifier of this volume record
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
-    attribute_avg_bytes TEXT, -- Average bytes per attribute name, estimated from sampled logs
+    attribute_avg_bytes TEXT, -- Average bytes per attribute path, estimated from sampled logs. Path uses unambiguous segments.
     avg_bytes REAL, -- Average bytes per log in this hour bucket, estimated from sampled logs
     count_per_hour REAL, -- Number of logs observed during this hour
     created_at TEXT, -- When this volume record was created

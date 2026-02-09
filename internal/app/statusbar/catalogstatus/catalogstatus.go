@@ -123,7 +123,13 @@ func (m *Model) CompactView() string {
 	s := m.summary
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 	d := status.ServiceDot(m.theme, s.WorstStatus)
-	readyCount := s.ActiveServices - s.AnalyzingCount - s.DiscoveringCount - s.BrokenServices - s.StaleServices
+
+	var readyCount int64
+	for _, svc := range m.services {
+		if svc.Status == domain.ServiceLogStatusReady {
+			readyCount++
+		}
+	}
 	ready := fmt.Sprintf("%d/%d svcs", readyCount, s.ActiveServices)
 
 	var suffix string
@@ -169,52 +175,87 @@ func (m *Model) renderSummary() string {
 	return status.ServiceDot(m.theme, s.WorstStatus) + " " + muted.Render(strings.Join(parts, " · "))
 }
 
-// renderServiceTable renders all services as an aligned table.
+// isActiveStatus returns true for statuses worth showing in the table.
+func isActiveStatus(s domain.ServiceLogStatus) bool {
+	switch s { //nolint:exhaustive // inactive/disabled are the only hidden ones
+	case domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
+		return false
+	}
+	return true
+}
+
+// renderServiceTable renders active services and summarizes hidden ones by status.
 func (m *Model) renderServiceTable(width int) string {
 	if len(m.services) == 0 {
 		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("No services")
+	}
+
+	var active []domain.ServiceStatus
+	hidden := make(map[domain.ServiceLogStatus]int)
+	for _, svc := range m.services {
+		if isActiveStatus(svc.Status) {
+			active = append(active, svc)
+		} else {
+			hidden[svc.Status]++
+		}
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
 	tbl.Headers("Service", "Status", "Events", "Volume", "Bytes", "Cost")
 	tbl.SetWidth(width)
 
-	for _, svc := range m.services {
-		row := []string{
+	for _, svc := range active {
+		tbl.Row(
 			m.serviceName(svc),
-			status.Service(m.theme, svc.Status, true),
+			m.renderStatus(svc),
 			fmt.Sprintf("%d", svc.EventCount),
-			formatVolume(svc.VolumePerHour) + "/hr",
-			formatBytes(svc.BytesPerHour) + "/hr",
+			formatVolume(svc.VolumePerHour)+"/hr",
+			formatBytes(svc.BytesPerHour)+"/hr",
 			formatMonthlyCost(svc.CostPerHourUSD),
-		}
-		tbl.Row(row...)
+		)
 	}
 
-	return tbl.View()
+	result := tbl.View()
+
+	if len(hidden) > 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		var parts []string
+		// Show in consistent order: disabled first, then inactive.
+		for _, s := range []domain.ServiceLogStatus{domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive} {
+			if n := hidden[s]; n > 0 {
+				parts = append(parts, fmt.Sprintf("%d %s", n, strings.ToLower(s.String())))
+			}
+		}
+		result += "\n" + muted.Render("  + "+strings.Join(parts, " · "))
+	}
+
+	return result
 }
 
 // serviceName returns the service name, with extra context for non-ready services.
 func (m *Model) serviceName(svc domain.ServiceStatus) string {
-	if svc.Status == domain.ServiceLogStatusReady {
-		return svc.Name
-	}
-	switch svc.Status {
+	switch svc.Status { //nolint:exhaustive // only special cases need extra context
 	case domain.ServiceLogStatusBroken:
 		if svc.Error != "" {
 			return svc.Name + " — " + svc.Error
 		}
-	case domain.ServiceLogStatusDiscovering:
-		if svc.PercentComplete > 0 {
-			return svc.Name + fmt.Sprintf(" (%.0f%%)", svc.PercentComplete)
-		}
 	case domain.ServiceLogStatusStale:
 		return svc.Name + " — no recent data"
-	case domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive,
-		domain.ServiceLogStatusAnalyzing, domain.ServiceLogStatusReady:
-		// No extra context needed.
 	}
 	return svc.Name
+}
+
+// renderStatus renders the status badge, with percent for discovering/analyzing.
+func (m *Model) renderStatus(svc domain.ServiceStatus) string {
+	s := status.Service(m.theme, svc.Status, true)
+	if svc.PercentComplete > 0 {
+		switch svc.Status { //nolint:exhaustive // only discovering/analyzing show percent
+		case domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
+			muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+			s += " " + muted.Render(fmt.Sprintf("%.0f%%", svc.PercentComplete))
+		}
+	}
+	return s
 }
 
 // formatVolume formats events/hr: 892, 12.4k, 2.1M.

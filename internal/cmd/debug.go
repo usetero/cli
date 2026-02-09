@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/api"
@@ -42,12 +41,13 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 		Short: "Show Datadog account discovery status",
 		Long:  "Show the current discovery status for the Datadog account, including service counts and progress.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
+			env := cliConfig.Environment()
 
 			// Load preferences to get account ID
-			cfg, err := config.Load(namespace)
+			orgID := config.ActiveOrgID(env)
+			cfg, err := config.Load(env, orgID)
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
@@ -89,37 +89,31 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 
 			// Print status
 			fmt.Println(s.Title.Render("Datadog Account Status"))
-			fmt.Println()
+			fmt.Println(kv(s, "Status", string(ddStatus.Status)))
+			fmt.Println(kv(s, "Percent Complete", fmt.Sprintf("%.1f%%", ddStatus.PercentComplete*100)))
 
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Status:"), s.Body.Render(string(ddStatus.Status)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Percent Complete:"), s.Body.Render(fmt.Sprintf("%.1f%%", ddStatus.PercentComplete*100)))
-			fmt.Println()
+			fmt.Println(section(s, "Service Counts"))
+			fmt.Println(kv(s, "Total", fmt.Sprintf("%d", ddStatus.ServiceCount)))
+			fmt.Println(kv(s, "Active", fmt.Sprintf("%d", ddStatus.ActiveServices)))
+			fmt.Println(kvStyled(s, "Ready", s.Success.Render(fmt.Sprintf("%d", ddStatus.ReadyServices))))
+			fmt.Println(kv(s, "Analyzing", fmt.Sprintf("%d", ddStatus.AnalyzingServices)))
+			fmt.Println(kv(s, "Discovering", fmt.Sprintf("%d", ddStatus.DiscoveringServices)))
+			fmt.Println(kv(s, "Stale", fmt.Sprintf("%d", ddStatus.StaleServices)))
+			fmt.Println(kvStyled(s, "Broken", s.Error.Render(fmt.Sprintf("%d", ddStatus.BrokenServices))))
+			fmt.Println(kvStyled(s, "Inactive", s.Help.Render(fmt.Sprintf("%d", ddStatus.InactiveServices))))
+			fmt.Println(kvStyled(s, "Disabled", s.Help.Render(fmt.Sprintf("%d", ddStatus.DisabledServices))))
 
-			fmt.Println(s.Title.Render("Service Counts"))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Total:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.ServiceCount)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Active:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.ActiveServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Ready:"), s.Success.Render(fmt.Sprintf("%d", ddStatus.ReadyServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Analyzing:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.AnalyzingServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Discovering:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.DiscoveringServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Stale:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.StaleServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Broken:"), s.Error.Render(fmt.Sprintf("%d", ddStatus.BrokenServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Inactive:"), s.Help.Render(fmt.Sprintf("%d", ddStatus.InactiveServices)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Disabled:"), s.Help.Render(fmt.Sprintf("%d", ddStatus.DisabledServices)))
-			fmt.Println()
+			fmt.Println(section(s, "Volume"))
+			fmt.Println(kv(s, "Service Volume", fmt.Sprintf("%d", ddStatus.ServiceLogVolume)))
+			fmt.Println(kv(s, "Discovered Volume", fmt.Sprintf("%d", ddStatus.DiscoveredLogVolume)))
 
-			fmt.Println(s.Title.Render("Volume"))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Service Volume:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.ServiceLogVolume)))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Discovered Volume:"), s.Body.Render(fmt.Sprintf("%d", ddStatus.DiscoveredLogVolume)))
-
-			// Show onboarding readiness
-			fmt.Println()
-			fmt.Println(s.Title.Render("Onboarding"))
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Analyzed Count:"), s.Body.Render(fmt.Sprintf("%d / 50", ddStatus.AnalyzedCount)))
+			fmt.Println(section(s, "Onboarding"))
+			fmt.Println(kv(s, "Analyzed Count", fmt.Sprintf("%d / 50", ddStatus.AnalyzedCount)))
 			readyForUseStr := fmt.Sprintf("%v", ddStatus.ReadyForUse)
 			if ddStatus.ReadyForUse {
-				fmt.Printf("  %-25s %s\n", s.Help.Render("Ready for Use:"), s.Success.Render(readyForUseStr))
+				fmt.Println(kvStyled(s, "Ready for Use", s.Success.Render(readyForUseStr)))
 			} else {
-				fmt.Printf("  %-25s %s\n", s.Help.Render("Ready for Use:"), s.Body.Render(readyForUseStr))
+				fmt.Println(kv(s, "Ready for Use", readyForUseStr))
 			}
 
 			return nil
@@ -134,35 +128,28 @@ func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 		Short: "Show current preferences",
 		Long:  "Show the current preferences stored in the config file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
+			env := cliConfig.Environment()
 
-			cfg, err := config.Load(namespace)
+			orgID := config.ActiveOrgID(env)
+			cfg, err := config.Load(env, orgID)
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 			prefs := preferences.NewService(cfg, scope)
 
 			// Get config path for display
-			homeDir, _ := os.UserHomeDir()
-			var configPath string
-			if namespace == "" {
-				configPath = homeDir + "/.tero/config.yaml"
-			} else {
-				configPath = homeDir + "/.tero/" + namespace + "/config.yaml"
-			}
+			configPath, _ := config.ConfigPath(env, orgID)
 
 			fmt.Println(s.Title.Render("Preferences"))
 			fmt.Println(s.Help.Render("Path: " + configPath))
-			fmt.Println()
 
-			// Use preferences service to get values
 			printPref := func(label, value string) {
 				if value == "" {
-					fmt.Printf("  %-25s %s\n", s.Help.Render(label+":"), s.Help.Render("(not set)"))
+					fmt.Println(kvStyled(s, label, s.Help.Render("(not set)")))
 				} else {
-					fmt.Printf("  %-25s %s\n", s.Help.Render(label+":"), s.Body.Render(value))
+					fmt.Println(kv(s, label, value))
 				}
 			}
 
@@ -173,16 +160,14 @@ func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 			printPref("Role", prefs.GetRole())
 			printPref("Email", prefs.GetEmail())
 
-			// Services (list)
 			services := prefs.GetServices()
 			if len(services) == 0 {
-				fmt.Printf("  %-25s %s\n", s.Help.Render("Services:"), s.Help.Render("(none)"))
+				fmt.Println(kvStyled(s, "Services", s.Help.Render("(none)")))
 			} else {
-				fmt.Printf("  %-25s %s\n", s.Help.Render("Services:"), s.Body.Render(fmt.Sprintf("%v", services)))
+				fmt.Println(kv(s, "Services", fmt.Sprintf("%v", services)))
 			}
 
-			// Has seen greeting
-			fmt.Printf("  %-25s %s\n", s.Help.Render("Has Seen Greeting:"), s.Body.Render(fmt.Sprintf("%v", prefs.GetHasSeenGreeting())))
+			fmt.Println(kv(s, "Has Seen Greeting", fmt.Sprintf("%v", prefs.GetHasSeenGreeting())))
 
 			return nil
 		},
@@ -216,7 +201,8 @@ func newDebugGraphQLCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Com
 			}
 
 			// Set account ID header if available
-			cfg, _ := config.Load(cliConfig.Namespace())
+			env := cliConfig.Environment()
+			cfg, _ := config.Load(env, config.ActiveOrgID(env))
 			if cfg != nil {
 				prefs := preferences.NewService(cfg, scope)
 				if accountID := prefs.GetDefaultAccountID(); accountID != "" {
@@ -253,38 +239,31 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 		Short: "Show file paths used by Tero",
 		Long:  "Show the file paths used by Tero for config, data, and credentials.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
+			env := cliConfig.Environment()
 
-			homeDir, _ := os.UserHomeDir()
+			orgID := config.ActiveOrgID(env)
 
 			fmt.Println(s.Title.Render("Tero Paths"))
-			fmt.Println()
-			fmt.Printf("  %-20s %s\n", s.Help.Render("Namespace:"), s.Body.Render(ifEmpty(namespace, "(production)")))
-			fmt.Println()
-
-			// Config path
-			var configPath string
-			if namespace == "" {
-				configPath = homeDir + "/.tero/config.yaml"
-			} else {
-				configPath = homeDir + "/.tero/" + namespace + "/config.yaml"
+			fmt.Println(kv(s, "Environment", env))
+			if orgID != "" {
+				fmt.Println(kv(s, "Active Org", orgID))
 			}
-			fmt.Printf("  %-20s %s\n", s.Help.Render("Config:"), s.Body.Render(configPath))
 
-			// Data directory
-			cfg, err := config.Load(namespace)
+			configPath, _ := config.ConfigPath(env, orgID)
+			fmt.Println(kv(s, "Config", configPath))
+
+			cfg, err := config.Load(env, orgID)
 			if err == nil {
 				baseDir, _ := cfg.BaseDir()
-				fmt.Printf("  %-20s %s\n", s.Help.Render("Base Dir:"), s.Body.Render(baseDir))
+				fmt.Println(kv(s, "Base Dir", baseDir))
 
-				// Show database path if account is configured
 				accountID := cfg.Get("account_id")
 				if accountID != "" {
 					storage := sqlite.NewStorageService(cfg)
 					dbPath, _ := storage.DatabasePath(accountID)
-					fmt.Printf("  %-20s %s\n", s.Help.Render("Database:"), s.Body.Render(dbPath))
+					fmt.Println(kv(s, "Database", dbPath))
 				}
 			}
 
@@ -295,8 +274,8 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 
 // getAPIServices creates authenticated API services
 func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (api.APIServices, error) {
-	namespace := cliConfig.Namespace()
-	tokenStore := keyring.New(namespace)
+	env := cliConfig.Environment()
+	tokenStore := keyring.New(env)
 	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 	authService := auth.NewService(workosClient, tokenStore, scope)
 
@@ -307,11 +286,4 @@ func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIC
 	}
 
 	return api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope), nil
-}
-
-func ifEmpty(s, fallback string) string {
-	if s == "" {
-		return fallback
-	}
-	return s
 }

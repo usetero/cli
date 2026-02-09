@@ -138,6 +138,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     created_at TEXT,
     dismissed_at TEXT,
     estimated_bytes_reduction_per_hour REAL,
+    estimated_cost_reduction_per_hour_usd REAL,
     estimated_volume_reduction_per_hour REAL,
     log_event_id TEXT,
     objectivity TEXT,

@@ -23,12 +23,13 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Clear all preferences and authentication",
 		Long:  "Remove stored authentication tokens and user preferences for the current environment.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			theme := styles.NewTheme(true)
+			theme := styles.DetectTheme()
 			s := theme.Styles
-			namespace := cliConfig.Namespace()
+			env := cliConfig.Environment()
 
 			// Clear preferences
-			cfg, err := config.Load(namespace)
+			orgID := config.ActiveOrgID(env)
+			cfg, err := config.Load(env, orgID)
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
@@ -38,7 +39,7 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Clear auth tokens
-			tokenStore := keyring.New(namespace)
+			tokenStore := keyring.New(env)
 			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 			if err := authService.ClearTokens(); err != nil {
@@ -52,11 +53,11 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 					return fmt.Errorf("failed to clear database: %w", err)
 				}
 
-				fmt.Println(s.Success.Render("Reset complete"))
-				fmt.Println(s.Help.Render("  Cleared preferences, authentication, and database for: " + namespace))
+				fmt.Println(s.Success.Render("✓ Reset complete"))
+				fmt.Println(s.Help.Render("Cleared preferences, authentication, and database for: " + env))
 			} else {
-				fmt.Println(s.Success.Render("Reset complete"))
-				fmt.Println(s.Help.Render("  Cleared preferences and authentication for: " + namespace))
+				fmt.Println(s.Success.Render("✓ Reset complete"))
+				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
 			}
 
 			return nil

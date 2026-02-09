@@ -2,6 +2,7 @@ package styles
 
 import (
 	"image/color"
+	"os"
 
 	"charm.land/lipgloss/v2"
 )
@@ -124,14 +125,14 @@ func buildTokens(p Palette, isDark bool) Tokens {
 		InputBorder:      MustHex(p.Neutral[S300]),
 		InputBorderFocus: MustHex(p.Brand[S600]),
 
-		ErrorFg:   MustHex(p.Error[S600]),
-		ErrorBg:   MustHex(p.Error[S100]),
-		SuccessFg: MustHex(p.Success[S600]),
-		SuccessBg: MustHex(p.Success[S100]),
-		WarningFg: MustHex(p.Warning[S600]),
-		WarningBg: MustHex(p.Warning[S100]),
-		InfoFg:    MustHex(p.Info[S600]),
-		InfoBg:    MustHex(p.Info[S100]),
+		ErrorFg:   MustHex(p.Error[S50]),
+		ErrorBg:   MustHex(p.Error[S600]),
+		SuccessFg: MustHex(p.Success[S50]),
+		SuccessBg: MustHex(p.Success[S600]),
+		WarningFg: MustHex(p.Warning[S50]),
+		WarningBg: MustHex(p.Warning[S600]),
+		InfoFg:    MustHex(p.Info[S50]),
+		InfoBg:    MustHex(p.Info[S600]),
 	}
 }
 
@@ -203,6 +204,13 @@ type Styles struct {
 	Error   lipgloss.Style // ErrorFg
 }
 
+// DetectTheme creates a theme by detecting the terminal's background color.
+// For standalone CLI usage only — Bubble Tea apps should use NewTheme with
+// tea.BackgroundColorMsg instead.
+func DetectTheme() Theme {
+	return NewTheme(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+}
+
 // NewTheme creates a new theme from the default palette. Use isDark=true for dark mode.
 func NewTheme(isDark bool) Theme {
 	tokens := buildTokens(DefaultPalette(), isDark)
@@ -249,15 +257,16 @@ func themeFromTokens(t Tokens) Theme {
 }
 
 // buildStyles creates pre-built styles from the active theme.
-// Every style includes Background so terminal cells are always filled.
+// Styles set foreground only — background is inherited from the terminal (CLI)
+// or set explicitly by TUI components at surface boundaries.
 func buildStyles(t Theme) Styles {
 	return Styles{
-		Title:   lipgloss.NewStyle().Foreground(t.Accent).Background(t.Bg).Bold(true),
-		Body:    lipgloss.NewStyle().Foreground(t.Text).Background(t.Bg),
-		Help:    lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
-		Action:  lipgloss.NewStyle().Foreground(t.Accent).Background(t.Bg),
-		URL:     lipgloss.NewStyle().Foreground(t.TextMuted).Background(t.Bg),
-		Success: lipgloss.NewStyle().Foreground(t.SuccessBg).Background(t.Bg).Bold(true),
-		Error:   lipgloss.NewStyle().Foreground(t.ErrorBg).Background(t.Bg),
+		Title:   lipgloss.NewStyle().Foreground(t.Accent).Bold(true),
+		Body:    lipgloss.NewStyle().Foreground(t.Text),
+		Help:    lipgloss.NewStyle().Foreground(t.TextMuted),
+		Action:  lipgloss.NewStyle().Foreground(t.Accent),
+		URL:     lipgloss.NewStyle().Foreground(t.TextMuted),
+		Success: lipgloss.NewStyle().Foreground(t.SuccessBg).Bold(true),
+		Error:   lipgloss.NewStyle().Foreground(t.ErrorBg),
 	}
 }

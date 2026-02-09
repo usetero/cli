@@ -87,6 +87,12 @@ func New(
 	}
 }
 
+// SetPreferences replaces the preferences used by subsequent onboarding steps.
+// Called by the app when switching to a different org-scoped config.
+func (m *Model) SetPreferences(prefs preferences.Preferences) {
+	m.prefs = prefs
+}
+
 // Init starts the onboarding flow with auth check.
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("onboarding started")
