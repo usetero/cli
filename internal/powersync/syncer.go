@@ -16,7 +16,7 @@ import (
 
 const (
 	initialRetryDelay = 1 * time.Second
-	maxRetryDelay     = 30 * time.Second
+	maxRetryDelay     = 10 * time.Second
 	maxAuthRetries    = 2
 	errorStateAfter   = 3 // show error state after this many consecutive failures
 )
