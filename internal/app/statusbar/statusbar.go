@@ -226,6 +226,16 @@ func (m *Model) View() string {
 
 	// Fill space between left content and right hint with diagonals
 	leftDiags := diagStyle.Render(diag + diag)
+
+	if rightSeg == "" {
+		// No right segment — fill remaining space with diagonals
+		trailing := m.width - contentWidth - 3 // 2 left diags + 1 space
+		if trailing < 1 {
+			trailing = 1
+		}
+		return leftDiags + " " + content + " " + diagStyle.Render(strings.Repeat(diag, trailing))
+	}
+
 	middlePadding := m.width - contentWidth - rightWidth - 7 // 2 left diags + 2 right diags + 3 spaces
 	if middlePadding < 3 {
 		middlePadding = 3
