@@ -205,18 +205,28 @@ func (m *Model) FocusNext() {
 	m.scrollToFocused()
 }
 
-// UpdateFocusFromScroll sets focus to the first fully visible item.
+// UpdateFocusFromScroll sets focus to the last fully visible item.
 func (m *Model) UpdateFocusFromScroll() {
 	if len(m.heights) == 0 {
 		m.focusIdx = -1
 		return
 	}
-	// If offsetLine > 0, the first item is partially hidden — focus the next one.
-	if m.offsetLine > 0 && m.offsetIdx+1 < len(m.heights) {
-		m.focusIdx = m.offsetIdx + 1
-	} else {
-		m.focusIdx = m.offsetIdx
+
+	// Walk from the offset, tracking the last item that fits entirely.
+	y := -m.offsetLine
+	last := m.offsetIdx
+	for idx := m.offsetIdx; idx < len(m.heights); idx++ {
+		if idx > m.offsetIdx {
+			y += m.gaps[idx]
+		}
+		bh := m.itemHeight(idx)
+		if y+bh > m.height {
+			break // this item doesn't fit
+		}
+		last = idx
+		y += bh
 	}
+	m.focusIdx = last
 }
 
 // scrollToFocused ensures the focused item is visible in the viewport.

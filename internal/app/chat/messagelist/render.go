@@ -120,23 +120,26 @@ func (m *Model) renderBlock(entry blockEntry) string {
 	b := entry.block
 	cw := m.contentWidth()
 
-	// Determine border color based on block type and focus state.
+	// Determine border color and style based on block type and focus state.
 	borderColor := m.theme.Bg
+	borderStyle := lipgloss.NormalBorder()
 	if b.Kind() == block.KindUser {
-		// User messages: accent border, brighter when focused.
+		// User messages: accent border, thicker when focused.
 		borderColor = m.theme.Accent
 		if b.Focused() {
 			borderColor = m.theme.AccentAlt
+			borderStyle = lipgloss.ThickBorder()
 		}
 	} else if b.Focused() {
-		// Assistant blocks: invisible border, accent when focused.
+		// Assistant blocks: invisible border, thick accent when focused.
 		borderColor = m.theme.AccentAlt
+		borderStyle = lipgloss.ThickBorder()
 	}
 
 	return lipgloss.NewStyle().
 		Width(cw).
 		BorderLeft(true).
-		BorderStyle(lipgloss.NormalBorder()).
+		BorderStyle(borderStyle).
 		BorderForeground(borderColor).
 		Render(b.View())
 }
@@ -176,7 +179,6 @@ func (m *Model) gapLines(idx int) []string {
 // divider renders "  ◇ Tero 4s ─────────" for a completed round,
 // or "  ◇ Cancelled 1.2s ─────────" for a cancelled round.
 func (m *Model) divider(r *round.Model) string {
-	const indent = block.BorderWidth + block.PaddingX
 	cw := m.contentWidth()
 
 	colors := m.theme
@@ -200,6 +202,7 @@ func (m *Model) divider(r *round.Model) string {
 		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	}
 
+	indent := block.BorderWidth
 	prefixWidth := lipgloss.Width(prefix)
 
 	lineWidth := cw - indent - prefixWidth

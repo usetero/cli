@@ -452,8 +452,11 @@ func TestUpdateFocusFromScroll_FullyVisible(t *testing.T) {
 	m := uniform(5, 3, 1, 10)
 	m.UpdateFocusFromScroll()
 
-	if m.FocusIdx() != 0 {
-		t.Errorf("FocusIdx = %d, want 0", m.FocusIdx())
+	// Items: 0(3)+gap(1)+1(3)+gap(1)+2(3)... viewport=10.
+	// Item 0: y=0..2, item 1: y=4..6, item 2: y=8..10 (doesn't fit, 11>10).
+	// Last fully visible = 1.
+	if m.FocusIdx() != 1 {
+		t.Errorf("FocusIdx = %d, want 1 (last fully visible)", m.FocusIdx())
 	}
 }
 
@@ -465,8 +468,9 @@ func TestUpdateFocusFromScroll_PartiallyHidden(t *testing.T) {
 
 	m.UpdateFocusFromScroll()
 
-	if m.FocusIdx() != 1 {
-		t.Errorf("FocusIdx = %d, want 1 (first fully visible)", m.FocusIdx())
+	// After scrolling 1 line: item 0 partially hidden, items 1,2 fully visible. Last = 2.
+	if m.FocusIdx() != 2 {
+		t.Errorf("FocusIdx = %d, want 2 (last fully visible)", m.FocusIdx())
 	}
 }
 
