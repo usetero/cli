@@ -32,7 +32,18 @@ Supporting docs:
 2. **Control plane is source of truth.** Local data is synced (TUI/MCP) or queried (CLI), never owned.
 3. **Dependencies point inward.** Services depend on interfaces, not implementations.
 4. **Composition happens in `cmd/`.** Wire implementations to interfaces there, nowhere else.
-5. **Conventional commits.** `feat:`, `fix:`, `docs:`, `refactor:`, etc.
+5. **Conventional commits.** Commit prefixes drive release-please version bumps and changelogs. Think from the **user's perspective** — would they notice this change?
+
+   | Prefix | When to use | Version bump |
+   |--------|-------------|--------------|
+   | `feat:` | User-visible new functionality. New UI element, new command, new capability. | Minor |
+   | `fix:` | User-visible bug fix. Something was broken, now it works. | Patch |
+   | `refactor:` | Internal restructuring. No user-visible change. | None |
+   | `chore:` | Build, deps, CI, tooling. No user-visible change. | None |
+   | `docs:` | Documentation only. | None |
+   | `test:` | Test only. No production code change. | None |
+
+   **The test:** If you'd put it in release notes for users, it's `feat:` or `fix:`. If only developers care, it's `refactor:`, `chore:`, or `test:`.
 
 ## Code Location
 
