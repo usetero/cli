@@ -293,6 +293,11 @@ func (m *Model) renderTabBar(width int) string {
 
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
+	// Hide hint until data is loaded and the drawer can open.
+	if !m.drawerOpen && !m.catalogStatus.HasData() && !m.policyStatus.HasData() {
+		return ""
+	}
+
 	colors := m.theme
 	keyStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 	tipStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg)
