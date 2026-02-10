@@ -134,6 +134,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			// If tool_use, turn will collect results and fire ToolResultsReady
 		}
 
+	case msgs.StreamFailed:
+		if m.isOurTurn(msg.TurnID) {
+			m.state = StateComplete
+			m.endTime = time.Now()
+			m.scope.Info("round failed", "error", msg.Err)
+		}
+
 	case msgs.ToolResultsReady:
 		// Tool results collected by one of our turns - start next turn
 		if m.isOurTurn(msg.TurnID) && m.state == StateActive {

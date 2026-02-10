@@ -8,7 +8,6 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -47,6 +46,7 @@ type Model struct {
 	// Tool result collection
 	pendingTools int
 	toolResults  []tools.Result
+	persisted    bool // true after assistantMessage is written to DB
 
 	db           sqlite.DB
 	chatClient   chatclient.Client
@@ -72,6 +72,12 @@ type streamUpdate struct {
 type streamUpdateMsg struct {
 	turnID domain.MessageID
 	update streamUpdate
+}
+
+// assistantPersisted is fired after the assistant message is written to the DB.
+// It gates fireToolResults to prevent racing with persistence.
+type assistantPersisted struct {
+	messageID domain.MessageID
 }
 
 // New creates a new turn from a user submission.
@@ -130,6 +136,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case msgs.ToolCompleted:
 		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
+
+	case assistantPersisted:
+		m.persisted = true
+		// If tools are already done, fire now that persist is complete.
+		if m.state == StateComplete && m.pendingTools > 0 && len(m.toolResults) >= m.pendingTools {
+			return m.fireToolResults()
+		}
+		return nil
 	}
 
 	cmds = append(cmds, m.userMessage.Update(msg))
@@ -151,7 +165,10 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	if len(m.toolResults) >= m.pendingTools {
 		m.scope.Info("all tools completed")
 		m.state = StateComplete
-		return m.fireToolResults()
+		if m.persisted {
+			return m.fireToolResults()
+		}
+		return nil // assistantPersisted handler will fire tool results
 	}
 	return nil
 }
@@ -239,8 +256,12 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			return nil
 		}
 		m.scope.Error("stream error", "error", update.err)
+		m.assistantMessage.Cancel()
 		m.state = StateComplete
-		return appmsg.ErrorCmd("Failed to get response", update.err, false)
+		turnID := m.userMessage.ID()
+		return func() tea.Msg {
+			return msgs.StreamFailed{TurnID: turnID, Err: update.err}
+		}
 	}
 
 	if update.message == nil {
@@ -271,7 +292,9 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			m.pendingTools = countToolUseBlocks(update.message.Content)
 			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
 
-			// Check if tools already completed during streaming
+			// Check if tools already completed during streaming.
+			// Don't fire tool results yet — wait for persistAssistantMessage
+			// to complete first (via assistantPersisted handler).
 			if len(m.toolResults) >= m.pendingTools {
 				m.scope.Info("all tools already completed")
 				m.state = StateComplete
@@ -288,7 +311,6 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 						}
 					},
 					m.persistAssistantMessage(update.message),
-					m.fireToolResults(),
 				)
 			}
 			m.state = StateAwaitingToolResults
@@ -385,7 +407,7 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 		}
 
 		m.scope.Info("assistant message persisted", "message_id", msgID)
-		return msgs.AssistantMessageCreated{MessageID: msgID}
+		return assistantPersisted{messageID: msgID}
 	}
 }
 

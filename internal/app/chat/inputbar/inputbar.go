@@ -26,10 +26,11 @@ const (
 
 // Model handles user input via a textarea.
 type Model struct {
-	theme    styles.Theme
-	textarea textarea.Model
-	width    int
-	scope    log.Scope
+	theme       styles.Theme
+	textarea    textarea.Model
+	width       int
+	scope       log.Scope
+	pendingText string // saved input text, restored on stream failure
 }
 
 // placeholder returns a random placeholder for the session.
@@ -135,11 +136,23 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if key.Matches(msg, keymap.Send) {
 			text := strings.TrimSpace(m.textarea.Value())
 			if text != "" {
+				m.pendingText = text
 				m.textarea.Reset()
 				return func() tea.Msg { return msgs.UserSubmittedInput{Text: text} }
 			}
 			return nil
 		}
+
+	case msgs.StreamFailed:
+		if m.pendingText != "" {
+			m.textarea.SetValue(m.pendingText)
+			m.pendingText = ""
+		}
+		return nil
+
+	case msgs.StreamCompleted:
+		m.pendingText = ""
+		return nil
 	}
 
 	// Forward to textarea
