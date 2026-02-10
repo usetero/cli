@@ -135,7 +135,7 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 			},
 		},
 		Strikethrough: ansi.StylePrimitive{
-			CrossedOut: boolPtr(true),
+			CrossedOut: boolPtr(false),
 		},
 		Emph: ansi.StylePrimitive{
 			Color:  text,
