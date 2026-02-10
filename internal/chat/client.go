@@ -10,6 +10,7 @@ package chat
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -116,7 +117,10 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 	allTools := append(c.globalTools, req.Tools...)
 	req.Tools = allTools
 
+	url := c.endpoint + "/api/chat/v1/messages"
+
 	c.scope.Debug("sending to chat API",
+		log.String("url", url),
 		log.String("conversation_id", req.ConversationID),
 		log.Int("message_count", len(req.Messages)),
 		log.Int("context_count", len(req.Context)),
@@ -126,7 +130,18 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 	// Get fresh token for this request
 	token, err := c.auth.GetAccessToken(ctx)
 	if err != nil {
+		c.scope.Error("failed to get access token", "error", err)
 		return nil, fmt.Errorf("get access token: %w", err)
+	}
+
+	// Log token metadata for debugging auth issues
+	if claims, parseErr := parseTokenAudience(token); parseErr == nil {
+		c.scope.Debug("token acquired",
+			log.String("sub", claims.sub),
+			log.String("aud", strings.Join(claims.aud, ", ")),
+			log.String("org_id", claims.orgID),
+			log.Bool("expired", claims.expired),
+		)
 	}
 
 	body, err := json.Marshal(req)
@@ -134,7 +149,7 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint+"/api/chat/v1/messages", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -143,19 +158,26 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		c.scope.Error("request failed", "error", err, "url", url)
 		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(body))
+		respBody, _ := io.ReadAll(resp.Body)
+		c.scope.Error("chat API returned error",
+			log.Int("status", resp.StatusCode),
+			log.String("url", url),
+			log.String("body", string(respBody)),
+			log.String("account_id", c.accountID.String()),
+		)
+		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "text/event-stream") {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("expected text/event-stream, got %s: %s", contentType, string(body))
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("expected text/event-stream, got %s: %s", contentType, string(respBody))
 	}
 
 	// Use internal accumulator to build the message from events
@@ -194,4 +216,39 @@ func (c *client) setHeaders(req *http.Request, token string) {
 	if c.accountID != "" {
 		req.Header.Set("X-Account-ID", c.accountID.String())
 	}
+}
+
+// tokenClaims holds the subset of JWT claims we log for debugging.
+type tokenClaims struct {
+	sub     string
+	aud     []string
+	orgID   string
+	expired bool
+}
+
+// parseTokenAudience extracts key claims from a JWT without signature verification.
+func parseTokenAudience(token string) (tokenClaims, error) {
+	parts := strings.SplitN(token, ".", 3)
+	if len(parts) != 3 {
+		return tokenClaims{}, fmt.Errorf("invalid JWT format")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return tokenClaims{}, err
+	}
+	var raw struct {
+		Sub   string   `json:"sub"`
+		Aud   []string `json:"aud"`
+		OrgID string   `json:"org_id"`
+		Exp   int64    `json:"exp"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return tokenClaims{}, err
+	}
+	return tokenClaims{
+		sub:     raw.Sub,
+		aud:     raw.Aud,
+		orgID:   raw.OrgID,
+		expired: raw.Exp > 0 && time.Now().Unix() > raw.Exp,
+	}, nil
 }
