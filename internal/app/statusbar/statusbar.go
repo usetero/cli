@@ -257,7 +257,6 @@ func (m *Model) DrawerView(width, height int) string {
 
 	style := lipgloss.NewStyle().
 		Width(width).
-		Height(height).
 		MaxHeight(height).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colors.GradientEnd).
