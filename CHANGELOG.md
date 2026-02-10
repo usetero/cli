@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.11.0](https://github.com/usetero/cli/compare/v1.10.0...v1.11.0) (2026-02-10)
+
+
+### Features
+
+* add detailed logging to chat client ([e10fd9d](https://github.com/usetero/cli/commit/e10fd9d416d50dfb79920df79a1f2a08c94674f0))
+* add nested command palette with theme selection ([a822da8](https://github.com/usetero/cli/commit/a822da88448b60a52edf082057cc11008f9b7e76))
+* display costs as yearly instead of monthly ([af8b5d4](https://github.com/usetero/cli/commit/af8b5d4471409902c3d55ca3e773aa2aea7b6d1d))
+* graceful stream error handling ([12e34ea](https://github.com/usetero/cli/commit/12e34ea6aea79115cbc5a122d2c837e568c3d9c6))
+* improve catalog drawer ([aaa8105](https://github.com/usetero/cli/commit/aaa8105e17b731144f8b0c9da8a954d805b6f588))
+* improve message list focus UX ([199b67b](https://github.com/usetero/cli/commit/199b67b23f845c3037b8af237d016c4faf160d10))
+* show query execution time in tool result title ([fa44c3b](https://github.com/usetero/cli/commit/fa44c3b6a0ca24adecaaf822072a8fd45ff29981))
+
+
+### Bug Fixes
+
+* disable strikethrough in markdown rendering ([2b8db94](https://github.com/usetero/cli/commit/2b8db94508eaeb5124279b5857bde83d058e7fe4))
+* include chat endpoint in token audience ([c9dbdba](https://github.com/usetero/cli/commit/c9dbdba99c6b6f89272b4975293e36336702a488))
+* increase watch test timeouts to prevent flakiness ([8d565ca](https://github.com/usetero/cli/commit/8d565ca515740ddf53b2bd3e5efab505c618277d))
+* race between persist and fire tool results ([a3f3231](https://github.com/usetero/cli/commit/a3f3231d4d5e8701d23c7d3150f3d95d4ee1123a))
+* reduce max sync retry backoff from 30s to 10s ([1785294](https://github.com/usetero/cli/commit/1785294c17573051dc9a007ae8ab7d4fc8b95065))
+* revert hardcoded version to dev ([e34e468](https://github.com/usetero/cli/commit/e34e468a3986840571f13045b0ca10161e372ddd))
+* set org and workspace on statusbar after onboarding ([b2c6c41](https://github.com/usetero/cli/commit/b2c6c419b9bb5306d954e568360c494d243daa33))
+* upload assets to existing release-please release ([90aca09](https://github.com/usetero/cli/commit/90aca09f5df1a0f72c96314c968fcd67c5a90435))
+* write log file to ~/.tero instead of /tmp ([d1f283e](https://github.com/usetero/cli/commit/d1f283e90d8b779ae32521e088ecbca1e848a76e))
+
 ## [1.10.0](https://github.com/usetero/cli/compare/v1.9.0...v1.10.0) (2026-02-09)
 
 
