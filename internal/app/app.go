@@ -617,7 +617,10 @@ func (m *Model) renderContent() string {
 	// Overlay drawer if open
 	if m.statusBar.IsDrawerOpen() {
 		drawerWidth := contentWidth - 2
-		drawerHeight := 12
+		drawerHeight := pageHeight - 2 // fill page area, leave gap at bottom
+		if drawerHeight < 6 {
+			drawerHeight = 6
+		}
 		drawer := m.statusBar.DrawerView(drawerWidth, drawerHeight)
 
 		layers := []*lipgloss.Layer{

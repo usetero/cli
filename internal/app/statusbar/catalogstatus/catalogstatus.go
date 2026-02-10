@@ -148,15 +148,21 @@ func (m *Model) CompactView() string {
 }
 
 // ExpandedView renders the detailed catalog status for the drawer.
-func (m *Model) ExpandedView(width int) string {
+func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
 		return ""
+	}
+
+	// Height budget: summary (1) + gap (1) + table header+border (2) = 4 lines overhead.
+	maxRows := height - 4
+	if maxRows < 1 {
+		maxRows = 1
 	}
 
 	var lines []string
 	lines = append(lines, m.renderSummary())
 	lines = append(lines, "")
-	lines = append(lines, m.renderServiceTable(width))
+	lines = append(lines, m.renderServiceTable(width, maxRows))
 	return strings.Join(lines, "\n")
 }
 
@@ -216,7 +222,7 @@ func isActiveStatus(s domain.ServiceLogStatus) bool {
 }
 
 // renderServiceTable renders active services and summarizes hidden ones by status.
-func (m *Model) renderServiceTable(width int) string {
+func (m *Model) renderServiceTable(width, maxRows int) string {
 	if len(m.services) == 0 {
 		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("No services")
 	}
@@ -228,11 +234,19 @@ func (m *Model) renderServiceTable(width int) string {
 		}
 	}
 
+	// Reserve a row for "+N more" if we need to clip.
+	clipped := 0
+	visible := active
+	if len(active) > maxRows {
+		visible = active[:maxRows-1] // -1 for the "+N more" line
+		clipped = len(active) - len(visible)
+	}
+
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
 	tbl.Headers("Service", "Status", "Events", "Volume", "Bytes", "Cost")
 	tbl.SetWidth(width)
 
-	for _, svc := range active {
+	for _, svc := range visible {
 		tbl.Row(
 			m.serviceName(svc),
 			m.renderStatus(svc),
@@ -243,7 +257,12 @@ func (m *Model) renderServiceTable(width int) string {
 		)
 	}
 
-	return tbl.View()
+	result := tbl.View()
+	if clipped > 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		result += "\n" + muted.Render(fmt.Sprintf("+%d more", clipped))
+	}
+	return result
 }
 
 // serviceName returns the service name, with extra context for non-ready services.

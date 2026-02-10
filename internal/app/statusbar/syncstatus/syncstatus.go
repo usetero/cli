@@ -235,7 +235,7 @@ func (m *Model) CompactView() string {
 }
 
 // ExpandedView renders the detailed sync status for the drawer.
-func (m *Model) ExpandedView(width int) string {
+func (m *Model) ExpandedView(width, _ int) string {
 	if m.lastState == nil {
 		return ""
 	}

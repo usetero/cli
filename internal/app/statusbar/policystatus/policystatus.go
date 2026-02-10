@@ -160,15 +160,21 @@ func (m *Model) CompactView() string {
 }
 
 // ExpandedView renders the detailed policy status for the drawer.
-func (m *Model) ExpandedView(width int) string {
+func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
 		return ""
+	}
+
+	// Height budget: headline (1) + gap (1) + table header+border (2) = 4 lines overhead.
+	maxRows := height - 4
+	if maxRows < 1 {
+		maxRows = 1
 	}
 
 	var lines []string
 	lines = append(lines, m.renderHeadline())
 	lines = append(lines, "")
-	lines = append(lines, m.renderCategoryTable(width))
+	lines = append(lines, m.renderCategoryTable(width, maxRows))
 	return strings.Join(lines, "\n")
 }
 
@@ -211,17 +217,25 @@ func (m *Model) renderHeadline() string {
 }
 
 // renderCategoryTable renders the per-category breakdown.
-func (m *Model) renderCategoryTable(width int) string {
+func (m *Model) renderCategoryTable(width, maxRows int) string {
 	if len(m.categories) == 0 {
 		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 		return muted.Render("No policy data")
+	}
+
+	// Reserve a row for "+N more" if we need to clip.
+	clipped := 0
+	visible := m.categories
+	if len(m.categories) > maxRows {
+		visible = m.categories[:maxRows-1]
+		clipped = len(m.categories) - len(visible)
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
 	tbl.Headers("Category", "Pending", "Risk", "Benefit", "Waste", "Cost", "Impact")
 	tbl.SetWidth(width)
 
-	for _, c := range m.categories {
+	for _, c := range visible {
 		tbl.Row(
 			c.Category,
 			fmt.Sprintf("%d", c.PendingCount),
@@ -233,7 +247,12 @@ func (m *Model) renderCategoryTable(width int) string {
 		)
 	}
 
-	return tbl.View()
+	result := tbl.View()
+	if clipped > 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		result += "\n" + muted.Render(fmt.Sprintf("+%d more", clipped))
+	}
+	return result
 }
 
 // categoryWastePercent computes a single category's waste as a percentage of total.

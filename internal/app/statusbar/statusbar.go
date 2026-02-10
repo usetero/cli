@@ -237,15 +237,16 @@ func (m *Model) DrawerView(width, height int) string {
 	tabBar := m.renderTabBar(width - 4) // account for border + padding
 
 	// Active tab content
-	contentWidth := width - 4 // border (2) + padding (2)
+	contentWidth := width - 4   // border (2) + padding (2)
+	contentHeight := height - 4 // border (2) + tab bar (1) + gap (1)
 	var content string
 	switch m.activeTab {
 	case TabSync:
-		content = m.syncStatus.ExpandedView(contentWidth)
+		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
 	case TabCatalog:
-		content = m.catalogStatus.ExpandedView(contentWidth)
+		content = m.catalogStatus.ExpandedView(contentWidth, contentHeight)
 	case TabPolicy:
-		content = m.policyStatus.ExpandedView(contentWidth)
+		content = m.policyStatus.ExpandedView(contentWidth, contentHeight)
 	}
 
 	if content == "" {
@@ -257,6 +258,7 @@ func (m *Model) DrawerView(width, height int) string {
 	style := lipgloss.NewStyle().
 		Width(width).
 		Height(height).
+		MaxHeight(height).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colors.GradientEnd).
 		Padding(0, 1)
