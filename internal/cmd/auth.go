@@ -58,7 +58,7 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			s := theme.Styles
 			env := cliConfig.Environment()
 			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			ctx := cmd.Context()
@@ -159,7 +159,7 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			s := theme.Styles
 			env := cliConfig.Environment()
 			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			ctx := cmd.Context()
@@ -226,7 +226,7 @@ func newTokenCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := cliConfig.Environment()
 			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			token, err := authService.GetAccessToken(cmd.Context())
@@ -250,7 +250,7 @@ func newLogoutCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			s := theme.Styles
 			env := cliConfig.Environment()
 			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			if err := authService.ClearTokens(); err != nil {
@@ -310,7 +310,7 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			// Try to get org name from API
 			if workosOrgID != "" {
 				orgName := workosOrgID // fallback to ID
-				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 				authService := auth.NewService(workosClient, tokenStore, scope)
 				services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 				if orgs, err := fetchOrganizations(cmd.Context(), services); err == nil {

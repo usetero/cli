@@ -72,7 +72,7 @@ Just run 'tero' to start an interactive chat session.`,
 			tokenStore := keyring.New(env)
 
 			// Create WorkOS client for OAuth
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 
 			// Create auth service
 			authService := auth.NewService(workosClient, tokenStore, scope)

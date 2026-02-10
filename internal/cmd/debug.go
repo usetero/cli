@@ -283,7 +283,7 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (api.APIServices, error) {
 	env := cliConfig.Environment()
 	tokenStore := keyring.New(env)
-	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 	authService := auth.NewService(workosClient, tokenStore, scope)
 
 	// Verify we're authenticated

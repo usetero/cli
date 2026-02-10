@@ -52,7 +52,7 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 
 			// Clear auth tokens
 			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
+			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 			authService := auth.NewService(workosClient, tokenStore, scope)
 			if err := authService.ClearTokens(); err != nil {
 				return fmt.Errorf("failed to clear tokens: %w", err)
