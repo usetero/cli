@@ -44,9 +44,10 @@ type Model struct {
 	stream *streamState
 
 	// Tool result collection
-	pendingTools int
-	toolResults  []tools.Result
-	persisted    bool // true after assistantMessage is written to DB
+	pendingTools   int
+	pendingToolIDs map[string]bool // tool_use IDs belonging to this turn
+	toolResults    []tools.Result
+	persisted      bool // true after assistantMessage is written to DB
 
 	db           sqlite.DB
 	chatClient   chatclient.Client
@@ -153,6 +154,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.Cmd {
+	// Ignore tools that don't belong to this turn.
+	// Before pendingToolIDs is set (during streaming), accept all tools —
+	// they'll be validated once the stream completes and IDs are known.
+	if m.pendingToolIDs != nil && !m.pendingToolIDs[toolUseID] {
+		return nil
+	}
+
 	// Collect results during streaming or awaiting - tools may complete before StreamCompleted
 	m.toolResults = append(m.toolResults, result)
 	m.scope.Info("tool completed", "tool_use_id", toolUseID, "collected", len(m.toolResults), "pending", m.pendingTools)
@@ -289,7 +297,7 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		}
 
 		if update.message.StopReason == "tool_use" {
-			m.pendingTools = countToolUseBlocks(update.message.Content)
+			m.pendingTools, m.pendingToolIDs = collectToolUseIDs(update.message.Content)
 			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
 
 			// Check if tools already completed during streaming.
@@ -298,22 +306,9 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			if len(m.toolResults) >= m.pendingTools {
 				m.scope.Info("all tools already completed")
 				m.state = StateComplete
-				return tea.Batch(
-					func() tea.Msg {
-						return msgs.StreamCompleted{
-							TurnID:        m.userMessage.ID(),
-							Message:       *update.message,
-							StopReason:    update.message.StopReason,
-							Title:         title,
-							ContextWindow: contextWindow,
-							InputTokens:   inputTokens,
-							OutputTokens:  outputTokens,
-						}
-					},
-					m.persistAssistantMessage(update.message),
-				)
+			} else {
+				m.state = StateAwaitingToolResults
 			}
-			m.state = StateAwaitingToolResults
 		} else {
 			m.state = StateComplete
 		}
@@ -423,13 +418,13 @@ func (m *Model) fireToolResults() tea.Cmd {
 	}
 }
 
-// countToolUseBlocks counts the number of tool_use blocks in content.
-func countToolUseBlocks(content []domain.Block) int {
-	count := 0
+// collectToolUseIDs returns the count and set of tool_use IDs in content.
+func collectToolUseIDs(content []domain.Block) (int, map[string]bool) {
+	ids := make(map[string]bool)
 	for _, b := range content {
-		if b.Type == domain.BlockTypeToolUse {
-			count++
+		if b.Type == domain.BlockTypeToolUse && b.ToolUse != nil && b.ToolUse.ID != "" {
+			ids[b.ToolUse.ID] = true
 		}
 	}
-	return count
+	return len(ids), ids
 }

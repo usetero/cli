@@ -762,10 +762,9 @@ func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
 }
 
 // switchOrganization re-enters onboarding at org selection.
-// Each org has its own config/prefs/databases, so no need to clear preferences —
-// selecting a new org loads that org's isolated data.
 func (m *Model) switchOrganization() tea.Cmd {
 	m.scope.Info("switching organization")
+	_ = m.userPrefs.SetActiveOrgID("") // clear so onboarding shows the picker
 	return m.restartOnboarding()
 }
 
