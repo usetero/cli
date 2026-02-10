@@ -197,20 +197,24 @@ func TestHandleToolCompleted(t *testing.T) {
 		}
 	})
 
-	t.Run("fires results when all collected in awaiting state", func(t *testing.T) {
+	t.Run("fires results when all collected and persisted", func(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
+		m.persisted = true
 		m.pendingTools = 2
 		m.toolResults = []tools.Result{{ToolUseID: "tool-1"}}
 
-		m.handleToolCompleted("tool-2", tools.Result{ToolUseID: "tool-2"})
+		cmd := m.handleToolCompleted("tool-2", tools.Result{ToolUseID: "tool-2"})
 
 		if m.state != StateComplete {
 			t.Errorf("expected StateComplete when all tools done, got %d", m.state)
 		}
 		if len(m.toolResults) != 2 {
 			t.Errorf("expected 2 results, got %d", len(m.toolResults))
+		}
+		if cmd == nil {
+			t.Error("expected non-nil cmd (fireToolResults)")
 		}
 	})
 
@@ -224,6 +228,76 @@ func TestHandleToolCompleted(t *testing.T) {
 
 		if m.state != StateAwaitingToolResults {
 			t.Errorf("expected StateAwaitingToolResults with 1 of 2 tools, got %d", m.state)
+		}
+	})
+
+	t.Run("waits for persist before firing results", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateAwaitingToolResults
+		m.persisted = false
+		m.pendingTools = 1
+
+		cmd := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
+
+		if m.state != StateComplete {
+			t.Errorf("expected StateComplete, got %d", m.state)
+		}
+		if cmd != nil {
+			t.Error("expected nil cmd — persist hasn't completed yet")
+		}
+	})
+}
+
+func TestPersistBeforeFireToolResults(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tools pre-completed fires after persist", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateComplete
+		m.pendingTools = 1
+		m.toolResults = []tools.Result{{ToolUseID: "tool-1"}}
+		m.persisted = false
+
+		// Simulate assistantPersisted arriving
+		cmd := m.Update(assistantPersisted{messageID: "asst-1"})
+
+		if !m.persisted {
+			t.Error("expected persisted = true")
+		}
+		if cmd == nil {
+			t.Error("expected non-nil cmd (fireToolResults)")
+		}
+	})
+
+	t.Run("tools complete after persist fires immediately", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateAwaitingToolResults
+		m.persisted = true
+		m.pendingTools = 1
+
+		cmd := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
+
+		if cmd == nil {
+			t.Error("expected non-nil cmd (fireToolResults) — already persisted")
+		}
+	})
+
+	t.Run("no-op when no pending tools", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateComplete
+		m.pendingTools = 0
+
+		cmd := m.Update(assistantPersisted{messageID: "asst-1"})
+
+		if !m.persisted {
+			t.Error("expected persisted = true")
+		}
+		if cmd != nil {
+			t.Error("expected nil cmd — no tools to fire")
 		}
 	})
 }
