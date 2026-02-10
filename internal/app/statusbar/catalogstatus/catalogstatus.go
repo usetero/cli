@@ -165,11 +165,42 @@ func (m *Model) renderSummary() string {
 	s := m.summary
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
+	// Count hidden services.
+	var hiddenParts []string
+	hidden := make(map[domain.ServiceLogStatus]int)
+	for _, svc := range m.services {
+		if !isActiveStatus(svc.Status) {
+			hidden[svc.Status]++
+		}
+	}
+	for _, st := range []domain.ServiceLogStatus{domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive} {
+		if n := hidden[st]; n > 0 {
+			hiddenParts = append(hiddenParts, fmt.Sprintf("%d %s", n, strings.ToLower(st.String())))
+		}
+	}
+
+	// Service count with hidden annotation.
+	svcLabel := fmt.Sprintf("%d services", s.ActiveServices)
+	if len(hiddenParts) > 0 {
+		svcLabel += fmt.Sprintf(" (+%s)", strings.Join(hiddenParts, ", "))
+	}
+
 	var parts []string
-	parts = append(parts, fmt.Sprintf("%d services", s.ServiceCount))
+	parts = append(parts, svcLabel)
 	parts = append(parts, fmt.Sprintf("%d log events", s.EventCount))
 	if s.PercentComplete > 0 {
 		parts = append(parts, fmt.Sprintf("%.0f%% coverage", s.PercentComplete))
+	}
+
+	// Total cost across all active services.
+	var totalCostPerHour float64
+	for _, svc := range m.services {
+		if isActiveStatus(svc.Status) {
+			totalCostPerHour += svc.CostPerHourUSD
+		}
+	}
+	if cost := formatMonthlyCost(totalCostPerHour); cost != "$0/mo" {
+		parts = append(parts, cost)
 	}
 
 	return status.ServiceDot(m.theme, s.WorstStatus) + " " + muted.Render(strings.Join(parts, " · "))
@@ -191,12 +222,9 @@ func (m *Model) renderServiceTable(width int) string {
 	}
 
 	var active []domain.ServiceStatus
-	hidden := make(map[domain.ServiceLogStatus]int)
 	for _, svc := range m.services {
 		if isActiveStatus(svc.Status) {
 			active = append(active, svc)
-		} else {
-			hidden[svc.Status]++
 		}
 	}
 
@@ -215,21 +243,7 @@ func (m *Model) renderServiceTable(width int) string {
 		)
 	}
 
-	result := tbl.View()
-
-	if len(hidden) > 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		var parts []string
-		// Show in consistent order: disabled first, then inactive.
-		for _, s := range []domain.ServiceLogStatus{domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive} {
-			if n := hidden[s]; n > 0 {
-				parts = append(parts, fmt.Sprintf("%d %s", n, strings.ToLower(s.String())))
-			}
-		}
-		result += "\n" + muted.Render("  + "+strings.Join(parts, " · "))
-	}
-
-	return result
+	return tbl.View()
 }
 
 // serviceName returns the service name, with extra context for non-ready services.

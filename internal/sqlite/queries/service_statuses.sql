@@ -22,4 +22,5 @@ ORDER BY
     WHEN 'INACTIVE' THEN 7
     ELSE 8
   END,
+  ssc.log_cost_per_hour_usd DESC,
   s.name;
