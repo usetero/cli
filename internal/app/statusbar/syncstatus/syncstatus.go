@@ -205,34 +205,29 @@ func (m *Model) CompactView() string {
 	}
 
 	colors := m.theme
-	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
 		return ""
 
 	case *powersync.Connecting:
-		return dot(colors.WarningBg, colors.Bg) + " " + muted.Render("connecting...")
+		return dot(colors.WarningBg, colors.Bg)
 
 	case *powersync.Syncing:
-		if state.Progress != nil && state.Progress.Total > 0 {
-			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			return dot(colors.WarningBg, colors.Bg) + " " + muted.Render(fmt.Sprintf("syncing %d%%", pct))
-		}
-		return dot(colors.WarningBg, colors.Bg) + " " + muted.Render("syncing...")
+		_ = state
+		return dot(colors.WarningBg, colors.Bg)
 
 	case *powersync.Ready:
-		return dot(colors.SuccessBg, colors.Bg) + " " + muted.Render(m.host)
+		return dot(colors.SuccessBg, colors.Bg)
 
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			return dot(colors.ErrorBg, colors.Bg) + " " + muted.Render("reconnecting...")
+			return dot(colors.ErrorBg, colors.Bg)
 		}
-		return dot(colors.WarningBg, colors.Bg) + " " + muted.Render("reconnecting...")
+		return dot(colors.WarningBg, colors.Bg)
 
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(colors.Bg)
-		return errStyle.Render("○") + " " + errStyle.Render("error")
+		return dot(colors.ErrorBg, colors.Bg)
 
 	default:
 		return ""

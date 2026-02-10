@@ -2,9 +2,11 @@
 package statusbar
 
 import (
+	"context"
 	"fmt"
 	"image/color"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -41,8 +43,9 @@ type Model struct {
 	width         int
 
 	// Account context
-	org       string
-	workspace string
+	org            string
+	workspace      string
+	workspaceCount int64
 
 	// Conversation
 	title string
@@ -67,6 +70,12 @@ func New(theme styles.Theme, syncer powersync.Syncer, host string) *Model {
 
 // SetDB sets the database for status polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	row := db.QueryRow(ctx, "SELECT COUNT(*) FROM workspaces")
+	_ = row.Scan(&m.workspaceCount)
+
 	return tea.Batch(
 		m.syncStatus.SetDB(db),
 		m.catalogStatus.SetDB(db),
@@ -161,9 +170,8 @@ func (m *Model) View() string {
 	// Build left-aligned segments
 	var segments []string
 
-	// 1. Brand + sync status (always shown)
-	brandConn := m.renderBrand()
-	segments = append(segments, brandConn)
+	// 1. Brand + sync dot + org context (always shown)
+	segments = append(segments, m.renderBrand())
 
 	// 2. Catalog health (dot + service count or discovery phase)
 	catalogView := m.catalogStatus.CompactView()
@@ -175,12 +183,6 @@ func (m *Model) View() string {
 	policyView := m.policyStatus.CompactView()
 	if policyView != "" {
 		segments = append(segments, policyView)
-	}
-
-	// 4. Org / workspace (only shown if set)
-	if m.org != "" {
-		orgWs := m.renderOrgWorkspace()
-		segments = append(segments, orgWs)
 	}
 
 	// Calculate what fits
@@ -295,25 +297,29 @@ func (m *Model) renderDrawerHint() string {
 	return keyStyle.Render("ctrl+d") + tipStyle.Render(tip)
 }
 
-// renderBrand renders "TERO" with optional sync status.
+// renderBrand renders "TERO ● Org" (sync dot + org context as one unit).
 func (m *Model) renderBrand() string {
 	colors := m.theme
 
 	brand := styles.ApplyBoldForegroundGrad("TERO", colors.GradientStart, colors.GradientEnd)
 
 	syncView := m.syncStatus.CompactView()
-	if syncView == "" {
-		return brand
+	if syncView != "" {
+		brand += " " + syncView
 	}
 
-	return brand + " " + syncView
+	if m.org != "" {
+		brand += " " + m.renderOrgWorkspace()
+	}
+
+	return brand
 }
 
-// renderOrgWorkspace renders "org / workspace".
+// renderOrgWorkspace renders org context. Includes workspace when multiple exist.
 func (m *Model) renderOrgWorkspace() string {
 	colors := m.theme
 	style := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
-	if m.workspace != "" {
+	if m.workspace != "" && m.workspaceCount > 1 {
 		return style.Render(m.org + " / " + m.workspace)
 	}
 	return style.Render(m.org)
