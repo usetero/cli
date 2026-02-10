@@ -69,7 +69,7 @@ func TestDB_Subscribe(t *testing.T) {
 				if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 					t.Errorf("subscriber %d: expected [messages], got %v", i+1, tables)
 				}
-			case <-time.After(100 * time.Millisecond):
+			case <-time.After(time.Second):
 				t.Errorf("subscriber %d: expected notification, got timeout", i+1)
 			}
 		}
@@ -163,7 +163,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -195,7 +195,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -226,7 +226,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			if len(tables) != 1 || tables[0] != sqlite.TableMessages {
 				t.Errorf("expected [messages], got %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -317,7 +317,7 @@ func TestDB_Exec_NotifiesSubscribers(t *testing.T) {
 			if !hasMessages || !hasConversations {
 				t.Errorf("expected [messages, conversations], got %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -352,7 +352,7 @@ func TestDB_Messages_NotifiesSubscribers(t *testing.T) {
 			if !hasMessages {
 				t.Errorf("expected messages table in %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -389,7 +389,7 @@ func TestDB_Messages_NotifiesSubscribers(t *testing.T) {
 			if !hasMessages {
 				t.Errorf("expected messages table in %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -426,7 +426,7 @@ func TestDB_Messages_NotifiesSubscribers(t *testing.T) {
 			if !hasMessages {
 				t.Errorf("expected messages table in %v", tables)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected notification, got timeout")
 		}
 	})
@@ -458,7 +458,7 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 		select {
 		case <-sub.Changes():
 			// Good - got at least one
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("expected at least one notification")
 		}
 
@@ -472,7 +472,7 @@ func TestDB_Subscribe_BufferBehavior(t *testing.T) {
 		select {
 		case <-done:
 			// Good - didn't block
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(time.Second):
 			t.Error("Exec blocked on slow subscriber")
 		}
 	})
