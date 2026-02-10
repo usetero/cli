@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/usetero/cli/compare/v1.11.0...v1.11.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* duplicate stream completion and cross-turn tool leaking ([3b946b0](https://github.com/usetero/cli/commit/3b946b04ff818101e6ff5aed9ccbea6ce7098847))
+
 ## [1.11.0](https://github.com/usetero/cli/compare/v1.10.0...v1.11.0) (2026-02-10)
 
 
