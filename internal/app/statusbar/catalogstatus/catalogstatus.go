@@ -199,7 +199,7 @@ func (m *Model) renderSummary() string {
 			totalCostPerHour += svc.CostPerHourUSD
 		}
 	}
-	if cost := formatMonthlyCost(totalCostPerHour); cost != "$0/mo" {
+	if cost := formatYearlyCost(totalCostPerHour); cost != "$0/yr" {
 		parts = append(parts, cost)
 	}
 
@@ -239,7 +239,7 @@ func (m *Model) renderServiceTable(width int) string {
 			fmt.Sprintf("%d", svc.EventCount),
 			formatVolume(svc.VolumePerHour)+"/hr",
 			formatBytes(svc.BytesPerHour)+"/hr",
-			formatMonthlyCost(svc.CostPerHourUSD),
+			formatYearlyCost(svc.CostPerHourUSD),
 		)
 	}
 
@@ -300,19 +300,19 @@ func formatBytes(b float64) string {
 	}
 }
 
-// formatMonthlyCost formats hourly USD rate as monthly: $0, $142/mo, $9.4k/mo.
-func formatMonthlyCost(costPerHour float64) string {
-	monthly := costPerHour * 730
-	if monthly < 0.5 {
-		return "$0/mo"
+// formatYearlyCost formats hourly USD rate as yearly: $0/yr, $1.7k/yr, $110k/yr.
+func formatYearlyCost(costPerHour float64) string {
+	yearly := costPerHour * 8760
+	if yearly < 1 {
+		return "$0/yr"
 	}
-	abs := math.Abs(monthly)
+	abs := math.Abs(yearly)
 	switch {
 	case abs >= 1_000_000:
-		return fmt.Sprintf("$%.1fM/mo", monthly/1_000_000)
+		return fmt.Sprintf("$%.1fM/yr", yearly/1_000_000)
 	case abs >= 1_000:
-		return fmt.Sprintf("$%.1fk/mo", monthly/1_000)
+		return fmt.Sprintf("$%.1fk/yr", yearly/1_000)
 	default:
-		return fmt.Sprintf("$%.0f/mo", monthly)
+		return fmt.Sprintf("$%.0f/yr", yearly)
 	}
 }

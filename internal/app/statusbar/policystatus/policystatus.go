@@ -290,12 +290,12 @@ func wastePercent(s domain.PolicySummary) int {
 	return 0
 }
 
-// formatCategoryCost returns estimated monthly cost reduction for a category.
+// formatCategoryCost returns estimated yearly cost reduction for a category.
 func formatCategoryCost(c domain.PolicyCategoryStatus) string {
 	if c.EstimatedCostPerHour > 0 {
-		monthly := c.EstimatedCostPerHour * 730
-		if monthly >= 1 {
-			return "~" + formatCost(monthly) + "/mo"
+		yearly := c.EstimatedCostPerHour * 8760
+		if yearly >= 1 {
+			return "~" + formatCost(yearly) + "/yr"
 		}
 	}
 	return "—"
@@ -350,9 +350,9 @@ func formatBenefitLabel(benefits string) string {
 // formatEstimated returns the estimated impact of pending policies.
 func formatEstimated(s domain.PolicySummary) string {
 	if s.EstimatedCostPerHour != nil {
-		monthly := *s.EstimatedCostPerHour * 730
-		if monthly >= 1 {
-			return formatCost(monthly) + "/mo"
+		yearly := *s.EstimatedCostPerHour * 8760
+		if yearly >= 1 {
+			return formatCost(yearly) + "/yr"
 		}
 	}
 	return ""
@@ -361,9 +361,9 @@ func formatEstimated(s domain.PolicySummary) string {
 // formatObservedSaving returns the observed savings from approved policies.
 func formatObservedSaving(s domain.PolicySummary) string {
 	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
-		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 730
+		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 8760
 		if diff >= 1 {
-			return formatCost(diff) + "/mo"
+			return formatCost(diff) + "/yr"
 		}
 		return ""
 	}
