@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -40,8 +41,9 @@ type Model struct {
 	resultTemplate string
 
 	// Results
-	rows []map[string]any
-	err  error
+	rows     []map[string]any
+	err      error
+	duration time.Duration
 }
 
 // New creates a new query tool model.
@@ -94,10 +96,16 @@ func (m *Model) Status() string {
 
 // Result returns the result message with {count} substituted.
 func (m *Model) Result() string {
+	var base string
 	if m.resultTemplate == "" {
-		return fmt.Sprintf("%d rows", len(m.rows))
+		base = fmt.Sprintf("%d rows", len(m.rows))
+	} else {
+		base = strings.Replace(m.resultTemplate, "{count}", fmt.Sprintf("%d", len(m.rows)), 1)
 	}
-	return strings.Replace(m.resultTemplate, "{count}", fmt.Sprintf("%d", len(m.rows)), 1)
+	if m.duration > 0 {
+		base += fmt.Sprintf(" (%.1fs)", m.duration.Seconds())
+	}
+	return base
 }
 
 const maxPreviewRows = 5
@@ -188,6 +196,8 @@ func (m *Model) execute() tea.Cmd {
 
 	m.scope.Info("executing query", "sql", m.sql, "status", m.status)
 
+	start := time.Now()
+
 	if m.executor == nil {
 		m.err = fmt.Errorf("no executor")
 		m.state = tools.StateComplete
@@ -196,6 +206,7 @@ func (m *Model) execute() tea.Cmd {
 	}
 
 	result, err := m.executor.Execute(json.RawMessage(m.input))
+	m.duration = time.Since(start)
 	if err != nil {
 		m.err = err
 		m.state = tools.StateComplete
@@ -205,7 +216,7 @@ func (m *Model) execute() tea.Cmd {
 
 	m.rows = result.Rows
 	m.state = tools.StateComplete
-	m.scope.Info("query completed", "row_count", len(m.rows))
+	m.scope.Info("query completed", "row_count", len(m.rows), "duration", m.duration)
 	return m.fireCompleted()
 }
 
