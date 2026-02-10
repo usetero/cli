@@ -118,6 +118,11 @@ func (m *Model) stateKey(s domain.PolicySummary, cats []domain.PolicyCategorySta
 	return key
 }
 
+// HasData returns true when policy data has been loaded.
+func (m *Model) HasData() bool {
+	return m.hasData
+}
+
 // CompactView renders the policy status for the statusbar.
 func (m *Model) CompactView() string {
 	if !m.hasData {

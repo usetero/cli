@@ -127,8 +127,15 @@ func (m *Model) SetContextPercent(percent int) {
 }
 
 // ToggleDrawer toggles the drawer open/closed.
+// Opening is suppressed until at least one tab has data.
 func (m *Model) ToggleDrawer() {
-	m.drawerOpen = !m.drawerOpen
+	if m.drawerOpen {
+		m.drawerOpen = false
+		return
+	}
+	if m.catalogStatus.HasData() || m.policyStatus.HasData() {
+		m.drawerOpen = true
+	}
 }
 
 // CloseDrawer closes the drawer.
