@@ -239,6 +239,10 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 		}
 	}
 
+	if len(active) == 0 {
+		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("No active services")
+	}
+
 	// Reserve a row for "+N more" if we need to clip.
 	clipped := 0
 	visible := active
