@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEventPolicyParams) error
 	CountConversations(ctx context.Context) (int64, error)
 	// Returns the total number of approved compliance policies across all 4 categories.
 	CountFixedCompliancePolicies(ctx context.Context) (int64, error)

@@ -9,6 +9,23 @@ import (
 	"context"
 )
 
+const approveLogEventPolicy = `-- name: ApproveLogEventPolicy :exec
+UPDATE log_event_policies
+SET approved_at = ?, approved_by = ?
+WHERE id = ?
+`
+
+type ApproveLogEventPolicyParams struct {
+	ApprovedAt *string
+	ApprovedBy *string
+	ID         *string
+}
+
+func (q *Queries) ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEventPolicyParams) error {
+	_, err := q.db.ExecContext(ctx, approveLogEventPolicy, arg.ApprovedAt, arg.ApprovedBy, arg.ID)
+	return err
+}
+
 const countFixedPIIPolicies = `-- name: CountFixedPIIPolicies :one
 SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
 WHERE category = 'pii_leakage' AND status = 'APPROVED'

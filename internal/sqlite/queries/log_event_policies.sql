@@ -63,3 +63,9 @@ LIMIT ?2;
 -- name: CountFixedPIIPolicies :one
 SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
 WHERE category = 'pii_leakage' AND status = 'APPROVED';
+
+-- name: ApproveLogEventPolicy :exec
+UPDATE log_event_policies
+SET approved_at = ?, approved_by = ?
+WHERE id = ?;
+
