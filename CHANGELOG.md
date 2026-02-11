@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.12.0](https://github.com/usetero/cli/compare/v1.11.1...v1.12.0) (2026-02-11)
+
+
+### Features
+
+* dynamic drawer height with row clipping and +N more ([d4b7627](https://github.com/usetero/cli/commit/d4b7627fa6457dd2046b3692730d5d6ec433c53e))
+
+
+### Bug Fixes
+
+* drawer shrinks to fit content instead of filling page ([5c8f347](https://github.com/usetero/cli/commit/5c8f347cb688f5b75cd769691b9564191c8c152d))
+* fill statusbar with diagonals when drawer hint is hidden ([0f76244](https://github.com/usetero/cli/commit/0f7624427ca91ee87c9aab8d34dd32b65d676557))
+* hide drawer hint until data is loaded ([c869ce3](https://github.com/usetero/cli/commit/c869ce3a9f81160cfdaf2f400a15e814132bbb8a))
+* prevent duplicate API streams when tools complete during turn transition ([017ae6e](https://github.com/usetero/cli/commit/017ae6e9ef55f96682674aa2822a1031f97f5629))
+* show empty state when all catalog services are disabled ([99c73c1](https://github.com/usetero/cli/commit/99c73c1e45310d8135e44e83f7270c0331139619))
+* suppress drawer until data is loaded ([5db3e5c](https://github.com/usetero/cli/commit/5db3e5c7acd8d0ba0f5252c3d899d0a4e02802b3))
+
 ## [1.11.1](https://github.com/usetero/cli/compare/v1.11.0...v1.11.1) (2026-02-10)
 
 
