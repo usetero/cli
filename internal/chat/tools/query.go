@@ -109,5 +109,46 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 	if err := rows.Err(); err != nil {
 		return tools.QueryResult{}, err
 	}
-	return tools.QueryResult{Rows: results}, nil
+
+	capped, dropped := capResults(results)
+	return tools.QueryResult{Rows: capped, RowsDropped: dropped}, nil
+}
+
+const (
+	maxFieldBytes  = 4096   // truncate any string value longer than this
+	maxResultBytes = 102400 // drop trailing rows if total JSON exceeds this
+)
+
+// capResults truncates large string values and drops trailing rows to keep
+// the serialized result within size limits. Returns the capped rows and the
+// number of rows that were dropped.
+func capResults(rows []map[string]any) ([]map[string]any, int) {
+	for _, row := range rows {
+		for k, v := range row {
+			s, ok := v.(string)
+			if ok && len(s) > maxFieldBytes {
+				row[k] = s[:maxFieldBytes] + "…(truncated)"
+			}
+		}
+	}
+
+	b, err := json.Marshal(rows)
+	if err != nil || len(b) <= maxResultBytes {
+		return rows, 0
+	}
+
+	// Binary search for the max number of rows that fit.
+	total := len(rows)
+	lo, hi := 0, total
+	for lo < hi {
+		mid := (lo + hi + 1) / 2
+		b, _ = json.Marshal(rows[:mid])
+		if len(b) <= maxResultBytes {
+			lo = mid
+		} else {
+			hi = mid - 1
+		}
+	}
+
+	return rows[:lo], total - lo
 }

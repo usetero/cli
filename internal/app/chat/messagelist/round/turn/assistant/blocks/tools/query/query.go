@@ -41,9 +41,10 @@ type Model struct {
 	resultTemplate string
 
 	// Results
-	rows     []map[string]any
-	err      error
-	duration time.Duration
+	rows        []map[string]any
+	rowsDropped int
+	err         error
+	duration    time.Duration
 }
 
 // New creates a new query tool model.
@@ -215,8 +216,9 @@ func (m *Model) execute() tea.Cmd {
 	}
 
 	m.rows = result.Rows
+	m.rowsDropped = result.RowsDropped
 	m.state = tools.StateComplete
-	m.scope.Info("query completed", "row_count", len(m.rows), "duration", m.duration)
+	m.scope.Info("query completed", "row_count", len(m.rows), "rows_dropped", m.rowsDropped, "duration", m.duration)
 	return m.fireCompleted()
 }
 
@@ -224,7 +226,7 @@ func (m *Model) fireCompleted() tea.Cmd {
 	return func() tea.Msg {
 		return msgs.QueryCompleted{
 			ToolUseID: m.toolID,
-			Result:    domaintools.QueryResult{Rows: m.rows},
+			Result:    domaintools.QueryResult{Rows: m.rows, RowsDropped: m.rowsDropped},
 			Error:     m.err,
 		}
 	}
