@@ -39,11 +39,11 @@ func ServiceDot(theme styles.Theme, s domain.ServiceLogStatus) string {
 func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
 	switch s {
 	case domain.ServiceLogStatusBroken, domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
-		return theme.ErrorBg
+		return theme.Error
 	case domain.ServiceLogStatusStale, domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
-		return theme.WarningBg
+		return theme.Warning
 	case domain.ServiceLogStatusReady:
-		return theme.SuccessBg
+		return theme.Success
 	default:
 		return theme.TextMuted
 	}
@@ -64,11 +64,11 @@ func LogEventDot(theme styles.Theme, s domain.LogEventStatus) string {
 func logEventColor(theme styles.Theme, s domain.LogEventStatus) color.Color {
 	switch s {
 	case domain.LogEventStatusBroken, domain.LogEventStatusQuarantined:
-		return theme.ErrorBg
+		return theme.Error
 	case domain.LogEventStatusResolved, domain.LogEventStatusClean:
-		return theme.SuccessBg
+		return theme.Success
 	case domain.LogEventStatusPending, domain.LogEventStatusAnalyzing, domain.LogEventStatusDiscovering:
-		return theme.WarningBg
+		return theme.Warning
 	default:
 		return theme.TextMuted
 	}
@@ -82,7 +82,7 @@ func Waste(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	dot := lipgloss.NewStyle().Foreground(theme.WarningBg).Background(theme.Bg).Render("●")
+	dot := lipgloss.NewStyle().Foreground(theme.Warning).Background(theme.Bg).Render("●")
 	text := lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render(fmt.Sprintf(" %d%% waste", pct))
 	return dot + text
 }
@@ -93,7 +93,7 @@ func WasteShort(theme styles.Theme, pct int) string {
 	if pct <= 0 {
 		return ""
 	}
-	dot := lipgloss.NewStyle().Foreground(theme.WarningBg).Background(theme.Bg).Render("●")
+	dot := lipgloss.NewStyle().Foreground(theme.Warning).Background(theme.Bg).Render("●")
 	text := lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render(fmt.Sprintf(" %d%%", pct))
 	return dot + text
 }
@@ -108,11 +108,11 @@ func Risk(theme styles.Theme, r domain.RiskLevel, showLabel bool) string {
 func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
 	switch r {
 	case domain.RiskLevelHigh:
-		return theme.ErrorBg
+		return theme.Error
 	case domain.RiskLevelMedium:
-		return theme.WarningBg
+		return theme.Warning
 	case domain.RiskLevelLow:
-		return theme.SuccessBg
+		return theme.Success
 	default:
 		return theme.TextMuted
 	}
@@ -133,9 +133,9 @@ func PolicyDot(theme styles.Theme, s domain.PolicyLogStatus) string {
 func policyColor(theme styles.Theme, s domain.PolicyLogStatus) color.Color {
 	switch s {
 	case domain.PolicyLogStatusApproved:
-		return theme.SuccessBg
+		return theme.Success
 	case domain.PolicyLogStatusPending:
-		return theme.WarningBg
+		return theme.Warning
 	case domain.PolicyLogStatusDismissed:
 		return theme.TextMuted
 	default:

@@ -205,8 +205,8 @@ func (m *Model) View() string {
 			header = icon + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+status)
 		}
 		errTag := lipgloss.NewStyle().
-			Background(colors.ErrorBg).
-			Foreground(colors.ErrorFg).
+			Background(colors.Error).
+			Foreground(colors.OnError).
 			Padding(0, 1).
 			Render("ERROR")
 		errMsg := m.child.Err().Error()
@@ -246,9 +246,9 @@ func (m *Model) renderIcon() string {
 
 	switch m.status {
 	case StatusSuccess:
-		return lipgloss.NewStyle().Foreground(colors.SuccessBg).Background(bg).Render(IconSuccess)
+		return lipgloss.NewStyle().Foreground(colors.Success).Background(bg).Render(IconSuccess)
 	case StatusError:
-		return lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(bg).Render(IconError)
+		return lipgloss.NewStyle().Foreground(colors.Error).Background(bg).Render(IconError)
 	case StatusCancelled:
 		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(bg).Render(IconCancelled)
 	default:

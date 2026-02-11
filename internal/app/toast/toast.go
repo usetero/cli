@@ -102,46 +102,46 @@ func (m *Model) View() string {
 	case toastError:
 		label = "ERROR"
 		labelStyle = lipgloss.NewStyle().
-			Background(t.ErrorBg).
-			Foreground(t.ErrorFg).
+			Background(t.Error).
+			Foreground(t.OnError).
 			Padding(0, 1).
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
-			Background(t.ErrorBg).
-			Foreground(t.ErrorFg).
+			Background(t.Error).
+			Foreground(t.OnError).
 			Padding(0, 1)
 	case toastWarning:
 		label = "WARNING"
 		labelStyle = lipgloss.NewStyle().
-			Background(t.WarningBg).
-			Foreground(t.WarningFg).
+			Background(t.Warning).
+			Foreground(t.OnWarning).
 			Padding(0, 1).
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
-			Background(t.WarningBg).
-			Foreground(t.WarningFg).
+			Background(t.Warning).
+			Foreground(t.OnWarning).
 			Padding(0, 1)
 	case toastSuccess:
 		label = "OK"
 		labelStyle = lipgloss.NewStyle().
-			Background(t.SuccessBg).
-			Foreground(t.SuccessFg).
+			Background(t.Success).
+			Foreground(t.OnSuccess).
 			Padding(0, 1).
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
-			Background(t.SuccessBg).
-			Foreground(t.SuccessFg).
+			Background(t.Success).
+			Foreground(t.OnSuccess).
 			Padding(0, 1)
 	case toastInfo:
 		label = "INFO"
 		labelStyle = lipgloss.NewStyle().
-			Background(t.InfoBg).
-			Foreground(t.InfoFg).
+			Background(t.Info).
+			Foreground(t.OnInfo).
 			Padding(0, 1).
 			Bold(true)
 		msgStyle = lipgloss.NewStyle().
-			Background(t.InfoBg).
-			Foreground(t.InfoFg).
+			Background(t.Info).
+			Foreground(t.OnInfo).
 			Padding(0, 1)
 	}
 

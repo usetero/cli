@@ -197,10 +197,10 @@ func (m *Model) divider(r *round.Model) string {
 	switch r.State() {
 	case round.StateCancelled:
 		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(colors.Bg)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
 	case round.StateFailed:
 		prefix = fmt.Sprintf("◇ Error %s ", durationStr)
-		prefixStyle = lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(colors.Bg)
+		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
 	default:
 		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)
 		prefixStyle = lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)

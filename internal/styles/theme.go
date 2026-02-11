@@ -48,15 +48,19 @@ type Tokens struct {
 	InputBorder      color.Color
 	InputBorderFocus color.Color
 
-	// Status
-	ErrorFg   color.Color
-	ErrorBg   color.Color
-	SuccessFg color.Color
-	SuccessBg color.Color
-	WarningFg color.Color
-	WarningBg color.Color
-	InfoFg    color.Color
-	InfoBg    color.Color
+	// Status — two-layer contrast system:
+	//   Error/Success/Warning/Info = the status color, high contrast against Bg.
+	//     Use for text, icons, dots placed directly on the page background.
+	//   OnError/OnSuccess/OnWarning/OnInfo = text on a status-colored surface.
+	//     Use for text inside badges, chips, toasts whose background is the status color.
+	Error     color.Color
+	OnError   color.Color
+	Success   color.Color
+	OnSuccess color.Color
+	Warning   color.Color
+	OnWarning color.Color
+	Info      color.Color
+	OnInfo    color.Color
 }
 
 // buildTokens resolves semantic tokens from a palette and color mode.
@@ -88,14 +92,14 @@ func buildTokens(p Palette, isDark bool) Tokens {
 			InputBorder:      MustHex(p.Neutral[S500]),
 			InputBorderFocus: MustHex(p.Brand[S300]),
 
-			ErrorFg:   MustHex(p.Error[S950]),
-			ErrorBg:   MustHex(p.Error[S400]),
-			SuccessFg: MustHex(p.Success[S950]),
-			SuccessBg: MustHex(p.Success[S400]),
-			WarningFg: MustHex(p.Warning[S950]),
-			WarningBg: MustHex(p.Warning[S400]),
-			InfoFg:    MustHex(p.Info[S950]),
-			InfoBg:    MustHex(p.Info[S400]),
+			Error:     MustHex(p.Error[S400]),
+			OnError:   MustHex(p.Error[S950]),
+			Success:   MustHex(p.Success[S400]),
+			OnSuccess: MustHex(p.Success[S950]),
+			Warning:   MustHex(p.Warning[S400]),
+			OnWarning: MustHex(p.Warning[S950]),
+			Info:      MustHex(p.Info[S400]),
+			OnInfo:    MustHex(p.Info[S950]),
 		}
 	}
 
@@ -125,14 +129,14 @@ func buildTokens(p Palette, isDark bool) Tokens {
 		InputBorder:      MustHex(p.Neutral[S300]),
 		InputBorderFocus: MustHex(p.Brand[S600]),
 
-		ErrorFg:   MustHex(p.Error[S50]),
-		ErrorBg:   MustHex(p.Error[S600]),
-		SuccessFg: MustHex(p.Success[S50]),
-		SuccessBg: MustHex(p.Success[S600]),
-		WarningFg: MustHex(p.Warning[S50]),
-		WarningBg: MustHex(p.Warning[S600]),
-		InfoFg:    MustHex(p.Info[S50]),
-		InfoBg:    MustHex(p.Info[S600]),
+		Error:     MustHex(p.Error[S600]),
+		OnError:   MustHex(p.Error[S50]),
+		Success:   MustHex(p.Success[S600]),
+		OnSuccess: MustHex(p.Success[S50]),
+		Warning:   MustHex(p.Warning[S600]),
+		OnWarning: MustHex(p.Warning[S50]),
+		Info:      MustHex(p.Info[S600]),
+		OnInfo:    MustHex(p.Info[S50]),
 	}
 }
 
@@ -164,15 +168,19 @@ type Theme struct {
 	InputBorder      color.Color
 	InputBorderFocus color.Color
 
-	// Status
-	ErrorFg   color.Color
-	ErrorBg   color.Color
-	SuccessFg color.Color
-	SuccessBg color.Color
-	WarningFg color.Color
-	WarningBg color.Color
-	InfoFg    color.Color
-	InfoBg    color.Color
+	// Status — two-layer contrast system:
+	//   Error/Success/Warning/Info = the status color, high contrast against Bg.
+	//     Use for text, icons, dots placed directly on the page background.
+	//   OnError/OnSuccess/OnWarning/OnInfo = text on a status-colored surface.
+	//     Use for text inside badges, chips, toasts whose background is the status color.
+	Error     color.Color
+	OnError   color.Color
+	Success   color.Color
+	OnSuccess color.Color
+	Warning   color.Color
+	OnWarning color.Color
+	Info      color.Color
+	OnInfo    color.Color
 
 	// Brand (gradient rendering)
 	GradientStart color.Color
@@ -200,8 +208,8 @@ type Styles struct {
 	Help    lipgloss.Style // TextMuted
 	Action  lipgloss.Style // Accent
 	URL     lipgloss.Style // TextMuted
-	Success lipgloss.Style // SuccessFg + Bold
-	Error   lipgloss.Style // ErrorFg
+	Success lipgloss.Style // Success + Bold
+	Error   lipgloss.Style // Error
 }
 
 // DetectTheme creates a theme by detecting the terminal's background color.
@@ -238,14 +246,14 @@ func themeFromTokens(t Tokens) Theme {
 		InputBorder:      t.InputBorder,
 		InputBorderFocus: t.InputBorderFocus,
 
-		ErrorFg:   t.ErrorFg,
-		ErrorBg:   t.ErrorBg,
-		SuccessFg: t.SuccessFg,
-		SuccessBg: t.SuccessBg,
-		WarningFg: t.WarningFg,
-		WarningBg: t.WarningBg,
-		InfoFg:    t.InfoFg,
-		InfoBg:    t.InfoBg,
+		Error:     t.Error,
+		OnError:   t.OnError,
+		Success:   t.Success,
+		OnSuccess: t.OnSuccess,
+		Warning:   t.Warning,
+		OnWarning: t.OnWarning,
+		Info:      t.Info,
+		OnInfo:    t.OnInfo,
 
 		GradientStart: t.GradientStart,
 		GradientEnd:   t.GradientEnd,
@@ -266,7 +274,7 @@ func buildStyles(t Theme) Styles {
 		Help:    lipgloss.NewStyle().Foreground(t.TextMuted),
 		Action:  lipgloss.NewStyle().Foreground(t.Accent),
 		URL:     lipgloss.NewStyle().Foreground(t.TextMuted),
-		Success: lipgloss.NewStyle().Foreground(t.SuccessBg).Bold(true),
-		Error:   lipgloss.NewStyle().Foreground(t.ErrorBg),
+		Success: lipgloss.NewStyle().Foreground(t.Success).Bold(true),
+		Error:   lipgloss.NewStyle().Foreground(t.Error),
 	}
 }

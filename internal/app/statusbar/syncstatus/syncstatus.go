@@ -211,23 +211,23 @@ func (m *Model) CompactView() string {
 		return ""
 
 	case *powersync.Connecting:
-		return dot(colors.WarningBg, colors.Bg)
+		return dot(colors.Warning, colors.Bg)
 
 	case *powersync.Syncing:
 		_ = state
-		return dot(colors.WarningBg, colors.Bg)
+		return dot(colors.Warning, colors.Bg)
 
 	case *powersync.Ready:
-		return dot(colors.SuccessBg, colors.Bg)
+		return dot(colors.Success, colors.Bg)
 
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			return dot(colors.ErrorBg, colors.Bg)
+			return dot(colors.Error, colors.Bg)
 		}
-		return dot(colors.WarningBg, colors.Bg)
+		return dot(colors.Warning, colors.Bg)
 
 	case *powersync.Error:
-		return dot(colors.ErrorBg, colors.Bg)
+		return dot(colors.Error, colors.Bg)
 
 	default:
 		return ""
@@ -257,30 +257,30 @@ func (m *Model) renderStatusLine() string {
 	case *powersync.Disconnected:
 		syncPart = dot(colors.TextSubtle, colors.Bg) + " " + muted.Render("Disconnected")
 	case *powersync.Connecting:
-		syncPart = dot(colors.WarningBg, colors.Bg) + " " + muted.Render("Connecting")
+		syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Connecting")
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			syncPart = dot(colors.WarningBg, colors.Bg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
+			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
 		} else {
-			syncPart = dot(colors.WarningBg, colors.Bg) + " " + muted.Render("Syncing")
+			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Syncing")
 		}
 	case *powersync.Ready:
-		syncPart = dot(colors.SuccessBg, colors.Bg) + " " + muted.Render("Connected")
+		syncPart = dot(colors.Success, colors.Bg) + " " + muted.Render("Connected")
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			syncPart = dot(colors.ErrorBg, colors.Bg) + " " + muted.Render("Reconnecting (degraded)")
+			syncPart = dot(colors.Error, colors.Bg) + " " + muted.Render("Reconnecting (degraded)")
 		} else {
-			syncPart = dot(colors.WarningBg, colors.Bg) + " " + muted.Render("Reconnecting")
+			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Reconnecting")
 		}
 	case *powersync.Error:
-		errStyle := lipgloss.NewStyle().Foreground(colors.ErrorBg).Background(colors.Bg)
+		errStyle := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
 		syncPart = errStyle.Render("○") + " " + errStyle.Render(state.Err.Error())
 	}
 
 	var uploadPart string
 	if m.totalPending > 0 {
-		warn := lipgloss.NewStyle().Foreground(colors.WarningBg).Background(colors.Bg)
+		warn := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
 		uploadPart = warn.Render(fmt.Sprintf("%d uploading", m.totalPending))
 	} else {
 		uploadPart = muted.Render("Upload queue empty")
