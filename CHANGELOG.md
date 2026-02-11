@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.14.0](https://github.com/usetero/cli/compare/v1.13.0...v1.14.0) (2026-02-11)
+
+
+### Features
+
+* stream error handling with StateFailed and DB cleanup ([a3bf473](https://github.com/usetero/cli/commit/a3bf473c4ce6a59a0e5108ca574786969ec344a0))
+
+
+### Bug Fixes
+
+* cap query tool results to prevent token limit errors ([fb6d116](https://github.com/usetero/cli/commit/fb6d1165344084143dc7de7dd5962dcbfc1f121c))
+* preserve chat messages when stream errors on subsequent turns ([5e90a49](https://github.com/usetero/cli/commit/5e90a49562b474accf4c313724fc402c5486fd5b))
+* single write connection prevents flaky notification tests ([92806e5](https://github.com/usetero/cli/commit/92806e58c6cc6e63655aafbdf9bb92e813d46295))
+
 ## [1.13.0](https://github.com/usetero/cli/compare/v1.12.0...v1.13.0) (2026-02-11)
 
 
