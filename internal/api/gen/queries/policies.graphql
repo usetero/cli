@@ -1,0 +1,17 @@
+mutation ApproveLogEventPolicy($id: ID!) {
+    approveLogEventPolicy(id: $id) {
+        id
+        category
+        approvedAt
+        approvedBy
+    }
+}
+
+mutation DismissLogEventPolicy($id: ID!) {
+    dismissLogEventPolicy(id: $id) {
+        id
+        category
+        dismissedAt
+        dismissedBy
+    }
+}
