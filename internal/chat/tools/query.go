@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain/tools"
@@ -33,19 +34,32 @@ func (t *QueryTool) Name() string {
 func (t *QueryTool) Definition() chat.Tool {
 	return chat.Tool{
 		Name: t.Name(),
-		Description: fmt.Sprintf(`Execute a READ-ONLY SQL query against the local SQLite catalog.
+		Description: fmt.Sprintf(`Read-only SQL against the local SQLite catalog (synced from Tero control plane).
 
-The catalog contains telemetry data synced from the Tero control plane, scoped to the user's account.
+## Schema
 
-Schema:
 %s
 
-Guidelines:
-- Use SELECT only (no INSERT, UPDATE, DELETE)
-- Query *_cache tables for pre-computed status and metrics
-- Join on id/foreign key columns (all UUIDs stored as TEXT)
-- Timestamps are ISO 8601 strings
-- Use LIKE for pattern matching, not regex`, querySchema),
+## Query rules
+
+1. SELECT only — the database is read-only.
+2. Prefer *_cache tables for current status and metrics.
+3. Timestamps are ISO 8601 strings. Use LIKE for pattern matching.
+
+## JOINs
+
+JOIN on a table's id column is fast:
+  JOIN log_events le ON le.id = p.log_event_id   -- PK lookup, indexed
+
+JOIN on any other column (service_id, log_event_id, etc.) is a full table scan and will freeze the UI. Use a correlated subquery instead:
+
+  -- WRONG: hangs for 30-60s
+  LEFT JOIN log_event_statuses_cache les ON les.log_event_id = p.log_event_id
+
+  -- RIGHT: instant
+  (SELECT les.volume_per_hour FROM log_event_statuses_cache les WHERE les.log_event_id = p.log_event_id) AS volume_per_hour
+
+Pull each column you need as a separate subquery. This applies to all tables.`, querySchema),
 		InputSchema: chat.NewObjectSchema(
 			map[string]chat.Property{
 				"sql": {
@@ -74,6 +88,11 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 	}
 
 	ctx := context.Background()
+
+	// Reject queries with full table scans on JOINed tables — these hang for 30-60s.
+	if err := t.checkQueryPlan(ctx, in.SQL); err != nil {
+		return tools.QueryResult{}, err
+	}
 
 	// Use the read pool — every connection has query_only = ON enforced by the driver
 	rows, err := t.db.ReadRaw().QueryContext(ctx, in.SQL)
@@ -151,4 +170,40 @@ func capResults(rows []map[string]any) ([]map[string]any, int) {
 	}
 
 	return rows[:lo], total - lo
+}
+
+// checkQueryPlan runs EXPLAIN QUERY PLAN and rejects queries that would do
+// a full table scan on a JOINed table (SCAN ... JOIN). These take 30-60s
+// due to a SQLite limitation with expression indexes through views.
+func (t *QueryTool) checkQueryPlan(ctx context.Context, sql string) error {
+	rows, err := t.db.ReadRaw().QueryContext(ctx, "EXPLAIN QUERY PLAN "+sql)
+	if err != nil {
+		return nil // let the actual query surface the error
+	}
+	defer rows.Close()
+
+	var scans []string
+	for rows.Next() {
+		var id, parent, notUsed int
+		var detail string
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			return nil
+		}
+		if strings.Contains(detail, "SCAN") && strings.Contains(detail, "JOIN") {
+			scans = append(scans, detail)
+		}
+	}
+
+	if len(scans) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"query rejected: full table scan detected on a JOINed table, which would hang for 30-60 seconds.\n\n"+
+			"Problem: %s\n\n"+
+			"Fix: replace the JOIN with a correlated subquery. "+
+			"JOIN on a table's id column is fast (e.g., JOIN log_events le ON le.id = p.log_event_id). "+
+			"For any other column, use: (SELECT col FROM table WHERE foreign_key = outer.value) AS alias",
+		strings.Join(scans, "; "),
+	)
 }
