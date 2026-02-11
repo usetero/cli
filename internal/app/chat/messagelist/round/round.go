@@ -27,6 +27,7 @@ const (
 	StateAwaitingNextTurn       // async DB work in progress before next turn
 	StateComplete
 	StateCancelled
+	StateFailed
 )
 
 // IsActive returns true if the round is in-flight (active or awaiting next turn).
@@ -49,6 +50,7 @@ type Model struct {
 	turns    []*turn.Model
 	thinking *thinking.Model
 	state    State
+	lastErr  error
 	width    int
 
 	startTime time.Time
@@ -120,8 +122,8 @@ func (m *Model) StartStream(messages []domain.Message, context []domain.ContextE
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	// Cancelled rounds are fully stopped — no state transitions, no forwarding.
-	if m.state == StateCancelled {
+	// Terminal states — no state transitions, no forwarding.
+	if m.state == StateCancelled || m.state == StateFailed {
 		return nil
 	}
 
@@ -142,7 +144,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case msgs.StreamFailed:
 		if m.isOurTurn(msg.TurnID) {
-			m.state = StateComplete
+			m.state = StateFailed
+			m.lastErr = msg.Err
 			m.endTime = time.Now()
 			m.scope.Info("round failed", "error", msg.Err)
 		}
@@ -302,6 +305,45 @@ func (m *Model) State() State {
 // ID returns the round's ID (first user message ID).
 func (m *Model) ID() domain.MessageID {
 	return m.id
+}
+
+// Err returns the error that caused the round to fail, or nil.
+func (m *Model) Err() error {
+	return m.lastErr
+}
+
+// HasAssistantContent returns true if any turn has assistant blocks.
+func (m *Model) HasAssistantContent() bool {
+	for _, t := range m.turns {
+		if len(t.Blocks()) > 1 { // more than just the user message block
+			return true
+		}
+	}
+	return false
+}
+
+// LastTurnMessageIDs returns the message IDs that should be deleted on failure.
+// For turn 1: the user message ID.
+// For turn 2+: the tool result message ID (current turn) + the previous turn's assistant message ID.
+func (m *Model) LastTurnMessageIDs() []domain.MessageID {
+	if len(m.turns) == 0 {
+		return nil
+	}
+
+	last := m.turns[len(m.turns)-1]
+
+	if len(m.turns) == 1 {
+		// Turn 1: just the user message
+		return []domain.MessageID{last.UserMessageID()}
+	}
+
+	// Turn 2+: tool result message + previous assistant message
+	prev := m.turns[len(m.turns)-2]
+	ids := []domain.MessageID{last.UserMessageID()}
+	if aid := prev.AssistantMessageID(); aid != "" {
+		ids = append(ids, aid)
+	}
+	return ids
 }
 
 // Duration returns the elapsed time for this round.

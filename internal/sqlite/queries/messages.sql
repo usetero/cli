@@ -32,3 +32,6 @@ UPDATE messages SET content = ? WHERE id = ?;
 
 -- name: UpdateMessageMeta :exec
 UPDATE messages SET model = ?, stop_reason = ? WHERE id = ?;
+
+-- name: DeleteMessage :exec
+DELETE FROM messages WHERE id = ?;

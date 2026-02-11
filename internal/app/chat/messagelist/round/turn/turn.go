@@ -246,6 +246,12 @@ func (m *Model) UserMessageID() domain.MessageID {
 	return m.userMessage.ID()
 }
 
+// AssistantMessageID returns the persisted assistant message ID.
+// Returns empty string if the assistant message was never persisted.
+func (m *Model) AssistantMessageID() domain.MessageID {
+	return m.assistantMessage.ID()
+}
+
 // Cancel stops the in-flight stream and marks the turn complete.
 // The partial content remains rendered but nothing is persisted.
 func (m *Model) Cancel() {

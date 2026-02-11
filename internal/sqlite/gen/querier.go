@@ -15,12 +15,12 @@ type Querier interface {
 	CountMessages(ctx context.Context) (int64, error)
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
 	CountServices(ctx context.Context) (int64, error)
-	GetCatalogStatus(ctx context.Context) (GetCatalogStatusRow, error)
+	DeleteMessage(ctx context.Context, id *string) error
+	GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, error)
 	GetConversation(ctx context.Context, id *string) (Conversation, error)
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)
 	GetLatestMessageByConversation(ctx context.Context, conversationID *string) (Message, error)
 	GetMessage(ctx context.Context, id *string) (Message, error)
-	GetPolicyStatus(ctx context.Context) (GetPolicyStatusRow, error)
 	GetService(ctx context.Context, id *string) (Service, error)
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error

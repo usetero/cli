@@ -31,6 +31,15 @@ func (q *Queries) CountMessagesByConversation(ctx context.Context, conversationI
 	return count, err
 }
 
+const deleteMessage = `-- name: DeleteMessage :exec
+DELETE FROM messages WHERE id = ?
+`
+
+func (q *Queries) DeleteMessage(ctx context.Context, id *string) error {
+	_, err := q.db.ExecContext(ctx, deleteMessage, id)
+	return err
+}
+
 const getLatestMessageByConversation = `-- name: GetLatestMessageByConversation :one
 SELECT id, account_id, content, conversation_id, created_at, model, role, stop_reason FROM messages
 WHERE conversation_id = ?

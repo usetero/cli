@@ -17,6 +17,7 @@ type Messages interface {
 	CreateAssistantMessage(ctx context.Context, accountID domain.AccountID, conversationID domain.ConversationID, model string) (domain.MessageID, error)
 	UpdateContent(ctx context.Context, id domain.MessageID, content string) error
 	UpdateMeta(ctx context.Context, id domain.MessageID, model, stopReason string) error
+	Delete(ctx context.Context, id domain.MessageID) error
 	List(ctx context.Context, conversationID domain.ConversationID) ([]domain.Message, error)
 }
 
@@ -150,6 +151,13 @@ func (m *messagesImpl) UpdateMeta(ctx context.Context, id domain.MessageID, mode
 		StopReason: &stopReason,
 	})
 	return WrapSQLiteError(err, "update message meta")
+}
+
+// Delete removes a message by ID.
+func (m *messagesImpl) Delete(ctx context.Context, id domain.MessageID) error {
+	idStr := id.String()
+	err := m.write.DeleteMessage(ctx, &idStr)
+	return WrapSQLiteError(err, "delete message")
 }
 
 // List returns all messages for a conversation, ordered by creation time.

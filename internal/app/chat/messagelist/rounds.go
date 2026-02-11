@@ -15,6 +15,23 @@ func (m *Model) HasActiveRound() bool {
 	return m.rounds[len(m.rounds)-1].IsActive()
 }
 
+// LastRound returns the last round or nil.
+func (m *Model) LastRound() *round.Model {
+	if len(m.rounds) == 0 {
+		return nil
+	}
+	return m.rounds[len(m.rounds)-1]
+}
+
+// RemoveLastRound removes the last round and rebuilds blocks.
+func (m *Model) RemoveLastRound() {
+	if len(m.rounds) == 0 {
+		return
+	}
+	m.rounds = m.rounds[:len(m.rounds)-1]
+	m.rebuildBlocks()
+}
+
 // CancelActiveRound cancels the last round if it is still active.
 func (m *Model) CancelActiveRound() {
 	if len(m.rounds) == 0 {

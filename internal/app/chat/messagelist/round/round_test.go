@@ -1,6 +1,7 @@
 package round
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
@@ -290,6 +291,91 @@ func TestStateAwaitingNextTurn(t *testing.T) {
 		}
 		if len(m.turns) != 1 {
 			t.Errorf("expected 1 turn (nextTurnReady ignored), got %d", len(m.turns))
+		}
+	})
+}
+
+func TestStreamFailed(t *testing.T) {
+	t.Parallel()
+
+	t.Run("transitions to StateFailed", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		m.Update(msgs.StreamFailed{TurnID: "user-1", Err: errors.New("connection lost")})
+
+		if m.State() != StateFailed {
+			t.Errorf("expected StateFailed, got %d", m.State())
+		}
+	})
+
+	t.Run("stores the error", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		err := errors.New("connection lost")
+		m.Update(msgs.StreamFailed{TurnID: "user-1", Err: err})
+
+		if !errors.Is(m.Err(), err) {
+			t.Errorf("expected stored error %v, got %v", err, m.Err())
+		}
+	})
+
+	t.Run("excludes thinking animation", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		m.Update(msgs.StreamFailed{TurnID: "user-1", Err: errors.New("fail")})
+
+		if hasBlockKind(m.Blocks(), block.KindThinkingAnimation) {
+			t.Error("thinking animation should be removed after failure")
+		}
+	})
+
+	t.Run("ignores subsequent messages", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		m.Update(msgs.StreamFailed{TurnID: "user-1", Err: errors.New("fail")})
+		m.Update(msgs.StreamCompleted{
+			TurnID:     "user-1",
+			StopReason: "end_turn",
+			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+		})
+
+		if m.State() != StateFailed {
+			t.Errorf("expected StateFailed (unchanged), got %d", m.State())
+		}
+	})
+}
+
+func TestHasAssistantContent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("false for fresh round", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		if m.HasAssistantContent() {
+			t.Error("expected false for fresh round with no assistant content")
+		}
+	})
+}
+
+func TestLastTurnMessageIDs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns user message ID for turn 1", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		ids := m.LastTurnMessageIDs()
+
+		if len(ids) != 1 {
+			t.Fatalf("expected 1 ID, got %d", len(ids))
+		}
+		if ids[0] != "user-1" {
+			t.Errorf("expected user-1, got %s", ids[0])
 		}
 	})
 }
