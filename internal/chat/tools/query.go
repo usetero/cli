@@ -75,23 +75,8 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 
 	ctx := context.Background()
 
-	// Get a dedicated connection and set read-only mode
-	conn, err := t.db.Raw().Conn(ctx)
-	if err != nil {
-		return tools.QueryResult{}, err
-	}
-	defer func() {
-		// Reset query_only before returning connection to pool
-		_, _ = conn.ExecContext(ctx, "PRAGMA query_only = OFF")
-		conn.Close()
-	}()
-
-	// PRAGMA query_only prevents any writes on this connection
-	if _, err := conn.ExecContext(ctx, "PRAGMA query_only = ON"); err != nil {
-		return tools.QueryResult{}, err
-	}
-
-	rows, err := conn.QueryContext(ctx, in.SQL)
+	// Use the read pool — every connection has query_only = ON enforced by the driver
+	rows, err := t.db.ReadRaw().QueryContext(ctx, in.SQL)
 	if err != nil {
 		return tools.QueryResult{}, err
 	}

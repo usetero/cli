@@ -123,7 +123,7 @@ func TestDB_Path(t *testing.T) {
 func TestDB_Queries(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns non-nil Queries", func(t *testing.T) {
+	t.Run("returns non-nil ReadQueries", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 
@@ -135,9 +135,27 @@ func TestDB_Queries(t *testing.T) {
 		}
 		defer db.Close()
 
-		q := asDatabase(t, db).Queries()
+		q := asDatabase(t, db).ReadQueries()
 		if q == nil {
-			t.Error("Queries() returned nil")
+			t.Error("ReadQueries() returned nil")
+		}
+	})
+
+	t.Run("returns non-nil WriteQueries", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "test.sqlite")
+		db, err := Open(ctx, dbPath)
+		if err != nil {
+			t.Fatalf("Open() error = %v", err)
+		}
+		defer db.Close()
+
+		q := asDatabase(t, db).WriteQueries()
+		if q == nil {
+			t.Error("WriteQueries() returned nil")
 		}
 	})
 }

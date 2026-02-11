@@ -20,7 +20,12 @@ var (
 	// automatic extension loading on every new connection.
 	extensionPath     string
 	extensionPathOnce sync.Once
-	driverRegistered  bool
+	driversOnce       sync.Once
+)
+
+const (
+	writeDriverName = "sqlite3_tero_write"
+	readDriverName  = "sqlite3_tero_read"
 )
 
 // DB is the interface for application code.
@@ -46,15 +51,17 @@ type DB interface {
 	QueryRow(ctx context.Context, sql string, args ...any) *sql.Row
 	Exec(ctx context.Context, sql string, args ...any) (sql.Result, error)
 	WithTx(ctx context.Context, fn func(tx *Tx) error) error
-	Raw() *sql.DB
+	Raw() *sql.DB     // Write pool — for PowerSync controller and direct writes
+	ReadRaw() *sql.DB // Read pool — for query tool and direct reads
 	Close() error
 }
 
 // database is the concrete implementation of DB.
 type database struct {
-	db    *sql.DB
-	path  string
-	watch watchState
+	db     *sql.DB // write pool — WAL writer, PowerSync controller, mutations
+	readDB *sql.DB // read pool — query_only, all domain reads
+	path   string
+	watch  watchState
 }
 
 // Ensure database implements DB.
@@ -66,31 +73,65 @@ var _ DB = (*database)(nil)
 func SetExtensionPath(path string) {
 	extensionPathOnce.Do(func() {
 		extensionPath = path
-		registerPowerSyncDriver()
 	})
 }
 
-// registerPowerSyncDriver registers a custom SQLite driver that loads the
-// PowerSync extension on every new connection.
-func registerPowerSyncDriver() {
-	if driverRegistered {
-		return
+// Per-connection pragmas applied to every connection via driver hooks.
+// These must be set per-connection because database/sql pools create
+// connections on demand, and pragmas are connection-scoped.
+var basePragmas = []string{
+	"PRAGMA busy_timeout = 30000",      // Wait up to 30s for locks instead of failing immediately
+	"PRAGMA synchronous = NORMAL",      // Safe with WAL, avoids fsync on every commit
+	"PRAGMA cache_size = -51200",       // 50MB page cache (negative = KB)
+	"PRAGMA temp_store = MEMORY",       // Keep temp tables in memory
+	"PRAGMA recursive_triggers = TRUE", // Required by PowerSync extension for trigger chains
+}
+
+// registerDrivers registers the write and read-only SQLite drivers exactly once.
+// Both drivers load the PowerSync extension (if configured) and apply base pragmas
+// on every new connection. The read driver additionally sets query_only = ON.
+func registerDrivers() {
+	driversOnce.Do(func() {
+		sql.Register(writeDriverName, &sqlite3.SQLiteDriver{
+			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+				if extensionPath != "" {
+					if err := conn.LoadExtension(extensionPath, "sqlite3_powersync_init"); err != nil {
+						return err
+					}
+				}
+				return execPragmas(conn, basePragmas)
+			},
+		})
+
+		readPragmas := append(basePragmas, "PRAGMA query_only = ON")
+		sql.Register(readDriverName, &sqlite3.SQLiteDriver{
+			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+				if extensionPath != "" {
+					if err := conn.LoadExtension(extensionPath, "sqlite3_powersync_init"); err != nil {
+						return err
+					}
+				}
+				return execPragmas(conn, readPragmas)
+			},
+		})
+	})
+}
+
+// execPragmas runs a list of PRAGMA statements on a raw SQLite connection.
+func execPragmas(conn *sqlite3.SQLiteConn, pragmas []string) error {
+	for _, p := range pragmas {
+		if _, err := conn.Exec(p, nil); err != nil {
+			return fmt.Errorf("%s: %w", p, err)
+		}
 	}
-	sql.Register("sqlite3_powersync", &sqlite3.SQLiteDriver{
-		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-			if extensionPath == "" {
-				return nil
-			}
-			return conn.LoadExtension(extensionPath, "sqlite3_powersync_init")
-		},
-	})
-	driverRegistered = true
+	return nil
 }
 
-// Open opens a SQLite database at the given path.
+// Open opens a SQLite database at the given path with separate read and write
+// connection pools. The write pool enables WAL mode for concurrent read access
+// during writes. The read pool enforces query_only = ON via the driver hook.
+//
 // The database file and parent directories are created if they don't exist.
-// If SetExtensionPath() was called, the PowerSync extension is automatically
-// loaded on every connection.
 func Open(ctx context.Context, path string) (DB, error) {
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
@@ -98,32 +139,55 @@ func Open(ctx context.Context, path string) (DB, error) {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	// Use PowerSync driver if extension is configured, otherwise plain sqlite3
-	driverName := "sqlite3"
-	if extensionPath != "" {
-		driverName = "sqlite3_powersync"
-	}
+	registerDrivers()
 
-	db, err := sql.Open(driverName, path)
+	// Open write pool
+	db, err := sql.Open(writeDriverName, path)
 	if err != nil {
-		return nil, fmt.Errorf("open database: %w", err)
+		return nil, fmt.Errorf("open write pool: %w", err)
 	}
-
-	// Verify connection
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
+		return nil, fmt.Errorf("ping write pool: %w", err)
+	}
+
+	// Database-level pragmas (not per-connection — one exec is correct).
+	// WAL allows concurrent readers during writes — the core fix for query blocking during sync.
+	// journal_size_limit caps the WAL file at 6MB to prevent unbounded growth.
+	for _, p := range []string{
+		"PRAGMA journal_mode = WAL",
+		"PRAGMA journal_size_limit = 6291456",
+	} {
+		if _, err := db.ExecContext(ctx, p); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+	}
+
+	// Open read pool — every connection has query_only = ON and busy_timeout
+	// set automatically by the driver hook.
+	readDB, err := sql.Open(readDriverName, path)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("open read pool: %w", err)
+	}
+	if err := readDB.PingContext(ctx); err != nil {
+		db.Close()
+		readDB.Close()
+		return nil, fmt.Errorf("ping read pool: %w", err)
 	}
 
 	d := &database{
-		db:   db,
-		path: path,
+		db:     db,
+		readDB: readDB,
+		path:   path,
 	}
 
 	// Install update hooks for change notifications (only works with PowerSync extension)
 	if extensionPath != "" {
 		if err := d.installUpdateHooks(ctx); err != nil {
 			db.Close()
+			readDB.Close()
 			return nil, fmt.Errorf("install update hooks: %w", err)
 		}
 	}
@@ -131,9 +195,14 @@ func Open(ctx context.Context, path string) (DB, error) {
 	return d, nil
 }
 
-// Close closes the database connection.
+// Close closes both the read and write connection pools.
 func (d *database) Close() error {
-	return d.db.Close()
+	readErr := d.readDB.Close()
+	writeErr := d.db.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return readErr
 }
 
 // Path returns the database file path.
@@ -141,58 +210,97 @@ func (d *database) Path() string {
 	return d.path
 }
 
-// Raw returns the underlying *sql.DB for advanced use cases.
+// ---------------------------------------------------------------------------
+// Raw pool access
+// ---------------------------------------------------------------------------
+
+// Raw returns the write pool for direct access.
+// Used by the PowerSync controller which needs write access.
 func (d *database) Raw() *sql.DB {
 	return d.db
 }
 
-// Queries returns a Queries instance for running typed queries.
-func (d *database) Queries() *gen.Queries {
+// ReadRaw returns the read pool for direct access.
+// Used by the query tool for user-initiated SQL queries.
+func (d *database) ReadRaw() *sql.DB {
+	return d.readDB
+}
+
+// ---------------------------------------------------------------------------
+// Typed query access (sqlc generated)
+// ---------------------------------------------------------------------------
+
+// ReadQueries returns a Queries instance backed by the read pool.
+func (d *database) ReadQueries() *gen.Queries {
+	return gen.New(d.readDB)
+}
+
+// WriteQueries returns a Queries instance backed by the write pool.
+func (d *database) WriteQueries() *gen.Queries {
 	return gen.New(d.db)
 }
 
+// ---------------------------------------------------------------------------
+// Domain entity factories
+// ---------------------------------------------------------------------------
+
 // Messages returns type-safe message operations.
+// Uses both pools: reads from readDB, writes (create/update) from writeDB.
 func (d *database) Messages() Messages {
-	return &messagesImpl{queries: d.Queries()}
+	return &messagesImpl{read: d.ReadQueries(), write: d.WriteQueries()}
 }
 
 // Conversations returns type-safe conversation operations.
+// Uses both pools: reads from readDB, writes (create/update) from writeDB.
 func (d *database) Conversations() Conversations {
-	return &conversationsImpl{queries: d.Queries()}
+	return &conversationsImpl{read: d.ReadQueries(), write: d.WriteQueries()}
 }
 
 // DatadogAccountStatuses returns type-safe Datadog account status operations.
 func (d *database) DatadogAccountStatuses() DatadogAccountStatuses {
-	return &datadogAccountStatusesImpl{queries: d.Queries()}
+	return &datadogAccountStatusesImpl{queries: d.ReadQueries()}
 }
 
 // ServiceStatuses returns type-safe service status operations.
 func (d *database) ServiceStatuses() ServiceStatuses {
-	return &serviceStatusesImpl{queries: d.Queries()}
+	return &serviceStatusesImpl{queries: d.ReadQueries()}
 }
 
 // Services returns type-safe service operations.
 func (d *database) Services() Services {
-	return &servicesImpl{queries: d.Queries()}
+	return &servicesImpl{queries: d.ReadQueries()}
 }
 
 // LogEvents returns type-safe log event operations.
 func (d *database) LogEvents() LogEvents {
-	return &logEventsImpl{queries: d.Queries()}
+	return &logEventsImpl{queries: d.ReadQueries()}
 }
 
 // LogEventPolicies returns type-safe log event policy operations.
 func (d *database) LogEventPolicies() LogEventPolicies {
-	return &logEventPoliciesImpl{queries: d.Queries()}
+	return &logEventPoliciesImpl{queries: d.ReadQueries()}
 }
 
-// Query executes a query and returns the results.
+// ---------------------------------------------------------------------------
+// Low-level query methods
+// ---------------------------------------------------------------------------
+
+// Query executes a read query via the read pool.
 func (d *database) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return d.db.QueryContext(ctx, query, args...)
+	return d.readDB.QueryContext(ctx, query, args...)
 }
 
-// BeginTx starts a transaction with the given options.
-// Use opts.ReadOnly = true to prevent writes.
+// QueryRow executes a query that returns at most one row via the read pool.
+func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+	return d.readDB.QueryRowContext(ctx, query, args...)
+}
+
+// Exec executes a statement via the write pool.
+func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return d.db.ExecContext(ctx, query, args...)
+}
+
+// BeginTx starts a transaction on the write pool.
 func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
 	tx, err := d.db.BeginTx(ctx, opts)
 	if err != nil {
@@ -201,30 +309,20 @@ func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error
 	return &Tx{tx: tx}, nil
 }
 
-// QueryRow executes a query that returns at most one row.
-func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
-	return d.db.QueryRowContext(ctx, query, args...)
-}
-
-// Exec executes a query that doesn't return rows.
-func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return d.db.ExecContext(ctx, query, args...)
-}
-
-// Count returns the number of rows in the given table.
+// Count returns the number of rows in the given table via the read pool.
 func (d *database) Count(ctx context.Context, table string) (int64, error) {
 	var count int64
 	// Use quote identifier to prevent SQL injection
-	err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
+	err := d.readDB.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count %s: %w", table, err)
 	}
 	return count, nil
 }
 
-// PendingUploadCounts returns pending upload counts grouped by entity table.
+// PendingUploadCounts returns pending upload counts grouped by entity table via the read pool.
 func (d *database) PendingUploadCounts(ctx context.Context) (map[Table]int64, error) {
-	rows, err := d.db.QueryContext(ctx,
+	rows, err := d.readDB.QueryContext(ctx,
 		"SELECT json_extract(data, '$.type') AS entity, COUNT(*) AS cnt FROM ps_crud GROUP BY 1")
 	if err != nil {
 		return nil, fmt.Errorf("count pending uploads: %w", err)
@@ -243,10 +341,7 @@ func (d *database) PendingUploadCounts(ctx context.Context) (map[Table]int64, er
 	return counts, rows.Err()
 }
 
-// LoadExtension loads a SQLite extension from the given path.
-// This uses the go-sqlite3 driver's C API to properly enable and load extensions.
-// The entryPoint can be empty to use the default, or specify a custom entry point
-// like "sqlite3_powersync_init" for the PowerSync extension.
+// LoadExtension loads a SQLite extension on the write pool.
 func (d *database) LoadExtension(ctx context.Context, path, entryPoint string) error {
 	conn, err := d.db.Conn(ctx)
 	if err != nil {
@@ -263,12 +358,16 @@ func (d *database) LoadExtension(ctx context.Context, path, entryPoint string) e
 	})
 }
 
+// ---------------------------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------------------------
+
 // Tx wraps a SQL transaction with convenience methods.
 type Tx struct {
 	tx *sql.Tx
 }
 
-// Exec executes a query that doesn't return rows within the transaction.
+// Exec executes a statement within the transaction.
 func (t *Tx) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return t.tx.ExecContext(ctx, query, args...)
 }
@@ -278,7 +377,7 @@ func (t *Tx) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 	return t.tx.QueryRowContext(ctx, query, args...)
 }
 
-// Query executes a query and returns the results within the transaction.
+// Query executes a query within the transaction.
 func (t *Tx) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return t.tx.QueryContext(ctx, query, args...)
 }
@@ -293,7 +392,7 @@ func (t *Tx) Rollback() error {
 	return t.tx.Rollback()
 }
 
-// WithTx executes a function within a database transaction.
+// WithTx executes a function within a database transaction on the write pool.
 // If the function returns an error, the transaction is rolled back.
 // If the function succeeds, the transaction is committed.
 func (d *database) WithTx(ctx context.Context, fn func(tx *Tx) error) error {

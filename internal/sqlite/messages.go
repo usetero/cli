@@ -22,12 +22,13 @@ type Messages interface {
 
 // messagesImpl implements Messages.
 type messagesImpl struct {
-	queries *gen.Queries
+	read  *gen.Queries // read pool — List, Count, Get
+	write *gen.Queries // write pool — Create*, Update*
 }
 
 // Count returns the total number of messages.
 func (m *messagesImpl) Count(ctx context.Context) (int64, error) {
-	count, err := m.queries.CountMessages(ctx)
+	count, err := m.read.CountMessages(ctx)
 	if err != nil {
 		return 0, WrapSQLiteError(err, "count messages")
 	}
@@ -37,7 +38,7 @@ func (m *messagesImpl) Count(ctx context.Context) (int64, error) {
 // Get retrieves a message by ID.
 func (m *messagesImpl) Get(ctx context.Context, id domain.MessageID) (*domain.Message, error) {
 	idStr := id.String()
-	row, err := m.queries.GetMessage(ctx, &idStr)
+	row, err := m.read.GetMessage(ctx, &idStr)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "get message")
 	}
@@ -59,7 +60,7 @@ func (m *messagesImpl) CreateUserMessage(ctx context.Context, accountID domain.A
 		return "", err
 	}
 
-	err = m.queries.InsertMessage(ctx, gen.InsertMessageParams{
+	err = m.write.InsertMessage(ctx, gen.InsertMessageParams{
 		ID:             &msgIDStr,
 		AccountID:      &accountIDStr,
 		ConversationID: &convIDStr,
@@ -88,7 +89,7 @@ func (m *messagesImpl) CreateToolResultMessage(ctx context.Context, accountID do
 		return "", err
 	}
 
-	err = m.queries.InsertMessage(ctx, gen.InsertMessageParams{
+	err = m.write.InsertMessage(ctx, gen.InsertMessageParams{
 		ID:             &msgIDStr,
 		AccountID:      &accountIDStr,
 		ConversationID: &convIDStr,
@@ -114,7 +115,7 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID dom
 	role := string(domain.RoleAssistant)
 	content := "[]" // Empty JSON array
 
-	err := m.queries.InsertMessage(ctx, gen.InsertMessageParams{
+	err := m.write.InsertMessage(ctx, gen.InsertMessageParams{
 		ID:             &msgIDStr,
 		AccountID:      &accountIDStr,
 		ConversationID: &convIDStr,
@@ -133,7 +134,7 @@ func (m *messagesImpl) CreateAssistantMessage(ctx context.Context, accountID dom
 // UpdateContent updates the content of a message.
 func (m *messagesImpl) UpdateContent(ctx context.Context, id domain.MessageID, content string) error {
 	idStr := id.String()
-	err := m.queries.UpdateMessageContent(ctx, gen.UpdateMessageContentParams{
+	err := m.write.UpdateMessageContent(ctx, gen.UpdateMessageContentParams{
 		ID:      &idStr,
 		Content: &content,
 	})
@@ -143,7 +144,7 @@ func (m *messagesImpl) UpdateContent(ctx context.Context, id domain.MessageID, c
 // UpdateMeta updates the model and stop_reason of a message.
 func (m *messagesImpl) UpdateMeta(ctx context.Context, id domain.MessageID, model, stopReason string) error {
 	idStr := id.String()
-	err := m.queries.UpdateMessageMeta(ctx, gen.UpdateMessageMetaParams{
+	err := m.write.UpdateMessageMeta(ctx, gen.UpdateMessageMetaParams{
 		ID:         &idStr,
 		Model:      &model,
 		StopReason: &stopReason,
@@ -154,7 +155,7 @@ func (m *messagesImpl) UpdateMeta(ctx context.Context, id domain.MessageID, mode
 // List returns all messages for a conversation, ordered by creation time.
 func (m *messagesImpl) List(ctx context.Context, conversationID domain.ConversationID) ([]domain.Message, error) {
 	convIDStr := conversationID.String()
-	rows, err := m.queries.ListMessagesByConversation(ctx, &convIDStr)
+	rows, err := m.read.ListMessagesByConversation(ctx, &convIDStr)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list messages")
 	}

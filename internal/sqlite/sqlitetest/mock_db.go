@@ -114,6 +114,11 @@ func (m *MockDB) Raw() *sql.DB {
 	return nil
 }
 
+// ReadRaw implements sqlite.DB.
+func (m *MockDB) ReadRaw() *sql.DB {
+	return nil
+}
+
 // Services implements sqlite.DB.
 func (m *MockDB) Services() sqlite.Services {
 	return m.ServicesImpl

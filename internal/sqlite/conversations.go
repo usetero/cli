@@ -19,12 +19,13 @@ type Conversations interface {
 
 // conversationsImpl implements Conversations.
 type conversationsImpl struct {
-	queries *gen.Queries
+	read  *gen.Queries // read pool — Count, List, Get
+	write *gen.Queries // write pool — Create, UpdateTitle
 }
 
 // Count returns the total number of conversations.
 func (c *conversationsImpl) Count(ctx context.Context) (int64, error) {
-	count, err := c.queries.CountConversations(ctx)
+	count, err := c.read.CountConversations(ctx)
 	if err != nil {
 		return 0, WrapSQLiteError(err, "count conversations")
 	}
@@ -36,7 +37,7 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID s
 	convID := uuid.New().String()
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	err := c.queries.InsertConversation(ctx, gen.InsertConversationParams{
+	err := c.write.InsertConversation(ctx, gen.InsertConversationParams{
 		ID:          &convID,
 		AccountID:   &accountID,
 		WorkspaceID: &workspaceID,
@@ -53,7 +54,7 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID s
 // UpdateTitle sets the title on a conversation.
 func (c *conversationsImpl) UpdateTitle(ctx context.Context, id, title string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	err := c.queries.UpdateConversationTitle(ctx, gen.UpdateConversationTitleParams{
+	err := c.write.UpdateConversationTitle(ctx, gen.UpdateConversationTitleParams{
 		Title:     &title,
 		UpdatedAt: &now,
 		ID:        &id,
@@ -63,10 +64,10 @@ func (c *conversationsImpl) UpdateTitle(ctx context.Context, id, title string) e
 
 // List returns all conversations for an account.
 func (c *conversationsImpl) List(ctx context.Context, accountID string) ([]gen.Conversation, error) {
-	return c.queries.ListConversationsByAccount(ctx, &accountID)
+	return c.read.ListConversationsByAccount(ctx, &accountID)
 }
 
 // Get returns a conversation by ID.
 func (c *conversationsImpl) Get(ctx context.Context, id string) (gen.Conversation, error) {
-	return c.queries.GetConversation(ctx, &id)
+	return c.read.GetConversation(ctx, &id)
 }
