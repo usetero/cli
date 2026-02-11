@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -13,6 +16,32 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/workos"
 )
+
+// listOrgIDs returns all org IDs found in the filesystem for the given environment.
+func listOrgIDs(env string) ([]domain.OrganizationID, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	orgsDir := filepath.Join(homeDir, ".tero", "environments", env, "orgs")
+	entries, err := os.ReadDir(orgsDir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var orgIDs []domain.OrganizationID
+	for _, entry := range entries {
+		if entry.IsDir() {
+			orgIDs = append(orgIDs, domain.OrganizationID(entry.Name()))
+		}
+	}
+
+	return orgIDs, nil
+}
 
 func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	scope = scope.Child("reset")
@@ -27,16 +56,36 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			s := theme.Styles
 			env := cliConfig.Environment()
 
-			// Clear org preferences
-			orgID := config.ActiveOrgID(env)
-			if orgID != "" {
-				orgCfg, err := config.LoadOrgPreferences(env, orgID)
-				if err != nil {
-					return fmt.Errorf("failed to load org preferences: %w", err)
+			// Get list of all orgs from filesystem
+			orgIDs, err := listOrgIDs(env)
+			if err != nil {
+				return fmt.Errorf("failed to list orgs: %w", err)
+			}
+
+			// Clear databases and preferences for all orgs
+			clearedDBs := 0
+			if includeDB {
+				for _, orgID := range orgIDs {
+					// Clear database
+					orgCfg, err := config.Load(env, orgID)
+					if err == nil {
+						storage := sqlite.NewStorageService(orgCfg)
+						if err := storage.Clear(); err != nil {
+							return fmt.Errorf("failed to clear database for org %s: %w", orgID, err)
+						}
+						clearedDBs++
+					}
 				}
-				orgPrefs := preferences.NewOrgService(orgCfg, scope)
-				if err := orgPrefs.Clear(); err != nil {
-					return fmt.Errorf("failed to clear org preferences: %w", err)
+			}
+
+			// Clear org preferences for all orgs
+			for _, orgID := range orgIDs {
+				orgCfg, err := config.LoadOrgPreferences(env, orgID)
+				if err == nil {
+					orgPrefs := preferences.NewOrgService(orgCfg, scope)
+					if err := orgPrefs.Clear(); err != nil {
+						return fmt.Errorf("failed to clear org preferences for %s: %w", orgID, err)
+					}
 				}
 			}
 
@@ -58,24 +107,11 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 				return fmt.Errorf("failed to clear tokens: %w", err)
 			}
 
-			// Clear database if requested
-			if includeDB && orgID != "" {
-				orgCfg, err := config.Load(env, orgID)
-				if err == nil {
-					storage := sqlite.NewStorageService(orgCfg)
-					if err := storage.Clear(); err != nil {
-						return fmt.Errorf("failed to clear database: %w", err)
-					}
-				}
-
-				fmt.Println(s.Success.Render("✓ Reset complete"))
-				fmt.Println(s.Help.Render("Cleared preferences, authentication, and database for: " + env))
-			} else if includeDB {
-				fmt.Println(s.Success.Render("✓ Reset complete"))
-				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
-				fmt.Println(s.Help.Render("No active org — skipped database"))
+			// Print results
+			fmt.Println(s.Success.Render("✓ Reset complete"))
+			if includeDB {
+				fmt.Println(s.Help.Render(fmt.Sprintf("Cleared preferences, authentication, and %d database(s) for: %s", clearedDBs, env)))
 			} else {
-				fmt.Println(s.Success.Render("✓ Reset complete"))
 				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
 			}
 

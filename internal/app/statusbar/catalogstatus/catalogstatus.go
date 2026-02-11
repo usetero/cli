@@ -286,12 +286,9 @@ func (m *Model) serviceName(svc domain.ServiceStatus) string {
 // renderStatus renders the status badge, with percent for discovering/analyzing.
 func (m *Model) renderStatus(svc domain.ServiceStatus) string {
 	s := status.Service(m.theme, svc.Status, true)
-	if svc.PercentComplete > 0 {
-		switch svc.Status { //nolint:exhaustive // only discovering/analyzing show percent
-		case domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
-			muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-			s += " " + muted.Render(fmt.Sprintf("%.0f%%", svc.PercentComplete))
-		}
+	if svc.PercentComplete > 0 && svc.Status == domain.ServiceLogStatusDiscovering {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		s += " " + muted.Render(fmt.Sprintf("%.0f%%", svc.PercentComplete))
 	}
 	return s
 }

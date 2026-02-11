@@ -39,6 +39,11 @@ type Account implements Node {
   """Human-readable name within the organization"""
   name: String!
 
+  """
+  Multiplier applied to volume data via trigger. 1 = real data, >1 = scaled for demos.
+  """
+  demoScaleFactor: Int!
+
   """When the account was created"""
   createdAt: Time!
 
@@ -155,6 +160,16 @@ input AccountWhereInput {
   nameHasSuffix: String
   nameEqualFold: String
   nameContainsFold: String
+
+  """demo_scale_factor field predicates"""
+  demoScaleFactor: Int
+  demoScaleFactorNEQ: Int
+  demoScaleFactorIn: [Int!]
+  demoScaleFactorNotIn: [Int!]
+  demoScaleFactorGT: Int
+  demoScaleFactorGTE: Int
+  demoScaleFactorLT: Int
+  demoScaleFactorLTE: Int
 
   """created_at field predicates"""
   createdAt: Time
@@ -1031,18 +1046,44 @@ type DatadogAccountStatus {
   """Account-wide observed current bytes"""
   logObservedBytesPerHourAfter: Float
 
-  """Account-wide current USD/hour cost (ingestion + indexing combined)"""
+  """Account-wide current bytes-based USD/hour cost"""
+  logCostPerHourBytesUsd: Float
+
+  """Account-wide current volume-based USD/hour cost"""
+  logCostPerHourVolumeUsd: Float
+
+  """Account-wide current USD/hour cost (bytes + volume combined)"""
   logCostPerHourUsd: Float
 
-  """
-  Account-wide estimated USD/hour savings (ingestion + indexing combined)
-  """
+  """Account-wide estimated bytes-based USD/hour savings"""
+  logEstimatedCostReductionPerHourBytesUsd: Float
+
+  """Account-wide estimated volume-based USD/hour savings"""
+  logEstimatedCostReductionPerHourVolumeUsd: Float
+
+  """Account-wide estimated USD/hour savings (bytes + volume combined)"""
   logEstimatedCostReductionPerHourUsd: Float
 
-  """Account-wide measured USD/hour cost before approval"""
+  """Account-wide measured bytes-based USD/hour cost before approval"""
+  logObservedCostPerHourBeforeBytesUsd: Float
+
+  """Account-wide measured volume-based USD/hour cost before approval"""
+  logObservedCostPerHourBeforeVolumeUsd: Float
+
+  """
+  Account-wide measured USD/hour cost before approval (bytes + volume combined)
+  """
   logObservedCostPerHourBeforeUsd: Float
 
-  """Account-wide measured USD/hour cost after approval"""
+  """Account-wide measured bytes-based USD/hour cost after approval"""
+  logObservedCostPerHourAfterBytesUsd: Float
+
+  """Account-wide measured volume-based USD/hour cost after approval"""
+  logObservedCostPerHourAfterVolumeUsd: Float
+
+  """
+  Account-wide measured USD/hour cost after approval (bytes + volume combined)
+  """
   logObservedCostPerHourAfterUsd: Float
 
   """
@@ -1938,8 +1979,14 @@ type LogEventPolicyStatus {
   """Projected bytes/hour eliminated. NULL when not estimable."""
   estimatedBytesReductionPerHour: Float
 
+  """Projected bytes-based USD/hour savings. NULL when not estimable."""
+  estimatedCostReductionPerHourBytesUsd: Float
+
+  """Projected volume-based USD/hour savings. NULL when not estimable."""
+  estimatedCostReductionPerHourVolumeUsd: Float
+
   """
-  Projected USD/hour savings. Aggregated across all integrations. NULL when not estimable.
+  Projected USD/hour savings (bytes + volume combined). NULL when not estimable.
   """
   estimatedCostReductionPerHourUsd: Float
 
@@ -2214,20 +2261,46 @@ type LogEventStatus {
   """Measured bytes/hour in recent window"""
   observedBytesPerHourAfter: Float
 
-  """
-  Current USD/hour cost based on volume and bytes throughput (ingestion + indexing combined)
-  """
+  """Current bytes-based cost in USD/hour"""
+  costPerHourBytesUsd: Float
+
+  """Current volume-based cost in USD/hour"""
+  costPerHourVolumeUsd: Float
+
+  """Current USD/hour cost (bytes + volume combined)"""
   costPerHourUsd: Float
 
+  """Estimated USD/hour savings from bytes reduction"""
+  estimatedCostReductionPerHourBytesUsd: Float
+
+  """Estimated USD/hour savings from volume reduction"""
+  estimatedCostReductionPerHourVolumeUsd: Float
+
   """
-  Estimated USD/hour savings from active policies (ingestion + indexing combined)
+  Estimated USD/hour savings from active policies (bytes + volume combined)
   """
   estimatedCostReductionPerHourUsd: Float
 
-  """Measured USD/hour cost before first policy approval"""
+  """Measured bytes-based USD/hour cost before first policy approval"""
+  observedCostPerHourBeforeBytesUsd: Float
+
+  """Measured volume-based USD/hour cost before first policy approval"""
+  observedCostPerHourBeforeVolumeUsd: Float
+
+  """
+  Measured USD/hour cost before first policy approval (bytes + volume combined)
+  """
   observedCostPerHourBeforeUsd: Float
 
-  """Measured USD/hour cost in recent window after policy approval"""
+  """Measured bytes-based USD/hour cost after policy approval"""
+  observedCostPerHourAfterBytesUsd: Float
+
+  """Measured volume-based USD/hour cost after policy approval"""
+  observedCostPerHourAfterVolumeUsd: Float
+
+  """
+  Measured USD/hour cost in recent window after policy approval (bytes + volume combined)
+  """
   observedCostPerHourAfterUsd: Float
 }
 
@@ -3340,20 +3413,44 @@ type ServiceStatus {
   """Sum of observed current bytes across approved log events"""
   logObservedBytesPerHourAfter: Float
 
+  """Current bytes-based USD/hour cost summed across all log events"""
+  logCostPerHourBytesUsd: Float
+
+  """Current volume-based USD/hour cost summed across all log events"""
+  logCostPerHourVolumeUsd: Float
+
   """
-  Current USD/hour cost summed across all log events (ingestion + indexing combined)
+  Current USD/hour cost summed across all log events (bytes + volume combined)
   """
   logCostPerHourUsd: Float
 
+  """Estimated bytes-based USD/hour savings across all log events"""
+  logEstimatedCostReductionPerHourBytesUsd: Float
+
+  """Estimated volume-based USD/hour savings across all log events"""
+  logEstimatedCostReductionPerHourVolumeUsd: Float
+
   """
-  Estimated USD/hour savings across all log events (ingestion + indexing combined)
+  Estimated USD/hour savings across all log events (bytes + volume combined)
   """
   logEstimatedCostReductionPerHourUsd: Float
 
-  """Measured USD/hour cost before approval across approved log events"""
+  """Measured bytes-based USD/hour cost before approval"""
+  logObservedCostPerHourBeforeBytesUsd: Float
+
+  """Measured volume-based USD/hour cost before approval"""
+  logObservedCostPerHourBeforeVolumeUsd: Float
+
+  """Measured USD/hour cost before approval (bytes + volume combined)"""
   logObservedCostPerHourBeforeUsd: Float
 
-  """Measured USD/hour cost after approval across approved log events"""
+  """Measured bytes-based USD/hour cost after approval"""
+  logObservedCostPerHourAfterBytesUsd: Float
+
+  """Measured volume-based USD/hour cost after approval"""
+  logObservedCostPerHourAfterVolumeUsd: Float
+
+  """Measured USD/hour cost after approval (bytes + volume combined)"""
   logObservedCostPerHourAfterUsd: Float
 
   """Most recent error from broken services"""
@@ -3714,6 +3811,11 @@ Input was generated by ent.
 input UpdateAccountInput {
   """Human-readable name within the organization"""
   name: String
+
+  """
+  Multiplier applied to volume data via trigger. 1 = real data, >1 = scaled for demos.
+  """
+  demoScaleFactor: Int
   organizationID: ID
   datadogAccountID: ID
   clearDatadogAccount: Boolean

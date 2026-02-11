@@ -39,6 +39,8 @@ SELECT
   CAST(COALESCE(SUM(log_policy_count), 0) AS INTEGER) AS policy_count,
   CAST(COALESCE(SUM(log_approved_policy_count), 0) AS INTEGER) AS approved_policy_count,
   SUM(log_estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,
+  SUM(log_estimated_cost_reduction_per_hour_bytes_usd) AS estimated_cost_per_hour_bytes,
+  SUM(log_estimated_cost_reduction_per_hour_volume_usd) AS estimated_cost_per_hour_volume,
   CAST(COALESCE(SUM(log_estimated_volume_reduction_per_hour), 0.0) AS REAL) AS estimated_volume_per_hour,
   CAST(COALESCE(SUM(log_estimated_bytes_reduction_per_hour), 0.0) AS REAL) AS estimated_bytes_per_hour,
   SUM(log_observed_cost_per_hour_before_usd) AS observed_cost_before,

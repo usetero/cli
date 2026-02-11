@@ -790,6 +790,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.chatClient = nil
 	m.toolRegistry = nil
 	m.chat = nil
+	m.services.SetAccountID("") // clear stale account scope
 
 	m.statusBar = statusbar.New(m.theme, m.syncer, m.cfg.APIEndpoint)
 	m.windowTitle = ""

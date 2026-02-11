@@ -21,12 +21,26 @@ const (
 type SchemaTable struct {
 	Name    string         `json:"name"`
 	Columns []SchemaColumn `json:"columns"`
+	Indexes []SchemaIndex  `json:"indexes"`
 }
 
 // SchemaColumn represents a column in a PowerSync table.
 type SchemaColumn struct {
 	Name string `json:"name"`
 	Type string `json:"type"` // "text", "integer", "real"
+}
+
+// SchemaIndex represents an index on a PowerSync table.
+type SchemaIndex struct {
+	Name    string              `json:"name"`
+	Columns []SchemaIndexColumn `json:"columns"`
+}
+
+// SchemaIndexColumn represents a column in an index.
+type SchemaIndexColumn struct {
+	Name      string `json:"name"`
+	Ascending bool   `json:"ascending"`
+	Type      string `json:"type"`
 }
 
 // schemaResponse is the response from /api/admin/v1/schema.
@@ -84,6 +98,9 @@ func FetchSchemaJSON(ctx context.Context, endpoint, token string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("fetch synced tables: %w", err)
 	}
+
+	// Apply client-side indexes for query performance
+	tables = applyClientIndexes(tables)
 
 	// Build schema JSON
 	schema := struct {
