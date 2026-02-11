@@ -191,28 +191,49 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 				Margin: uintPtr(0),
 			},
 			Chroma: &ansi.Chroma{
-				Text: ansi.StylePrimitive{
-					Color: text,
-				},
-				Keyword: ansi.StylePrimitive{
-					Color: accent,
-				},
-				Name: ansi.StylePrimitive{
-					Color: text,
-				},
-				NameFunction: ansi.StylePrimitive{
-					Color: accent,
-				},
-				LiteralString: ansi.StylePrimitive{
-					Color: stringPtr(colorToHex(t.SuccessFg)),
-				},
-				LiteralNumber: ansi.StylePrimitive{
-					Color: stringPtr(colorToHex(t.WarningFg)),
-				},
-				Comment: ansi.StylePrimitive{
-					Color:  muted,
-					Italic: boolPtr(true),
-				},
+				// Base
+				Text:  ansi.StylePrimitive{Color: text},
+				Error: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.ErrorFg))},
+
+				// Comments
+				Comment:        ansi.StylePrimitive{Color: muted, Italic: boolPtr(true)},
+				CommentPreproc: ansi.StylePrimitive{Color: muted, Italic: boolPtr(true)},
+
+				// Keywords (if/else/for, true/false/null, import, int/string, class/struct)
+				Keyword:          ansi.StylePrimitive{Color: accent},
+				KeywordReserved:  ansi.StylePrimitive{Color: accent},
+				KeywordNamespace: ansi.StylePrimitive{Color: accent},
+				KeywordType:      ansi.StylePrimitive{Color: stringPtr(colorToHex(t.InfoFg))},
+
+				// Operators & punctuation ({}, :, =, +)
+				Operator:    ansi.StylePrimitive{Color: text},
+				Punctuation: ansi.StylePrimitive{Color: muted},
+
+				// Names (variables, functions, classes, JSON keys, decorators)
+				Name:          ansi.StylePrimitive{Color: text},
+				NameBuiltin:   ansi.StylePrimitive{Color: stringPtr(colorToHex(t.InfoFg))},
+				NameTag:       ansi.StylePrimitive{Color: accent},
+				NameAttribute: ansi.StylePrimitive{Color: accent},
+				NameClass:     ansi.StylePrimitive{Color: stringPtr(colorToHex(t.InfoFg)), Bold: boolPtr(true)},
+				NameConstant:  ansi.StylePrimitive{Color: stringPtr(colorToHex(t.WarningFg))},
+				NameDecorator: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.InfoFg))},
+				NameException: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.ErrorFg))},
+				NameFunction:  ansi.StylePrimitive{Color: accent},
+				NameOther:     ansi.StylePrimitive{Color: text},
+
+				// Literals (strings, numbers, dates)
+				Literal:             ansi.StylePrimitive{Color: stringPtr(colorToHex(t.SuccessFg))},
+				LiteralNumber:       ansi.StylePrimitive{Color: stringPtr(colorToHex(t.WarningFg))},
+				LiteralDate:         ansi.StylePrimitive{Color: stringPtr(colorToHex(t.WarningFg))},
+				LiteralString:       ansi.StylePrimitive{Color: stringPtr(colorToHex(t.SuccessFg))},
+				LiteralStringEscape: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.WarningFg))},
+
+				// Diff
+				GenericDeleted:    ansi.StylePrimitive{Color: stringPtr(colorToHex(t.ErrorFg))},
+				GenericEmph:       ansi.StylePrimitive{Italic: boolPtr(true)},
+				GenericInserted:   ansi.StylePrimitive{Color: stringPtr(colorToHex(t.SuccessFg))},
+				GenericStrong:     ansi.StylePrimitive{Bold: boolPtr(true)},
+				GenericSubheading: ansi.StylePrimitive{Color: muted},
 			},
 		},
 		Table: ansi.StyleTable{
