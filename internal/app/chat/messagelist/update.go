@@ -3,7 +3,9 @@ package messagelist
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/atotto/clipboard"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 )
 
 // Update handles messages.
@@ -71,6 +73,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				text := m.extractHighlight()
 				if text != "" {
 					cmds = append(cmds, tea.SetClipboard(text))
+					_ = clipboard.WriteAll(text)
+					cmds = append(cmds, appmsg.SuccessCmd("Copied to clipboard"))
 				}
 			} else {
 				m.handleBlockClick(m.mouseDownBlock)
