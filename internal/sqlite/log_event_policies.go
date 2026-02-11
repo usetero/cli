@@ -10,10 +10,10 @@ import (
 
 // LogEventPolicies provides type-safe access to log event policies.
 type LogEventPolicies interface {
-	Approve(ctx context.Context, arg gen.ApproveLogEventPolicyParams) error
 	Count(ctx context.Context) (int64, error)
 	ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error)
+	Approve(ctx context.Context, id, userID string) error
 }
 
 // logEventPoliciesImpl implements LogEventPolicies.
@@ -85,12 +85,12 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 	return result, nil
 }
 
-func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userId string) error {
+func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	err := l.queries.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
 		ID:         &id,
 		ApprovedAt: &now,
-		ApprovedBy: &userId,
+		ApprovedBy: &userID,
 	})
 	if err != nil {
 		return WrapSQLiteError(err, "approve log event policy")

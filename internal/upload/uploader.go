@@ -60,6 +60,7 @@ func New(
 	conversations api.Conversations,
 	messages api.Messages,
 	services api.Services,
+	policies api.LogEventPolicies,
 	scope log.Scope,
 ) Uploader {
 	scope = scope.Child("upload")
@@ -69,9 +70,10 @@ func New(
 		client:         client,
 		tokenRefresher: tokenRefresher,
 		handlers: map[sqlite.Table]Handler{
-			sqlite.TableConversations: newConversationHandler(conversations, scope),
-			sqlite.TableMessages:      newMessageHandler(messages, database, scope),
-			sqlite.TableServices:      newServiceHandler(services, scope),
+			sqlite.TableConversations:    newConversationHandler(conversations, scope),
+			sqlite.TableMessages:         newMessageHandler(messages, database, scope),
+			sqlite.TableServices:         newServiceHandler(services, scope),
+			sqlite.TableLogEventPolicies: newPolicyHandler(policies, scope),
 		},
 		scope:        scope,
 		pollInterval: defaultPollInterval,

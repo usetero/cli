@@ -32,7 +32,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -56,7 +56,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -105,7 +105,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
 			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -161,7 +161,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -226,7 +226,7 @@ func TestUploader_Run(t *testing.T) {
 			powersynctest.NewMockTokenRefresher("token"),
 			conversations,
 			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
