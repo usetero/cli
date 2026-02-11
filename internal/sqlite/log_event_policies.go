@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"time"
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
@@ -9,10 +10,10 @@ import (
 
 // LogEventPolicies provides type-safe access to log event policies.
 type LogEventPolicies interface {
+	Approve(ctx context.Context, arg gen.ApproveLogEventPolicyParams) error
 	Count(ctx context.Context) (int64, error)
 	ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error)
-	Approve(ctx context.Context, arg gen.ApproveLogEventPolicyParams) error
 }
 
 // logEventPoliciesImpl implements LogEventPolicies.
@@ -60,7 +61,6 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 	return result, nil
 }
 
-<<<<<<< HEAD
 // ListTopPendingPoliciesByCategory returns the top pending policies for a category, ordered by cost then volume.
 func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error) {
 	rows, err := l.queries.ListTopPendingPoliciesByCategory(ctx, gen.ListTopPendingPoliciesByCategoryParams{
@@ -69,19 +69,6 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 	})
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list top pending policies by category")
-=======
-func (l *logEventPoliciesImpl) Approve(ctx context.Context, arg gen.ApproveLogEventPolicyParams) error {
-	return l.queries.ApproveLogEventPolicy(ctx, arg)
-}
-
-func (l *logEventPoliciesImpl) Dismiss(ctx context.Context, arg gen.DismissLogEventPolicyParams) error {
-	return l.queries.DismissLogEventPolicy(ctx, arg)
-}
-
-func derefFloat(p *float64) float64 {
-	if p == nil {
-		return 0
->>>>>>> 52a0c76 (feat: Add wrapper methods to call sqlc functions)
 	}
 
 	result := make([]domain.WastePolicy, len(rows))
@@ -96,4 +83,17 @@ func derefFloat(p *float64) float64 {
 		}
 	}
 	return result, nil
+}
+
+func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userId string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	err := l.queries.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
+		ID:         &id,
+		ApprovedAt: &now,
+		ApprovedBy: &userId,
+	})
+	if err != nil {
+		return WrapSQLiteError(err, "approve log event policy")
+	}
+	return nil
 }
