@@ -10,8 +10,7 @@ import (
 
 // DatadogAccountStatuses provides access to Datadog account status data.
 type DatadogAccountStatuses interface {
-	GetCatalogSummary(ctx context.Context) (domain.CatalogSummary, error)
-	GetPolicySummary(ctx context.Context) (domain.PolicySummary, error)
+	GetSummary(ctx context.Context) (domain.AccountSummary, error)
 }
 
 // datadogAccountStatusesImpl implements DatadogAccountStatuses.
@@ -19,52 +18,58 @@ type datadogAccountStatusesImpl struct {
 	queries *gen.Queries
 }
 
-// GetCatalogSummary returns aggregated catalog status across all Datadog accounts.
-func (d *datadogAccountStatusesImpl) GetCatalogSummary(ctx context.Context) (domain.CatalogSummary, error) {
-	row, err := d.queries.GetCatalogStatus(ctx)
+// GetSummary returns aggregated status across all Datadog accounts.
+func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.AccountSummary, error) {
+	row, err := d.queries.GetAccountSummary(ctx)
 	if err != nil {
-		return domain.CatalogSummary{}, WrapSQLiteError(err, "get catalog summary")
+		return domain.AccountSummary{}, WrapSQLiteError(err, "get account summary")
 	}
 
-	return domain.CatalogSummary{
-		ReadyForUse:      row.ReadyForUse != 0,
+	return domain.AccountSummary{
+		ReadyForUse: row.ReadyForUse != 0,
+
+		// Services
 		ServiceCount:     row.ServiceCount,
 		ActiveServices:   row.ActiveServices,
-		EventCount:       row.EventCount,
-		AnalyzedCount:    row.AnalyzedCount,
-		AnalyzingCount:   row.AnalyzingCount,
-		DiscoveringCount: row.DiscoveringCount,
+		ReadyServices:    row.ReadyServices,
 		BrokenServices:   row.BrokenServices,
 		StaleServices:    row.StaleServices,
+		DiscoveringCount: row.DiscoveringCount,
+		AnalyzingCount:   row.AnalyzingCount,
+
+		// Events
+		EventCount:       row.EventCount,
+		AnalyzedCount:    row.AnalyzedCount,
+		CleanCount:       row.CleanCount,
+		PendingCount:     row.PendingCount,
+		ResolvedCount:    row.ResolvedCount,
+		QuarantinedCount: row.QuarantinedCount,
 		PercentComplete:  row.PercentComplete,
 		WorstStatus:      domain.ServiceLogStatus(row.WorstStatus),
 		LogError:         fmt.Sprint(row.LogError),
-	}, nil
-}
 
-// GetPolicySummary returns aggregated policy/savings status across all Datadog accounts.
-func (d *datadogAccountStatusesImpl) GetPolicySummary(ctx context.Context) (domain.PolicySummary, error) {
-	row, err := d.queries.GetPolicyStatus(ctx)
-	if err != nil {
-		return domain.PolicySummary{}, WrapSQLiteError(err, "get policy summary")
-	}
+		// Policies
+		PolicyCount:          row.PolicyCount,
+		PendingPolicyCount:   row.PendingPolicyCount,
+		ApprovedPolicyCount:  row.ApprovedPolicyCount,
+		DismissedPolicyCount: row.DismissedPolicyCount,
 
-	return domain.PolicySummary{
-		ReadyForUse:                row.ReadyForUse != 0,
-		PendingPolicyCount:         row.PendingPolicyCount,
-		PolicyCount:                row.PolicyCount,
-		ApprovedPolicyCount:        row.ApprovedPolicyCount,
+		// Estimated savings
 		EstimatedCostPerHour:       row.EstimatedCostPerHour,
 		EstimatedCostPerHourBytes:  row.EstimatedCostPerHourBytes,
 		EstimatedCostPerHourVolume: row.EstimatedCostPerHourVolume,
 		EstimatedVolumePerHour:     row.EstimatedVolumePerHour,
 		EstimatedBytesPerHour:      row.EstimatedBytesPerHour,
-		ObservedCostBefore:         row.ObservedCostBefore,
-		ObservedCostAfter:          row.ObservedCostAfter,
-		ObservedVolumeBefore:       row.ObservedVolumeBefore,
-		ObservedVolumeAfter:        row.ObservedVolumeAfter,
-		TotalCostPerHour:           row.TotalCostPerHour,
-		TotalVolumePerHour:         row.TotalVolumePerHour,
-		TotalBytesPerHour:          row.TotalBytesPerHour,
+
+		// Observed impact
+		ObservedCostBefore:   row.ObservedCostBefore,
+		ObservedCostAfter:    row.ObservedCostAfter,
+		ObservedVolumeBefore: row.ObservedVolumeBefore,
+		ObservedVolumeAfter:  row.ObservedVolumeAfter,
+
+		// Totals
+		TotalCostPerHour:   row.TotalCostPerHour,
+		TotalVolumePerHour: row.TotalVolumePerHour,
+		TotalBytesPerHour:  row.TotalBytesPerHour,
 	}, nil
 }

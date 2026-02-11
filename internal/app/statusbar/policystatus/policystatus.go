@@ -27,7 +27,7 @@ type Model struct {
 	theme styles.Theme
 	db    sqlite.DB
 
-	summary    domain.PolicySummary
+	summary    domain.AccountSummary
 	categories []domain.PolicyCategoryStatus
 	hasData    bool
 	lastState  string
@@ -71,7 +71,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		summary, err := m.db.DatadogAccountStatuses().GetPolicySummary(ctx)
+		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
 			return m.poll()
 		}
@@ -96,7 +96,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 // stateKey builds a string key for change detection.
-func (m *Model) stateKey(s domain.PolicySummary, cats []domain.PolicyCategoryStatus) string {
+func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
 	key := fmt.Sprintf("%v:%d:%d:%d:%v:%v:%v:%.0f:%.0f:%v:%v:%.0f:%.0f:%v:%.0f:%.0f:%d",
 		s.ReadyForUse, s.PendingPolicyCount,
 		s.PolicyCount, s.ApprovedPolicyCount,
@@ -165,7 +165,7 @@ func (m *Model) CompactView() string {
 }
 
 // wastePercent computes the estimated waste as a percentage of total bytes.
-func wastePercent(s domain.PolicySummary) int {
+func wastePercent(s domain.AccountSummary) int {
 	if s.TotalBytesPerHour > 0 && s.EstimatedBytesPerHour > 0 {
 		return int(math.Round(s.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
 	}
@@ -233,7 +233,7 @@ func (m *Model) renderHeadline() string {
 
 // formatSavingsBreakdown returns per-dimension savings segments for joining
 // into the headline, e.g. ["bytes: ~$4.6k/yr", "volume: ~$7.3k/yr", "~$11.9k/yr total"].
-func formatSavingsBreakdown(s domain.PolicySummary, sep string) []string {
+func formatSavingsBreakdown(s domain.AccountSummary, sep string) []string {
 	if s.EstimatedCostPerHour == nil {
 		return nil
 	}
@@ -389,7 +389,7 @@ func formatBenefitLabel(benefits string) string {
 }
 
 // formatObservedSaving returns the observed savings from approved policies.
-func formatObservedSaving(s domain.PolicySummary) string {
+func formatObservedSaving(s domain.AccountSummary) string {
 	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
 		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 8760
 		if diff >= 1 {

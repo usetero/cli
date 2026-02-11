@@ -28,7 +28,7 @@ type Model struct {
 	theme styles.Theme
 	db    sqlite.DB
 
-	summary   domain.CatalogSummary
+	summary   domain.AccountSummary
 	services  []domain.ServiceStatus
 	hasData   bool
 	lastState string
@@ -72,7 +72,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		summary, err := m.db.DatadogAccountStatuses().GetCatalogSummary(ctx)
+		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
 			return m.poll()
 		}
@@ -97,7 +97,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 // stateKey builds a string key for change detection.
-func (m *Model) stateKey(s domain.CatalogSummary, services []domain.ServiceStatus) string {
+func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
 	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%d:%s:%.0f:%s:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.AnalyzingCount,
@@ -142,7 +142,11 @@ func (m *Model) CompactView() string {
 	case domain.ServiceLogStatusDiscovering:
 		suffix = " · discovering"
 	case domain.ServiceLogStatusAnalyzing:
-		suffix = " · analyzing"
+		if s.EventCount > 0 {
+			suffix = fmt.Sprintf(" · analyzing %d/%d events", s.AnalyzedCount, s.EventCount)
+		} else {
+			suffix = " · analyzing"
+		}
 	case domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive,
 		domain.ServiceLogStatusBroken, domain.ServiceLogStatusStale,
 		domain.ServiceLogStatusReady:
@@ -290,7 +294,7 @@ func (m *Model) serviceName(svc domain.ServiceStatus) string {
 // renderStatus renders the status badge, with percent for discovering/analyzing.
 func (m *Model) renderStatus(svc domain.ServiceStatus) string {
 	s := status.Service(m.theme, svc.Status, true)
-	if svc.PercentComplete > 0 && svc.Status == domain.ServiceLogStatusDiscovering {
+	if svc.PercentComplete > 0 && (svc.Status == domain.ServiceLogStatusDiscovering || svc.Status == domain.ServiceLogStatusAnalyzing) {
 		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 		s += " " + muted.Render(fmt.Sprintf("%.0f%%", svc.PercentComplete))
 	}

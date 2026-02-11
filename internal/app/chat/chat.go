@@ -71,7 +71,7 @@ type Model struct {
 	originY   int
 
 	// Empty state
-	policySummary *domain.PolicySummary
+	policySummary *domain.AccountSummary
 
 	// Dependencies
 	db           sqlite.DB
@@ -149,7 +149,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if !m.hasMessages() && m.db != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			summary, err := m.db.DatadogAccountStatuses().GetPolicySummary(ctx)
+			summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
 			if err == nil && summary.ReadyForUse {
 				m.policySummary = &summary
 			}
@@ -170,7 +170,35 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.handlePersistedMessage(msg))
 
 	case msgs.StreamFailed:
+		// Forward to round so it transitions to StateFailed.
+		cmds = append(cmds, m.messageList.Update(msg))
+
+		// Clean up orphaned messages from DB (async to avoid blocking UI).
+		if last := m.messageList.LastRound(); last != nil {
+			ids := last.LastTurnMessageIDs()
+			if len(ids) > 0 {
+				db := m.db
+				scope := m.scope
+				cmds = append(cmds, func() tea.Msg {
+					for _, id := range ids {
+						if err := db.Messages().Delete(context.Background(), id); err != nil {
+							scope.Error("failed to delete orphaned message", "id", id, "error", err)
+						}
+					}
+					return nil
+				})
+			}
+
+			// Turn 1: remove round entirely, input bar restores text via pendingText.
+			if !last.HasAssistantContent() {
+				m.messageList.RemoveLastRound()
+			}
+			// Turn 2+: round stays visible with red error divider.
+		}
+
+		cmds = append(cmds, m.inputBar.Update(msg))
 		cmds = append(cmds, appmsg.ErrorCmd("Failed to get response", msg.Err, false))
+		return tea.Batch(cmds...)
 
 	case tea.MouseClickMsg:
 		// Click on the message list area focuses it
@@ -493,7 +521,7 @@ func (m *Model) emptyStateContent() string {
 }
 
 // wastePercent computes waste % preferring bytes.
-func wastePercent(s domain.PolicySummary) int {
+func wastePercent(s domain.AccountSummary) int {
 	if s.TotalBytesPerHour > 0 && s.EstimatedBytesPerHour > 0 {
 		return int(math.Round(s.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
 	}
