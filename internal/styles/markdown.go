@@ -191,9 +191,10 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 				Margin: uintPtr(0),
 			},
 			Chroma: &ansi.Chroma{
-				// Base
-				Text:  ansi.StylePrimitive{Color: text},
-				Error: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Error))},
+				// Base — code blocks render on BgElevated, so set Background to match.
+				Background: ansi.StylePrimitive{BackgroundColor: codeBg},
+				Text:       ansi.StylePrimitive{Color: text},
+				Error:      ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Error))},
 
 				// Comments
 				Comment:        ansi.StylePrimitive{Color: muted, Italic: boolPtr(true)},
@@ -222,10 +223,11 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 				NameOther:     ansi.StylePrimitive{Color: text},
 
 				// Literals (strings, numbers, dates)
-				Literal:             ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Success))},
+				// Strings use Info (cyan) to contrast with keys which use Accent (emerald).
+				Literal:             ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Info))},
 				LiteralNumber:       ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Warning))},
 				LiteralDate:         ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Warning))},
-				LiteralString:       ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Success))},
+				LiteralString:       ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Info))},
 				LiteralStringEscape: ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Warning))},
 
 				// Diff
