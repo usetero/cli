@@ -27,17 +27,6 @@ func (m *Model) CancelActiveRound() {
 	}
 }
 
-// RemoveLastRound removes the most recent round from the list.
-// Used to clean up after a stream failure so the user bubble and
-// thinking animation disappear.
-func (m *Model) RemoveLastRound() {
-	if len(m.rounds) == 0 {
-		return
-	}
-	m.rounds = m.rounds[:len(m.rounds)-1]
-	m.rebuildBlocks()
-}
-
 // StartTurn creates a new round and begins streaming.
 func (m *Model) StartTurn(
 	conversationID domain.ConversationID,

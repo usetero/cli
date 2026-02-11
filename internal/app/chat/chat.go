@@ -170,7 +170,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.handlePersistedMessage(msg))
 
 	case msgs.StreamFailed:
-		m.messageList.RemoveLastRound()
 		cmds = append(cmds, appmsg.ErrorCmd("Failed to get response", msg.Err, false))
 
 	case tea.MouseClickMsg:
