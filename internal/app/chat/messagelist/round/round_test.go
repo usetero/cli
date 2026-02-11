@@ -6,6 +6,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -193,6 +194,102 @@ func TestUpdate(t *testing.T) {
 		// State should still be cancelled, not complete
 		if m.State() != StateCancelled {
 			t.Errorf("expected StateCancelled (unchanged), got %d", m.State())
+		}
+	})
+}
+
+func TestToolResultsReadyDoesNotDoubleFire(t *testing.T) {
+	t.Parallel()
+
+	t.Run("transitions to StateAwaitingNextTurn", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		m.Update(msgs.ToolResultsReady{
+			TurnID:  "user-1",
+			Results: []tools.Result{{ToolUseID: "tool-1"}},
+		})
+
+		if m.state != StateAwaitingNextTurn {
+			t.Fatalf("expected StateAwaitingNextTurn, got %d", m.state)
+		}
+	})
+
+	t.Run("second ToolResultsReady is ignored", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+
+		m.Update(msgs.ToolResultsReady{
+			TurnID:  "user-1",
+			Results: []tools.Result{{ToolUseID: "tool-1"}},
+		})
+		m.Update(msgs.ToolResultsReady{
+			TurnID:  "user-1",
+			Results: []tools.Result{{ToolUseID: "tool-1"}},
+		})
+
+		if m.state != StateAwaitingNextTurn {
+			t.Fatalf("expected StateAwaitingNextTurn (unchanged), got %d", m.state)
+		}
+		if len(m.turns) != 1 {
+			t.Errorf("expected 1 turn (no duplicate), got %d", len(m.turns))
+		}
+	})
+}
+
+func TestStateAwaitingNextTurn(t *testing.T) {
+	t.Parallel()
+
+	t.Run("IsActive returns true", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+		m.state = StateAwaitingNextTurn
+
+		if !m.IsActive() {
+			t.Error("expected IsActive() true for StateAwaitingNextTurn")
+		}
+	})
+
+	t.Run("shows thinking animation", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+		m.state = StateAwaitingNextTurn
+
+		if !hasBlockKind(m.Blocks(), block.KindThinkingAnimation) {
+			t.Error("expected thinking animation in StateAwaitingNextTurn")
+		}
+	})
+
+	t.Run("cancel works from awaiting state", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+		m.state = StateAwaitingNextTurn
+
+		m.Cancel()
+
+		if m.State() != StateCancelled {
+			t.Errorf("expected StateCancelled, got %d", m.State())
+		}
+	})
+
+	t.Run("nextTurnReady ignored after cancel", func(t *testing.T) {
+		t.Parallel()
+		m := newTestRound(t)
+		m.state = StateAwaitingNextTurn
+
+		m.Cancel()
+
+		m.Update(nextTurnReady{
+			roundID:   "user-1",
+			messageID: "tool-result-1",
+			messages:  []domain.Message{},
+		})
+
+		if m.State() != StateCancelled {
+			t.Errorf("expected StateCancelled (unchanged), got %d", m.State())
+		}
+		if len(m.turns) != 1 {
+			t.Errorf("expected 1 turn (nextTurnReady ignored), got %d", len(m.turns))
 		}
 	})
 }

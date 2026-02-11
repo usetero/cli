@@ -99,7 +99,7 @@ func (m *Model) renderVisible() []string {
 	if reachedEnd && len(m.blocks) > 0 {
 		lastEntry := m.blocks[len(m.blocks)-1]
 		lastRound := m.rounds[lastEntry.roundIndex]
-		if lastRound.State() != round.StateActive {
+		if !lastRound.IsActive() {
 			for range gapBeforeDivider {
 				lines = append(lines, "")
 			}
@@ -164,7 +164,7 @@ func (m *Model) gapLines(idx int) []string {
 	// Different round — blank lines with an optional divider embedded
 	lines := make([]string, 0, n)
 	prevRound := m.rounds[prev.roundIndex]
-	if prevRound.State() != round.StateActive {
+	if !prevRound.IsActive() {
 		for range gapBeforeDivider {
 			lines = append(lines, "")
 		}

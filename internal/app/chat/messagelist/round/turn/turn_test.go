@@ -301,3 +301,25 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		}
 	})
 }
+
+func TestFireToolResultsOnlyOnce(t *testing.T) {
+	t.Parallel()
+
+	t.Run("second call returns nil", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateAwaitingToolResults
+		m.persisted = true
+		m.pendingTools = 1
+
+		cmd1 := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
+		if cmd1 == nil {
+			t.Fatal("expected non-nil cmd on first fire")
+		}
+
+		cmd2 := m.fireToolResults()
+		if cmd2 != nil {
+			t.Error("expected nil cmd on second fireToolResults call")
+		}
+	})
+}

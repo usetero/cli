@@ -44,10 +44,11 @@ type Model struct {
 	stream *streamState
 
 	// Tool result collection
-	pendingTools   int
-	pendingToolIDs map[string]bool // tool_use IDs belonging to this turn
-	toolResults    []tools.Result
-	persisted      bool // true after assistantMessage is written to DB
+	pendingTools     int
+	pendingToolIDs   map[string]bool // tool_use IDs belonging to this turn
+	toolResults      []tools.Result
+	persisted        bool // true after assistantMessage is written to DB
+	firedToolResults bool // true after fireToolResults has been called
 
 	db           sqlite.DB
 	chatClient   chatclient.Client
@@ -407,7 +408,13 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 }
 
 // fireToolResults fires ToolResultsReady for the round to handle.
+// Guarded by firedToolResults to ensure it can only fire once per turn.
 func (m *Model) fireToolResults() tea.Cmd {
+	if m.firedToolResults {
+		m.scope.Warn("fireToolResults called twice, ignoring")
+		return nil
+	}
+	m.firedToolResults = true
 	turnID := m.userMessage.ID()
 	results := m.toolResults
 	return func() tea.Msg {

@@ -12,7 +12,7 @@ func (m *Model) HasActiveRound() bool {
 	if len(m.rounds) == 0 {
 		return false
 	}
-	return m.rounds[len(m.rounds)-1].State() == round.StateActive
+	return m.rounds[len(m.rounds)-1].IsActive()
 }
 
 // CancelActiveRound cancels the last round if it is still active.
@@ -21,7 +21,7 @@ func (m *Model) CancelActiveRound() {
 		return
 	}
 	last := m.rounds[len(m.rounds)-1]
-	if last.State() == round.StateActive {
+	if last.IsActive() {
 		last.Cancel()
 		m.rebuildBlocks()
 	}

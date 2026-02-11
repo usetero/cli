@@ -23,10 +23,16 @@ import (
 type State int
 
 const (
-	StateActive State = iota
+	StateActive           State = iota
+	StateAwaitingNextTurn       // async DB work in progress before next turn
 	StateComplete
 	StateCancelled
 )
+
+// IsActive returns true if the round is in-flight (active or awaiting next turn).
+func (m *Model) IsActive() bool {
+	return m.state == StateActive || m.state == StateAwaitingNextTurn
+}
 
 // Model represents a complete user→assistant exchange, potentially with multiple turns
 // if tools are involved. A round starts with explicit user input and ends when the
@@ -142,20 +148,25 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case msgs.ToolResultsReady:
-		// Tool results collected by one of our turns - start next turn
+		// Tool results collected by one of our turns - start next turn.
+		// Transition to StateAwaitingNextTurn synchronously to prevent
+		// a second ToolResultsReady from triggering a duplicate startNextTurn.
 		if m.isOurTurn(msg.TurnID) && m.state == StateActive {
+			m.state = StateAwaitingNextTurn
 			cmds = append(cmds, m.startNextTurn(msg.Results))
 		}
 
 	case nextTurnReady:
-		// Internal message after persistence - create and start next turn
-		if msg.roundID == m.id {
+		// Internal message after persistence - create and start next turn.
+		// Only proceed if still awaiting (cancel may have intervened).
+		if msg.roundID == m.id && m.state == StateAwaitingNextTurn {
+			m.state = StateActive
 			cmds = append(cmds, m.handleNextTurnReady(msg))
 		}
 	}
 
 	// Forward thinking ticks while active
-	if m.state == StateActive {
+	if m.IsActive() {
 		cmds = append(cmds, m.thinking.Update(msg))
 	}
 
@@ -259,7 +270,7 @@ func (m *Model) Blocks() []block.Block {
 	for _, t := range m.turns {
 		result = append(result, t.Blocks()...)
 	}
-	if m.state == StateActive {
+	if m.IsActive() {
 		result = append(result, blocks.NewThinkingAnimBlock(m.thinking))
 	}
 	return result
