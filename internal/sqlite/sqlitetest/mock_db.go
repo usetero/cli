@@ -31,9 +31,6 @@ type MockDB struct {
 	// LogEventPoliciesImpl is the mock log event policies implementation.
 	LogEventPoliciesImpl sqlite.LogEventPolicies
 
-	// SubscriptionImpl is returned by Subscribe.
-	SubscriptionImpl *sqlite.Subscription
-
 	// QueryFunc is called by Query.
 	QueryFunc func(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 
@@ -73,11 +70,6 @@ func (m *MockDB) DatadogAccountStatuses() sqlite.DatadogAccountStatuses {
 // ServiceStatuses implements sqlite.DB.
 func (m *MockDB) ServiceStatuses() sqlite.ServiceStatuses {
 	return m.ServiceStatusesImpl
-}
-
-// Subscribe implements sqlite.DB.
-func (m *MockDB) Subscribe() *sqlite.Subscription {
-	return m.SubscriptionImpl
 }
 
 // Query implements sqlite.DB.

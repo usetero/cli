@@ -44,7 +44,6 @@ type DB interface {
 
 	// Sync
 	PendingUploadCounts(ctx context.Context) (map[Table]int64, error)
-	Subscribe() *Subscription
 
 	// Low-level
 	Query(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
@@ -61,7 +60,6 @@ type database struct {
 	db     *sql.DB // write pool — WAL writer, PowerSync controller, mutations
 	readDB *sql.DB // read pool — query_only, all domain reads
 	path   string
-	watch  watchState
 }
 
 // Ensure database implements DB.
@@ -150,11 +148,6 @@ func Open(ctx context.Context, path string) (DB, error) {
 		db.Close()
 		return nil, fmt.Errorf("ping write pool: %w", err)
 	}
-	// SQLite only allows one writer at a time. A single connection avoids
-	// SQLITE_BUSY between writers and ensures powersync_update_hooks state
-	// (which is per-connection) is shared across all write operations.
-	db.SetMaxOpenConns(1)
-
 	// Database-level pragmas (not per-connection — one exec is correct).
 	// WAL allows concurrent readers during writes — the core fix for query blocking during sync.
 	// journal_size_limit caps the WAL file at 6MB to prevent unbounded growth.
@@ -181,22 +174,11 @@ func Open(ctx context.Context, path string) (DB, error) {
 		return nil, fmt.Errorf("ping read pool: %w", err)
 	}
 
-	d := &database{
+	return &database{
 		db:     db,
 		readDB: readDB,
 		path:   path,
-	}
-
-	// Install update hooks for change notifications (only works with PowerSync extension)
-	if extensionPath != "" {
-		if err := d.installUpdateHooks(ctx); err != nil {
-			db.Close()
-			readDB.Close()
-			return nil, fmt.Errorf("install update hooks: %w", err)
-		}
-	}
-
-	return d, nil
+	}, nil
 }
 
 // Close closes both the read and write connection pools.
@@ -240,9 +222,8 @@ func (d *database) ReadQueries() *gen.Queries {
 }
 
 // WriteQueries returns a Queries instance backed by the write pool.
-// Writes kick the watcher so subscribers are notified immediately.
 func (d *database) WriteQueries() *gen.Queries {
-	return gen.New(&kickingDB{db: d.db, kick: d.kickWatcher})
+	return gen.New(d.db)
 }
 
 // ---------------------------------------------------------------------------
@@ -300,14 +281,9 @@ func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql
 	return d.readDB.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a statement via the write pool and kicks the watcher so
-// subscribers are notified without waiting for the next poll tick.
+// Exec executes a statement via the write pool.
 func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	result, err := d.db.ExecContext(ctx, query, args...)
-	if err == nil {
-		d.kickWatcher()
-	}
-	return result, err
+	return d.db.ExecContext(ctx, query, args...)
 }
 
 // BeginTx starts a transaction on the write pool.
