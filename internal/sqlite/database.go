@@ -150,6 +150,10 @@ func Open(ctx context.Context, path string) (DB, error) {
 		db.Close()
 		return nil, fmt.Errorf("ping write pool: %w", err)
 	}
+	// SQLite only allows one writer at a time. A single connection avoids
+	// SQLITE_BUSY between writers and ensures powersync_update_hooks state
+	// (which is per-connection) is shared across all write operations.
+	db.SetMaxOpenConns(1)
 
 	// Database-level pragmas (not per-connection — one exec is correct).
 	// WAL allows concurrent readers during writes — the core fix for query blocking during sync.
@@ -236,8 +240,9 @@ func (d *database) ReadQueries() *gen.Queries {
 }
 
 // WriteQueries returns a Queries instance backed by the write pool.
+// Writes kick the watcher so subscribers are notified immediately.
 func (d *database) WriteQueries() *gen.Queries {
-	return gen.New(d.db)
+	return gen.New(&kickingDB{db: d.db, kick: d.kickWatcher})
 }
 
 // ---------------------------------------------------------------------------
@@ -295,9 +300,14 @@ func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql
 	return d.readDB.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a statement via the write pool.
+// Exec executes a statement via the write pool and kicks the watcher so
+// subscribers are notified without waiting for the next poll tick.
 func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return d.db.ExecContext(ctx, query, args...)
+	result, err := d.db.ExecContext(ctx, query, args...)
+	if err == nil {
+		d.kickWatcher()
+	}
+	return result, err
 }
 
 // BeginTx starts a transaction on the write pool.

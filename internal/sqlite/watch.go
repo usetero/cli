@@ -2,10 +2,13 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/usetero/cli/internal/sqlite/gen"
 )
 
 const (
@@ -32,12 +35,39 @@ func (s *Subscription) Stop() {
 	s.db.unsubscribe(s)
 }
 
+// kickingDB wraps a DBTX and kicks the watcher after successful writes.
+type kickingDB struct {
+	db   gen.DBTX
+	kick func()
+}
+
+func (k *kickingDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	result, err := k.db.ExecContext(ctx, query, args...)
+	if err == nil {
+		k.kick()
+	}
+	return result, err
+}
+
+func (k *kickingDB) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	return k.db.PrepareContext(ctx, query)
+}
+
+func (k *kickingDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return k.db.QueryContext(ctx, query, args...)
+}
+
+func (k *kickingDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return k.db.QueryRowContext(ctx, query, args...)
+}
+
 // watchState manages change detection and subscriber notification.
 type watchState struct {
 	mu          sync.RWMutex
 	subscribers map[*Subscription]struct{}
 	installed   bool
 	cancel      context.CancelFunc
+	kick        chan struct{} // signals an immediate check
 }
 
 // installUpdateHooks enables change tracking via PowerSync's update hooks.
@@ -60,13 +90,15 @@ func (d *database) installUpdateHooks(ctx context.Context) error {
 	// Start background polling goroutine
 	pollCtx, cancel := context.WithCancel(ctx)
 	d.watch.cancel = cancel
+	d.watch.kick = make(chan struct{}, 1)
 	go d.pollForChanges(pollCtx)
 
 	d.watch.installed = true
 	return nil
 }
 
-// pollForChanges runs in the background, checking for table changes periodically.
+// pollForChanges runs in the background, checking for table changes periodically
+// or immediately when kicked by Exec.
 func (d *database) pollForChanges(ctx context.Context) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -77,7 +109,22 @@ func (d *database) pollForChanges(ctx context.Context) {
 			return
 		case <-ticker.C:
 			d.checkForChanges()
+		case <-d.watch.kick:
+			d.checkForChanges()
 		}
+	}
+}
+
+// kickWatcher signals the poll loop to check immediately.
+// Safe to call before hooks are installed (no-op).
+func (d *database) kickWatcher() {
+	if d.watch.kick == nil {
+		return
+	}
+	select {
+	case d.watch.kick <- struct{}{}:
+	default:
+		// Already pending — poller will pick it up.
 	}
 }
 
