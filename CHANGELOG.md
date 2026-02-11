@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/usetero/cli/compare/v1.12.0...v1.13.0) (2026-02-11)
+
+
+### Features
+
+* WAL mode with separate read/write connection pools ([0ffe144](https://github.com/usetero/cli/commit/0ffe1445d999f6a23e02da71ca0c0bb573be7b88))
+
 ## [1.12.0](https://github.com/usetero/cli/compare/v1.11.1...v1.12.0) (2026-02-11)
 
 
