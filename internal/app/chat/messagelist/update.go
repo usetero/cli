@@ -73,8 +73,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				text := m.extractHighlight()
 				if text != "" {
 					cmds = append(cmds, tea.SetClipboard(text))
-					_ = clipboard.WriteAll(text)
-					cmds = append(cmds, appmsg.SuccessCmd("Copied to clipboard"))
+					cmds = append(cmds, func() tea.Msg {
+						_ = clipboard.WriteAll(text)
+						return appmsg.Success{Message: "Copied to clipboard"}
+					})
 				}
 			} else {
 				m.handleBlockClick(m.mouseDownBlock)
