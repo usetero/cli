@@ -153,6 +153,7 @@ github.com/vektah/gqlparser/v2 v2.5.31 h1:YhWGA1mfTjID7qJhd1+Vxhpk5HTgydrGU9IgkW
 github.com/vektah/gqlparser/v2 v2.5.31/go.mod h1:c1I28gSOVNzlfc4WuDlqU7voQnsqI6OG2amkBAFmgts=
 github.com/workos/workos-go/v4 v4.46.1 h1:Gk4EWxLIHxZ8aNlGpvddYyqhtq96fzcTHNqSoq0jVnE=
 github.com/workos/workos-go/v4 v4.46.1/go.mod h1:5NYFvNKzTkxTj2n3AbUc/8SOXvpzmP8LsiB31Vw5RCM=
+github.com/workos/workos-go/v6 v6.4.0/go.mod h1:s2UWX2+JxAjTJ7Gr8B+iiAzs8CbHXPUd/ilqd7t0Ayc=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavMF/ppJZNG9ZpyihvCd0w101no=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e/go.mod h1:RbqR21r5mrJuqunuUZ/Dhy/avygyECGrLceyNeo4LiM=
 github.com/yuin/goldmark v1.7.16 h1:n+CJdUxaFMiDUNnWC3dMWCIQJSkxH4uz3ZwQBkAlVNE=
