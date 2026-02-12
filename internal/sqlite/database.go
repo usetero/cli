@@ -265,7 +265,7 @@ func (d *database) LogEvents() LogEvents {
 
 // LogEventPolicies returns type-safe log event policy operations.
 func (d *database) LogEventPolicies() LogEventPolicies {
-	return &logEventPoliciesImpl{queries: d.ReadQueries()}
+	return &logEventPoliciesImpl{read: d.ReadQueries(), write: d.WriteQueries()}
 }
 
 // CompliancePolicies returns type-safe compliance policy operations.

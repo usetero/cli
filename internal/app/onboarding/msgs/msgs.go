@@ -16,8 +16,10 @@ const (
 // Auth messages.
 
 // AuthChecked is emitted when the auth check completes.
+// When NeedsAuth is false, User contains the authenticated user.
 type AuthChecked struct {
 	NeedsAuth bool
+	User      *auth.User
 }
 
 // Authenticated is emitted when authentication succeeds.

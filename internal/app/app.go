@@ -306,6 +306,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			map[string]chattools.ActionTool{
 				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
 			},
+			chattools.NewPolicyApproveTool(m.db.LogEventPolicies(), func() string {
+				if m.user == nil {
+					return ""
+				}
+				return m.user.ID
+			}),
+			chattools.NewStartJourneyTool(),
+			chattools.NewEndJourneyTool(),
 		)
 
 		// Create chat client with tool definitions

@@ -131,6 +131,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.NeedsAuth {
 			return m.setStep(auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.scope))
 		}
+		// Set user from existing session
+		if msg.User != nil {
+			m.user = msg.User
+		}
 		return m.setStep(role.New(m.theme, m.userPrefs, m.scope))
 
 	case msgs.Authenticated:

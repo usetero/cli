@@ -46,17 +46,7 @@ func (h *policyHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) er
 		return nil
 	}
 
-	// Check if this is a dismissal (dismissed_at is set)
-	if dismissedAt, ok := entry.Data["dismissed_at"]; ok && dismissedAt != nil {
-		err := h.policies.Dismiss(ctx, entry.RowID)
-		if err != nil {
-			return fmt.Errorf("dismiss policy: %w", err)
-		}
-		h.scope.Debug("dismissed policy", "id", entry.RowID)
-		return nil
-	}
-
 	// If neither, just log and skip
-	h.scope.Debug("policy patch with no approve/dismiss", "id", entry.RowID, "data", entry.Data)
+	h.scope.Debug("policy patch with no approve", "id", entry.RowID, "data", entry.Data)
 	return nil
 }

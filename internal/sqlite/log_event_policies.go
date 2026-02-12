@@ -18,12 +18,13 @@ type LogEventPolicies interface {
 
 // logEventPoliciesImpl implements LogEventPolicies.
 type logEventPoliciesImpl struct {
-	queries *gen.Queries
+	read  *gen.Queries
+	write *gen.Queries
 }
 
 // Count returns the total number of log event policies.
 func (l *logEventPoliciesImpl) Count(ctx context.Context) (int64, error) {
-	count, err := l.queries.CountLogEventPolicies(ctx)
+	count, err := l.read.CountLogEventPolicies(ctx)
 	if err != nil {
 		return 0, WrapSQLiteError(err, "count log event policies")
 	}
@@ -32,7 +33,7 @@ func (l *logEventPoliciesImpl) Count(ctx context.Context) (int64, error) {
 
 // ListCategoryStatuses returns policy counts and impact grouped by category.
 func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error) {
-	rows, err := l.queries.ListPolicyCategoryStatuses(ctx)
+	rows, err := l.read.ListPolicyCategoryStatuses(ctx)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list policy category statuses")
 	}
@@ -87,7 +88,7 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 
 func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	err := l.queries.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
+	err := l.write.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
 		ID:         &id,
 		ApprovedAt: &now,
 		ApprovedBy: &userID,
@@ -96,4 +97,11 @@ func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) e
 		return WrapSQLiteError(err, "approve log event policy")
 	}
 	return nil
+}
+
+func derefFloat(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }

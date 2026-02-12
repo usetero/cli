@@ -55,6 +55,9 @@ type Client interface {
 	// Service operations
 	EnableService(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
 	DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
+
+	// Policy operations
+	ApproveLogEventPolicy(ctx context.Context, id string) (*gen.ApproveLogEventPolicyResponse, error)
 }
 
 // client is the concrete implementation of Client.
@@ -282,4 +285,12 @@ func (c *client) DisableService(ctx context.Context, serviceID string) (*gen.Dis
 		return nil, err
 	}
 	return gen.DisableService(ctx, gql, serviceID)
+}
+
+func (c *client) ApproveLogEventPolicy(ctx context.Context, id string) (*gen.ApproveLogEventPolicyResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ApproveLogEventPolicy(ctx, gql, id)
 }

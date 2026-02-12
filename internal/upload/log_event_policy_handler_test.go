@@ -12,19 +12,11 @@ import (
 // mockPolicies implements api.LogEventPolicies for testing.
 type mockPolicies struct {
 	approveFunc func(ctx context.Context, id string) error
-	dismissFunc func(ctx context.Context, id string) error
 }
 
 func (m *mockPolicies) Approve(ctx context.Context, id string) error {
 	if m.approveFunc != nil {
 		return m.approveFunc(ctx, id)
-	}
-	return nil
-}
-
-func (m *mockPolicies) Dismiss(ctx context.Context, id string) error {
-	if m.dismissFunc != nil {
-		return m.dismissFunc(ctx, id)
 	}
 	return nil
 }
@@ -62,39 +54,6 @@ func TestPolicyHandler_Handle(t *testing.T) {
 
 		if approvedID != "policy-123" {
 			t.Errorf("Approve called with id = %q, want %q", approvedID, "policy-123")
-		}
-	})
-
-	t.Run("PATCH with dismissed_at calls Dismiss", func(t *testing.T) {
-		t.Parallel()
-
-		var dismissedID string
-		policies := &mockPolicies{
-			dismissFunc: func(ctx context.Context, id string) error {
-				dismissedID = id
-				return nil
-			},
-		}
-
-		handler := newPolicyHandler(policies, logtest.NewScope(t))
-
-		entry := &db.CrudEntry{
-			Table: "log_event_policies",
-			RowID: "policy-789",
-			Op:    db.OpPatch,
-			Data: map[string]any{
-				"dismissed_at": "2024-01-15T10:00:00Z",
-				"dismissed_by": "user-456",
-			},
-		}
-
-		err := handler.Handle(context.Background(), entry, nil)
-		if err != nil {
-			t.Fatalf("Handle() error = %v", err)
-		}
-
-		if dismissedID != "policy-789" {
-			t.Errorf("Dismiss called with id = %q, want %q", dismissedID, "policy-789")
 		}
 	})
 
@@ -149,16 +108,12 @@ func TestPolicyHandler_Handle(t *testing.T) {
 		}
 	})
 
-	t.Run("ignores PATCH without approve/dismiss data", func(t *testing.T) {
+	t.Run("ignores PATCH without approve data", func(t *testing.T) {
 		t.Parallel()
 
 		policies := &mockPolicies{
 			approveFunc: func(ctx context.Context, id string) error {
 				t.Error("Approve should not be called")
-				return nil
-			},
-			dismissFunc: func(ctx context.Context, id string) error {
-				t.Error("Dismiss should not be called")
 				return nil
 			},
 		}

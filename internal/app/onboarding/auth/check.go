@@ -17,6 +17,7 @@ import (
 // checkResultMsg is the internal message for auth check completion.
 type checkResultMsg struct {
 	hasValidAuth bool
+	userID       string
 	err          error
 }
 
@@ -63,7 +64,14 @@ func (m *CheckModel) checkAuth() tea.Cmd {
 			return checkResultMsg{hasValidAuth: false}
 		}
 
-		return checkResultMsg{hasValidAuth: true}
+		// Get user ID for the authenticated user
+		userID, err := m.auth.GetUserID(m.ctx)
+		if err != nil {
+			_ = m.auth.ClearTokens()
+			return checkResultMsg{hasValidAuth: false}
+		}
+
+		return checkResultMsg{hasValidAuth: true, userID: userID}
 	}
 }
 
@@ -76,12 +84,16 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 			return appmsg.ErrorCmd("Authentication check failed", msg.err, false)
 		}
 		if msg.hasValidAuth {
-			m.scope.Info("auth valid")
+			m.scope.Info("auth valid", "user_id", msg.userID)
 		} else {
 			m.scope.Info("auth required")
 		}
 		return func() tea.Msg {
-			return msgs.AuthChecked{NeedsAuth: !msg.hasValidAuth}
+			result := msgs.AuthChecked{NeedsAuth: !msg.hasValidAuth}
+			if msg.hasValidAuth && msg.userID != "" {
+				result.User = &auth.User{ID: msg.userID}
+			}
+			return result
 		}
 	}
 	return nil
