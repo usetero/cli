@@ -111,3 +111,17 @@ func (q *Queries) ListServicesByAccount(ctx context.Context, accountID *string) 
 	}
 	return items, nil
 }
+
+const setServiceEnabled = `-- name: SetServiceEnabled :exec
+UPDATE services SET enabled = ? WHERE id = ?
+`
+
+type SetServiceEnabledParams struct {
+	Enabled *int64
+	ID      *string
+}
+
+func (q *Queries) SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error {
+	_, err := q.db.ExecContext(ctx, setServiceEnabled, arg.Enabled, arg.ID)
+	return err
+}

@@ -9,3 +9,6 @@ SELECT * FROM services WHERE account_id = ? ORDER BY name;
 
 -- name: CountServices :one
 SELECT COUNT(*) FROM services;
+
+-- name: SetServiceEnabled :exec
+UPDATE services SET enabled = ? WHERE id = ?;

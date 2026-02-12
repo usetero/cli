@@ -63,3 +63,12 @@ mutation EnableService($serviceId: ID!) {
         enabled
     }
 }
+
+# Mutation to disable a service
+mutation DisableService($serviceId: ID!) {
+    updateService(id: $serviceId, input: { enabled: false }) {
+        id
+        name
+        enabled
+    }
+}

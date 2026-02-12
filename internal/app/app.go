@@ -291,9 +291,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Create tool registry with executors
 		m.toolRegistry = &chattools.Registry{
-			Query:        chattools.NewQueryTool(m.db),
-			StartJourney: chattools.NewStartJourneyTool(),
-			EndJourney:   chattools.NewEndJourneyTool(),
+			Query:             chattools.NewQueryTool(m.db),
+			StartJourney:      chattools.NewStartJourneyTool(),
+			EndJourney:        chattools.NewEndJourneyTool(),
+			SetServiceEnabled: chattools.NewSetServiceEnabledTool(m.db),
 		}
 
 		// Create chat client with tool definitions
@@ -486,7 +487,7 @@ func (m *Model) startSync(accountID string) error {
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
 
 	// Create and start uploader
-	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.scope)
+	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.services.Services, m.scope)
 	go func() {
 		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
 			m.scope.Error("uploader error", "error", err)

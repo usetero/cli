@@ -6,6 +6,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/setserviceenabled"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -153,6 +154,8 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	switch toolUse.Name {
 	case m.toolRegistry.Query.Name():
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
+	case m.toolRegistry.SetServiceEnabled.Name():
+		child = setserviceenabled.New(index, toolUse.ID, width, m.toolRegistry.SetServiceEnabled, m.scope)
 	default:
 		child = query.New(m.blockTheme, index, toolUse.ID, width, nil, m.scope)
 	}

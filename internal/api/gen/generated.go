@@ -527,6 +527,35 @@ type DeleteConversationResponse struct {
 // GetDeleteConversation returns DeleteConversationResponse.DeleteConversation, and is useful for accessing the field via an interface.
 func (v *DeleteConversationResponse) GetDeleteConversation() bool { return v.DeleteConversation }
 
+// DisableServiceResponse is returned by DisableService on success.
+type DisableServiceResponse struct {
+	UpdateService DisableServiceUpdateService `json:"updateService"`
+}
+
+// GetUpdateService returns DisableServiceResponse.UpdateService, and is useful for accessing the field via an interface.
+func (v *DisableServiceResponse) GetUpdateService() DisableServiceUpdateService {
+	return v.UpdateService
+}
+
+// DisableServiceUpdateService includes the requested fields of the GraphQL type Service.
+type DisableServiceUpdateService struct {
+	// Unique identifier of the service
+	Id string `json:"id"`
+	// Service identifier in telemetry (e.g., 'checkout-service')
+	Name string `json:"name"`
+	// Whether log analysis and policy generation is active for this service
+	Enabled bool `json:"enabled"`
+}
+
+// GetId returns DisableServiceUpdateService.Id, and is useful for accessing the field via an interface.
+func (v *DisableServiceUpdateService) GetId() string { return v.Id }
+
+// GetName returns DisableServiceUpdateService.Name, and is useful for accessing the field via an interface.
+func (v *DisableServiceUpdateService) GetName() string { return v.Name }
+
+// GetEnabled returns DisableServiceUpdateService.Enabled, and is useful for accessing the field via an interface.
+func (v *DisableServiceUpdateService) GetEnabled() bool { return v.Enabled }
+
 // EnableServiceResponse is returned by EnableService on success.
 type EnableServiceResponse struct {
 	UpdateService EnableServiceUpdateService `json:"updateService"`
@@ -2006,6 +2035,14 @@ type __DeleteConversationInput struct {
 // GetId returns __DeleteConversationInput.Id, and is useful for accessing the field via an interface.
 func (v *__DeleteConversationInput) GetId() string { return v.Id }
 
+// __DisableServiceInput is used internally by genqlient
+type __DisableServiceInput struct {
+	ServiceId string `json:"serviceId"`
+}
+
+// GetServiceId returns __DisableServiceInput.ServiceId, and is useful for accessing the field via an interface.
+func (v *__DisableServiceInput) GetServiceId() string { return v.ServiceId }
+
 // __EnableServiceInput is used internally by genqlient
 type __EnableServiceInput struct {
 	ServiceId string `json:"serviceId"`
@@ -2299,6 +2336,43 @@ func DeleteConversation(
 	}
 
 	data_ = &DeleteConversationResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by DisableService.
+const DisableService_Operation = `
+mutation DisableService ($serviceId: ID!) {
+	updateService(id: $serviceId, input: {enabled:false}) {
+		id
+		name
+		enabled
+	}
+}
+`
+
+// Mutation to disable a service
+func DisableService(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	serviceId string,
+) (data_ *DisableServiceResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "DisableService",
+		Query:  DisableService_Operation,
+		Variables: &__DisableServiceInput{
+			ServiceId: serviceId,
+		},
+	}
+
+	data_ = &DisableServiceResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

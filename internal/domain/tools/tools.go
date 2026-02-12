@@ -11,11 +11,12 @@ type Tool interface {
 
 // Result holds a typed tool result. Exactly one field is set.
 type Result struct {
-	ToolUseID    string
-	Query        *QueryResult
-	StartJourney *StartJourneyResult
-	EndJourney   *EndJourneyResult
-	Error        *ErrorResult
+	ToolUseID         string
+	Query             *QueryResult
+	StartJourney      *StartJourneyResult
+	EndJourney        *EndJourneyResult
+	SetServiceEnabled *SetServiceEnabledResult
+	Error             *ErrorResult
 }
 
 // ToMap serializes the result for the GraphQL API.
@@ -27,6 +28,8 @@ func (r Result) ToMap() map[string]any {
 		return r.StartJourney.ToMap()
 	case r.EndJourney != nil:
 		return r.EndJourney.ToMap()
+	case r.SetServiceEnabled != nil:
+		return r.SetServiceEnabled.ToMap()
 	case r.Error != nil:
 		return map[string]any{"error": r.Error.Message}
 	default:

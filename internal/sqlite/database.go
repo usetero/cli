@@ -254,7 +254,7 @@ func (d *database) ServiceStatuses() ServiceStatuses {
 
 // Services returns type-safe service operations.
 func (d *database) Services() Services {
-	return &servicesImpl{queries: d.ReadQueries()}
+	return &servicesImpl{read: d.ReadQueries(), write: d.WriteQueries()}
 }
 
 // LogEvents returns type-safe log event operations.

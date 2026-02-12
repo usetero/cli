@@ -51,6 +51,10 @@ type Client interface {
 
 	// Message operations
 	CreateMessage(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error)
+
+	// Service operations
+	EnableService(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
+	DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
 }
 
 // client is the concrete implementation of Client.
@@ -260,4 +264,22 @@ func (c *client) CreateMessage(ctx context.Context, input gen.CreateMessageInput
 		return nil, err
 	}
 	return gen.CreateMessage(ctx, gql, input)
+}
+
+// Service operations
+
+func (c *client) EnableService(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.EnableService(ctx, gql, serviceID)
+}
+
+func (c *client) DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.DisableService(ctx, gql, serviceID)
 }

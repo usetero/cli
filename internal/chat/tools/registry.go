@@ -4,9 +4,10 @@ import "github.com/usetero/cli/internal/chat"
 
 // Registry holds tool instances and provides definitions.
 type Registry struct {
-	Query        *QueryTool
-	StartJourney *StartJourneyTool
-	EndJourney   *EndJourneyTool
+	Query             *QueryTool
+	StartJourney      *StartJourneyTool
+	EndJourney        *EndJourneyTool
+	SetServiceEnabled *SetServiceEnabledTool
 }
 
 // Definitions returns tool definitions for the chat API.
@@ -20,6 +21,9 @@ func (r *Registry) Definitions() []chat.Tool {
 	}
 	if r.EndJourney != nil {
 		defs = append(defs, r.EndJourney.Definition())
+	}
+	if r.SetServiceEnabled != nil {
+		defs = append(defs, r.SetServiceEnabled.Definition())
 	}
 	return defs
 }

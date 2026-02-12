@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/usetero/cli/internal/log"
 )
 
 // Services provides access to service operations.
 type Services interface {
-	// No methods yet - services are discovered from observability platforms
+	EnableService(ctx context.Context, serviceID string) error
+	DisableService(ctx context.Context, serviceID string) error
 }
 
 // ServiceService handles service-related operations.
@@ -26,4 +30,22 @@ func NewServiceService(client Client, scope log.Scope) *ServiceService {
 		client: client,
 		scope:  scope.Child("services"),
 	}
+}
+
+// EnableService enables a service for analysis.
+func (s *ServiceService) EnableService(ctx context.Context, serviceID string) error {
+	_, err := s.client.EnableService(ctx, serviceID)
+	if err != nil {
+		return fmt.Errorf("enable service %s: %w", serviceID, err)
+	}
+	return nil
+}
+
+// DisableService disables a service.
+func (s *ServiceService) DisableService(ctx context.Context, serviceID string) error {
+	_, err := s.client.DisableService(ctx, serviceID)
+	if err != nil {
+		return fmt.Errorf("disable service %s: %w", serviceID, err)
+	}
+	return nil
 }

@@ -31,6 +31,7 @@ type Querier interface {
 	ListServiceStatuses(ctx context.Context) ([]ListServiceStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
+	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error
 	UpdateMessageMeta(ctx context.Context, arg UpdateMessageMetaParams) error

@@ -67,6 +67,24 @@ func (m EndJourneyCompleted) GetResult() domaintools.Result {
 }
 func (m EndJourneyCompleted) toolCompleted() {}
 
+// SetServiceEnabledCompleted is fired when a set_service_enabled tool finishes executing.
+type SetServiceEnabledCompleted struct {
+	ToolUseID string
+	Result    domaintools.SetServiceEnabledResult
+	Error     error
+}
+
+func (m SetServiceEnabledCompleted) GetToolUseID() string { return m.ToolUseID }
+func (m SetServiceEnabledCompleted) GetError() error      { return m.Error }
+func (m SetServiceEnabledCompleted) GetResult() domaintools.Result {
+	return domaintools.Result{
+		ToolUseID:         m.ToolUseID,
+		SetServiceEnabled: &m.Result,
+		Error:             errorResultFromErr(m.Error),
+	}
+}
+func (m SetServiceEnabledCompleted) toolCompleted() {}
+
 func errorResultFromErr(err error) *domaintools.ErrorResult {
 	if err == nil {
 		return nil
@@ -79,4 +97,5 @@ var (
 	_ ToolCompleted = QueryCompleted{}
 	_ ToolCompleted = StartJourneyCompleted{}
 	_ ToolCompleted = EndJourneyCompleted{}
+	_ ToolCompleted = SetServiceEnabledCompleted{}
 )

@@ -18,6 +18,7 @@ type APIServices struct {
 	DatadogAccounts DatadogAccounts
 	Conversations   Conversations
 	Messages        Messages
+	Services        Services
 }
 
 // NewServices creates APIServices with an internally-managed client.
@@ -43,6 +44,7 @@ func newAPIServices(client Client, scope log.Scope) APIServices {
 		DatadogAccounts: NewDatadogAccountService(client, scope),
 		Conversations:   NewConversationService(client, scope),
 		Messages:        NewMessageService(client, scope),
+		Services:        NewServiceService(client, scope),
 	}
 }
 

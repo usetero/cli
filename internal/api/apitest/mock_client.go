@@ -24,6 +24,8 @@ type MockClient struct {
 	UpdateConversationFunc                  func(ctx context.Context, id string, input gen.UpdateConversationInput) (*gen.UpdateConversationResponse, error)
 	DeleteConversationFunc                  func(ctx context.Context, id string) (*gen.DeleteConversationResponse, error)
 	CreateMessageFunc                       func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error)
+	EnableServiceFunc                       func(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
+	DisableServiceFunc                      func(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
 }
 
 // NewMockClient creates a MockClient with sensible defaults.
@@ -131,6 +133,20 @@ func (m *MockClient) DeleteConversation(ctx context.Context, id string) (*gen.De
 func (m *MockClient) CreateMessage(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error) {
 	if m.CreateMessageFunc != nil {
 		return m.CreateMessageFunc(ctx, input)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) EnableService(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error) {
+	if m.EnableServiceFunc != nil {
+		return m.EnableServiceFunc(ctx, serviceID)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error) {
+	if m.DisableServiceFunc != nil {
+		return m.DisableServiceFunc(ctx, serviceID)
 	}
 	return nil, nil
 }
