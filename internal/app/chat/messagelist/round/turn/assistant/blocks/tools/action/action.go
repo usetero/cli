@@ -1,46 +1,51 @@
-package setserviceenabled
+// Package action provides a generic tool UI model for simple tools
+// that accumulate input, execute, and show status — with no custom body.
+package action
 
 import (
 	"encoding/json"
-	"fmt"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log"
 )
 
-// Model handles set_service_enabled tool execution and rendering.
+// Executor runs a tool and returns a result.
+type Executor func(input json.RawMessage) (domaintools.Result, error)
+
+// Config provides display strings for the chrome wrapper.
+type Config struct {
+	DisplayName func(input json.RawMessage) string
+	Status      func(input json.RawMessage) string
+	Result      func(result domaintools.Result) string
+}
+
+// Model is a generic tool UI model implementing tools.Child.
 type Model struct {
 	scope    log.Scope
 	index    int
 	toolID   string
 	state    tools.State
-	executor *chattools.SetServiceEnabledTool
+	config   Config
+	executor Executor
 	width    int
 
-	// Input accumulation
-	input string
-
-	// Parsed input
-	serviceID string
-	enabled   bool
-
-	// Results
-	result domaintools.SetServiceEnabledResult
+	input  json.RawMessage
+	result domaintools.Result
 	err    error
 }
 
-// New creates a new set_service_enabled tool model.
-func New(index int, toolID string, width int, executor *chattools.SetServiceEnabledTool, scope log.Scope) *Model {
+// New creates a new generic action tool model.
+func New(index int, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
 	return &Model{
-		scope:    scope.Child("set_service_enabled"),
+		scope:    scope,
 		index:    index,
 		toolID:   toolID,
 		state:    tools.StateAccumulating,
+		config:   config,
 		executor: executor,
 		width:    width,
 	}
@@ -64,7 +69,7 @@ func (m *Model) handleContent(content []domain.Block) tea.Cmd {
 
 	for _, b := range content {
 		if b.Index == m.index && b.Type == domain.BlockTypeToolUse && b.ToolUse != nil {
-			m.input = string(b.ToolUse.Input)
+			m.input = b.ToolUse.Input
 			if b.ToolUse.InputComplete {
 				return m.execute()
 			}
@@ -77,21 +82,7 @@ func (m *Model) handleContent(content []domain.Block) tea.Cmd {
 func (m *Model) execute() tea.Cmd {
 	m.state = tools.StateExecuting
 
-	var in domaintools.SetServiceEnabledInput
-	if err := json.Unmarshal([]byte(m.input), &in); err == nil {
-		m.serviceID = in.ServiceID
-		m.enabled = in.Enabled
-	}
-
-	m.scope.Info("executing", "service_id", m.serviceID, "enabled", m.enabled)
-
-	if m.executor == nil {
-		m.err = fmt.Errorf("no executor")
-		m.state = tools.StateComplete
-		return m.fireCompleted()
-	}
-
-	result, err := m.executor.Execute(json.RawMessage(m.input))
+	result, err := m.executor(m.input)
 	if err != nil {
 		m.err = err
 		m.state = tools.StateComplete
@@ -101,13 +92,12 @@ func (m *Model) execute() tea.Cmd {
 
 	m.result = result
 	m.state = tools.StateComplete
-	m.scope.Info("completed", "service_name", result.ServiceName, "enabled", result.Enabled)
 	return m.fireCompleted()
 }
 
 func (m *Model) fireCompleted() tea.Cmd {
 	return func() tea.Msg {
-		return msgs.SetServiceEnabledCompleted{
+		return msgs.ToolCompleted{
 			ToolUseID: m.toolID,
 			Result:    m.result,
 			Error:     m.err,
@@ -117,37 +107,20 @@ func (m *Model) fireCompleted() tea.Cmd {
 
 // Name returns the display name.
 func (m *Model) Name() string {
-	if m.enabled {
-		return "Enable Service"
-	}
-	return "Disable Service"
+	return m.config.DisplayName(m.input)
 }
 
 // Status returns the status message shown while executing.
 func (m *Model) Status() string {
-	name := m.result.ServiceName
-	if name == "" {
-		name = m.serviceID
-	}
-	if m.enabled {
-		return fmt.Sprintf("Enabling %s", name)
-	}
-	return fmt.Sprintf("Disabling %s", name)
+	return m.config.Status(m.input)
 }
 
 // Result returns the result message shown when complete.
 func (m *Model) Result() string {
-	name := m.result.ServiceName
-	if name == "" {
-		name = m.serviceID
-	}
-	if m.result.Enabled {
-		return fmt.Sprintf("%s enabled", name)
-	}
-	return fmt.Sprintf("%s disabled", name)
+	return m.config.Result(m.result)
 }
 
-// View returns the body content (empty for this tool).
+// View returns empty — simple tools have no body content.
 func (m *Model) View() string {
 	return ""
 }

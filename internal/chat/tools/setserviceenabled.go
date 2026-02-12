@@ -5,30 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// SetServiceEnabledTool enables or disables a service.
-type SetServiceEnabledTool struct {
-	db sqlite.DB
-}
-
-// NewSetServiceEnabledTool creates a new set_service_enabled tool.
-func NewSetServiceEnabledTool(db sqlite.DB) *SetServiceEnabledTool {
-	return &SetServiceEnabledTool{db: db}
-}
-
-// Name returns the tool name.
-func (t *SetServiceEnabledTool) Name() string {
-	return "set_service_enabled"
-}
-
-// Definition returns the tool definition for the chat API.
-func (t *SetServiceEnabledTool) Definition() chat.Tool {
-	return chat.Tool{
-		Name:        t.Name(),
+// NewSetServiceEnabledAction creates an ActionTool for set_service_enabled.
+func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
+	def := chat.Tool{
+		Name:        "set_service_enabled",
 		Description: "Enable or disable a service for log analysis. Enabling triggers the analysis pipeline.",
 		InputSchema: chat.NewObjectSchema(
 			map[string]chat.Property{
@@ -44,32 +30,64 @@ func (t *SetServiceEnabledTool) Definition() chat.Tool {
 			[]string{"service_id", "enabled"},
 		),
 	}
-}
 
-// Execute runs the tool and returns a typed result.
-func (t *SetServiceEnabledTool) Execute(input json.RawMessage) (tools.SetServiceEnabledResult, error) {
-	var in tools.SetServiceEnabledInput
-	if err := json.Unmarshal(input, &in); err != nil {
-		return tools.SetServiceEnabledResult{}, err
+	executor := func(input json.RawMessage) (tools.Result, error) {
+		var in tools.SetServiceEnabledInput
+		if err := json.Unmarshal(input, &in); err != nil {
+			return tools.Result{}, err
+		}
+
+		ctx := context.Background()
+
+		if err := db.Services().SetEnabled(ctx, in.ServiceID, in.Enabled); err != nil {
+			return tools.Result{}, fmt.Errorf("set service enabled: %w", err)
+		}
+
+		var serviceName string
+		row := db.QueryRow(ctx, "SELECT name FROM services WHERE id = ?", in.ServiceID)
+		if err := row.Scan(&serviceName); err != nil {
+			serviceName = in.ServiceID
+		}
+
+		return tools.Result{
+			Content: tools.SetServiceEnabledResult{
+				ServiceID:   in.ServiceID,
+				ServiceName: serviceName,
+				Enabled:     in.Enabled,
+			}.ToMap(),
+		}, nil
 	}
 
-	ctx := context.Background()
-
-	// Write to local SQLite — PowerSync will sync this to the server via the upload handler.
-	if err := t.db.Services().SetEnabled(ctx, in.ServiceID, in.Enabled); err != nil {
-		return tools.SetServiceEnabledResult{}, fmt.Errorf("set service enabled: %w", err)
+	config := action.Config{
+		DisplayName: func(input json.RawMessage) string {
+			var in tools.SetServiceEnabledInput
+			if json.Unmarshal(input, &in) == nil && !in.Enabled {
+				return "Disable Service"
+			}
+			return "Enable Service"
+		},
+		Status: func(input json.RawMessage) string {
+			var in tools.SetServiceEnabledInput
+			if json.Unmarshal(input, &in) != nil {
+				return ""
+			}
+			if in.Enabled {
+				return fmt.Sprintf("Enabling %s", in.ServiceID)
+			}
+			return fmt.Sprintf("Disabling %s", in.ServiceID)
+		},
+		Result: func(result tools.Result) string {
+			name, _ := result.Content["service_name"].(string)
+			if name == "" {
+				name, _ = result.Content["service_id"].(string)
+			}
+			enabled, _ := result.Content["enabled"].(bool)
+			if enabled {
+				return fmt.Sprintf("%s enabled", name)
+			}
+			return fmt.Sprintf("%s disabled", name)
+		},
 	}
 
-	// Read back to get service name for the result.
-	var serviceName string
-	row := t.db.QueryRow(ctx, "SELECT name FROM services WHERE id = ?", in.ServiceID)
-	if err := row.Scan(&serviceName); err != nil {
-		serviceName = in.ServiceID // fall back to ID if name unavailable
-	}
-
-	return tools.SetServiceEnabledResult{
-		ServiceID:   in.ServiceID,
-		ServiceName: serviceName,
-		Enabled:     in.Enabled,
-	}, nil
+	return NewActionTool(def, executor, config)
 }

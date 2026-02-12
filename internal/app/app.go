@@ -290,12 +290,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		catalogCmd := m.statusBar.SetDB(m.db)
 
 		// Create tool registry with executors
-		m.toolRegistry = &chattools.Registry{
-			Query:             chattools.NewQueryTool(m.db),
-			StartJourney:      chattools.NewStartJourneyTool(),
-			EndJourney:        chattools.NewEndJourneyTool(),
-			SetServiceEnabled: chattools.NewSetServiceEnabledTool(m.db),
-		}
+		m.toolRegistry = chattools.NewRegistry(
+			chattools.NewQueryTool(m.db),
+			map[string]chattools.ActionTool{
+				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
+			},
+		)
 
 		// Create chat client with tool definitions
 		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions())

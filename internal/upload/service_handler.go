@@ -9,8 +9,7 @@ import (
 )
 
 // serviceHandler handles uploading service mutations to the GraphQL API.
-// Only PATCH operations that change the "enabled" field are uploaded.
-// All other operations are silently discarded to prevent stalling the queue.
+// Services are server-owned — the client only patches them (e.g. enable/disable).
 type serviceHandler struct {
 	services api.Services
 	scope    log.Scope
@@ -26,25 +25,26 @@ func newServiceHandler(services api.Services, scope log.Scope) *serviceHandler {
 func (h *serviceHandler) Handle(ctx context.Context, entry *db.CrudEntry, emit Emitter) error {
 	_ = emit
 
-	if entry.Op != db.OpPatch {
-		h.scope.Debug("ignoring non-patch op", "op", entry.Op, "rowId", entry.RowID)
+	switch entry.Op {
+	case db.OpPatch:
+		return h.handlePatch(ctx, entry)
+	default:
+		h.scope.Warn("unsupported service op, dropping", "op", entry.Op, "rowId", entry.RowID)
 		return nil
 	}
+}
 
-	enabledVal, ok := entry.Data["enabled"]
-	if !ok {
-		h.scope.Debug("ignoring patch without enabled field", "rowId", entry.RowID)
-		return nil
+func (h *serviceHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) error {
+	if enabledVal, ok := entry.Data["enabled"]; ok {
+		if toBool(enabledVal) {
+			return h.services.EnableService(ctx, entry.RowID)
+		}
+		return h.services.DisableService(ctx, entry.RowID)
 	}
 
-	enabled := toBool(enabledVal)
-	if enabled {
-		h.scope.Debug("enabling service", "rowId", entry.RowID)
-		return h.services.EnableService(ctx, entry.RowID)
-	}
-
-	h.scope.Debug("disabling service", "rowId", entry.RowID)
-	return h.services.DisableService(ctx, entry.RowID)
+	// No mutation available for the patched fields
+	h.scope.Warn("no mutation for patched fields, dropping", "rowId", entry.RowID, "fields", fieldNames(entry.Data))
+	return nil
 }
 
 // toBool converts a value from the CRUD entry data to a boolean.
@@ -63,4 +63,13 @@ func toBool(v any) bool {
 	default:
 		return false
 	}
+}
+
+// fieldNames returns the keys of a map for logging.
+func fieldNames(data map[string]any) []string {
+	names := make([]string, 0, len(data))
+	for k := range data {
+		names = append(names, k)
+	}
+	return names
 }

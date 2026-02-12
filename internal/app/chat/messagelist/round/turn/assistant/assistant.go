@@ -5,8 +5,8 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
-	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/setserviceenabled"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -151,13 +151,16 @@ func (m *Model) hasBlock(index int) bool {
 // newToolBlock creates the appropriate tool model wrapped in chrome.
 func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *tools.Model {
 	var child tools.Child
-	switch toolUse.Name {
-	case m.toolRegistry.Query.Name():
+	switch {
+	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
-	case m.toolRegistry.SetServiceEnabled.Name():
-		child = setserviceenabled.New(index, toolUse.ID, width, m.toolRegistry.SetServiceEnabled, m.scope)
 	default:
-		child = query.New(m.blockTheme, index, toolUse.ID, width, nil, m.scope)
+		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
+		if !ok {
+			m.scope.Warn("unknown tool, using generic action", "name", toolUse.Name)
+			entry = chattools.UnknownTool(toolUse.Name)
+		}
+		child = action.New(index, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
 	}
 	return tools.New(m.blockTheme, index, toolUse.ID, width, child)
 }

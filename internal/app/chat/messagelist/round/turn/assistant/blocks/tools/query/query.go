@@ -224,9 +224,10 @@ func (m *Model) execute() tea.Cmd {
 
 func (m *Model) fireCompleted() tea.Cmd {
 	return func() tea.Msg {
-		return msgs.QueryCompleted{
+		result := domaintools.QueryResult{Rows: m.rows, RowsDropped: m.rowsDropped}
+		return msgs.ToolCompleted{
 			ToolUseID: m.toolID,
-			Result:    domaintools.QueryResult{Rows: m.rows, RowsDropped: m.rowsDropped},
+			Result:    domaintools.Result{Content: result.ToMap()},
 			Error:     m.err,
 		}
 	}
