@@ -267,10 +267,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case onboardingmsg.OrgSelected:
-		return m, m.activateOrg(msg.Org.ID, msg)
+		return m, tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg))
 
 	case onboardingmsg.OrgCreated:
-		return m, m.activateOrg(msg.Org.ID, msg)
+		return m, tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg))
 
 	case onboardingmsg.AccountSelected:
 		// Open database and start syncer when account is selected
