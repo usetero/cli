@@ -150,7 +150,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-			if err == nil && summary.ReadyForUse {
+			if err == nil {
 				m.policySummary = &summary
 			}
 			return m.pollEmptyState()

@@ -86,7 +86,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if key != m.lastState {
 			m.summary = summary
 			m.services = services
-			m.hasData = summary.ServiceCount > 0
+			m.hasData = summary.ActiveServices > 0
 			m.lastState = key
 		}
 
