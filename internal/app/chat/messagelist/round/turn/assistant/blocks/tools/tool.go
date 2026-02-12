@@ -197,23 +197,31 @@ func (m *Model) View() string {
 		}
 
 	case StatusError:
-		// × Query · Checking service status
+		// × ▶ Query · Query rejected  (collapsed)
+		// × ▼ Query · Query rejected  (expanded)
 		//
-		//   ERROR  Connection timeout
-		header := icon + sp + nameStyle.Render(m.child.Name())
-		if status := m.child.Status(); status != "" {
-			header = icon + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+status)
+		//   ERROR  full table scan detected on a JOINed table...
+		result := m.child.Result()
+		chevron := mutedStyle.Render("▶")
+		if m.expanded {
+			chevron = mutedStyle.Render("▼")
 		}
-		errTag := lipgloss.NewStyle().
-			Background(colors.Error).
-			Foreground(colors.OnError).
-			Padding(0, 1).
-			Render("ERROR")
-		errMsg := m.child.Err().Error()
-		body := lipgloss.NewStyle().
-			PaddingLeft(bodyPaddingLeft).
-			Render(errTag + sp + mutedStyle.Render(errMsg))
-		content = header + "\n\n" + body
+		header := icon + sp + chevron + sp + nameStyle.Render(m.child.Name())
+		if result != "" {
+			header = icon + sp + chevron + sp + nameStyle.Render(m.child.Name()) + sp + mutedStyle.Render("· "+result)
+		}
+		if !m.expanded {
+			content = header
+		} else {
+			errTag := lipgloss.NewStyle().
+				Background(colors.Error).
+				Foreground(colors.OnError).
+				Padding(0, 1).
+				Render("ERROR")
+			errMsg := m.child.Err().Error()
+			body := m.bodyStyle().Render(errTag + sp + mutedStyle.Render(errMsg))
+			content = header + "\n\n" + body
+		}
 
 	case StatusCancelled:
 		// ○ Query

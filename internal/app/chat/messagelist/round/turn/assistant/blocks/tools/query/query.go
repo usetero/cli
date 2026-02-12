@@ -97,6 +97,9 @@ func (m *Model) Status() string {
 
 // Result returns the result message with {count} substituted.
 func (m *Model) Result() string {
+	if m.err != nil {
+		return "Query failed"
+	}
 	var base string
 	if m.resultTemplate == "" {
 		base = fmt.Sprintf("%d rows", len(m.rows))

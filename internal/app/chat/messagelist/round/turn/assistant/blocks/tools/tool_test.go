@@ -89,12 +89,13 @@ func TestStatusRendering(t *testing.T) {
 		}
 	})
 
-	t.Run("error shows error tag and message", func(t *testing.T) {
+	t.Run("error collapsed shows icon and result", func(t *testing.T) {
 		t.Parallel()
 		child := &stubChild{
-			name:  "Query",
-			state: StateComplete,
-			err:   errors.New("connection timeout"),
+			name:   "Query",
+			result: "Query failed",
+			state:  StateComplete,
+			err:    errors.New("connection timeout"),
 		}
 		m := newTestTool(t, child)
 		m.updateStatus()
@@ -103,11 +104,32 @@ func TestStatusRendering(t *testing.T) {
 		if !strings.Contains(view, IconError) {
 			t.Error("expected error icon")
 		}
+		if !strings.Contains(view, "Query failed") {
+			t.Error("expected result in collapsed error view")
+		}
+		if strings.Contains(view, "ERROR") {
+			t.Error("ERROR tag should be hidden when collapsed")
+		}
+	})
+
+	t.Run("error expanded shows error tag and message", func(t *testing.T) {
+		t.Parallel()
+		child := &stubChild{
+			name:   "Query",
+			result: "Query failed",
+			state:  StateComplete,
+			err:    errors.New("connection timeout"),
+		}
+		m := newTestTool(t, child)
+		m.updateStatus()
+		m.Toggle()
+		view := m.View()
+
 		if !strings.Contains(view, "ERROR") {
-			t.Error("expected ERROR tag in view")
+			t.Error("expected ERROR tag in expanded view")
 		}
 		if !strings.Contains(view, "connection timeout") {
-			t.Error("expected error message in view")
+			t.Error("expected error message in expanded view")
 		}
 	})
 }
