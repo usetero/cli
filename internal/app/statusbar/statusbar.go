@@ -12,6 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/app/statusbar/catalogstatus"
 	"github.com/usetero/cli/internal/app/statusbar/policystatus"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
@@ -94,6 +95,15 @@ func (m *Model) Init() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	switch msg := msg.(type) {
+	case onboardingmsg.OrgSelected:
+		m.org = msg.Org.Name
+	case onboardingmsg.OrgCreated:
+		m.org = msg.Org.Name
+	case onboardingmsg.WorkspaceSelected:
+		m.workspace = msg.Workspace.Name
+	}
+
 	return tea.Batch(
 		m.syncStatus.Update(msg),
 		m.catalogStatus.Update(msg),
@@ -104,16 +114,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // SetWidth sets the statusbar width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
-}
-
-// SetOrg sets the organization name.
-func (m *Model) SetOrg(org string) {
-	m.org = org
-}
-
-// SetWorkspace sets the workspace name.
-func (m *Model) SetWorkspace(workspace string) {
-	m.workspace = workspace
 }
 
 // SetTitle sets the conversation title.

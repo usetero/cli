@@ -318,9 +318,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"workspace", msg.Workspace.Name,
 		)
 
-		m.statusBar.SetOrg(msg.Org.Name)
-		m.statusBar.SetWorkspace(msg.Workspace.Name)
-
 		// Create chat model (sizing happens via updateLayout)
 		m.chat = m.newChat()
 
