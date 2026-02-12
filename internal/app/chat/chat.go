@@ -459,16 +459,23 @@ func (m *Model) emptyStateContent() string {
 	var suggestions []string
 
 	s := m.policySummary
-	if s == nil || !s.ReadyForUse {
-		// No data yet — generic greeting
+	if s == nil {
+		// Still loading
 		if name != "" {
 			headline = fmt.Sprintf("Hey %s — loading your environment...", name)
 		} else {
 			headline = "Loading your environment..."
 		}
+	} else if s.ActiveServices == 0 {
+		// No services enabled — guide them to get started
+		if name != "" {
+			headline = fmt.Sprintf("Welcome, %s — let's get your environment set up.", name)
+		} else {
+			headline = "Let's get your environment set up."
+		}
 		suggestions = []string{
-			"What services are generating the most logs?",
-			"Show me a summary of my environment",
+			"Help me get started",
+			"What services do I have?",
 			"What does Tero do?",
 		}
 	} else if s.PendingPolicyCount > 0 {
