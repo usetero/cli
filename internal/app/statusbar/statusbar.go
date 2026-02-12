@@ -38,6 +38,7 @@ var tabLabels = [tabCount]string{"Policy", "Catalog", "Sync"}
 // Model renders the app status bar.
 type Model struct {
 	theme         styles.Theme
+	env           string
 	syncStatus    *syncstatus.Model
 	catalogStatus *catalogstatus.Model
 	policyStatus  *policystatus.Model
@@ -60,9 +61,10 @@ type Model struct {
 }
 
 // New creates a new statusbar.
-func New(theme styles.Theme, syncer powersync.Syncer, host string) *Model {
+func New(theme styles.Theme, syncer powersync.Syncer, host string, env string) *Model {
 	return &Model{
 		theme:         theme,
+		env:           env,
 		syncStatus:    syncstatus.New(theme, syncer, host),
 		catalogStatus: catalogstatus.New(theme),
 		policyStatus:  policystatus.New(theme),
@@ -320,11 +322,16 @@ func (m *Model) renderDrawerHint() string {
 	return keyStyle.Render("ctrl+d") + tipStyle.Render(tip)
 }
 
-// renderBrand renders "TERO ● Org" (sync dot + org context as one unit).
+// renderBrand renders "TERO [env] ● Org" (sync dot + org context as one unit).
 func (m *Model) renderBrand() string {
 	colors := m.theme
 
 	brand := styles.ApplyBoldForegroundGrad("TERO", colors.GradientStart, colors.GradientEnd)
+
+	if m.env != "" && m.env != "prd" {
+		envStyle := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
+		brand += " " + envStyle.Render(strings.ToUpper(m.env))
+	}
 
 	syncView := m.syncStatus.CompactView()
 	if syncView != "" {

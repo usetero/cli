@@ -151,7 +151,7 @@ func New(
 		services:    services,
 		userPrefs:   userPrefs,
 		orgPrefs:    orgPrefs,
-		statusBar:   statusbar.New(theme, syncer, cfg.APIEndpoint),
+		statusBar:   statusbar.New(theme, syncer, cfg.APIEndpoint, cfg.Env),
 		toast:       toast.New(theme),
 		keyBar:      keybar.New(theme, scope),
 		onboarding:  onboarding.New(ctx, theme, services, userPrefs, orgPrefs, authService, syncer, scope),
@@ -789,7 +789,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.chat = nil
 	m.services.SetAccountID("") // clear stale account scope
 
-	m.statusBar = statusbar.New(m.theme, m.syncer, m.cfg.APIEndpoint)
+	m.statusBar = statusbar.New(m.theme, m.syncer, m.cfg.APIEndpoint, m.cfg.Env)
 	m.windowTitle = ""
 
 	m.onboarding = onboarding.New(m.ctx, m.theme, m.services, m.userPrefs, m.orgPrefs, m.authService, m.syncer, m.scope)
