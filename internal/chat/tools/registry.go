@@ -17,21 +17,23 @@ type ActionTool struct {
 
 // Registry holds tool instances and provides definitions.
 type Registry struct {
-	Query         *QueryTool
-	PolicyApprove *PolicyApproveTool
-	StartJourney  *StartJourneyTool
-	EndJourney    *EndJourneyTool
-	actions       map[string]ActionTool
+	Query               *QueryTool
+	StartPolicyApproval *StartPolicyApprovalTool
+	PolicyApprove       *PolicyApproveTool
+	StartJourney        *StartJourneyTool
+	EndJourney          *EndJourneyTool
+	actions             map[string]ActionTool
 }
 
 // NewRegistry creates a registry with the query tool, action tools, and specific tools.
-func NewRegistry(query *QueryTool, actions map[string]ActionTool, policyApprove *PolicyApproveTool, startJourney *StartJourneyTool, endJourney *EndJourneyTool) *Registry {
+func NewRegistry(query *QueryTool, actions map[string]ActionTool, policyApprove *PolicyApproveTool, startPolicyApproval *StartPolicyApprovalTool, startJourney *StartJourneyTool, endJourney *EndJourneyTool) *Registry {
 	return &Registry{
-		Query:         query,
-		actions:       actions,
-		PolicyApprove: policyApprove,
-		StartJourney:  startJourney,
-		EndJourney:    endJourney,
+		Query:               query,
+		actions:             actions,
+		PolicyApprove:       policyApprove,
+		StartPolicyApproval: startPolicyApproval,
+		StartJourney:        startJourney,
+		EndJourney:          endJourney,
 	}
 }
 
@@ -43,6 +45,9 @@ func (r *Registry) Definitions() []chat.Tool {
 	}
 	for _, a := range r.actions {
 		defs = append(defs, a.Def)
+	}
+	if r.StartPolicyApproval != nil {
+		defs = append(defs, r.StartPolicyApproval.Definition())
 	}
 	if r.PolicyApprove != nil {
 		defs = append(defs, r.PolicyApprove.Definition())

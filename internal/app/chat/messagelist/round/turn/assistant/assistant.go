@@ -8,6 +8,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/policyapprove"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/startpolicyapproval"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -157,6 +158,8 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
 	case m.toolRegistry.PolicyApprove.Name():
 		child = policyapprove.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.PolicyApprove, m.scope)
+	case m.toolRegistry.StartPolicyApproval.Name():
+		child = startpolicyapproval.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.StartPolicyApproval, m.scope)
 	default:
 		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
 		if !ok {

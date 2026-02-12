@@ -19,6 +19,8 @@ import (
 	"github.com/usetero/cli/internal/app/onboarding"
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/app/palette"
+	"github.com/usetero/cli/internal/app/policyapproval"
+	policyapprovalmsg "github.com/usetero/cli/internal/app/policyapproval/msgs"
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
@@ -44,6 +46,7 @@ type state int
 const (
 	stateOnboarding state = iota
 	stateChat
+	statePolicyApproval
 )
 
 // Layout constants.
@@ -84,14 +87,15 @@ type Model struct {
 	workspace     domain.Workspace
 
 	// Components
-	statusBar  *statusbar.Model
-	toast      *toast.Model
-	keyBar     *keybar.Model
-	onboarding *onboarding.Model
-	chat       *chat.Model
-	quitDlg    *quitDialog
-	palette    *palette.Model
-	state      state
+	statusBar      *statusbar.Model
+	toast          *toast.Model
+	keyBar         *keybar.Model
+	onboarding     *onboarding.Model
+	policyApproval *policyapproval.Model
+	chat           *chat.Model
+	quitDlg        *quitDialog
+	palette        *palette.Model
+	state          state
 
 	// Dimensions
 	width  int
@@ -222,6 +226,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+		if key.Matches(msg, key.NewBinding(key.WithKeys("ctrl+p"))) {
+			m.scope.Info("DEBUG: triggering policy approval")
+			return m, func() tea.Msg {
+				return policyapprovalmsg.Start{
+					ToolUseID: "debug-test",
+					Policies:  []policyapprovalmsg.Policy{{ID: "test-1", ServiceName: "Test Service"}},
+				}
+			}
+		}
+
 		// When quit dialog is open, forward keys to it and consume
 		if m.quitDlg != nil {
 			return m, m.quitDlg.Update(msg)
@@ -306,12 +320,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			map[string]chattools.ActionTool{
 				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
 			},
-			chattools.NewPolicyApproveTool(m.db.LogEventPolicies(), func() string {
-				if m.user == nil {
-					return ""
-				}
-				return m.user.ID
-			}),
+			nil, // PolicyApprove (disabled for now)
+			chattools.NewStartPolicyApprovalTool(),
 			chattools.NewStartJourneyTool(),
 			chattools.NewEndJourneyTool(),
 		)
@@ -337,6 +347,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"account", msg.Account.Name,
 			"workspace", msg.Workspace.Name,
 		)
+
+		// Create chat model (sizing happens via updateLayout)
+		m.chat = m.newChat()
+
+		// Size the new chat component
+		m.updateLayout()
+
+		return m, m.chat.Init()
+
+	case policyapprovalmsg.Start:
+		m.state = statePolicyApproval
+		m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, msg.ToolUseID, m.scope)
+		// m.policyApproval.SetPolicies(msg.Policies)
+		m.updateLayout()
+		return m, m.policyApproval.Init()
+
+	case policyapprovalmsg.PolicyApprovalComplete:
+		m.scope.Info("policy approval complete",
+			"msg", "TODO: add details from message",
+		)
+
+		m.state = stateChat
+		m.policyApproval = nil
 
 		// Create chat model (sizing happens via updateLayout)
 		m.chat = m.newChat()
@@ -392,6 +425,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.chat != nil {
 			cmds = append(cmds, m.chat.Update(msg))
 		}
+	case statePolicyApproval:
+		if m.policyApproval != nil {
+			cmds = append(cmds, m.policyApproval.Update(msg))
+		}
 	}
 
 	// Update keybar after page updates (bindings may have changed)
@@ -421,6 +458,10 @@ func (m *Model) updateLayout() {
 	case stateOnboarding:
 		if m.onboarding != nil {
 			m.onboarding.SetSize(contentWidth, pageHeight)
+		}
+	case statePolicyApproval:
+		if m.policyApproval != nil {
+			m.policyApproval.SetSize(contentWidth, pageHeight)
 		}
 	case stateChat:
 		if m.chat != nil {
@@ -452,6 +493,10 @@ func (m *Model) updateKeyBar() {
 		case stateOnboarding:
 			if m.onboarding != nil {
 				bindings = m.onboarding.ShortHelp()
+			}
+		case statePolicyApproval:
+			if m.policyApproval != nil {
+				bindings = m.policyApproval.ShortHelp()
 			}
 		case stateChat:
 			if m.chat != nil {
@@ -589,6 +634,10 @@ func (m *Model) renderContent() string {
 	switch m.state {
 	case stateOnboarding:
 		pageView = m.onboarding.View()
+	case statePolicyApproval:
+		if m.policyApproval != nil {
+			pageView = m.policyApproval.View()
+		}
 	case stateChat:
 		if m.chat != nil {
 			pageView = m.chat.View()

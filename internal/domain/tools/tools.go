@@ -3,13 +3,14 @@ package tools
 
 // Result holds a tool result with serialized content.
 type Result struct {
-	ToolUseID     string
-	Content       map[string]any // serialized tool result (for generic action tools)
-	Query         *QueryResult
-	PolicyApprove *PolicyApproveResult
-	StartJourney  *StartJourneyResult
-	EndJourney    *EndJourneyResult
-	Error         *ErrorResult
+	ToolUseID           string
+	Content             map[string]any // serialized tool result (for generic action tools)
+	Query               *QueryResult
+	StartPolicyApproval *StartPolicyApprovalResult
+	PolicyApprove       *PolicyApproveResult
+	StartJourney        *StartJourneyResult
+	EndJourney          *EndJourneyResult
+	Error               *ErrorResult
 }
 
 // ToMap serializes the result for the GraphQL API.
@@ -17,6 +18,8 @@ func (r Result) ToMap() map[string]any {
 	switch {
 	case r.Query != nil:
 		return r.Query.ToMap()
+	case r.StartPolicyApproval != nil:
+		return r.StartPolicyApproval.ToMap()
 	case r.StartJourney != nil:
 		return r.StartJourney.ToMap()
 	case r.EndJourney != nil:
