@@ -198,6 +198,11 @@ func (m *Model) renderSummary() string {
 		parts = append(parts, evtLabel)
 	}
 
+	// Total volume.
+	if s.TotalVolumePerHour > 0 {
+		parts = append(parts, format.Volume(s.TotalVolumePerHour)+" evt/hr")
+	}
+
 	// Total cost from account summary (pre-aggregated by control plane).
 	if s.TotalCostPerHour != nil {
 		if cost := format.YearlyCost(*s.TotalCostPerHour); cost != "$0/yr" {

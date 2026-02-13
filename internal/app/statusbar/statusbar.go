@@ -220,16 +220,16 @@ func (m *Model) View() string {
 		segments = append(segments, servicesView)
 	}
 
-	// 3. PII leakage (red dot + count when findings exist)
-	piiView := m.piiStatus.CompactView()
-	if piiView != "" {
-		segments = append(segments, piiView)
-	}
-
-	// 4. Waste status (pending count, estimated/observed savings)
+	// 3. Waste status (pending count, estimated/observed savings)
 	wasteView := m.wasteStatus.CompactView()
 	if wasteView != "" {
 		segments = append(segments, wasteView)
+	}
+
+	// 4. PII leakage (red dot + count when findings exist)
+	piiView := m.piiStatus.CompactView()
+	if piiView != "" {
+		segments = append(segments, piiView)
 	}
 
 	// Calculate what fits
