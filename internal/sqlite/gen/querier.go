@@ -29,6 +29,7 @@ type Querier interface {
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
+	ListPIIPolicies(ctx context.Context) ([]ListPIIPoliciesRow, error)
 	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)

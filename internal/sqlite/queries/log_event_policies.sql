@@ -34,3 +34,20 @@ WHERE leps.category IS NOT NULL AND leps.category != ''
 GROUP BY leps.category
 ORDER BY
   SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END) DESC;
+
+-- name: ListPIIPolicies :many
+SELECT
+  COALESCE(s.name, '') AS service_name,
+  COALESCE(le.name, '') AS log_event_name,
+  COALESCE(leps.risk_level, '') AS risk_level,
+  COALESCE(leps.status, '') AS status,
+  COALESCE(lep.analysis, '') AS analysis
+FROM log_event_policy_statuses_cache leps
+JOIN log_events le ON le.id = leps.log_event_id
+JOIN services s ON s.id = le.service_id
+LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+WHERE leps.category = 'pii_leakage'
+ORDER BY
+  CASE leps.risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+  CASE leps.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END,
+  s.name, le.name;

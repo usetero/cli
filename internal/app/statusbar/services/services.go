@@ -140,10 +140,7 @@ func (m *Model) CompactView() string {
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 	d := status.ServiceDot(m.theme, s.Health)
 
-	label := fmt.Sprintf("%d svcs · %d log events", s.ActiveServices, s.EventCount)
-	if pct := summaryDiscoveryPercent(s); pct < discoveryDoneThreshold {
-		label += fmt.Sprintf(" (%d%%)", pct)
-	}
+	label := fmt.Sprintf("%d svcs", s.ActiveServices)
 
 	return d + " " + muted.Render(label)
 }

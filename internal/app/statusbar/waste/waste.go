@@ -77,9 +77,17 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return m.poll()
 		}
 
-		categories, err := m.db.LogEventPolicies().ListCategoryStatuses(ctx)
+		allCategories, err := m.db.LogEventPolicies().ListCategoryStatuses(ctx)
 		if err != nil {
-			categories = nil
+			allCategories = nil
+		}
+
+		// Filter out PII leakage — it has its own dedicated tab.
+		var categories []domain.PolicyCategoryStatus
+		for _, c := range allCategories {
+			if c.Category != "pii_leakage" {
+				categories = append(categories, c)
+			}
 		}
 
 		key := m.stateKey(summary, categories)

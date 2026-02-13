@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/app/statusbar/pii"
 	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/app/statusbar/waste"
@@ -26,14 +27,15 @@ const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabWaste    = 0
-	TabServices = 1
-	TabSync     = 2
-	tabCount    = 3
+	TabPII      = 0
+	TabWaste    = 1
+	TabServices = 2
+	TabSync     = 3
+	tabCount    = 4
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Waste", "Services", "Sync"}
+var tabLabels = [tabCount]string{"PII", "Waste", "Services", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
@@ -42,6 +44,7 @@ type Model struct {
 	syncStatus     *syncstatus.Model
 	servicesStatus *services.Model
 	wasteStatus    *waste.Model
+	piiStatus      *pii.Model
 	width          int
 
 	// Account context
@@ -68,6 +71,7 @@ func New(theme styles.Theme, syncer powersync.Syncer, host string, env string) *
 		syncStatus:     syncstatus.New(theme, syncer, host),
 		servicesStatus: services.New(theme),
 		wasteStatus:    waste.New(theme),
+		piiStatus:      pii.New(theme),
 	}
 }
 
@@ -83,6 +87,7 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 		m.syncStatus.SetDB(db),
 		m.servicesStatus.SetDB(db),
 		m.wasteStatus.SetDB(db),
+		m.piiStatus.SetDB(db),
 	)
 }
 
@@ -92,6 +97,7 @@ func (m *Model) Init() tea.Cmd {
 		m.syncStatus.Init(),
 		m.servicesStatus.Init(),
 		m.wasteStatus.Init(),
+		m.piiStatus.Init(),
 	)
 }
 
@@ -110,6 +116,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.syncStatus.Update(msg),
 		m.servicesStatus.Update(msg),
 		m.wasteStatus.Update(msg),
+		m.piiStatus.Update(msg),
 	)
 }
 
@@ -135,7 +142,7 @@ func (m *Model) ToggleDrawer() {
 		m.drawerOpen = false
 		return
 	}
-	if m.servicesStatus.HasData() || m.wasteStatus.HasData() {
+	if m.piiStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() {
 		m.drawerOpen = true
 	}
 }
@@ -188,7 +195,13 @@ func (m *Model) View() string {
 		segments = append(segments, servicesView)
 	}
 
-	// 3. Waste status (pending count, estimated/observed savings)
+	// 3. PII leakage (red dot + count when findings exist)
+	piiView := m.piiStatus.CompactView()
+	if piiView != "" {
+		segments = append(segments, piiView)
+	}
+
+	// 4. Waste status (pending count, estimated/observed savings)
 	wasteView := m.wasteStatus.CompactView()
 	if wasteView != "" {
 		segments = append(segments, wasteView)
@@ -260,6 +273,8 @@ func (m *Model) DrawerView(width, height int) string {
 	contentHeight := height - 4 // border (2) + tab bar (1) + gap (1)
 	var content string
 	switch m.activeTab {
+	case TabPII:
+		content = m.piiStatus.ExpandedView(contentWidth, contentHeight)
 	case TabSync:
 		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
 	case TabServices:
@@ -306,7 +321,7 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	// Hide hint until data is loaded and the drawer can open.
-	if !m.drawerOpen && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
+	if !m.drawerOpen && !m.piiStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
 		return ""
 	}
 

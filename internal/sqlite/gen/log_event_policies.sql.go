@@ -20,6 +20,61 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const listPIIPolicies = `-- name: ListPIIPolicies :many
+SELECT
+  COALESCE(s.name, '') AS service_name,
+  COALESCE(le.name, '') AS log_event_name,
+  COALESCE(leps.risk_level, '') AS risk_level,
+  COALESCE(leps.status, '') AS status,
+  COALESCE(lep.analysis, '') AS analysis
+FROM log_event_policy_statuses_cache leps
+JOIN log_events le ON le.id = leps.log_event_id
+JOIN services s ON s.id = le.service_id
+LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+WHERE leps.category = 'pii_leakage'
+ORDER BY
+  CASE leps.risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+  CASE leps.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END,
+  s.name, le.name
+`
+
+type ListPIIPoliciesRow struct {
+	ServiceName  string
+	LogEventName string
+	RiskLevel    string
+	Status       string
+	Analysis     string
+}
+
+func (q *Queries) ListPIIPolicies(ctx context.Context) ([]ListPIIPoliciesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPIIPolicies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPIIPoliciesRow
+	for rows.Next() {
+		var i ListPIIPoliciesRow
+		if err := rows.Scan(
+			&i.ServiceName,
+			&i.LogEventName,
+			&i.RiskLevel,
+			&i.Status,
+			&i.Analysis,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPolicyCategoryStatuses = `-- name: ListPolicyCategoryStatuses :many
 SELECT
   COALESCE(leps.category, '') AS category,

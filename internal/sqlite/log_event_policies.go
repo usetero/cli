@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
@@ -11,6 +12,7 @@ import (
 type LogEventPolicies interface {
 	Count(ctx context.Context) (int64, error)
 	ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
+	ListPIIPolicies(ctx context.Context) ([]domain.PIIPolicy, error)
 }
 
 // logEventPoliciesImpl implements LogEventPolicies.
@@ -53,6 +55,35 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			ObservedCostBefore:     derefFloat(row.ObservedCostBefore),
 			ObservedCostAfter:      derefFloat(row.ObservedCostAfter),
 		}
+	}
+	return result, nil
+}
+
+// ListPIIPolicies returns individual PII leakage policies with service/event context.
+func (l *logEventPoliciesImpl) ListPIIPolicies(ctx context.Context) ([]domain.PIIPolicy, error) {
+	rows, err := l.queries.ListPIIPolicies(ctx)
+	if err != nil {
+		return nil, WrapSQLiteError(err, "list pii policies")
+	}
+
+	result := make([]domain.PIIPolicy, 0, len(rows))
+	for _, row := range rows {
+		p := domain.PIIPolicy{
+			LogEventName: row.LogEventName,
+			ServiceName:  row.ServiceName,
+			RiskLevel:    domain.RiskLevel(row.RiskLevel),
+			Status:       domain.PolicyLogStatus(row.Status),
+		}
+
+		// Parse the analysis JSON to extract PII field paths.
+		if row.Analysis != "" {
+			var envelope domain.PIIAnalysisEnvelope
+			if err := json.Unmarshal([]byte(row.Analysis), &envelope); err == nil && envelope.PIILeakage != nil {
+				p.Fields = envelope.PIILeakage.Fields
+			}
+		}
+
+		result = append(result, p)
 	}
 	return result, nil
 }
