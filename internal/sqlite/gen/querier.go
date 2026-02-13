@@ -31,6 +31,7 @@ type Querier interface {
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
 	ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error)
+	ListApprovedPoliciesByCategory(ctx context.Context, category *string) ([]ListApprovedPoliciesByCategoryRow, error)
 	// Compliance policy queries for PII, Secrets, PHI, and Payment Data leakage.
 	// Returns summary stats for each of the 4 compliance categories.
 	ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error)

@@ -7,7 +7,6 @@ type Result struct {
 	Content             map[string]any // serialized tool result (for generic action tools)
 	Query               *QueryResult
 	StartPolicyApproval *StartPolicyApprovalResult
-	PolicyApprove       *PolicyApproveResult
 	StartJourney        *StartJourneyResult
 	EndJourney          *EndJourneyResult
 	Error               *ErrorResult
@@ -24,8 +23,6 @@ func (r Result) ToMap() map[string]any {
 		return r.StartJourney.ToMap()
 	case r.EndJourney != nil:
 		return r.EndJourney.ToMap()
-	case r.PolicyApprove != nil:
-		return r.PolicyApprove.ToMap()
 	case r.Error != nil:
 		return map[string]any{"error": r.Error.Message}
 	}

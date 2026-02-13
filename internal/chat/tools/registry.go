@@ -19,7 +19,6 @@ type ActionTool struct {
 type Registry struct {
 	Query               *QueryTool
 	StartPolicyApproval *StartPolicyApprovalTool
-	PolicyApprove       *PolicyApproveTool
 	StartJourney        *StartJourneyTool
 	EndJourney          *EndJourneyTool
 	actions             map[string]ActionTool
@@ -48,9 +47,6 @@ func (r *Registry) Definitions() []chat.Tool {
 	}
 	if r.StartPolicyApproval != nil {
 		defs = append(defs, r.StartPolicyApproval.Definition())
-	}
-	if r.PolicyApprove != nil {
-		defs = append(defs, r.PolicyApprove.Definition())
 	}
 	if r.StartJourney != nil {
 		defs = append(defs, r.StartJourney.Definition())

@@ -61,24 +61,6 @@ func (m EndJourneyCompleted) GetResult() domaintools.Result {
 	}
 }
 
-// PolicyApproveCompleted is fired when a policy approve tool finishes executing.
-type PolicyApproveCompleted struct {
-	ToolUseID string
-	PolicyID  string
-	Approved  bool
-	Error     error
-}
-
-func (m PolicyApproveCompleted) GetToolUseID() string { return m.ToolUseID }
-func (m PolicyApproveCompleted) GetError() error      { return m.Error }
-func (m PolicyApproveCompleted) GetResult() domaintools.Result {
-	return domaintools.Result{
-		ToolUseID:     m.ToolUseID,
-		PolicyApprove: &domaintools.PolicyApproveResult{Approved: m.Approved},
-		Error:         errorResultFromErr(m.Error),
-	}
-}
-
 // StartPolicyApprovalCompleted is fired when the policy approval wizard is triggered.
 type StartPolicyApprovalCompleted struct {
 	ToolUseID string

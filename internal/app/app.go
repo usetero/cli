@@ -334,7 +334,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			map[string]chattools.ActionTool{
 				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
 			},
-			nil, // PolicyApprove (disabled for now)
+			nil, // PolicyApprove (removed)
 			chattools.NewStartPolicyApprovalTool(),
 			chattools.NewStartJourneyTool(),
 			chattools.NewEndJourneyTool(),

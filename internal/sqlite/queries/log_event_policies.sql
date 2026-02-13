@@ -77,6 +77,19 @@ LEFT JOIN log_events e ON c.log_event_id = e.id
 WHERE c.category = ? AND c.status = 'PENDING'
 ORDER BY c.estimated_cost_reduction_per_hour_usd DESC;
 
+-- name: ListApprovedPoliciesByCategory :many
+SELECT
+  c.policy_id,
+  c.risk_level,
+  c.benefits,
+  c.estimated_cost_reduction_per_hour_usd,
+  c.estimated_volume_reduction_per_hour,
+  COALESCE(e.name, '') AS log_event_name
+FROM log_event_policy_statuses_cache c
+LEFT JOIN log_events e ON c.log_event_id = e.id
+WHERE c.category = ? AND c.status = 'APPROVED'
+ORDER BY c.estimated_cost_reduction_per_hour_usd DESC;
+
 -- name: ApproveLogEventPolicy :exec
 UPDATE log_event_policies
 SET approved_at = ?, approved_by = ?

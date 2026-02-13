@@ -6,7 +6,6 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
-	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/policyapprove"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/startpolicyapproval"
 	"github.com/usetero/cli/internal/app/chat/msgs"
@@ -156,8 +155,6 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
-	case m.toolRegistry.PolicyApprove.Name():
-		child = policyapprove.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.PolicyApprove, m.scope)
 	case m.toolRegistry.StartPolicyApproval.Name():
 		child = startpolicyapproval.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.StartPolicyApproval, m.scope)
 	default:
