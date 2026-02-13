@@ -194,6 +194,10 @@ func (t *QueryTool) checkQueryPlan(ctx context.Context, sql string) error {
 		}
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil
+	}
+
 	if len(scans) == 0 {
 		return nil
 	}
