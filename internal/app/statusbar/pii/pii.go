@@ -13,7 +13,6 @@ import (
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/status"
 	"github.com/usetero/cli/internal/tea/components/table"
 )
 
@@ -93,8 +92,11 @@ func (m *Model) stateKey(policies []domain.PIIPolicy) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d", len(policies))
 	for _, p := range policies {
-		fmt.Fprintf(&b, "|%s:%s:%s:%s:%d",
-			p.ServiceName, p.LogEventName, p.RiskLevel, p.Status, len(p.Fields))
+		fmt.Fprintf(&b, "|%s:%s:%s:%d",
+			p.ServiceName, p.LogEventName, p.Status, len(p.Fields))
+		for _, f := range p.Fields {
+			fmt.Fprintf(&b, ":%s", f.PIIType)
+		}
 	}
 	return b.String()
 }
@@ -172,53 +174,58 @@ func (m *Model) renderTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(40))
-	tbl.Headers("Log Event", "Service", "Risk", "Leaking")
+	tbl.Headers("Log Event", "Service", "Leaking")
 	tbl.SetWidth(width)
 
 	for _, p := range m.policies {
 		tbl.Row(
 			p.LogEventName,
 			p.ServiceName,
-			status.Risk(m.theme, p.RiskLevel, true),
-			formatFields(p.Fields),
+			formatPIITypes(p.Fields, 3),
 		)
 	}
 
 	return tbl.View()
 }
 
-// formatFields joins PII field paths into a readable string.
-// [["attributes","user","email"]] → "user.email"
-// Strips the leading "attributes"/"resource_attributes" namespace for readability.
-func formatFields(fields [][]string) string {
+// formatPIITypes returns deduplicated PII type labels, showing at most maxShow
+// before truncating with "+N". For example: "email, phone, +2".
+func formatPIITypes(fields []domain.PIIField, maxShow int) string {
 	if len(fields) == 0 {
 		return "—"
 	}
 
-	names := make([]string, 0, len(fields))
-	for _, path := range fields {
-		names = append(names, formatFieldPath(path))
-	}
-	return strings.Join(names, ", ")
-}
-
-// formatFieldPath converts a field path to a dot-separated string,
-// stripping common OTel namespace prefixes.
-func formatFieldPath(path []string) string {
-	if len(path) == 0 {
-		return ""
-	}
-
-	// Strip common OTel namespace prefixes for readability.
-	start := 0
-	if len(path) > 1 {
-		switch path[0] {
-		case "attributes", "resource_attributes", "scope_attributes":
-			start = 1
+	// Deduplicate and preserve first-seen order.
+	seen := make(map[string]bool)
+	var types []string
+	for _, f := range fields {
+		label := displayPIIType(f.PIIType)
+		if !seen[label] {
+			seen[label] = true
+			types = append(types, label)
 		}
 	}
 
-	return strings.Join(path[start:], ".")
+	if len(types) <= maxShow {
+		return strings.Join(types, ", ")
+	}
+	return strings.Join(types[:maxShow], ", ") + fmt.Sprintf(", +%d", len(types)-maxShow)
+}
+
+// displayPIIType returns a human-readable label for a pii_type value.
+func displayPIIType(t string) string {
+	switch t {
+	case domain.PIITypeCreditCard:
+		return "credit card"
+	case domain.PIITypeIPAddress:
+		return "IP address"
+	case domain.PIITypeSSN:
+		return "SSN"
+	case domain.PIITypeDateOfBirth:
+		return "date of birth"
+	default:
+		return t
+	}
 }
 
 func (m *Model) pendingCount() int {
