@@ -81,17 +81,19 @@ func (m *Model) handleContent(content []domain.Block) tea.Cmd {
 
 func (m *Model) execute() tea.Cmd {
 	m.state = tools.StateExecuting
+	m.scope.Info("executing action", "name", m.config.DisplayName(m.input), "input", string(m.input))
 
 	result, err := m.executor(m.input)
 	if err != nil {
 		m.err = err
 		m.state = tools.StateComplete
-		m.scope.Error("failed", "error", err)
+		m.scope.Error("action failed", "name", m.config.DisplayName(m.input), "error", err)
 		return m.fireCompleted()
 	}
 
 	m.result = result
 	m.state = tools.StateComplete
+	m.scope.Info("action completed", "name", m.config.DisplayName(m.input))
 	return m.fireCompleted()
 }
 
