@@ -44,9 +44,9 @@ func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
 		}
 
 		var serviceName string
-		row := db.QueryRow(ctx, "SELECT name FROM services WHERE id = ?", in.ServiceID)
+		row := db.QueryRow(ctx, "SELECT name FROM services WHERE id = ?", in.ServiceID.String())
 		if err := row.Scan(&serviceName); err != nil {
-			serviceName = in.ServiceID
+			serviceName = in.ServiceID.String()
 		}
 
 		return tools.Result{

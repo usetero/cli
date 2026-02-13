@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
 )
@@ -36,10 +37,11 @@ func (h *serviceHandler) Handle(ctx context.Context, entry *db.CrudEntry, emit E
 
 func (h *serviceHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) error {
 	if enabledVal, ok := entry.Data["enabled"]; ok {
+		id := domain.ServiceID(entry.RowID)
 		if toBool(enabledVal) {
-			return h.services.EnableService(ctx, entry.RowID)
+			return h.services.EnableService(ctx, id)
 		}
-		return h.services.DisableService(ctx, entry.RowID)
+		return h.services.DisableService(ctx, id)
 	}
 
 	// No mutation available for the patched fields

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db"
 )
@@ -16,9 +17,9 @@ func TestServiceHandler_Handle(t *testing.T) {
 	t.Run("PATCH enabled=true calls EnableService", func(t *testing.T) {
 		t.Parallel()
 
-		var enabledID string
+		var enabledID domain.ServiceID
 		mock := &apitest.MockAPIServiceServices{
-			EnableServiceFunc: func(ctx context.Context, serviceID string) error {
+			EnableServiceFunc: func(ctx context.Context, serviceID domain.ServiceID) error {
 				enabledID = serviceID
 				return nil
 			},
@@ -43,9 +44,9 @@ func TestServiceHandler_Handle(t *testing.T) {
 	t.Run("PATCH enabled=false calls DisableService", func(t *testing.T) {
 		t.Parallel()
 
-		var disabledID string
+		var disabledID domain.ServiceID
 		mock := &apitest.MockAPIServiceServices{
-			DisableServiceFunc: func(ctx context.Context, serviceID string) error {
+			DisableServiceFunc: func(ctx context.Context, serviceID domain.ServiceID) error {
 				disabledID = serviceID
 				return nil
 			},
@@ -72,7 +73,7 @@ func TestServiceHandler_Handle(t *testing.T) {
 
 		var called bool
 		mock := &apitest.MockAPIServiceServices{
-			EnableServiceFunc: func(ctx context.Context, serviceID string) error {
+			EnableServiceFunc: func(ctx context.Context, serviceID domain.ServiceID) error {
 				called = true
 				return nil
 			},
@@ -98,7 +99,7 @@ func TestServiceHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockAPIServiceServices{
-			EnableServiceFunc: func(ctx context.Context, serviceID string) error {
+			EnableServiceFunc: func(ctx context.Context, serviceID domain.ServiceID) error {
 				return errors.New("network error")
 			},
 		}

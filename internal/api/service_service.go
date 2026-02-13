@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
 // Services provides access to service operations.
 type Services interface {
-	EnableService(ctx context.Context, serviceID string) error
-	DisableService(ctx context.Context, serviceID string) error
+	EnableService(ctx context.Context, serviceID domain.ServiceID) error
+	DisableService(ctx context.Context, serviceID domain.ServiceID) error
 }
 
 // ServiceService handles service-related operations.
@@ -33,8 +34,8 @@ func NewServiceService(client Client, scope log.Scope) *ServiceService {
 }
 
 // EnableService enables a service for analysis.
-func (s *ServiceService) EnableService(ctx context.Context, serviceID string) error {
-	_, err := s.client.EnableService(ctx, serviceID)
+func (s *ServiceService) EnableService(ctx context.Context, serviceID domain.ServiceID) error {
+	_, err := s.client.EnableService(ctx, serviceID.String())
 	if err != nil {
 		return fmt.Errorf("enable service %s: %w", serviceID, err)
 	}
@@ -42,8 +43,8 @@ func (s *ServiceService) EnableService(ctx context.Context, serviceID string) er
 }
 
 // DisableService disables a service.
-func (s *ServiceService) DisableService(ctx context.Context, serviceID string) error {
-	_, err := s.client.DisableService(ctx, serviceID)
+func (s *ServiceService) DisableService(ctx context.Context, serviceID domain.ServiceID) error {
+	_, err := s.client.DisableService(ctx, serviceID.String())
 	if err != nil {
 		return fmt.Errorf("disable service %s: %w", serviceID, err)
 	}

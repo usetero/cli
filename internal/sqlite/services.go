@@ -3,13 +3,14 @@ package sqlite
 import (
 	"context"
 
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
 )
 
 // Services provides type-safe access to services.
 type Services interface {
 	Count(ctx context.Context) (int64, error)
-	SetEnabled(ctx context.Context, id string, enabled bool) error
+	SetEnabled(ctx context.Context, id domain.ServiceID, enabled bool) error
 }
 
 // servicesImpl implements Services.
@@ -28,14 +29,15 @@ func (s *servicesImpl) Count(ctx context.Context) (int64, error) {
 }
 
 // SetEnabled enables or disables a service.
-func (s *servicesImpl) SetEnabled(ctx context.Context, id string, enabled bool) error {
+func (s *servicesImpl) SetEnabled(ctx context.Context, id domain.ServiceID, enabled bool) error {
 	var val int64
 	if enabled {
 		val = 1
 	}
+	idStr := id.String()
 	err := s.write.SetServiceEnabled(ctx, gen.SetServiceEnabledParams{
 		Enabled: &val,
-		ID:      &id,
+		ID:      &idStr,
 	})
 	if err != nil {
 		return WrapSQLiteError(err, "set service enabled")

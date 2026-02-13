@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/domain"
 )
 
 // MockAPIServiceServices is a mock implementation of api.Services.
 type MockAPIServiceServices struct {
-	EnableServiceFunc  func(ctx context.Context, serviceID string) error
-	DisableServiceFunc func(ctx context.Context, serviceID string) error
+	EnableServiceFunc  func(ctx context.Context, serviceID domain.ServiceID) error
+	DisableServiceFunc func(ctx context.Context, serviceID domain.ServiceID) error
 }
 
 var _ api.Services = (*MockAPIServiceServices)(nil)
@@ -19,14 +20,14 @@ func NewMockAPIServiceServices() *MockAPIServiceServices {
 	return &MockAPIServiceServices{}
 }
 
-func (m *MockAPIServiceServices) EnableService(ctx context.Context, serviceID string) error {
+func (m *MockAPIServiceServices) EnableService(ctx context.Context, serviceID domain.ServiceID) error {
 	if m.EnableServiceFunc != nil {
 		return m.EnableServiceFunc(ctx, serviceID)
 	}
 	return nil
 }
 
-func (m *MockAPIServiceServices) DisableService(ctx context.Context, serviceID string) error {
+func (m *MockAPIServiceServices) DisableService(ctx context.Context, serviceID domain.ServiceID) error {
 	if m.DisableServiceFunc != nil {
 		return m.DisableServiceFunc(ctx, serviceID)
 	}
