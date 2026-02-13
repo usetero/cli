@@ -159,12 +159,21 @@ func (m *DiscoveryModel) View() string {
 
 	statusText := m.statusText()
 	statusLine := m.spinner.View() + " " + s.Body.Render(statusText)
-	progressBar := m.progress.ViewAs(m.status.PercentComplete)
+
+	// Derive progress from analyzed/total events.
+	var pct float64
+	if m.status.EventCount > 0 {
+		pct = float64(m.status.AnalyzedCount) / float64(m.status.EventCount) * 100
+	}
+	progressBar := m.progress.ViewAs(pct)
 
 	parts := []string{title, "", statusLine, "", progressBar}
 
 	if m.status.ServiceCount > 0 {
-		countText := fmt.Sprintf("%d / %d services analyzed", m.status.ReadyServices, m.status.ActiveServices)
+		countText := fmt.Sprintf("%d / %d services OK", m.status.OkServices, m.status.ActiveServices)
+		if m.status.EventCount > 0 {
+			countText += fmt.Sprintf(" · %d / %d events analyzed", m.status.AnalyzedCount, m.status.EventCount)
+		}
 		parts = append(parts, "", s.Help.Render(countText))
 	}
 
@@ -172,13 +181,13 @@ func (m *DiscoveryModel) View() string {
 }
 
 func (m *DiscoveryModel) statusText() string {
-	switch m.status.Status {
-	case api.DatadogAccountStatusDiscovering:
-		return "Discovering services..."
-	case api.DatadogAccountStatusAnalyzing:
-		return "Analyzing log patterns..."
-	case api.DatadogAccountStatusReady:
-		return "Ready!"
+	switch m.status.Health {
+	case api.DatadogAccountHealthOK:
+		return "Services healthy, analyzing log patterns..."
+	case api.DatadogAccountHealthError:
+		return "Error encountered during discovery"
+	case api.DatadogAccountHealthStale:
+		return "Waiting for recent data..."
 	default:
 		return "Processing..."
 	}

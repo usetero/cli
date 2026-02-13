@@ -89,26 +89,28 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 
 			// Print status
 			fmt.Println(s.Title.Render("Datadog Account Status"))
-			fmt.Println(kv(s, "Status", string(ddStatus.Status)))
-			fmt.Println(kv(s, "Percent Complete", fmt.Sprintf("%.1f%%", ddStatus.PercentComplete*100)))
+			fmt.Println(kv(s, "Health", string(ddStatus.Health)))
 
 			fmt.Println(section(s, "Service Counts"))
 			fmt.Println(kv(s, "Total", fmt.Sprintf("%d", ddStatus.ServiceCount)))
 			fmt.Println(kv(s, "Active", fmt.Sprintf("%d", ddStatus.ActiveServices)))
-			fmt.Println(kvStyled(s, "Ready", s.Success.Render(fmt.Sprintf("%d", ddStatus.ReadyServices))))
-			fmt.Println(kv(s, "Analyzing", fmt.Sprintf("%d", ddStatus.AnalyzingServices)))
-			fmt.Println(kv(s, "Discovering", fmt.Sprintf("%d", ddStatus.DiscoveringServices)))
+			fmt.Println(kvStyled(s, "OK", s.Success.Render(fmt.Sprintf("%d", ddStatus.OkServices))))
+			fmt.Println(kvStyled(s, "Error", s.Error.Render(fmt.Sprintf("%d", ddStatus.ErrorServices))))
 			fmt.Println(kv(s, "Stale", fmt.Sprintf("%d", ddStatus.StaleServices)))
-			fmt.Println(kvStyled(s, "Broken", s.Error.Render(fmt.Sprintf("%d", ddStatus.BrokenServices))))
 			fmt.Println(kvStyled(s, "Inactive", s.Help.Render(fmt.Sprintf("%d", ddStatus.InactiveServices))))
 			fmt.Println(kvStyled(s, "Disabled", s.Help.Render(fmt.Sprintf("%d", ddStatus.DisabledServices))))
 
-			fmt.Println(section(s, "Volume"))
-			fmt.Println(kv(s, "Service Volume", fmt.Sprintf("%d", ddStatus.ServiceLogVolume)))
-			fmt.Println(kv(s, "Discovered Volume", fmt.Sprintf("%d", ddStatus.DiscoveredLogVolume)))
+			fmt.Println(section(s, "Events"))
+			fmt.Println(kv(s, "Total", fmt.Sprintf("%d", ddStatus.EventCount)))
+			fmt.Println(kv(s, "Analyzed", fmt.Sprintf("%d", ddStatus.AnalyzedCount)))
+			fmt.Println(kv(s, "Quarantined", fmt.Sprintf("%d", ddStatus.QuarantinedCount)))
+
+			fmt.Println(section(s, "Policies"))
+			fmt.Println(kv(s, "Pending", fmt.Sprintf("%d", ddStatus.PendingPolicyCount)))
+			fmt.Println(kv(s, "Approved", fmt.Sprintf("%d", ddStatus.ApprovedPolicyCount)))
+			fmt.Println(kv(s, "Dismissed", fmt.Sprintf("%d", ddStatus.DismissedPolicyCount)))
 
 			fmt.Println(section(s, "Onboarding"))
-			fmt.Println(kv(s, "Analyzed Count", fmt.Sprintf("%d / 50", ddStatus.AnalyzedCount)))
 			readyForUseStr := fmt.Sprintf("%v", ddStatus.ReadyForUse)
 			if ddStatus.ReadyForUse {
 				fmt.Println(kvStyled(s, "Ready for Use", s.Success.Render(readyForUseStr)))
