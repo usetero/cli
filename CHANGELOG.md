@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.15.0](https://github.com/usetero/cli/compare/v1.14.0...v1.15.0) (2026-02-13)
+
+
+### Features
+
+* add dedicated PII tab to statusbar ([8c12d91](https://github.com/usetero/cli/commit/8c12d919d1fea75e04a8f0e1a7e94b4cf751d52c))
+* add keyboard navigation and drill-down to waste drawer ([c0d1667](https://github.com/usetero/cli/commit/c0d1667c3b5a3d1bd58486b3247869e05b1454ea))
+* add set_service_enabled chat tool ([fe88058](https://github.com/usetero/cli/commit/fe88058b0ce07f537b98311df4dda91c29af25dc))
+* copy selected text to clipboard with toast feedback ([bb01fe4](https://github.com/usetero/cli/commit/bb01fe4fe0f88dea53fb50cfd6f7633401293ad6))
+* redesign statusbar with services and waste tabs ([ac1f245](https://github.com/usetero/cli/commit/ac1f24514369ea3953bb362867859fdef6c71420))
+* show environment label in status bar for non-production envs ([4668b85](https://github.com/usetero/cli/commit/4668b85caf379d3b9afd91adad0d0df44dccc53f))
+* show PII type categories in statusbar instead of field paths ([9f98c13](https://github.com/usetero/cli/commit/9f98c13c75d04590d940f44e5b2a5237e86f83a5))
+
+
+### Bug Fixes
+
+* add spacer between sync status headline and description ([469d0e3](https://github.com/usetero/cli/commit/469d0e3f320b0e5d9ee2f0706280aa4b87eb2baa))
+* check rows.Err after EXPLAIN QUERY PLAN iteration ([6d4d530](https://github.com/usetero/cli/commit/6d4d530e4d0fda9c6fbaaa48b8154e492a63c119))
+* clarify pending counts as policies in waste view ([8df2869](https://github.com/usetero/cli/commit/8df2869918ed99dceea4a8fdcc6902855d46531b))
+* clicking outside drawer closes it and passes click through ([ac858e3](https://github.com/usetero/cli/commit/ac858e3205ddc28adeee6a1ad6e6e3bbe9b13bd9))
+* code block background matches panel surface ([9bf7caa](https://github.com/usetero/cli/commit/9bf7caaf5b54eddada815c8dd676ad8b8e56062e))
+* complete Chroma syntax highlighting for code blocks ([c948523](https://github.com/usetero/cli/commit/c948523f65cd93d6d2ee2e7fcca555be2aba4abb))
+* **deps:** update module github.com/workos/workos-go/v4 to v6 ([#36](https://github.com/usetero/cli/issues/36)) ([5ef549f](https://github.com/usetero/cli/commit/5ef549f66c7ee4ca60c3ac4597a623d91fb530f4))
+* display friendly category names in waste table ([0fb0d06](https://github.com/usetero/cli/commit/0fb0d06cf078901a7c87b2d717178b51712c9c89))
+* eliminate black rectangles in markdown code blocks ([d9ef4f1](https://github.com/usetero/cli/commit/d9ef4f1ae444e920baf8e52f21774b5bc89bbbe5))
+* empty state shows setup guidance when no services are enabled ([bb6520b](https://github.com/usetero/cli/commit/bb6520bd78de782301843e28052ca77529f4d4af))
+* hide catalog drawer when all services are disabled ([6c17498](https://github.com/usetero/cli/commit/6c174987a768f4ed55e78c676fa2bffa0802be84))
+* move clipboard.WriteAll to tea.Cmd to avoid blocking Update ([eefa102](https://github.com/usetero/cli/commit/eefa10275491923af40f71eee2d9453fa1a205a0))
+* reject queries with full table scan JOINs ([12238a6](https://github.com/usetero/cli/commit/12238a64c3b4daf102052e814a0cfdf4ce915ee9))
+* show org name in status bar during onboarding ([eb7e76c](https://github.com/usetero/cli/commit/eb7e76cefdfc6f4b9d0485c6013e7b9b5f48a0de))
+* show org name in status bar during onboarding ([f492541](https://github.com/usetero/cli/commit/f4925416b832c51fd849b6624045e12bf7c70db1))
+* show total volume in services summary, reorder statusbar segments ([ffd4e09](https://github.com/usetero/cli/commit/ffd4e09c361c4260138202d4866b52fe1c79e035))
+* syntax highlighting uses distinct colors for keys vs strings ([807822c](https://github.com/usetero/cli/commit/807822c7b1646f4f00b2fc6fb6e5a57aa6da2a30))
+* text highlight no longer bleeds into left border ([79c4636](https://github.com/usetero/cli/commit/79c463689bfef12ae83cf3fc31634a473de87aa6))
+* tool error state collapsed by default with chevron toggle ([d1406ba](https://github.com/usetero/cli/commit/d1406ba084cc1474d59ddd56acaeb0b9ef59c442))
+* use config defaults for PowerSync endpoint in generate script ([fd04fc5](https://github.com/usetero/cli/commit/fd04fc54c235dffe7129696ab38a534a8508bdce))
+* validate service existence before enabling/disabling ([3256d6e](https://github.com/usetero/cli/commit/3256d6ee8d4c2cee2ab4daeac6e3300720177ebf))
+
 ## [1.14.0](https://github.com/usetero/cli/compare/v1.13.0...v1.14.0) (2026-02-11)
 
 
