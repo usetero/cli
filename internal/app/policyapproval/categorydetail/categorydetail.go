@@ -92,12 +92,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case tea.KeyPressMsg:
 		switch {
-		case key.Matches(msg, keySpace):
-			if m.tbl != nil && len(m.policies) > 0 {
-				p := m.policies[m.tbl.Cursor()]
-				m.selected[p.PolicyID] = !m.selected[p.PolicyID]
-				m.rebuildRows()
-			}
 		case key.Matches(msg, keySelectAll):
 			for _, p := range m.policies {
 				m.selected[p.PolicyID] = true
@@ -109,9 +103,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 			m.rebuildRows()
 		case key.Matches(msg, keyEnter):
-			return m.submit()
-		case key.Matches(msg, keyEscape):
+			if m.tbl != nil && len(m.policies) > 0 {
+				p := m.policies[m.tbl.Cursor()]
+				m.selected[p.PolicyID] = !m.selected[p.PolicyID]
+				m.rebuildRows()
+			}
+		case key.Matches(msg, keyBack):
 			return func() tea.Msg { return msgs.BackToSummary{} }
+		case key.Matches(msg, keyEscape):
+			return func() tea.Msg { return msgs.Cancelled{} }
 		default:
 			if m.tbl != nil {
 				return m.tbl.Update(msg)
@@ -226,16 +226,16 @@ func (m *Model) SetSize(width, height int) {
 
 // ShortHelp returns key bindings.
 func (m *Model) ShortHelp() []key.Binding {
-	return []key.Binding{keySpace, keySelectAll, keySelectNone, keyEnter, keyEscape}
+	return []key.Binding{keyEnter, keySelectAll, keySelectNone, keyBack, keyEscape}
 }
 
 // Key bindings.
 var (
-	keySpace      = key.NewBinding(key.WithKeys(" "), key.WithHelp("space", "toggle"))
+	keyEnter      = key.NewBinding(key.WithKeys("enter", " "), key.WithHelp("enter", "toggle"))
 	keySelectAll  = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "select all"))
 	keySelectNone = key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "select none"))
-	keyEnter      = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm"))
-	keyEscape     = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
+	keyBack       = key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "back"))
+	keyEscape     = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "home"))
 )
 
 // formatSavings returns estimated yearly cost savings.
