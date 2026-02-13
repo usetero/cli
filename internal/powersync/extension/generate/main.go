@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/powersync/api"
 )
 
@@ -24,12 +25,10 @@ func main() {
 }
 
 func run() error {
-	endpoint := os.Getenv("TERO_POWERSYNC_ENDPOINT")
+	cfg := config.LoadCLIConfig()
+	endpoint := cfg.PowerSyncEndpoint
 	token := os.Getenv("POWERSYNC_API_TOKEN")
 
-	if endpoint == "" {
-		return fmt.Errorf("TERO_POWERSYNC_ENDPOINT is required\nUse: doppler run -- go generate ./internal/powersync")
-	}
 	if token == "" {
 		return fmt.Errorf("POWERSYNC_API_TOKEN is required\nUse: doppler run -- go generate ./internal/powersync")
 	}
