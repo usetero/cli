@@ -255,6 +255,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusBar.CloseDrawer()
 				return m, nil
 			}
+			// Esc in policy approval returns to chat
+			if m.state == statePolicyApproval {
+				m.scope.Info("policy approval cancelled")
+				m.state = stateChat
+				m.policyApproval = nil
+				return m, nil
+			}
 			// Esc cancels the active round first; only show dialog if nothing to cancel
 			if m.chat != nil && m.chat.CancelActiveRound() {
 				return m, nil
@@ -289,6 +296,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if strings.EqualFold(text, "exit") || strings.EqualFold(text, "quit") {
 			m.quitDlg = newQuitDialog(m.theme)
 			return m, nil
+		}
+		// Intercept "approve", "approval", etc. to open wizard directly
+		if strings.HasPrefix(strings.ToLower(text), "approv") {
+			m.state = statePolicyApproval
+			m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, "", m.scope)
+			m.updateLayout()
+			return m, m.policyApproval.Init()
 		}
 
 	case onboardingmsg.OrgSelected:

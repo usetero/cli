@@ -38,6 +38,8 @@ Use this when the user wants to:
 - Bulk approve multiple policies
 - See what policies are available for approval
 
+IMPORTANT: Call this tool immediately without any preceding text. Do not explain what you're about to do - just call the tool directly.
+
 The tool returns after the user completes or cancels the wizard.`,
 		InputSchema: chat.NewObjectSchema(map[string]chat.Property{}, nil),
 	}

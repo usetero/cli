@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	policyselect "github.com/usetero/cli/internal/app/policyapproval/select"
+	"github.com/usetero/cli/internal/app/policyapproval/categorysummary"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -53,11 +53,10 @@ func New(
 	}
 }
 
-// Init starts the wizard with the select step.
+// Init starts the wizard with the category summary step.
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("policy approval wizard started")
-	// TODO: return m.setStep(select.New(...))
-	return m.setStep(policyselect.New(m.ctx, m.theme, nil, m.scope))
+	return m.setStep(categorysummary.New(m.ctx, m.theme, m.db, m.scope))
 }
 
 // Update handles messages and orchestrates step transitions.

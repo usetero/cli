@@ -19,6 +19,14 @@ type PoliciesSelected struct {
 
 type Confirmed struct{}
 
+type CategorySelected struct {
+	Category string
+}
+
+type ApproveAllLowRisk struct {
+	Categories []string
+}
+
 type Cancelled struct {
 	ToolUseID string
 }
