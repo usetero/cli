@@ -16,9 +16,9 @@ type environmentDefaults struct {
 // Unknown environments fall back to prd defaults.
 var environments = map[string]environmentDefaults{
 	"local": {
-		APIEndpoint:       "http://localhost:8081",
-		PowerSyncEndpoint: "http://localhost:8084",
-		ChatEndpoint:      "http://localhost:8083",
+		APIEndpoint:       "http://localhost:18081",
+		PowerSyncEndpoint: "http://localhost:18084",
+		ChatEndpoint:      "http://localhost:18083",
 		WorkOSClientID:    "client_01JQCC2CJMTB8AY2JRMZXFY9R1",
 	},
 	"dev": {

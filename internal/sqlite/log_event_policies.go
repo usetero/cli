@@ -46,6 +46,12 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			EstimatedCostPerHour:   derefFloat(row.EstimatedCostPerHour),
 			RiskLevel:              domain.RiskLevel(row.RiskLevel),
 			Benefit:                row.Benefits,
+			ObservedVolumeBefore:   derefFloat(row.ObservedVolumeBefore),
+			ObservedVolumeAfter:    derefFloat(row.ObservedVolumeAfter),
+			ObservedBytesBefore:    derefFloat(row.ObservedBytesBefore),
+			ObservedBytesAfter:     derefFloat(row.ObservedBytesAfter),
+			ObservedCostBefore:     derefFloat(row.ObservedCostBefore),
+			ObservedCostAfter:      derefFloat(row.ObservedCostAfter),
 		}
 	}
 	return result, nil

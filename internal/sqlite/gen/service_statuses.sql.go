@@ -9,65 +9,284 @@ import (
 	"context"
 )
 
-const listServiceStatuses = `-- name: ListServiceStatuses :many
+const listAllServiceStatuses = `-- name: ListAllServiceStatuses :many
 SELECT
   s.name AS service_name,
-  COALESCE(ssc.log_status, '') AS log_status,
-  COALESCE(ssc.log_error, '') AS log_error,
-  COALESCE(ssc.log_percent_complete, 0.0) AS log_percent_complete,
+  COALESCE(ssc.health, '') AS health,
+  COALESCE(ssc.error, '') AS error,
+  COALESCE(ssc.error_at, '') AS error_at,
+  COALESCE(ssc.warning, '') AS warning,
+  COALESCE(ssc.warning_at, '') AS warning_at,
   CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
-  CAST(COALESCE(ssc.log_analyzed_count, 0) AS INTEGER) AS log_analyzed_count,
-  COALESCE(ssc.log_volume_per_hour, 0.0) AS log_volume_per_hour,
-  COALESCE(ssc.log_bytes_per_hour, 0.0) AS log_bytes_per_hour,
-  COALESCE(ssc.log_cost_per_hour_usd, 0.0) AS log_cost_per_hour_usd
+  CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
+  CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
+  CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
+  CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
+  CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
+  COALESCE(ssc.service_volume_per_hour, 0.0) AS service_volume_per_hour,
+  COALESCE(ssc.service_cost_per_hour_volume_usd, 0.0) AS service_cost_per_hour_volume_usd,
+  COALESCE(ssc.log_event_volume_per_hour, 0.0) AS log_event_volume_per_hour,
+  COALESCE(ssc.log_event_bytes_per_hour, 0.0) AS log_event_bytes_per_hour,
+  COALESCE(ssc.log_event_cost_per_hour_usd, 0.0) AS log_event_cost_per_hour_usd,
+  COALESCE(ssc.log_event_cost_per_hour_bytes_usd, 0.0) AS log_event_cost_per_hour_bytes_usd,
+  COALESCE(ssc.log_event_cost_per_hour_volume_usd, 0.0) AS log_event_cost_per_hour_volume_usd,
+  COALESCE(ssc.estimated_volume_reduction_per_hour, 0.0) AS estimated_volume_reduction_per_hour,
+  COALESCE(ssc.estimated_bytes_reduction_per_hour, 0.0) AS estimated_bytes_reduction_per_hour,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_usd, 0.0) AS estimated_cost_reduction_per_hour_usd,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_bytes_usd, 0.0) AS estimated_cost_reduction_per_hour_bytes_usd,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_volume_usd, 0.0) AS estimated_cost_reduction_per_hour_volume_usd,
+  COALESCE(ssc.observed_volume_per_hour_before, 0.0) AS observed_volume_per_hour_before,
+  COALESCE(ssc.observed_volume_per_hour_after, 0.0) AS observed_volume_per_hour_after,
+  COALESCE(ssc.observed_bytes_per_hour_before, 0.0) AS observed_bytes_per_hour_before,
+  COALESCE(ssc.observed_bytes_per_hour_after, 0.0) AS observed_bytes_per_hour_after,
+  COALESCE(ssc.observed_cost_per_hour_before_usd, 0.0) AS observed_cost_per_hour_before_usd,
+  COALESCE(ssc.observed_cost_per_hour_before_bytes_usd, 0.0) AS observed_cost_per_hour_before_bytes_usd,
+  COALESCE(ssc.observed_cost_per_hour_before_volume_usd, 0.0) AS observed_cost_per_hour_before_volume_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_usd, 0.0) AS observed_cost_per_hour_after_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_bytes_usd, 0.0) AS observed_cost_per_hour_after_bytes_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_volume_usd, 0.0) AS observed_cost_per_hour_after_volume_usd
 FROM service_statuses_cache ssc
 JOIN services s ON ssc.service_id = s.id
 ORDER BY
-  CASE ssc.log_status
-    WHEN 'BROKEN' THEN 1
+  CASE ssc.health
+    WHEN 'ERROR' THEN 1
     WHEN 'STALE' THEN 2
-    WHEN 'DISCOVERING' THEN 3
-    WHEN 'ANALYZING' THEN 4
-    WHEN 'READY' THEN 5
-    WHEN 'DISABLED' THEN 6
-    WHEN 'INACTIVE' THEN 7
-    ELSE 8
+    WHEN 'OK' THEN 3
+    WHEN 'DISABLED' THEN 4
+    WHEN 'INACTIVE' THEN 5
+    ELSE 6
   END,
-  ssc.log_cost_per_hour_usd DESC,
+  ssc.log_event_cost_per_hour_usd DESC,
   s.name
 `
 
-type ListServiceStatusesRow struct {
-	ServiceName        *string
-	LogStatus          string
-	LogError           string
-	LogPercentComplete float64
-	LogEventCount      int64
-	LogAnalyzedCount   int64
-	LogVolumePerHour   float64
-	LogBytesPerHour    float64
-	LogCostPerHourUsd  float64
+type ListAllServiceStatusesRow struct {
+	ServiceName                            *string
+	Health                                 string
+	Error                                  string
+	ErrorAt                                string
+	Warning                                string
+	WarningAt                              string
+	LogEventCount                          int64
+	LogEventAnalyzedCount                  int64
+	LogEventQuarantinedCount               int64
+	PolicyPendingCount                     int64
+	PolicyApprovedCount                    int64
+	PolicyDismissedCount                   int64
+	ServiceVolumePerHour                   float64
+	ServiceCostPerHourVolumeUsd            float64
+	LogEventVolumePerHour                  float64
+	LogEventBytesPerHour                   float64
+	LogEventCostPerHourUsd                 float64
+	LogEventCostPerHourBytesUsd            float64
+	LogEventCostPerHourVolumeUsd           float64
+	EstimatedVolumeReductionPerHour        float64
+	EstimatedBytesReductionPerHour         float64
+	EstimatedCostReductionPerHourUsd       float64
+	EstimatedCostReductionPerHourBytesUsd  float64
+	EstimatedCostReductionPerHourVolumeUsd float64
+	ObservedVolumePerHourBefore            float64
+	ObservedVolumePerHourAfter             float64
+	ObservedBytesPerHourBefore             float64
+	ObservedBytesPerHourAfter              float64
+	ObservedCostPerHourBeforeUsd           float64
+	ObservedCostPerHourBeforeBytesUsd      float64
+	ObservedCostPerHourBeforeVolumeUsd     float64
+	ObservedCostPerHourAfterUsd            float64
+	ObservedCostPerHourAfterBytesUsd       float64
+	ObservedCostPerHourAfterVolumeUsd      float64
 }
 
-func (q *Queries) ListServiceStatuses(ctx context.Context) ([]ListServiceStatusesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listServiceStatuses)
+func (q *Queries) ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAllServiceStatuses)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListServiceStatusesRow
+	var items []ListAllServiceStatusesRow
 	for rows.Next() {
-		var i ListServiceStatusesRow
+		var i ListAllServiceStatusesRow
 		if err := rows.Scan(
 			&i.ServiceName,
-			&i.LogStatus,
-			&i.LogError,
-			&i.LogPercentComplete,
+			&i.Health,
+			&i.Error,
+			&i.ErrorAt,
+			&i.Warning,
+			&i.WarningAt,
 			&i.LogEventCount,
-			&i.LogAnalyzedCount,
-			&i.LogVolumePerHour,
-			&i.LogBytesPerHour,
-			&i.LogCostPerHourUsd,
+			&i.LogEventAnalyzedCount,
+			&i.LogEventQuarantinedCount,
+			&i.PolicyPendingCount,
+			&i.PolicyApprovedCount,
+			&i.PolicyDismissedCount,
+			&i.ServiceVolumePerHour,
+			&i.ServiceCostPerHourVolumeUsd,
+			&i.LogEventVolumePerHour,
+			&i.LogEventBytesPerHour,
+			&i.LogEventCostPerHourUsd,
+			&i.LogEventCostPerHourBytesUsd,
+			&i.LogEventCostPerHourVolumeUsd,
+			&i.EstimatedVolumeReductionPerHour,
+			&i.EstimatedBytesReductionPerHour,
+			&i.EstimatedCostReductionPerHourUsd,
+			&i.EstimatedCostReductionPerHourBytesUsd,
+			&i.EstimatedCostReductionPerHourVolumeUsd,
+			&i.ObservedVolumePerHourBefore,
+			&i.ObservedVolumePerHourAfter,
+			&i.ObservedBytesPerHourBefore,
+			&i.ObservedBytesPerHourAfter,
+			&i.ObservedCostPerHourBeforeUsd,
+			&i.ObservedCostPerHourBeforeBytesUsd,
+			&i.ObservedCostPerHourBeforeVolumeUsd,
+			&i.ObservedCostPerHourAfterUsd,
+			&i.ObservedCostPerHourAfterBytesUsd,
+			&i.ObservedCostPerHourAfterVolumeUsd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEnabledServiceStatuses = `-- name: ListEnabledServiceStatuses :many
+SELECT
+  s.name AS service_name,
+  COALESCE(ssc.health, '') AS health,
+  COALESCE(ssc.error, '') AS error,
+  COALESCE(ssc.error_at, '') AS error_at,
+  COALESCE(ssc.warning, '') AS warning,
+  COALESCE(ssc.warning_at, '') AS warning_at,
+  CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
+  CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
+  CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
+  CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
+  CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
+  CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
+  COALESCE(ssc.service_volume_per_hour, 0.0) AS service_volume_per_hour,
+  COALESCE(ssc.service_cost_per_hour_volume_usd, 0.0) AS service_cost_per_hour_volume_usd,
+  COALESCE(ssc.log_event_volume_per_hour, 0.0) AS log_event_volume_per_hour,
+  COALESCE(ssc.log_event_bytes_per_hour, 0.0) AS log_event_bytes_per_hour,
+  COALESCE(ssc.log_event_cost_per_hour_usd, 0.0) AS log_event_cost_per_hour_usd,
+  COALESCE(ssc.log_event_cost_per_hour_bytes_usd, 0.0) AS log_event_cost_per_hour_bytes_usd,
+  COALESCE(ssc.log_event_cost_per_hour_volume_usd, 0.0) AS log_event_cost_per_hour_volume_usd,
+  COALESCE(ssc.estimated_volume_reduction_per_hour, 0.0) AS estimated_volume_reduction_per_hour,
+  COALESCE(ssc.estimated_bytes_reduction_per_hour, 0.0) AS estimated_bytes_reduction_per_hour,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_usd, 0.0) AS estimated_cost_reduction_per_hour_usd,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_bytes_usd, 0.0) AS estimated_cost_reduction_per_hour_bytes_usd,
+  COALESCE(ssc.estimated_cost_reduction_per_hour_volume_usd, 0.0) AS estimated_cost_reduction_per_hour_volume_usd,
+  COALESCE(ssc.observed_volume_per_hour_before, 0.0) AS observed_volume_per_hour_before,
+  COALESCE(ssc.observed_volume_per_hour_after, 0.0) AS observed_volume_per_hour_after,
+  COALESCE(ssc.observed_bytes_per_hour_before, 0.0) AS observed_bytes_per_hour_before,
+  COALESCE(ssc.observed_bytes_per_hour_after, 0.0) AS observed_bytes_per_hour_after,
+  COALESCE(ssc.observed_cost_per_hour_before_usd, 0.0) AS observed_cost_per_hour_before_usd,
+  COALESCE(ssc.observed_cost_per_hour_before_bytes_usd, 0.0) AS observed_cost_per_hour_before_bytes_usd,
+  COALESCE(ssc.observed_cost_per_hour_before_volume_usd, 0.0) AS observed_cost_per_hour_before_volume_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_usd, 0.0) AS observed_cost_per_hour_after_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_bytes_usd, 0.0) AS observed_cost_per_hour_after_bytes_usd,
+  COALESCE(ssc.observed_cost_per_hour_after_volume_usd, 0.0) AS observed_cost_per_hour_after_volume_usd
+FROM service_statuses_cache ssc
+JOIN services s ON ssc.service_id = s.id
+WHERE ssc.health NOT IN ('DISABLED', 'INACTIVE')
+ORDER BY
+  CASE ssc.health
+    WHEN 'ERROR' THEN 1
+    WHEN 'STALE' THEN 2
+    WHEN 'OK' THEN 3
+    ELSE 4
+  END,
+  ssc.log_event_cost_per_hour_usd DESC,
+  s.name
+LIMIT ?1
+`
+
+type ListEnabledServiceStatusesRow struct {
+	ServiceName                            *string
+	Health                                 string
+	Error                                  string
+	ErrorAt                                string
+	Warning                                string
+	WarningAt                              string
+	LogEventCount                          int64
+	LogEventAnalyzedCount                  int64
+	LogEventQuarantinedCount               int64
+	PolicyPendingCount                     int64
+	PolicyApprovedCount                    int64
+	PolicyDismissedCount                   int64
+	ServiceVolumePerHour                   float64
+	ServiceCostPerHourVolumeUsd            float64
+	LogEventVolumePerHour                  float64
+	LogEventBytesPerHour                   float64
+	LogEventCostPerHourUsd                 float64
+	LogEventCostPerHourBytesUsd            float64
+	LogEventCostPerHourVolumeUsd           float64
+	EstimatedVolumeReductionPerHour        float64
+	EstimatedBytesReductionPerHour         float64
+	EstimatedCostReductionPerHourUsd       float64
+	EstimatedCostReductionPerHourBytesUsd  float64
+	EstimatedCostReductionPerHourVolumeUsd float64
+	ObservedVolumePerHourBefore            float64
+	ObservedVolumePerHourAfter             float64
+	ObservedBytesPerHourBefore             float64
+	ObservedBytesPerHourAfter              float64
+	ObservedCostPerHourBeforeUsd           float64
+	ObservedCostPerHourBeforeBytesUsd      float64
+	ObservedCostPerHourBeforeVolumeUsd     float64
+	ObservedCostPerHourAfterUsd            float64
+	ObservedCostPerHourAfterBytesUsd       float64
+	ObservedCostPerHourAfterVolumeUsd      float64
+}
+
+func (q *Queries) ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listEnabledServiceStatuses, rowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEnabledServiceStatusesRow
+	for rows.Next() {
+		var i ListEnabledServiceStatusesRow
+		if err := rows.Scan(
+			&i.ServiceName,
+			&i.Health,
+			&i.Error,
+			&i.ErrorAt,
+			&i.Warning,
+			&i.WarningAt,
+			&i.LogEventCount,
+			&i.LogEventAnalyzedCount,
+			&i.LogEventQuarantinedCount,
+			&i.PolicyPendingCount,
+			&i.PolicyApprovedCount,
+			&i.PolicyDismissedCount,
+			&i.ServiceVolumePerHour,
+			&i.ServiceCostPerHourVolumeUsd,
+			&i.LogEventVolumePerHour,
+			&i.LogEventBytesPerHour,
+			&i.LogEventCostPerHourUsd,
+			&i.LogEventCostPerHourBytesUsd,
+			&i.LogEventCostPerHourVolumeUsd,
+			&i.EstimatedVolumeReductionPerHour,
+			&i.EstimatedBytesReductionPerHour,
+			&i.EstimatedCostReductionPerHourUsd,
+			&i.EstimatedCostReductionPerHourBytesUsd,
+			&i.EstimatedCostReductionPerHourVolumeUsd,
+			&i.ObservedVolumePerHourBefore,
+			&i.ObservedVolumePerHourAfter,
+			&i.ObservedBytesPerHourBefore,
+			&i.ObservedBytesPerHourAfter,
+			&i.ObservedCostPerHourBeforeUsd,
+			&i.ObservedCostPerHourBeforeBytesUsd,
+			&i.ObservedCostPerHourBeforeVolumeUsd,
+			&i.ObservedCostPerHourAfterUsd,
+			&i.ObservedCostPerHourAfterBytesUsd,
+			&i.ObservedCostPerHourAfterVolumeUsd,
 		); err != nil {
 			return nil, err
 		}

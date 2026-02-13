@@ -31,6 +31,14 @@ type PolicyCategoryStatus struct {
 	EstimatedCostPerHour   float64
 	RiskLevel              RiskLevel
 	Benefit                string
+
+	// Observed impact from approved policies (before/after).
+	ObservedVolumeBefore float64
+	ObservedVolumeAfter  float64
+	ObservedBytesBefore  float64
+	ObservedBytesAfter   float64
+	ObservedCostBefore   float64
+	ObservedCostAfter    float64
 }
 
 // DisplayName returns a human-readable name for the category.

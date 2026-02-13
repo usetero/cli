@@ -34,62 +34,62 @@ CREATE TABLE conversations (
     workspace_id TEXT -- Workspace this conversation belongs to
 );
 
--- Cache table for datadog_account_statuses view. Refreshed by pg_cron.
+-- Cache table for datadog_account_statuses view. Refreshed by cron service.
 CREATE TABLE datadog_account_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID (denormalized from Datadog account)
     datadog_account_id TEXT, -- The Datadog account this status belongs to
     log_active_services INTEGER, -- Services not DISABLED or INACTIVE
-    log_analyzed_count INTEGER, -- Number of log events that have been analyzed
-    log_analyzing_count INTEGER, -- Log events with ANALYZING status
-    log_analyzing_services INTEGER, -- Services with ANALYZING status
-    log_approved_policy_count INTEGER, -- Policies approved by user
-    log_broken_services INTEGER, -- Services with BROKEN status
-    log_bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window, summed across all services. Same baseline used for policy impact estimates.
-    log_clean_count INTEGER, -- Log events with CLEAN status (analyzed, no issues)
-    log_cost_per_hour_bytes_usd REAL, -- Account-wide bytes-based cost in USD/hour.
-    log_cost_per_hour_usd REAL, -- Account-wide cost in USD/hour (bytes + volume combined).
-    log_cost_per_hour_volume_usd REAL, -- Account-wide volume-based cost in USD/hour.
-    log_disabled_services INTEGER, -- Services with DISABLED status
-    log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the rolling 7-day window across all active services
-    log_discovering_count INTEGER, -- Log events with DISCOVERING status
-    log_discovering_services INTEGER, -- Services with DISCOVERING status
-    log_dismissed_policy_count INTEGER, -- Policies dismissed by user
-    log_error TEXT, -- Most recent error message from any broken service or account-level discovery
-    log_error_at TEXT, -- When the most recent error occurred
-    log_estimable_policy_count INTEGER, -- Policies with volume or bytes estimates
-    log_estimated_bytes_reduction_per_hour REAL, -- Account-wide estimated bytes reduction
-    log_estimated_cost_reduction_per_hour_bytes_usd REAL, -- Account-wide estimated bytes-based USD/hour savings
-    log_estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated USD/hour savings (bytes + volume combined)
-    log_estimated_cost_reduction_per_hour_volume_usd REAL, -- Account-wide estimated volume-based USD/hour savings
-    log_estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
+    log_analyzed_count TEXT,
+    log_analyzing_count TEXT,
+    log_analyzing_services TEXT,
+    log_approved_policy_count TEXT,
+    log_broken_services TEXT,
+    log_bytes_per_hour TEXT,
+    log_clean_count TEXT,
+    log_cost_per_hour_bytes_usd TEXT,
+    log_cost_per_hour_usd TEXT,
+    log_cost_per_hour_volume_usd TEXT,
+    log_disabled_services TEXT,
+    log_discovered_volume_in_window TEXT,
+    log_discovering_count TEXT,
+    log_discovering_services TEXT,
+    log_dismissed_policy_count TEXT,
+    log_error TEXT,
+    log_error_at TEXT,
+    log_estimable_policy_count TEXT,
+    log_estimated_bytes_reduction_per_hour TEXT,
+    log_estimated_cost_reduction_per_hour_bytes_usd TEXT,
+    log_estimated_cost_reduction_per_hour_usd TEXT,
+    log_estimated_cost_reduction_per_hour_volume_usd TEXT,
+    log_estimated_volume_reduction_per_hour TEXT,
     log_event_count INTEGER, -- Total log events across all services
-    log_inactive_services INTEGER, -- Services with INACTIVE status
-    log_observed_bytes_per_hour_after REAL, -- Account-wide observed current bytes
-    log_observed_bytes_per_hour_before REAL, -- Account-wide observed pre-approval bytes
-    log_observed_cost_per_hour_after_bytes_usd REAL, -- Account-wide measured bytes-based USD/hour cost after approval
-    log_observed_cost_per_hour_after_usd REAL, -- Account-wide measured USD/hour cost after approval (bytes + volume combined)
-    log_observed_cost_per_hour_after_volume_usd REAL, -- Account-wide measured volume-based USD/hour cost after approval
-    log_observed_cost_per_hour_before_bytes_usd REAL, -- Account-wide measured bytes-based USD/hour cost before approval
-    log_observed_cost_per_hour_before_usd REAL, -- Account-wide measured USD/hour cost before approval (bytes + volume combined)
-    log_observed_cost_per_hour_before_volume_usd REAL, -- Account-wide measured volume-based USD/hour cost before approval
-    log_observed_volume_per_hour_after REAL, -- Account-wide observed current volume
-    log_observed_volume_per_hour_before REAL, -- Account-wide observed pre-approval volume
-    log_pending_count INTEGER, -- Log events with PENDING status (policies awaiting action)
-    log_pending_policy_count INTEGER, -- Policies awaiting user action
-    log_percent_complete REAL, -- Overall coverage percentage (discovered / service volume * 100)
-    log_policy_count INTEGER, -- Total active policies
-    log_quarantined_count INTEGER, -- Log events with QUARANTINED status (repeated AI analysis failures)
-    log_ready_services INTEGER, -- Services with READY status
-    log_resolved_count INTEGER, -- Log events with RESOLVED status (all policies acted on)
+    log_inactive_services TEXT,
+    log_observed_bytes_per_hour_after TEXT,
+    log_observed_bytes_per_hour_before TEXT,
+    log_observed_cost_per_hour_after_bytes_usd TEXT,
+    log_observed_cost_per_hour_after_usd TEXT,
+    log_observed_cost_per_hour_after_volume_usd TEXT,
+    log_observed_cost_per_hour_before_bytes_usd TEXT,
+    log_observed_cost_per_hour_before_usd TEXT,
+    log_observed_cost_per_hour_before_volume_usd TEXT,
+    log_observed_volume_per_hour_after TEXT,
+    log_observed_volume_per_hour_before TEXT,
+    log_pending_count TEXT,
+    log_pending_policy_count TEXT,
+    log_percent_complete TEXT,
+    log_policy_count TEXT,
+    log_quarantined_count TEXT,
+    log_ready_services TEXT,
+    log_resolved_count TEXT,
     log_service_count INTEGER, -- Total number of services
-    log_service_volume_in_window INTEGER, -- Total service log volume in the rolling 7-day window across all active services
-    log_stale_services INTEGER, -- Services with STALE status
-    log_status TEXT, -- Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
-    log_volume_per_hour REAL, -- Current throughput in events/hour from the rolling 7-day window, summed across all services. Same baseline used for policy impact estimates.
-    log_warning TEXT, -- Most recent warning message (e.g., rate limit)
-    log_warning_at TEXT, -- When the most recent warning occurred
-    ready_for_use INTEGER, -- True when at least 1 log event has been analyzed, proving the pipeline works end-to-end
+    log_service_volume_in_window TEXT,
+    log_stale_services TEXT,
+    log_status TEXT,
+    log_volume_per_hour TEXT,
+    log_warning TEXT,
+    log_warning_at TEXT,
+    ready_for_use INTEGER, -- True when at least 1 log event has been analyzed
     refreshed_at TEXT
 );
 
@@ -154,7 +154,7 @@ CREATE TABLE log_event_policies (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
--- Cache table for log_event_policy_statuses view. Refreshed by pg_cron.
+-- Cache table for log_event_policy_statuses view. Refreshed by cron service.
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
@@ -177,7 +177,7 @@ CREATE TABLE log_event_policy_statuses_cache (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
--- Pipeline status for each log event with estimated and observed impact. Status: BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING.
+-- Cache table for log_event_statuses view. Refreshed by cron service.
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
@@ -242,52 +242,52 @@ CREATE TABLE messages (
     stop_reason TEXT -- Why the assistant stopped generating. end_turn: completed response, tool_use: paused to call a tool. Null for user messages.
 );
 
--- Cache table for service_statuses view. Refreshed by pg_cron.
+-- Cache table for service_statuses view. Refreshed by cron service.
 CREATE TABLE service_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID (denormalized from service)
     datadog_account_id TEXT, -- The Datadog account performing discovery
-    log_analyzed_count INTEGER, -- Number of log events that have been analyzed
-    log_analyzing_count INTEGER, -- Log events with ANALYZING status
-    log_approved_policy_count INTEGER, -- Policies approved by user
-    log_bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window, summed across all log events. Same baseline used for policy impact estimates.
-    log_clean_count INTEGER, -- Log events with CLEAN status (analyzed, no issues)
-    log_cost_per_hour_bytes_usd REAL, -- Current bytes-based cost in USD/hour, summed across all log events.
-    log_cost_per_hour_usd REAL, -- Current cost in USD/hour (bytes + volume combined), summed across all log events.
-    log_cost_per_hour_volume_usd REAL, -- Current volume-based cost in USD/hour, summed across all log events.
-    log_discovered_volume_in_window INTEGER, -- Total discovered log event volume in the aligned 24h coverage window (2 days ago)
-    log_discovering_count INTEGER, -- Log events with DISCOVERING status
-    log_dismissed_policy_count INTEGER, -- Policies dismissed by user
-    log_error TEXT, -- Most recent error from broken services
-    log_error_at TEXT, -- When the error occurred
-    log_estimable_policy_count INTEGER, -- Policies with volume or bytes reduction estimates
-    log_estimated_bytes_reduction_per_hour REAL, -- Sum of estimated bytes reductions across all log events
-    log_estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated bytes-based USD/hour savings across all log events
-    log_estimated_cost_reduction_per_hour_usd REAL, -- Estimated USD/hour savings across all log events (bytes + volume combined)
-    log_estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated volume-based USD/hour savings across all log events
-    log_estimated_volume_reduction_per_hour REAL, -- Sum of estimated volume reductions across all log events
+    log_analyzed_count TEXT,
+    log_analyzing_count TEXT,
+    log_approved_policy_count TEXT,
+    log_bytes_per_hour TEXT,
+    log_clean_count TEXT,
+    log_cost_per_hour_bytes_usd TEXT,
+    log_cost_per_hour_usd TEXT,
+    log_cost_per_hour_volume_usd TEXT,
+    log_discovered_volume_in_window TEXT,
+    log_discovering_count TEXT,
+    log_dismissed_policy_count TEXT,
+    log_error TEXT,
+    log_error_at TEXT,
+    log_estimable_policy_count TEXT,
+    log_estimated_bytes_reduction_per_hour TEXT,
+    log_estimated_cost_reduction_per_hour_bytes_usd TEXT,
+    log_estimated_cost_reduction_per_hour_usd TEXT,
+    log_estimated_cost_reduction_per_hour_volume_usd TEXT,
+    log_estimated_volume_reduction_per_hour TEXT,
     log_event_count INTEGER, -- Total number of log events discovered for this service
-    log_observed_bytes_per_hour_after REAL, -- Sum of observed current bytes across approved log events
-    log_observed_bytes_per_hour_before REAL, -- Sum of observed pre-approval bytes across approved log events
-    log_observed_cost_per_hour_after_bytes_usd REAL, -- Measured bytes-based USD/hour cost after approval across approved log events
-    log_observed_cost_per_hour_after_usd REAL, -- Measured USD/hour cost after approval across approved log events (bytes + volume combined)
-    log_observed_cost_per_hour_after_volume_usd REAL, -- Measured volume-based USD/hour cost after approval across approved log events
-    log_observed_cost_per_hour_before_bytes_usd REAL, -- Measured bytes-based USD/hour cost before approval across approved log events
-    log_observed_cost_per_hour_before_usd REAL, -- Measured USD/hour cost before approval across approved log events (bytes + volume combined)
-    log_observed_cost_per_hour_before_volume_usd REAL, -- Measured volume-based USD/hour cost before approval across approved log events
-    log_observed_volume_per_hour_after REAL, -- Sum of observed current volume across approved log events
-    log_observed_volume_per_hour_before REAL, -- Sum of observed pre-approval volume across approved log events
-    log_pending_count INTEGER, -- Log events with PENDING status (policies awaiting action)
-    log_pending_policy_count INTEGER, -- Policies awaiting user action
-    log_percent_complete REAL, -- Coverage percentage (discovered_volume / service_volume * 100)
-    log_policy_count INTEGER, -- Total active policies across all log events
-    log_quarantined_count INTEGER, -- Log events with QUARANTINED status (repeated AI analysis failures)
-    log_resolved_count INTEGER, -- Log events with RESOLVED status (all policies acted on)
-    log_service_volume_in_window INTEGER, -- Total service log volume in the aligned 24h coverage window (2 days ago)
-    log_status TEXT, -- Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
-    log_volume_per_hour REAL, -- Current throughput in events/hour from the rolling 7-day window, summed across all log events. Same baseline used for policy impact estimates.
-    log_warning TEXT, -- Most recent warning (rate limits, etc.)
-    log_warning_at TEXT, -- When the warning occurred
+    log_observed_bytes_per_hour_after TEXT,
+    log_observed_bytes_per_hour_before TEXT,
+    log_observed_cost_per_hour_after_bytes_usd TEXT,
+    log_observed_cost_per_hour_after_usd TEXT,
+    log_observed_cost_per_hour_after_volume_usd TEXT,
+    log_observed_cost_per_hour_before_bytes_usd TEXT,
+    log_observed_cost_per_hour_before_usd TEXT,
+    log_observed_cost_per_hour_before_volume_usd TEXT,
+    log_observed_volume_per_hour_after TEXT,
+    log_observed_volume_per_hour_before TEXT,
+    log_pending_count TEXT,
+    log_pending_policy_count TEXT,
+    log_percent_complete TEXT,
+    log_policy_count TEXT,
+    log_quarantined_count TEXT,
+    log_resolved_count TEXT,
+    log_service_volume_in_window TEXT,
+    log_status TEXT,
+    log_volume_per_hour TEXT,
+    log_warning TEXT,
+    log_warning_at TEXT,
     refreshed_at TEXT,
     service_id TEXT -- The service this status belongs to
 );

@@ -24,11 +24,12 @@ type Querier interface {
 	GetService(ctx context.Context, id *string) (Service, error)
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
+	ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error)
 	ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error)
+	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
 	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
-	ListServiceStatuses(ctx context.Context) ([]ListServiceStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error

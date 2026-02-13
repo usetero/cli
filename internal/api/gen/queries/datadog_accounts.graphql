@@ -38,25 +38,47 @@ query GetDatadogAccountStatus($id: ID!) {
             node {
                 id
                 status {
-                    logStatus
-                    logPercentComplete
-                    logServiceVolumeInWindow
-                    logDiscoveredVolumeInWindow
+                    health
+                    readyForUse
+                    logEventCount
+                    logEventAnalyzedCount
+                    logEventQuarantinedCount
                     logServiceCount
                     logActiveServices
-                    logReadyServices
-                    logAnalyzingServices
-                    logDiscoveringServices
-                    logStaleServices
-                    logBrokenServices
-                    logDisabledServices
-                    logInactiveServices
-                    logAnalyzedCount
-                    logResolvedCount
-                    logCleanCount
-                    logPendingCount
-                    logPendingPolicyCount
-                    readyForUse
+                    disabledServices
+                    inactiveServices
+                    errorServices
+                    staleServices
+                    okServices
+                    policyPendingCount
+                    policyApprovedCount
+                    policyDismissedCount
+                    serviceVolumePerHour
+                    serviceCostPerHourVolumeUsd
+                    logEventVolumePerHour
+                    logEventBytesPerHour
+                    logEventCostPerHourBytesUsd
+                    logEventCostPerHourVolumeUsd
+                    logEventCostPerHourUsd
+                    estimatedVolumeReductionPerHour
+                    estimatedBytesReductionPerHour
+                    estimatedCostReductionPerHourBytesUsd
+                    estimatedCostReductionPerHourVolumeUsd
+                    estimatedCostReductionPerHourUsd
+                    observedVolumePerHourBefore
+                    observedVolumePerHourAfter
+                    observedBytesPerHourBefore
+                    observedBytesPerHourAfter
+                    observedCostPerHourBeforeBytesUsd
+                    observedCostPerHourBeforeVolumeUsd
+                    observedCostPerHourBeforeUsd
+                    observedCostPerHourAfterBytesUsd
+                    observedCostPerHourAfterVolumeUsd
+                    observedCostPerHourAfterUsd
+                    error
+                    errorAt
+                    warning
+                    warningAt
                 }
             }
         }

@@ -28,28 +28,28 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 	return domain.AccountSummary{
 		ReadyForUse: row.ReadyForUse != 0,
 
+		// Health
+		Health:    domain.ServiceHealth(fmt.Sprint(row.Health)),
+		Error:     fmt.Sprint(row.Error),
+		ErrorAt:   fmt.Sprint(row.ErrorAt),
+		Warning:   fmt.Sprint(row.Warning),
+		WarningAt: fmt.Sprint(row.WarningAt),
+
 		// Services
 		ServiceCount:     row.ServiceCount,
 		ActiveServices:   row.ActiveServices,
-		ReadyServices:    row.ReadyServices,
-		BrokenServices:   row.BrokenServices,
+		OkServices:       row.OkServices,
+		ErrorServices:    row.ErrorServices,
 		StaleServices:    row.StaleServices,
-		DiscoveringCount: row.DiscoveringCount,
-		AnalyzingCount:   row.AnalyzingCount,
+		DisabledServices: row.DisabledServices,
+		InactiveServices: row.InactiveServices,
 
 		// Events
 		EventCount:       row.EventCount,
 		AnalyzedCount:    row.AnalyzedCount,
-		CleanCount:       row.CleanCount,
-		PendingCount:     row.PendingCount,
-		ResolvedCount:    row.ResolvedCount,
 		QuarantinedCount: row.QuarantinedCount,
-		PercentComplete:  row.PercentComplete,
-		WorstStatus:      domain.ServiceLogStatus(row.WorstStatus),
-		LogError:         fmt.Sprint(row.LogError),
 
 		// Policies
-		PolicyCount:          row.PolicyCount,
 		PendingPolicyCount:   row.PendingPolicyCount,
 		ApprovedPolicyCount:  row.ApprovedPolicyCount,
 		DismissedPolicyCount: row.DismissedPolicyCount,
@@ -66,10 +66,18 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		ObservedCostAfter:    row.ObservedCostAfter,
 		ObservedVolumeBefore: row.ObservedVolumeBefore,
 		ObservedVolumeAfter:  row.ObservedVolumeAfter,
+		ObservedBytesBefore:  row.ObservedBytesBefore,
+		ObservedBytesAfter:   row.ObservedBytesAfter,
 
 		// Totals
-		TotalCostPerHour:   row.TotalCostPerHour,
-		TotalVolumePerHour: row.TotalVolumePerHour,
-		TotalBytesPerHour:  row.TotalBytesPerHour,
+		TotalCostPerHour:       row.TotalCostPerHour,
+		TotalCostPerHourBytes:  row.TotalCostPerHourBytes,
+		TotalCostPerHourVolume: row.TotalCostPerHourVolume,
+		TotalVolumePerHour:     row.TotalVolumePerHour,
+		TotalBytesPerHour:      row.TotalBytesPerHour,
+
+		// Service-level throughput
+		TotalServiceVolumePerHour: row.TotalServiceVolumePerHour,
+		TotalServiceCostPerHour:   row.TotalServiceCostPerHour,
 	}, nil
 }

@@ -1,29 +1,67 @@
 package domain
 
-// ServiceLogStatus is the catalog health status for a service or account.
-type ServiceLogStatus string
+// ServiceHealth is the health status for a service or account.
+type ServiceHealth string
 
 const (
-	ServiceLogStatusDisabled    ServiceLogStatus = "DISABLED"
-	ServiceLogStatusInactive    ServiceLogStatus = "INACTIVE"
-	ServiceLogStatusBroken      ServiceLogStatus = "BROKEN"
-	ServiceLogStatusStale       ServiceLogStatus = "STALE"
-	ServiceLogStatusDiscovering ServiceLogStatus = "DISCOVERING"
-	ServiceLogStatusAnalyzing   ServiceLogStatus = "ANALYZING"
-	ServiceLogStatusReady       ServiceLogStatus = "READY"
+	ServiceHealthDisabled ServiceHealth = "DISABLED"
+	ServiceHealthInactive ServiceHealth = "INACTIVE"
+	ServiceHealthError    ServiceHealth = "ERROR"
+	ServiceHealthStale    ServiceHealth = "STALE"
+	ServiceHealthOK       ServiceHealth = "OK"
 )
 
-func (s ServiceLogStatus) String() string { return string(s) }
+func (s ServiceHealth) String() string { return string(s) }
 
-// ServiceStatus is a service's catalog health with throughput metrics.
+// ServiceStatus mirrors service_statuses_cache. All columns included;
+// callers pick what they need.
 type ServiceStatus struct {
-	Name            string
-	Status          ServiceLogStatus
-	Error           string
-	PercentComplete float64
-	EventCount      int64
-	AnalyzedCount   int64
-	VolumePerHour   float64
-	BytesPerHour    float64
-	CostPerHourUSD  float64
+	Name   string
+	Health ServiceHealth
+
+	// Error / warning state.
+	Error     string
+	ErrorAt   string
+	Warning   string
+	WarningAt string
+
+	// Event counts.
+	LogEventCount            int64
+	LogEventAnalyzedCount    int64
+	LogEventQuarantinedCount int64
+
+	// Policy counts.
+	PolicyPendingCount   int64
+	PolicyApprovedCount  int64
+	PolicyDismissedCount int64
+
+	// Service-level throughput (ground truth from service_log_volumes).
+	ServiceVolumePerHour        float64
+	ServiceCostPerHourVolumeUSD float64
+
+	// Log event throughput (discovered events subset).
+	LogEventVolumePerHour        float64
+	LogEventBytesPerHour         float64
+	LogEventCostPerHourUSD       float64
+	LogEventCostPerHourBytesUSD  float64
+	LogEventCostPerHourVolumeUSD float64
+
+	// Estimated savings from pending policies.
+	EstimatedVolumeReductionPerHour     float64
+	EstimatedBytesReductionPerHour      float64
+	EstimatedCostReductionPerHourUSD    float64
+	EstimatedCostReductionPerHourBytes  float64
+	EstimatedCostReductionPerHourVolume float64
+
+	// Observed impact from approved policies (before/after).
+	ObservedVolumePerHourBefore        float64
+	ObservedVolumePerHourAfter         float64
+	ObservedBytesPerHourBefore         float64
+	ObservedBytesPerHourAfter          float64
+	ObservedCostPerHourBeforeUSD       float64
+	ObservedCostPerHourBeforeBytesUSD  float64
+	ObservedCostPerHourBeforeVolumeUSD float64
+	ObservedCostPerHourAfterUSD        float64
+	ObservedCostPerHourAfterBytesUSD   float64
+	ObservedCostPerHourAfterVolumeUSD  float64
 }

@@ -57,40 +57,34 @@ type DatadogAccount struct {
 	Site string // GraphQL enum value (US1, US5, EU1, etc.)
 }
 
-// DatadogAccountStatusState represents the log discovery pipeline state.
-type DatadogAccountStatusState string
+// DatadogAccountHealth represents the infrastructure health of a Datadog account.
+type DatadogAccountHealth string
 
 const (
-	DatadogAccountStatusDisabled    DatadogAccountStatusState = "DISABLED"
-	DatadogAccountStatusInactive    DatadogAccountStatusState = "INACTIVE"
-	DatadogAccountStatusBroken      DatadogAccountStatusState = "BROKEN"
-	DatadogAccountStatusStale       DatadogAccountStatusState = "STALE"
-	DatadogAccountStatusDiscovering DatadogAccountStatusState = "DISCOVERING"
-	DatadogAccountStatusAnalyzing   DatadogAccountStatusState = "ANALYZING"
-	DatadogAccountStatusReady       DatadogAccountStatusState = "READY"
+	DatadogAccountHealthDisabled DatadogAccountHealth = "DISABLED"
+	DatadogAccountHealthInactive DatadogAccountHealth = "INACTIVE"
+	DatadogAccountHealthError    DatadogAccountHealth = "ERROR"
+	DatadogAccountHealthStale    DatadogAccountHealth = "STALE"
+	DatadogAccountHealthOK       DatadogAccountHealth = "OK"
 )
 
-// DatadogAccountStatus tracks the log discovery status for a Datadog account.
+// DatadogAccountStatus tracks the health and progress for a Datadog account.
 type DatadogAccountStatus struct {
-	Status              DatadogAccountStatusState
-	PercentComplete     float64
-	ServiceLogVolume    int // Total log volume across all active services
-	DiscoveredLogVolume int // Volume of logs we've analyzed
-	ServiceCount        int // Total number of services
-	ActiveServices      int // Services not DISABLED or INACTIVE
-	ReadyServices       int
-	AnalyzingServices   int
-	DiscoveringServices int
-	StaleServices       int
-	BrokenServices      int
-	DisabledServices    int
-	InactiveServices    int
-	AnalyzedCount       int  // Number of log events analyzed (for progress display)
-	ResolvedCount       int  // Log events with all policies acted on
-	CleanCount          int  // Log events analyzed with no issues
-	PendingCount        int  // Log events with policies awaiting action
-	PendingPolicyCount  int  // Policies awaiting user action
-	ReadyForUse         bool // Whether the account has enough data to proceed
+	Health               DatadogAccountHealth
+	ReadyForUse          bool
+	ServiceCount         int
+	ActiveServices       int
+	OkServices           int
+	ErrorServices        int
+	StaleServices        int
+	DisabledServices     int
+	InactiveServices     int
+	EventCount           int
+	AnalyzedCount        int
+	QuarantinedCount     int
+	PendingPolicyCount   int
+	ApprovedPolicyCount  int
+	DismissedPolicyCount int
 }
 
 // HasAccount checks if an account has a Datadog integration configured
@@ -204,7 +198,7 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateD
 	}, nil
 }
 
-// GetStatus gets the discovery status for a Datadog account.
+// GetStatus gets the health status for a Datadog account.
 // This is used during onboarding to track overall progress.
 func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error) {
 	s.scope.Debug("fetching datadog account status", "datadogAccountID", datadogAccountID)
@@ -221,33 +215,33 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 	}
 
 	statusNode := resp.DatadogAccounts.Edges[0].Node.Status
+	if statusNode == nil {
+		s.scope.Debug("status cache not populated yet")
+		return nil, nil
+	}
 
 	result := &DatadogAccountStatus{
-		Status:              DatadogAccountStatusState(statusNode.LogStatus),
-		PercentComplete:     deref(statusNode.LogPercentComplete),
-		ServiceLogVolume:    deref(statusNode.LogServiceVolumeInWindow),
-		DiscoveredLogVolume: deref(statusNode.LogDiscoveredVolumeInWindow),
-		ServiceCount:        statusNode.LogServiceCount,
-		ActiveServices:      statusNode.LogActiveServices,
-		ReadyServices:       statusNode.LogReadyServices,
-		AnalyzingServices:   statusNode.LogAnalyzingServices,
-		DiscoveringServices: statusNode.LogDiscoveringServices,
-		StaleServices:       statusNode.LogStaleServices,
-		BrokenServices:      statusNode.LogBrokenServices,
-		DisabledServices:    statusNode.LogDisabledServices,
-		InactiveServices:    statusNode.LogInactiveServices,
-		AnalyzedCount:       statusNode.LogAnalyzedCount,
-		ResolvedCount:       statusNode.LogResolvedCount,
-		CleanCount:          statusNode.LogCleanCount,
-		PendingCount:        statusNode.LogPendingCount,
-		PendingPolicyCount:  statusNode.LogPendingPolicyCount,
-		ReadyForUse:         statusNode.ReadyForUse,
+		Health:               DatadogAccountHealth(statusNode.Health),
+		ReadyForUse:          statusNode.ReadyForUse,
+		ServiceCount:         statusNode.LogServiceCount,
+		ActiveServices:       statusNode.LogActiveServices,
+		OkServices:           statusNode.OkServices,
+		ErrorServices:        statusNode.ErrorServices,
+		StaleServices:        statusNode.StaleServices,
+		DisabledServices:     statusNode.DisabledServices,
+		InactiveServices:     statusNode.InactiveServices,
+		EventCount:           statusNode.LogEventCount,
+		AnalyzedCount:        statusNode.LogEventAnalyzedCount,
+		QuarantinedCount:     statusNode.LogEventQuarantinedCount,
+		PendingPolicyCount:   statusNode.PolicyPendingCount,
+		ApprovedPolicyCount:  statusNode.PolicyApprovedCount,
+		DismissedPolicyCount: statusNode.PolicyDismissedCount,
 	}
 
 	s.scope.Debug("fetched datadog account status",
-		log.String("status", string(result.Status)),
+		log.String("health", string(result.Health)),
 		log.Int("serviceCount", result.ServiceCount),
-		log.Int("ready", result.ReadyServices),
+		log.Int("ok", result.OkServices),
 		log.Int("inactive", result.InactiveServices))
 
 	return result, nil

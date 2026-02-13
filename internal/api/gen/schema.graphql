@@ -867,8 +867,9 @@ type DatadogAccount implements Node {
   """
   Status of this Datadog account in the discovery pipeline.
   Derived from the status of all services discovered from this account.
+  Returns null if cache has not been populated yet.
   """
-  status: DatadogAccountStatus!
+  status: DatadogAccountStatusCache
 }
 
 """A connection to a list of items."""
@@ -921,208 +922,569 @@ enum DatadogAccountSite {
   AP2
 }
 
-"""Aggregated status for each Datadog account based on service statuses"""
-type DatadogAccountStatus {
-  """The Datadog account this status belongs to"""
-  datadogAccountId: ID!
-
-  """Account ID (denormalized from Datadog account)"""
-  accountId: ID!
-
-  """
-  Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
-  """
-  logStatus: DatadogAccountStatusLogStatus!
-
-  """
-  True when account has enough analyzed data for good UX (>= 50 analyzed log events)
-  """
+type DatadogAccountStatusCache implements Node {
+  id: ID!
+  datadogAccountID: ID!
+  accountID: UUID!
+  health: DatadogAccountStatusCacheHealth!
   readyForUse: Boolean!
-
-  """Number of log events that have been analyzed"""
-  logAnalyzedCount: Int!
-
-  """
-  Total service log volume in the rolling 7-day window across all active services
-  """
-  logServiceVolumeInWindow: Int
-
-  """
-  Total discovered log event volume in the rolling 7-day window across all active services
-  """
-  logDiscoveredVolumeInWindow: Int
-
-  """Overall coverage percentage"""
-  logPercentComplete: Float
-
-  """Total number of services"""
+  logEventAnalyzedCount: Int!
   logServiceCount: Int!
-
-  """Services not DISABLED or INACTIVE"""
   logActiveServices: Int!
-
-  """Services with DISABLED status"""
-  logDisabledServices: Int!
-
-  """Services with INACTIVE status"""
-  logInactiveServices: Int!
-
-  """Services with BROKEN status"""
-  logBrokenServices: Int!
-
-  """Services with STALE status"""
-  logStaleServices: Int!
-
-  """Services with DISCOVERING status"""
-  logDiscoveringServices: Int!
-
-  """Services with ANALYZING status"""
-  logAnalyzingServices: Int!
-
-  """Services with READY status"""
-  logReadyServices: Int!
-
-  """Total log events across all services"""
+  disabledServices: Int!
+  inactiveServices: Int!
+  errorServices: Int!
+  staleServices: Int!
+  okServices: Int!
   logEventCount: Int!
+  logEventQuarantinedCount: Int!
+  policyPendingCount: Int!
+  policyApprovedCount: Int!
+  policyDismissedCount: Int!
+  serviceVolumePerHour: Float
+  serviceCostPerHourVolumeUsd: Float
+  logEventVolumePerHour: Float
+  logEventBytesPerHour: Float
+  logEventCostPerHourBytesUsd: Float
+  logEventCostPerHourVolumeUsd: Float
+  logEventCostPerHourUsd: Float
+  estimatedVolumeReductionPerHour: Float
+  estimatedBytesReductionPerHour: Float
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourUsd: Float
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourAfter: Float
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourAfter: Float
+  observedCostPerHourBeforeBytesUsd: Float
+  observedCostPerHourBeforeVolumeUsd: Float
+  observedCostPerHourBeforeUsd: Float
+  observedCostPerHourAfterBytesUsd: Float
+  observedCostPerHourAfterVolumeUsd: Float
+  observedCostPerHourAfterUsd: Float
+  error: String
+  errorAt: Time
+  warning: String
+  warningAt: Time
+  refreshedAt: Time!
+}
 
-  """Log events with RESOLVED status (all policies acted on)"""
-  logResolvedCount: Int!
-
-  """Log events with CLEAN status (analyzed, no issues)"""
-  logCleanCount: Int!
-
-  """Log events with PENDING status (policies awaiting action)"""
-  logPendingCount: Int!
-
-  """Log events with ANALYZING status"""
-  logAnalyzingCount: Int!
-
-  """Log events with DISCOVERING status"""
-  logDiscoveringCount: Int!
-
-  """Log events with QUARANTINED status (repeated AI analysis failures)"""
-  logQuarantinedCount: Int!
-
-  """Total active policies"""
-  logPolicyCount: Int!
-
-  """Policies awaiting user action"""
-  logPendingPolicyCount: Int!
-
-  """Policies approved by user"""
-  logApprovedPolicyCount: Int!
-
-  """Policies dismissed by user"""
-  logDismissedPolicyCount: Int!
-
-  """Policies with volume or bytes estimates"""
-  logEstimablePolicyCount: Int!
-
-  """
-  Current throughput in events/hour from the rolling 7-day window, summed across all services
-  """
-  logVolumePerHour: Float
-
-  """
-  Current throughput in bytes/hour from the rolling 7-day window, summed across all services
-  """
-  logBytesPerHour: Float
-
-  """Account-wide estimated volume reduction"""
-  logEstimatedVolumeReductionPerHour: Float
-
-  """Account-wide estimated bytes reduction"""
-  logEstimatedBytesReductionPerHour: Float
-
-  """Account-wide observed pre-approval volume"""
-  logObservedVolumePerHourBefore: Float
-
-  """Account-wide observed current volume"""
-  logObservedVolumePerHourAfter: Float
-
-  """Account-wide observed pre-approval bytes"""
-  logObservedBytesPerHourBefore: Float
-
-  """Account-wide observed current bytes"""
-  logObservedBytesPerHourAfter: Float
-
-  """Account-wide current bytes-based USD/hour cost"""
-  logCostPerHourBytesUsd: Float
-
-  """Account-wide current volume-based USD/hour cost"""
-  logCostPerHourVolumeUsd: Float
-
-  """Account-wide current USD/hour cost (bytes + volume combined)"""
-  logCostPerHourUsd: Float
-
-  """Account-wide estimated bytes-based USD/hour savings"""
-  logEstimatedCostReductionPerHourBytesUsd: Float
-
-  """Account-wide estimated volume-based USD/hour savings"""
-  logEstimatedCostReductionPerHourVolumeUsd: Float
-
-  """Account-wide estimated USD/hour savings (bytes + volume combined)"""
-  logEstimatedCostReductionPerHourUsd: Float
-
-  """Account-wide measured bytes-based USD/hour cost before approval"""
-  logObservedCostPerHourBeforeBytesUsd: Float
-
-  """Account-wide measured volume-based USD/hour cost before approval"""
-  logObservedCostPerHourBeforeVolumeUsd: Float
-
-  """
-  Account-wide measured USD/hour cost before approval (bytes + volume combined)
-  """
-  logObservedCostPerHourBeforeUsd: Float
-
-  """Account-wide measured bytes-based USD/hour cost after approval"""
-  logObservedCostPerHourAfterBytesUsd: Float
-
-  """Account-wide measured volume-based USD/hour cost after approval"""
-  logObservedCostPerHourAfterVolumeUsd: Float
-
-  """
-  Account-wide measured USD/hour cost after approval (bytes + volume combined)
-  """
-  logObservedCostPerHourAfterUsd: Float
-
-  """
-  Most recent error message from any broken service or account-level discovery
-  """
-  logError: String
-
-  """When the most recent error occurred"""
-  logErrorAt: Time
-
-  """Most recent warning message"""
-  logWarning: String
-
-  """When the most recent warning occurred"""
-  logWarningAt: Time
+"""DatadogAccountStatusCacheHealth is enum for the field health"""
+enum DatadogAccountStatusCacheHealth {
+  DISABLED
+  INACTIVE
+  ERROR
+  STALE
+  OK
 }
 
 """
-Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+DatadogAccountStatusCacheWhereInput is used for filtering DatadogAccountStatusCache objects.
+Input was generated by ent.
 """
-enum DatadogAccountStatusLogStatus {
-  """All services have discovery turned off"""
-  DISABLED
+input DatadogAccountStatusCacheWhereInput {
+  not: DatadogAccountStatusCacheWhereInput
+  and: [DatadogAccountStatusCacheWhereInput!]
+  or: [DatadogAccountStatusCacheWhereInput!]
 
-  """All active services have zero log volume"""
-  INACTIVE
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
 
-  """At least one service has discovery errors (5+ consecutive failures)"""
-  BROKEN
+  """datadog_account_id field predicates"""
+  datadogAccountID: ID
+  datadogAccountIDNEQ: ID
+  datadogAccountIDIn: [ID!]
+  datadogAccountIDNotIn: [ID!]
 
-  """At least one service has stale data (older than 48 hours)"""
-  STALE
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
 
-  """At least one service is still being discovered (no volume data yet)"""
-  DISCOVERING
-  ANALYZING
+  """health field predicates"""
+  health: DatadogAccountStatusCacheHealth
+  healthNEQ: DatadogAccountStatusCacheHealth
+  healthIn: [DatadogAccountStatusCacheHealth!]
+  healthNotIn: [DatadogAccountStatusCacheHealth!]
 
-  """All services have fresh data with 90%+ coverage"""
-  READY
+  """ready_for_use field predicates"""
+  readyForUse: Boolean
+  readyForUseNEQ: Boolean
+
+  """log_event_analyzed_count field predicates"""
+  logEventAnalyzedCount: Int
+  logEventAnalyzedCountNEQ: Int
+  logEventAnalyzedCountIn: [Int!]
+  logEventAnalyzedCountNotIn: [Int!]
+  logEventAnalyzedCountGT: Int
+  logEventAnalyzedCountGTE: Int
+  logEventAnalyzedCountLT: Int
+  logEventAnalyzedCountLTE: Int
+
+  """log_service_count field predicates"""
+  logServiceCount: Int
+  logServiceCountNEQ: Int
+  logServiceCountIn: [Int!]
+  logServiceCountNotIn: [Int!]
+  logServiceCountGT: Int
+  logServiceCountGTE: Int
+  logServiceCountLT: Int
+  logServiceCountLTE: Int
+
+  """log_active_services field predicates"""
+  logActiveServices: Int
+  logActiveServicesNEQ: Int
+  logActiveServicesIn: [Int!]
+  logActiveServicesNotIn: [Int!]
+  logActiveServicesGT: Int
+  logActiveServicesGTE: Int
+  logActiveServicesLT: Int
+  logActiveServicesLTE: Int
+
+  """disabled_services field predicates"""
+  disabledServices: Int
+  disabledServicesNEQ: Int
+  disabledServicesIn: [Int!]
+  disabledServicesNotIn: [Int!]
+  disabledServicesGT: Int
+  disabledServicesGTE: Int
+  disabledServicesLT: Int
+  disabledServicesLTE: Int
+
+  """inactive_services field predicates"""
+  inactiveServices: Int
+  inactiveServicesNEQ: Int
+  inactiveServicesIn: [Int!]
+  inactiveServicesNotIn: [Int!]
+  inactiveServicesGT: Int
+  inactiveServicesGTE: Int
+  inactiveServicesLT: Int
+  inactiveServicesLTE: Int
+
+  """error_services field predicates"""
+  errorServices: Int
+  errorServicesNEQ: Int
+  errorServicesIn: [Int!]
+  errorServicesNotIn: [Int!]
+  errorServicesGT: Int
+  errorServicesGTE: Int
+  errorServicesLT: Int
+  errorServicesLTE: Int
+
+  """stale_services field predicates"""
+  staleServices: Int
+  staleServicesNEQ: Int
+  staleServicesIn: [Int!]
+  staleServicesNotIn: [Int!]
+  staleServicesGT: Int
+  staleServicesGTE: Int
+  staleServicesLT: Int
+  staleServicesLTE: Int
+
+  """ok_services field predicates"""
+  okServices: Int
+  okServicesNEQ: Int
+  okServicesIn: [Int!]
+  okServicesNotIn: [Int!]
+  okServicesGT: Int
+  okServicesGTE: Int
+  okServicesLT: Int
+  okServicesLTE: Int
+
+  """log_event_count field predicates"""
+  logEventCount: Int
+  logEventCountNEQ: Int
+  logEventCountIn: [Int!]
+  logEventCountNotIn: [Int!]
+  logEventCountGT: Int
+  logEventCountGTE: Int
+  logEventCountLT: Int
+  logEventCountLTE: Int
+
+  """log_event_quarantined_count field predicates"""
+  logEventQuarantinedCount: Int
+  logEventQuarantinedCountNEQ: Int
+  logEventQuarantinedCountIn: [Int!]
+  logEventQuarantinedCountNotIn: [Int!]
+  logEventQuarantinedCountGT: Int
+  logEventQuarantinedCountGTE: Int
+  logEventQuarantinedCountLT: Int
+  logEventQuarantinedCountLTE: Int
+
+  """policy_pending_count field predicates"""
+  policyPendingCount: Int
+  policyPendingCountNEQ: Int
+  policyPendingCountIn: [Int!]
+  policyPendingCountNotIn: [Int!]
+  policyPendingCountGT: Int
+  policyPendingCountGTE: Int
+  policyPendingCountLT: Int
+  policyPendingCountLTE: Int
+
+  """policy_approved_count field predicates"""
+  policyApprovedCount: Int
+  policyApprovedCountNEQ: Int
+  policyApprovedCountIn: [Int!]
+  policyApprovedCountNotIn: [Int!]
+  policyApprovedCountGT: Int
+  policyApprovedCountGTE: Int
+  policyApprovedCountLT: Int
+  policyApprovedCountLTE: Int
+
+  """policy_dismissed_count field predicates"""
+  policyDismissedCount: Int
+  policyDismissedCountNEQ: Int
+  policyDismissedCountIn: [Int!]
+  policyDismissedCountNotIn: [Int!]
+  policyDismissedCountGT: Int
+  policyDismissedCountGTE: Int
+  policyDismissedCountLT: Int
+  policyDismissedCountLTE: Int
+
+  """service_volume_per_hour field predicates"""
+  serviceVolumePerHour: Float
+  serviceVolumePerHourNEQ: Float
+  serviceVolumePerHourIn: [Float!]
+  serviceVolumePerHourNotIn: [Float!]
+  serviceVolumePerHourGT: Float
+  serviceVolumePerHourGTE: Float
+  serviceVolumePerHourLT: Float
+  serviceVolumePerHourLTE: Float
+  serviceVolumePerHourIsNil: Boolean
+  serviceVolumePerHourNotNil: Boolean
+
+  """service_cost_per_hour_volume_usd field predicates"""
+  serviceCostPerHourVolumeUsd: Float
+  serviceCostPerHourVolumeUsdNEQ: Float
+  serviceCostPerHourVolumeUsdIn: [Float!]
+  serviceCostPerHourVolumeUsdNotIn: [Float!]
+  serviceCostPerHourVolumeUsdGT: Float
+  serviceCostPerHourVolumeUsdGTE: Float
+  serviceCostPerHourVolumeUsdLT: Float
+  serviceCostPerHourVolumeUsdLTE: Float
+  serviceCostPerHourVolumeUsdIsNil: Boolean
+  serviceCostPerHourVolumeUsdNotNil: Boolean
+
+  """log_event_volume_per_hour field predicates"""
+  logEventVolumePerHour: Float
+  logEventVolumePerHourNEQ: Float
+  logEventVolumePerHourIn: [Float!]
+  logEventVolumePerHourNotIn: [Float!]
+  logEventVolumePerHourGT: Float
+  logEventVolumePerHourGTE: Float
+  logEventVolumePerHourLT: Float
+  logEventVolumePerHourLTE: Float
+  logEventVolumePerHourIsNil: Boolean
+  logEventVolumePerHourNotNil: Boolean
+
+  """log_event_bytes_per_hour field predicates"""
+  logEventBytesPerHour: Float
+  logEventBytesPerHourNEQ: Float
+  logEventBytesPerHourIn: [Float!]
+  logEventBytesPerHourNotIn: [Float!]
+  logEventBytesPerHourGT: Float
+  logEventBytesPerHourGTE: Float
+  logEventBytesPerHourLT: Float
+  logEventBytesPerHourLTE: Float
+  logEventBytesPerHourIsNil: Boolean
+  logEventBytesPerHourNotNil: Boolean
+
+  """log_event_cost_per_hour_bytes_usd field predicates"""
+  logEventCostPerHourBytesUsd: Float
+  logEventCostPerHourBytesUsdNEQ: Float
+  logEventCostPerHourBytesUsdIn: [Float!]
+  logEventCostPerHourBytesUsdNotIn: [Float!]
+  logEventCostPerHourBytesUsdGT: Float
+  logEventCostPerHourBytesUsdGTE: Float
+  logEventCostPerHourBytesUsdLT: Float
+  logEventCostPerHourBytesUsdLTE: Float
+  logEventCostPerHourBytesUsdIsNil: Boolean
+  logEventCostPerHourBytesUsdNotNil: Boolean
+
+  """log_event_cost_per_hour_volume_usd field predicates"""
+  logEventCostPerHourVolumeUsd: Float
+  logEventCostPerHourVolumeUsdNEQ: Float
+  logEventCostPerHourVolumeUsdIn: [Float!]
+  logEventCostPerHourVolumeUsdNotIn: [Float!]
+  logEventCostPerHourVolumeUsdGT: Float
+  logEventCostPerHourVolumeUsdGTE: Float
+  logEventCostPerHourVolumeUsdLT: Float
+  logEventCostPerHourVolumeUsdLTE: Float
+  logEventCostPerHourVolumeUsdIsNil: Boolean
+  logEventCostPerHourVolumeUsdNotNil: Boolean
+
+  """log_event_cost_per_hour_usd field predicates"""
+  logEventCostPerHourUsd: Float
+  logEventCostPerHourUsdNEQ: Float
+  logEventCostPerHourUsdIn: [Float!]
+  logEventCostPerHourUsdNotIn: [Float!]
+  logEventCostPerHourUsdGT: Float
+  logEventCostPerHourUsdGTE: Float
+  logEventCostPerHourUsdLT: Float
+  logEventCostPerHourUsdLTE: Float
+  logEventCostPerHourUsdIsNil: Boolean
+  logEventCostPerHourUsdNotNil: Boolean
+
+  """estimated_volume_reduction_per_hour field predicates"""
+  estimatedVolumeReductionPerHour: Float
+  estimatedVolumeReductionPerHourNEQ: Float
+  estimatedVolumeReductionPerHourIn: [Float!]
+  estimatedVolumeReductionPerHourNotIn: [Float!]
+  estimatedVolumeReductionPerHourGT: Float
+  estimatedVolumeReductionPerHourGTE: Float
+  estimatedVolumeReductionPerHourLT: Float
+  estimatedVolumeReductionPerHourLTE: Float
+  estimatedVolumeReductionPerHourIsNil: Boolean
+  estimatedVolumeReductionPerHourNotNil: Boolean
+
+  """estimated_bytes_reduction_per_hour field predicates"""
+  estimatedBytesReductionPerHour: Float
+  estimatedBytesReductionPerHourNEQ: Float
+  estimatedBytesReductionPerHourIn: [Float!]
+  estimatedBytesReductionPerHourNotIn: [Float!]
+  estimatedBytesReductionPerHourGT: Float
+  estimatedBytesReductionPerHourGTE: Float
+  estimatedBytesReductionPerHourLT: Float
+  estimatedBytesReductionPerHourLTE: Float
+  estimatedBytesReductionPerHourIsNil: Boolean
+  estimatedBytesReductionPerHourNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourBytesUsdNEQ: Float
+  estimatedCostReductionPerHourBytesUsdIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdGT: Float
+  estimatedCostReductionPerHourBytesUsdGTE: Float
+  estimatedCostReductionPerHourBytesUsdLT: Float
+  estimatedCostReductionPerHourBytesUsdLTE: Float
+  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
+  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourVolumeUsdNEQ: Float
+  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdGT: Float
+  estimatedCostReductionPerHourVolumeUsdGTE: Float
+  estimatedCostReductionPerHourVolumeUsdLT: Float
+  estimatedCostReductionPerHourVolumeUsdLTE: Float
+  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
+  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_usd field predicates"""
+  estimatedCostReductionPerHourUsd: Float
+  estimatedCostReductionPerHourUsdNEQ: Float
+  estimatedCostReductionPerHourUsdIn: [Float!]
+  estimatedCostReductionPerHourUsdNotIn: [Float!]
+  estimatedCostReductionPerHourUsdGT: Float
+  estimatedCostReductionPerHourUsdGTE: Float
+  estimatedCostReductionPerHourUsdLT: Float
+  estimatedCostReductionPerHourUsdLTE: Float
+  estimatedCostReductionPerHourUsdIsNil: Boolean
+  estimatedCostReductionPerHourUsdNotNil: Boolean
+
+  """observed_volume_per_hour_before field predicates"""
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourBeforeNEQ: Float
+  observedVolumePerHourBeforeIn: [Float!]
+  observedVolumePerHourBeforeNotIn: [Float!]
+  observedVolumePerHourBeforeGT: Float
+  observedVolumePerHourBeforeGTE: Float
+  observedVolumePerHourBeforeLT: Float
+  observedVolumePerHourBeforeLTE: Float
+  observedVolumePerHourBeforeIsNil: Boolean
+  observedVolumePerHourBeforeNotNil: Boolean
+
+  """observed_volume_per_hour_after field predicates"""
+  observedVolumePerHourAfter: Float
+  observedVolumePerHourAfterNEQ: Float
+  observedVolumePerHourAfterIn: [Float!]
+  observedVolumePerHourAfterNotIn: [Float!]
+  observedVolumePerHourAfterGT: Float
+  observedVolumePerHourAfterGTE: Float
+  observedVolumePerHourAfterLT: Float
+  observedVolumePerHourAfterLTE: Float
+  observedVolumePerHourAfterIsNil: Boolean
+  observedVolumePerHourAfterNotNil: Boolean
+
+  """observed_bytes_per_hour_before field predicates"""
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourBeforeNEQ: Float
+  observedBytesPerHourBeforeIn: [Float!]
+  observedBytesPerHourBeforeNotIn: [Float!]
+  observedBytesPerHourBeforeGT: Float
+  observedBytesPerHourBeforeGTE: Float
+  observedBytesPerHourBeforeLT: Float
+  observedBytesPerHourBeforeLTE: Float
+  observedBytesPerHourBeforeIsNil: Boolean
+  observedBytesPerHourBeforeNotNil: Boolean
+
+  """observed_bytes_per_hour_after field predicates"""
+  observedBytesPerHourAfter: Float
+  observedBytesPerHourAfterNEQ: Float
+  observedBytesPerHourAfterIn: [Float!]
+  observedBytesPerHourAfterNotIn: [Float!]
+  observedBytesPerHourAfterGT: Float
+  observedBytesPerHourAfterGTE: Float
+  observedBytesPerHourAfterLT: Float
+  observedBytesPerHourAfterLTE: Float
+  observedBytesPerHourAfterIsNil: Boolean
+  observedBytesPerHourAfterNotNil: Boolean
+
+  """observed_cost_per_hour_before_bytes_usd field predicates"""
+  observedCostPerHourBeforeBytesUsd: Float
+  observedCostPerHourBeforeBytesUsdNEQ: Float
+  observedCostPerHourBeforeBytesUsdIn: [Float!]
+  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
+  observedCostPerHourBeforeBytesUsdGT: Float
+  observedCostPerHourBeforeBytesUsdGTE: Float
+  observedCostPerHourBeforeBytesUsdLT: Float
+  observedCostPerHourBeforeBytesUsdLTE: Float
+  observedCostPerHourBeforeBytesUsdIsNil: Boolean
+  observedCostPerHourBeforeBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_volume_usd field predicates"""
+  observedCostPerHourBeforeVolumeUsd: Float
+  observedCostPerHourBeforeVolumeUsdNEQ: Float
+  observedCostPerHourBeforeVolumeUsdIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdGT: Float
+  observedCostPerHourBeforeVolumeUsdGTE: Float
+  observedCostPerHourBeforeVolumeUsdLT: Float
+  observedCostPerHourBeforeVolumeUsdLTE: Float
+  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
+  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_usd field predicates"""
+  observedCostPerHourBeforeUsd: Float
+  observedCostPerHourBeforeUsdNEQ: Float
+  observedCostPerHourBeforeUsdIn: [Float!]
+  observedCostPerHourBeforeUsdNotIn: [Float!]
+  observedCostPerHourBeforeUsdGT: Float
+  observedCostPerHourBeforeUsdGTE: Float
+  observedCostPerHourBeforeUsdLT: Float
+  observedCostPerHourBeforeUsdLTE: Float
+  observedCostPerHourBeforeUsdIsNil: Boolean
+  observedCostPerHourBeforeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_bytes_usd field predicates"""
+  observedCostPerHourAfterBytesUsd: Float
+  observedCostPerHourAfterBytesUsdNEQ: Float
+  observedCostPerHourAfterBytesUsdIn: [Float!]
+  observedCostPerHourAfterBytesUsdNotIn: [Float!]
+  observedCostPerHourAfterBytesUsdGT: Float
+  observedCostPerHourAfterBytesUsdGTE: Float
+  observedCostPerHourAfterBytesUsdLT: Float
+  observedCostPerHourAfterBytesUsdLTE: Float
+  observedCostPerHourAfterBytesUsdIsNil: Boolean
+  observedCostPerHourAfterBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_volume_usd field predicates"""
+  observedCostPerHourAfterVolumeUsd: Float
+  observedCostPerHourAfterVolumeUsdNEQ: Float
+  observedCostPerHourAfterVolumeUsdIn: [Float!]
+  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
+  observedCostPerHourAfterVolumeUsdGT: Float
+  observedCostPerHourAfterVolumeUsdGTE: Float
+  observedCostPerHourAfterVolumeUsdLT: Float
+  observedCostPerHourAfterVolumeUsdLTE: Float
+  observedCostPerHourAfterVolumeUsdIsNil: Boolean
+  observedCostPerHourAfterVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_usd field predicates"""
+  observedCostPerHourAfterUsd: Float
+  observedCostPerHourAfterUsdNEQ: Float
+  observedCostPerHourAfterUsdIn: [Float!]
+  observedCostPerHourAfterUsdNotIn: [Float!]
+  observedCostPerHourAfterUsdGT: Float
+  observedCostPerHourAfterUsdGTE: Float
+  observedCostPerHourAfterUsdLT: Float
+  observedCostPerHourAfterUsdLTE: Float
+  observedCostPerHourAfterUsdIsNil: Boolean
+  observedCostPerHourAfterUsdNotNil: Boolean
+
+  """error field predicates"""
+  error: String
+  errorNEQ: String
+  errorIn: [String!]
+  errorNotIn: [String!]
+  errorGT: String
+  errorGTE: String
+  errorLT: String
+  errorLTE: String
+  errorContains: String
+  errorHasPrefix: String
+  errorHasSuffix: String
+  errorIsNil: Boolean
+  errorNotNil: Boolean
+  errorEqualFold: String
+  errorContainsFold: String
+
+  """error_at field predicates"""
+  errorAt: Time
+  errorAtNEQ: Time
+  errorAtIn: [Time!]
+  errorAtNotIn: [Time!]
+  errorAtGT: Time
+  errorAtGTE: Time
+  errorAtLT: Time
+  errorAtLTE: Time
+  errorAtIsNil: Boolean
+  errorAtNotNil: Boolean
+
+  """warning field predicates"""
+  warning: String
+  warningNEQ: String
+  warningIn: [String!]
+  warningNotIn: [String!]
+  warningGT: String
+  warningGTE: String
+  warningLT: String
+  warningLTE: String
+  warningContains: String
+  warningHasPrefix: String
+  warningHasSuffix: String
+  warningIsNil: Boolean
+  warningNotNil: Boolean
+  warningEqualFold: String
+  warningContainsFold: String
+
+  """warning_at field predicates"""
+  warningAt: Time
+  warningAtNEQ: Time
+  warningAtIn: [Time!]
+  warningAtNotIn: [Time!]
+  warningAtGT: Time
+  warningAtGTE: Time
+  warningAtLT: Time
+  warningAtLTE: Time
+  warningAtIsNil: Boolean
+  warningAtNotNil: Boolean
+
+  """refreshed_at field predicates"""
+  refreshedAt: Time
+  refreshedAtNEQ: Time
+  refreshedAtIn: [Time!]
+  refreshedAtNotIn: [Time!]
+  refreshedAtGT: Time
+  refreshedAtGTE: Time
+  refreshedAtLT: Time
+  refreshedAtLTE: Time
 }
 
 """
@@ -1764,14 +2126,18 @@ type LogEvent implements Node {
   """Service that produces this event"""
   service: Service!
 
+  """Log sample that produced this event during classification"""
+  logSample: LogSample!
+
   """Category-specific policies across workspaces"""
   policies: [LogEventPolicy!]
 
   """
   Status of this log event for a specific workspace and Datadog account.
   Shows where the log event is in the preparation pipeline.
+  Returns null if cache has not been populated yet.
   """
-  status(workspaceID: ID!, datadogAccountID: ID!): LogEventStatus
+  status(workspaceID: ID!, datadogAccountID: ID!): LogEventStatusCache
 }
 
 """A connection to a list of items."""
@@ -2186,138 +2552,436 @@ input LogEventPolicyWhereInput {
   hasWorkspaceWith: [WorkspaceWhereInput!]
 }
 
-"""Pipeline status for each log event with estimated and observed impact"""
-type LogEventStatus {
-  """The log event this status belongs to"""
-  logEventId: ID!
-
-  """Account ID for tenant isolation"""
-  accountId: ID!
-
-  """Service ID (denormalized from log_event)"""
-  serviceId: ID!
-
-  """The Datadog account performing discovery"""
-  datadogAccountId: ID!
-
-  """
-  BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING
-  """
-  status: LogEventStatusState!
-
-  """Whether log_event_volumes exist for this event from this integration"""
+type LogEventStatusCache implements Node {
+  id: ID!
+  accountID: UUID!
+  logEventID: ID!
+  serviceID: UUID!
+  datadogAccountID: ID!
+  status: LogEventStatusCacheStatus!
   hasVolumes: Boolean!
-
-  """Whether this log event has been analyzed for quality issues"""
   hasBeenAnalyzed: Boolean!
-
-  """Error message if status is BROKEN"""
   error: String
-
-  """Total active (non-dismissed) policies on this log event"""
   policyCount: Int!
-
-  """Policies awaiting user action"""
   pendingPolicyCount: Int!
-
-  """Policies approved by user"""
   approvedPolicyCount: Int!
-
-  """Policies dismissed by user"""
   dismissedPolicyCount: Int!
-
-  """Active policies with volume or bytes reduction estimates"""
   estimablePolicyCount: Int!
-
-  """Sum of estimated volume reductions from all active estimable policies"""
   estimatedVolumeReductionPerHour: Float
-
-  """Sum of estimated bytes reductions from all active estimable policies"""
   estimatedBytesReductionPerHour: Float
-
-  """
-  Current throughput in events/hour from the rolling 7-day window. Same baseline used for policy impact estimates.
-  """
   volumePerHour: Float
-
-  """
-  Current throughput in bytes/hour from the rolling 7-day window. Same baseline used for policy impact estimates.
-  """
   bytesPerHour: Float
-
-  """
-  Measured events/hour before first policy approval (only when approved and data is fresh)
-  """
   observedVolumePerHourBefore: Float
-
-  """
-  Measured events/hour in recent window (only when approved and data is fresh)
-  """
   observedVolumePerHourAfter: Float
-
-  """Measured bytes/hour before first policy approval"""
   observedBytesPerHourBefore: Float
-
-  """Measured bytes/hour in recent window"""
   observedBytesPerHourAfter: Float
-
-  """Current bytes-based cost in USD/hour"""
   costPerHourBytesUsd: Float
-
-  """Current volume-based cost in USD/hour"""
   costPerHourVolumeUsd: Float
-
-  """Current USD/hour cost (bytes + volume combined)"""
   costPerHourUsd: Float
-
-  """Estimated USD/hour savings from bytes reduction"""
   estimatedCostReductionPerHourBytesUsd: Float
-
-  """Estimated USD/hour savings from volume reduction"""
   estimatedCostReductionPerHourVolumeUsd: Float
-
-  """
-  Estimated USD/hour savings from active policies (bytes + volume combined)
-  """
   estimatedCostReductionPerHourUsd: Float
-
-  """Measured bytes-based USD/hour cost before first policy approval"""
   observedCostPerHourBeforeBytesUsd: Float
-
-  """Measured volume-based USD/hour cost before first policy approval"""
   observedCostPerHourBeforeVolumeUsd: Float
-
-  """
-  Measured USD/hour cost before first policy approval (bytes + volume combined)
-  """
   observedCostPerHourBeforeUsd: Float
-
-  """Measured bytes-based USD/hour cost after policy approval"""
   observedCostPerHourAfterBytesUsd: Float
-
-  """Measured volume-based USD/hour cost after policy approval"""
   observedCostPerHourAfterVolumeUsd: Float
-
-  """
-  Measured USD/hour cost in recent window after policy approval (bytes + volume combined)
-  """
   observedCostPerHourAfterUsd: Float
+  refreshedAt: Time!
 }
 
-"""
-BROKEN > QUARANTINED > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING
-"""
-enum LogEventStatusState {
-  """Discovery is failing repeatedly (5+ consecutive errors)"""
+"""LogEventStatusCacheStatus is enum for the field status"""
+enum LogEventStatusCacheStatus {
   BROKEN
   RESOLVED
   CLEAN
-
-  """Missing volume data or policy analysis"""
   PENDING
   ANALYZING
   DISCOVERING
   QUARANTINED
+}
+
+"""
+LogEventStatusCacheWhereInput is used for filtering LogEventStatusCache objects.
+Input was generated by ent.
+"""
+input LogEventStatusCacheWhereInput {
+  not: LogEventStatusCacheWhereInput
+  and: [LogEventStatusCacheWhereInput!]
+  or: [LogEventStatusCacheWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
+  """log_event_id field predicates"""
+  logEventID: ID
+  logEventIDNEQ: ID
+  logEventIDIn: [ID!]
+  logEventIDNotIn: [ID!]
+
+  """service_id field predicates"""
+  serviceID: UUID
+  serviceIDNEQ: UUID
+  serviceIDIn: [UUID!]
+  serviceIDNotIn: [UUID!]
+  serviceIDGT: UUID
+  serviceIDGTE: UUID
+  serviceIDLT: UUID
+  serviceIDLTE: UUID
+
+  """datadog_account_id field predicates"""
+  datadogAccountID: ID
+  datadogAccountIDNEQ: ID
+  datadogAccountIDIn: [ID!]
+  datadogAccountIDNotIn: [ID!]
+
+  """status field predicates"""
+  status: LogEventStatusCacheStatus
+  statusNEQ: LogEventStatusCacheStatus
+  statusIn: [LogEventStatusCacheStatus!]
+  statusNotIn: [LogEventStatusCacheStatus!]
+
+  """has_volumes field predicates"""
+  hasVolumes: Boolean
+  hasVolumesNEQ: Boolean
+
+  """has_been_analyzed field predicates"""
+  hasBeenAnalyzed: Boolean
+  hasBeenAnalyzedNEQ: Boolean
+
+  """error field predicates"""
+  error: String
+  errorNEQ: String
+  errorIn: [String!]
+  errorNotIn: [String!]
+  errorGT: String
+  errorGTE: String
+  errorLT: String
+  errorLTE: String
+  errorContains: String
+  errorHasPrefix: String
+  errorHasSuffix: String
+  errorIsNil: Boolean
+  errorNotNil: Boolean
+  errorEqualFold: String
+  errorContainsFold: String
+
+  """policy_count field predicates"""
+  policyCount: Int
+  policyCountNEQ: Int
+  policyCountIn: [Int!]
+  policyCountNotIn: [Int!]
+  policyCountGT: Int
+  policyCountGTE: Int
+  policyCountLT: Int
+  policyCountLTE: Int
+
+  """pending_policy_count field predicates"""
+  pendingPolicyCount: Int
+  pendingPolicyCountNEQ: Int
+  pendingPolicyCountIn: [Int!]
+  pendingPolicyCountNotIn: [Int!]
+  pendingPolicyCountGT: Int
+  pendingPolicyCountGTE: Int
+  pendingPolicyCountLT: Int
+  pendingPolicyCountLTE: Int
+
+  """approved_policy_count field predicates"""
+  approvedPolicyCount: Int
+  approvedPolicyCountNEQ: Int
+  approvedPolicyCountIn: [Int!]
+  approvedPolicyCountNotIn: [Int!]
+  approvedPolicyCountGT: Int
+  approvedPolicyCountGTE: Int
+  approvedPolicyCountLT: Int
+  approvedPolicyCountLTE: Int
+
+  """dismissed_policy_count field predicates"""
+  dismissedPolicyCount: Int
+  dismissedPolicyCountNEQ: Int
+  dismissedPolicyCountIn: [Int!]
+  dismissedPolicyCountNotIn: [Int!]
+  dismissedPolicyCountGT: Int
+  dismissedPolicyCountGTE: Int
+  dismissedPolicyCountLT: Int
+  dismissedPolicyCountLTE: Int
+
+  """estimable_policy_count field predicates"""
+  estimablePolicyCount: Int
+  estimablePolicyCountNEQ: Int
+  estimablePolicyCountIn: [Int!]
+  estimablePolicyCountNotIn: [Int!]
+  estimablePolicyCountGT: Int
+  estimablePolicyCountGTE: Int
+  estimablePolicyCountLT: Int
+  estimablePolicyCountLTE: Int
+
+  """estimated_volume_reduction_per_hour field predicates"""
+  estimatedVolumeReductionPerHour: Float
+  estimatedVolumeReductionPerHourNEQ: Float
+  estimatedVolumeReductionPerHourIn: [Float!]
+  estimatedVolumeReductionPerHourNotIn: [Float!]
+  estimatedVolumeReductionPerHourGT: Float
+  estimatedVolumeReductionPerHourGTE: Float
+  estimatedVolumeReductionPerHourLT: Float
+  estimatedVolumeReductionPerHourLTE: Float
+  estimatedVolumeReductionPerHourIsNil: Boolean
+  estimatedVolumeReductionPerHourNotNil: Boolean
+
+  """estimated_bytes_reduction_per_hour field predicates"""
+  estimatedBytesReductionPerHour: Float
+  estimatedBytesReductionPerHourNEQ: Float
+  estimatedBytesReductionPerHourIn: [Float!]
+  estimatedBytesReductionPerHourNotIn: [Float!]
+  estimatedBytesReductionPerHourGT: Float
+  estimatedBytesReductionPerHourGTE: Float
+  estimatedBytesReductionPerHourLT: Float
+  estimatedBytesReductionPerHourLTE: Float
+  estimatedBytesReductionPerHourIsNil: Boolean
+  estimatedBytesReductionPerHourNotNil: Boolean
+
+  """volume_per_hour field predicates"""
+  volumePerHour: Float
+  volumePerHourNEQ: Float
+  volumePerHourIn: [Float!]
+  volumePerHourNotIn: [Float!]
+  volumePerHourGT: Float
+  volumePerHourGTE: Float
+  volumePerHourLT: Float
+  volumePerHourLTE: Float
+  volumePerHourIsNil: Boolean
+  volumePerHourNotNil: Boolean
+
+  """bytes_per_hour field predicates"""
+  bytesPerHour: Float
+  bytesPerHourNEQ: Float
+  bytesPerHourIn: [Float!]
+  bytesPerHourNotIn: [Float!]
+  bytesPerHourGT: Float
+  bytesPerHourGTE: Float
+  bytesPerHourLT: Float
+  bytesPerHourLTE: Float
+  bytesPerHourIsNil: Boolean
+  bytesPerHourNotNil: Boolean
+
+  """observed_volume_per_hour_before field predicates"""
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourBeforeNEQ: Float
+  observedVolumePerHourBeforeIn: [Float!]
+  observedVolumePerHourBeforeNotIn: [Float!]
+  observedVolumePerHourBeforeGT: Float
+  observedVolumePerHourBeforeGTE: Float
+  observedVolumePerHourBeforeLT: Float
+  observedVolumePerHourBeforeLTE: Float
+  observedVolumePerHourBeforeIsNil: Boolean
+  observedVolumePerHourBeforeNotNil: Boolean
+
+  """observed_volume_per_hour_after field predicates"""
+  observedVolumePerHourAfter: Float
+  observedVolumePerHourAfterNEQ: Float
+  observedVolumePerHourAfterIn: [Float!]
+  observedVolumePerHourAfterNotIn: [Float!]
+  observedVolumePerHourAfterGT: Float
+  observedVolumePerHourAfterGTE: Float
+  observedVolumePerHourAfterLT: Float
+  observedVolumePerHourAfterLTE: Float
+  observedVolumePerHourAfterIsNil: Boolean
+  observedVolumePerHourAfterNotNil: Boolean
+
+  """observed_bytes_per_hour_before field predicates"""
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourBeforeNEQ: Float
+  observedBytesPerHourBeforeIn: [Float!]
+  observedBytesPerHourBeforeNotIn: [Float!]
+  observedBytesPerHourBeforeGT: Float
+  observedBytesPerHourBeforeGTE: Float
+  observedBytesPerHourBeforeLT: Float
+  observedBytesPerHourBeforeLTE: Float
+  observedBytesPerHourBeforeIsNil: Boolean
+  observedBytesPerHourBeforeNotNil: Boolean
+
+  """observed_bytes_per_hour_after field predicates"""
+  observedBytesPerHourAfter: Float
+  observedBytesPerHourAfterNEQ: Float
+  observedBytesPerHourAfterIn: [Float!]
+  observedBytesPerHourAfterNotIn: [Float!]
+  observedBytesPerHourAfterGT: Float
+  observedBytesPerHourAfterGTE: Float
+  observedBytesPerHourAfterLT: Float
+  observedBytesPerHourAfterLTE: Float
+  observedBytesPerHourAfterIsNil: Boolean
+  observedBytesPerHourAfterNotNil: Boolean
+
+  """cost_per_hour_bytes_usd field predicates"""
+  costPerHourBytesUsd: Float
+  costPerHourBytesUsdNEQ: Float
+  costPerHourBytesUsdIn: [Float!]
+  costPerHourBytesUsdNotIn: [Float!]
+  costPerHourBytesUsdGT: Float
+  costPerHourBytesUsdGTE: Float
+  costPerHourBytesUsdLT: Float
+  costPerHourBytesUsdLTE: Float
+  costPerHourBytesUsdIsNil: Boolean
+  costPerHourBytesUsdNotNil: Boolean
+
+  """cost_per_hour_volume_usd field predicates"""
+  costPerHourVolumeUsd: Float
+  costPerHourVolumeUsdNEQ: Float
+  costPerHourVolumeUsdIn: [Float!]
+  costPerHourVolumeUsdNotIn: [Float!]
+  costPerHourVolumeUsdGT: Float
+  costPerHourVolumeUsdGTE: Float
+  costPerHourVolumeUsdLT: Float
+  costPerHourVolumeUsdLTE: Float
+  costPerHourVolumeUsdIsNil: Boolean
+  costPerHourVolumeUsdNotNil: Boolean
+
+  """cost_per_hour_usd field predicates"""
+  costPerHourUsd: Float
+  costPerHourUsdNEQ: Float
+  costPerHourUsdIn: [Float!]
+  costPerHourUsdNotIn: [Float!]
+  costPerHourUsdGT: Float
+  costPerHourUsdGTE: Float
+  costPerHourUsdLT: Float
+  costPerHourUsdLTE: Float
+  costPerHourUsdIsNil: Boolean
+  costPerHourUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourBytesUsdNEQ: Float
+  estimatedCostReductionPerHourBytesUsdIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdGT: Float
+  estimatedCostReductionPerHourBytesUsdGTE: Float
+  estimatedCostReductionPerHourBytesUsdLT: Float
+  estimatedCostReductionPerHourBytesUsdLTE: Float
+  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
+  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourVolumeUsdNEQ: Float
+  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdGT: Float
+  estimatedCostReductionPerHourVolumeUsdGTE: Float
+  estimatedCostReductionPerHourVolumeUsdLT: Float
+  estimatedCostReductionPerHourVolumeUsdLTE: Float
+  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
+  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_usd field predicates"""
+  estimatedCostReductionPerHourUsd: Float
+  estimatedCostReductionPerHourUsdNEQ: Float
+  estimatedCostReductionPerHourUsdIn: [Float!]
+  estimatedCostReductionPerHourUsdNotIn: [Float!]
+  estimatedCostReductionPerHourUsdGT: Float
+  estimatedCostReductionPerHourUsdGTE: Float
+  estimatedCostReductionPerHourUsdLT: Float
+  estimatedCostReductionPerHourUsdLTE: Float
+  estimatedCostReductionPerHourUsdIsNil: Boolean
+  estimatedCostReductionPerHourUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_bytes_usd field predicates"""
+  observedCostPerHourBeforeBytesUsd: Float
+  observedCostPerHourBeforeBytesUsdNEQ: Float
+  observedCostPerHourBeforeBytesUsdIn: [Float!]
+  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
+  observedCostPerHourBeforeBytesUsdGT: Float
+  observedCostPerHourBeforeBytesUsdGTE: Float
+  observedCostPerHourBeforeBytesUsdLT: Float
+  observedCostPerHourBeforeBytesUsdLTE: Float
+  observedCostPerHourBeforeBytesUsdIsNil: Boolean
+  observedCostPerHourBeforeBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_volume_usd field predicates"""
+  observedCostPerHourBeforeVolumeUsd: Float
+  observedCostPerHourBeforeVolumeUsdNEQ: Float
+  observedCostPerHourBeforeVolumeUsdIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdGT: Float
+  observedCostPerHourBeforeVolumeUsdGTE: Float
+  observedCostPerHourBeforeVolumeUsdLT: Float
+  observedCostPerHourBeforeVolumeUsdLTE: Float
+  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
+  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_usd field predicates"""
+  observedCostPerHourBeforeUsd: Float
+  observedCostPerHourBeforeUsdNEQ: Float
+  observedCostPerHourBeforeUsdIn: [Float!]
+  observedCostPerHourBeforeUsdNotIn: [Float!]
+  observedCostPerHourBeforeUsdGT: Float
+  observedCostPerHourBeforeUsdGTE: Float
+  observedCostPerHourBeforeUsdLT: Float
+  observedCostPerHourBeforeUsdLTE: Float
+  observedCostPerHourBeforeUsdIsNil: Boolean
+  observedCostPerHourBeforeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_bytes_usd field predicates"""
+  observedCostPerHourAfterBytesUsd: Float
+  observedCostPerHourAfterBytesUsdNEQ: Float
+  observedCostPerHourAfterBytesUsdIn: [Float!]
+  observedCostPerHourAfterBytesUsdNotIn: [Float!]
+  observedCostPerHourAfterBytesUsdGT: Float
+  observedCostPerHourAfterBytesUsdGTE: Float
+  observedCostPerHourAfterBytesUsdLT: Float
+  observedCostPerHourAfterBytesUsdLTE: Float
+  observedCostPerHourAfterBytesUsdIsNil: Boolean
+  observedCostPerHourAfterBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_volume_usd field predicates"""
+  observedCostPerHourAfterVolumeUsd: Float
+  observedCostPerHourAfterVolumeUsdNEQ: Float
+  observedCostPerHourAfterVolumeUsdIn: [Float!]
+  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
+  observedCostPerHourAfterVolumeUsdGT: Float
+  observedCostPerHourAfterVolumeUsdGTE: Float
+  observedCostPerHourAfterVolumeUsdLT: Float
+  observedCostPerHourAfterVolumeUsdLTE: Float
+  observedCostPerHourAfterVolumeUsdIsNil: Boolean
+  observedCostPerHourAfterVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_usd field predicates"""
+  observedCostPerHourAfterUsd: Float
+  observedCostPerHourAfterUsdNEQ: Float
+  observedCostPerHourAfterUsdIn: [Float!]
+  observedCostPerHourAfterUsdNotIn: [Float!]
+  observedCostPerHourAfterUsdGT: Float
+  observedCostPerHourAfterUsdGTE: Float
+  observedCostPerHourAfterUsdLT: Float
+  observedCostPerHourAfterUsdLTE: Float
+  observedCostPerHourAfterUsdIsNil: Boolean
+  observedCostPerHourAfterUsdNotNil: Boolean
+
+  """refreshed_at field predicates"""
+  refreshedAt: Time
+  refreshedAtNEQ: Time
+  refreshedAtIn: [Time!]
+  refreshedAtNotIn: [Time!]
+  refreshedAtGT: Time
+  refreshedAtGTE: Time
+  refreshedAtLT: Time
+  refreshedAtLTE: Time
 }
 
 """
@@ -2421,6 +3085,10 @@ input LogEventWhereInput {
   hasService: Boolean
   hasServiceWith: [ServiceWhereInput!]
 
+  """log_sample edge predicates"""
+  hasLogSample: Boolean
+  hasLogSampleWith: [LogSampleWhereInput!]
+
   """policies edge predicates"""
   hasPolicies: Boolean
   hasPoliciesWith: [LogEventPolicyWhereInput!]
@@ -2445,6 +3113,233 @@ type LogRecord {
 
   """Scope-level attributes (e.g., instrumentation library info)"""
   scopeAttributes: Map
+}
+
+type LogSample implements Node {
+  """Unique identifier of the log sample"""
+  id: ID!
+
+  """Parent account for tenant isolation"""
+  accountID: ID!
+
+  """Service these logs belong to"""
+  serviceID: ID!
+
+  """Datadog account that produced this sample"""
+  datadogAccountID: ID!
+
+  """Number of OTEL log records in this page"""
+  recordCount: Int!
+
+  """Size of the GCS object in bytes"""
+  byteSize: Int!
+
+  """GCS object path for the log payload"""
+  storagePath: String!
+
+  """Earliest log timestamp in this page"""
+  timeFrom: Time!
+
+  """Latest log timestamp in this page"""
+  timeTo: Time!
+
+  """
+  Queue state: pending (awaiting analysis), processing (being analyzed), processed (done), failed (analysis error)
+  """
+  status: LogSampleStatus!
+
+  """
+  When this sample was claimed for processing — used to detect stale claims
+  """
+  claimedAt: Time
+
+  """When analysis of this sample completed"""
+  processedAt: Time
+
+  """When this sample was ingested"""
+  createdAt: Time!
+
+  """When this record was last updated"""
+  updatedAt: Time!
+
+  """Account this sample belongs to"""
+  account: Account!
+
+  """Service these logs belong to"""
+  service: Service!
+
+  """Datadog account that produced this sample"""
+  datadogAccount: DatadogAccount!
+
+  """Log events discovered from this sample"""
+  logEvents: [LogEvent!]
+}
+
+"""LogSampleStatus is enum for the field status"""
+enum LogSampleStatus {
+  pending
+  processing
+  processed
+  failed
+}
+
+"""
+LogSampleWhereInput is used for filtering LogSample objects.
+Input was generated by ent.
+"""
+input LogSampleWhereInput {
+  not: LogSampleWhereInput
+  and: [LogSampleWhereInput!]
+  or: [LogSampleWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: ID
+  accountIDNEQ: ID
+  accountIDIn: [ID!]
+  accountIDNotIn: [ID!]
+
+  """service_id field predicates"""
+  serviceID: ID
+  serviceIDNEQ: ID
+  serviceIDIn: [ID!]
+  serviceIDNotIn: [ID!]
+
+  """datadog_account_id field predicates"""
+  datadogAccountID: ID
+  datadogAccountIDNEQ: ID
+  datadogAccountIDIn: [ID!]
+  datadogAccountIDNotIn: [ID!]
+
+  """record_count field predicates"""
+  recordCount: Int
+  recordCountNEQ: Int
+  recordCountIn: [Int!]
+  recordCountNotIn: [Int!]
+  recordCountGT: Int
+  recordCountGTE: Int
+  recordCountLT: Int
+  recordCountLTE: Int
+
+  """byte_size field predicates"""
+  byteSize: Int
+  byteSizeNEQ: Int
+  byteSizeIn: [Int!]
+  byteSizeNotIn: [Int!]
+  byteSizeGT: Int
+  byteSizeGTE: Int
+  byteSizeLT: Int
+  byteSizeLTE: Int
+
+  """storage_path field predicates"""
+  storagePath: String
+  storagePathNEQ: String
+  storagePathIn: [String!]
+  storagePathNotIn: [String!]
+  storagePathGT: String
+  storagePathGTE: String
+  storagePathLT: String
+  storagePathLTE: String
+  storagePathContains: String
+  storagePathHasPrefix: String
+  storagePathHasSuffix: String
+  storagePathEqualFold: String
+  storagePathContainsFold: String
+
+  """time_from field predicates"""
+  timeFrom: Time
+  timeFromNEQ: Time
+  timeFromIn: [Time!]
+  timeFromNotIn: [Time!]
+  timeFromGT: Time
+  timeFromGTE: Time
+  timeFromLT: Time
+  timeFromLTE: Time
+
+  """time_to field predicates"""
+  timeTo: Time
+  timeToNEQ: Time
+  timeToIn: [Time!]
+  timeToNotIn: [Time!]
+  timeToGT: Time
+  timeToGTE: Time
+  timeToLT: Time
+  timeToLTE: Time
+
+  """status field predicates"""
+  status: LogSampleStatus
+  statusNEQ: LogSampleStatus
+  statusIn: [LogSampleStatus!]
+  statusNotIn: [LogSampleStatus!]
+
+  """claimed_at field predicates"""
+  claimedAt: Time
+  claimedAtNEQ: Time
+  claimedAtIn: [Time!]
+  claimedAtNotIn: [Time!]
+  claimedAtGT: Time
+  claimedAtGTE: Time
+  claimedAtLT: Time
+  claimedAtLTE: Time
+  claimedAtIsNil: Boolean
+  claimedAtNotNil: Boolean
+
+  """processed_at field predicates"""
+  processedAt: Time
+  processedAtNEQ: Time
+  processedAtIn: [Time!]
+  processedAtNotIn: [Time!]
+  processedAtGT: Time
+  processedAtGTE: Time
+  processedAtLT: Time
+  processedAtLTE: Time
+  processedAtIsNil: Boolean
+  processedAtNotNil: Boolean
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """account edge predicates"""
+  hasAccount: Boolean
+  hasAccountWith: [AccountWhereInput!]
+
+  """service edge predicates"""
+  hasService: Boolean
+  hasServiceWith: [ServiceWhereInput!]
+
+  """datadog_account edge predicates"""
+  hasDatadogAccount: Boolean
+  hasDatadogAccountWith: [DatadogAccountWhereInput!]
+
+  """log_events edge predicates"""
+  hasLogEvents: Boolean
+  hasLogEventsWith: [LogEventWhereInput!]
 }
 
 scalar Map
@@ -3278,8 +4173,9 @@ type Service implements Node {
   """
   Status of this service from a specific Datadog account.
   Shows where the service is in the discovery pipeline.
+  Returns null if cache has not been populated yet.
   """
-  status(datadogAccountID: ID!): ServiceStatus
+  status(datadogAccountID: ID!): ServiceStatusCache
 }
 
 """A connection to a list of items."""
@@ -3321,173 +4217,494 @@ enum ServiceOrderField {
   UPDATED_AT
 }
 
-"""Aggregated status for each service based on log event statuses"""
-type ServiceStatus {
-  """The service this status belongs to"""
-  serviceId: ID!
-
-  """Account ID (denormalized from service)"""
-  accountId: ID!
-
-  """The Datadog account performing discovery"""
-  datadogAccountId: ID!
-
-  """
-  Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
-  """
-  logStatus: ServiceStatusLogStatus!
-
-  """Total service log volume in the rolling 7-day window"""
-  logServiceVolumeInWindow: Int
-
-  """Total discovered log event volume in the rolling 7-day window"""
-  logDiscoveredVolumeInWindow: Int
-
-  """Coverage percentage (discovered_volume / service_volume * 100)"""
-  logPercentComplete: Float
-
-  """Total number of log events discovered for this service"""
+type ServiceStatusCache implements Node {
+  id: ID!
+  serviceID: ID!
+  accountID: UUID!
+  datadogAccountID: ID!
+  health: ServiceStatusCacheHealth!
   logEventCount: Int!
+  logEventAnalyzedCount: Int!
+  logEventQuarantinedCount: Int!
+  policyPendingCount: Int!
+  policyApprovedCount: Int!
+  policyDismissedCount: Int!
+  serviceVolumePerHour: Float
+  serviceCostPerHourVolumeUsd: Float
+  logEventVolumePerHour: Float
+  logEventBytesPerHour: Float
+  logEventCostPerHourBytesUsd: Float
+  logEventCostPerHourVolumeUsd: Float
+  logEventCostPerHourUsd: Float
+  estimatedVolumeReductionPerHour: Float
+  estimatedBytesReductionPerHour: Float
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourUsd: Float
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourAfter: Float
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourAfter: Float
+  observedCostPerHourBeforeBytesUsd: Float
+  observedCostPerHourBeforeVolumeUsd: Float
+  observedCostPerHourBeforeUsd: Float
+  observedCostPerHourAfterBytesUsd: Float
+  observedCostPerHourAfterVolumeUsd: Float
+  observedCostPerHourAfterUsd: Float
+  error: String
+  errorAt: Time
+  warning: String
+  warningAt: Time
+  refreshedAt: Time!
+}
 
-  """Number of log events that have been analyzed"""
-  logAnalyzedCount: Int!
-
-  """Log events with RESOLVED status (all policies acted on)"""
-  logResolvedCount: Int!
-
-  """Log events with CLEAN status (analyzed, no issues)"""
-  logCleanCount: Int!
-
-  """Log events with PENDING status (policies awaiting action)"""
-  logPendingCount: Int!
-
-  """Log events with ANALYZING status"""
-  logAnalyzingCount: Int!
-
-  """Log events with DISCOVERING status"""
-  logDiscoveringCount: Int!
-
-  """Log events with QUARANTINED status (repeated AI analysis failures)"""
-  logQuarantinedCount: Int!
-
-  """Total active policies across all log events"""
-  logPolicyCount: Int!
-
-  """Policies awaiting user action"""
-  logPendingPolicyCount: Int!
-
-  """Policies approved by user"""
-  logApprovedPolicyCount: Int!
-
-  """Policies dismissed by user"""
-  logDismissedPolicyCount: Int!
-
-  """Policies with volume or bytes reduction estimates"""
-  logEstimablePolicyCount: Int!
-
-  """
-  Current throughput in events/hour from the rolling 7-day window, summed across all log events
-  """
-  logVolumePerHour: Float
-
-  """
-  Current throughput in bytes/hour from the rolling 7-day window, summed across all log events
-  """
-  logBytesPerHour: Float
-
-  """Sum of estimated volume reductions across all log events"""
-  logEstimatedVolumeReductionPerHour: Float
-
-  """Sum of estimated bytes reductions across all log events"""
-  logEstimatedBytesReductionPerHour: Float
-
-  """Sum of observed pre-approval volume across approved log events"""
-  logObservedVolumePerHourBefore: Float
-
-  """Sum of observed current volume across approved log events"""
-  logObservedVolumePerHourAfter: Float
-
-  """Sum of observed pre-approval bytes across approved log events"""
-  logObservedBytesPerHourBefore: Float
-
-  """Sum of observed current bytes across approved log events"""
-  logObservedBytesPerHourAfter: Float
-
-  """Current bytes-based USD/hour cost summed across all log events"""
-  logCostPerHourBytesUsd: Float
-
-  """Current volume-based USD/hour cost summed across all log events"""
-  logCostPerHourVolumeUsd: Float
-
-  """
-  Current USD/hour cost summed across all log events (bytes + volume combined)
-  """
-  logCostPerHourUsd: Float
-
-  """Estimated bytes-based USD/hour savings across all log events"""
-  logEstimatedCostReductionPerHourBytesUsd: Float
-
-  """Estimated volume-based USD/hour savings across all log events"""
-  logEstimatedCostReductionPerHourVolumeUsd: Float
-
-  """
-  Estimated USD/hour savings across all log events (bytes + volume combined)
-  """
-  logEstimatedCostReductionPerHourUsd: Float
-
-  """Measured bytes-based USD/hour cost before approval"""
-  logObservedCostPerHourBeforeBytesUsd: Float
-
-  """Measured volume-based USD/hour cost before approval"""
-  logObservedCostPerHourBeforeVolumeUsd: Float
-
-  """Measured USD/hour cost before approval (bytes + volume combined)"""
-  logObservedCostPerHourBeforeUsd: Float
-
-  """Measured bytes-based USD/hour cost after approval"""
-  logObservedCostPerHourAfterBytesUsd: Float
-
-  """Measured volume-based USD/hour cost after approval"""
-  logObservedCostPerHourAfterVolumeUsd: Float
-
-  """Measured USD/hour cost after approval (bytes + volume combined)"""
-  logObservedCostPerHourAfterUsd: Float
-
-  """Most recent error from broken services"""
-  logError: String
-
-  """When the error occurred"""
-  logErrorAt: Time
-
-  """Most recent warning (rate limits, etc.)"""
-  logWarning: String
-
-  """When the warning occurred"""
-  logWarningAt: Time
+"""ServiceStatusCacheHealth is enum for the field health"""
+enum ServiceStatusCacheHealth {
+  DISABLED
+  INACTIVE
+  ERROR
+  STALE
+  OK
 }
 
 """
-Status: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY
+ServiceStatusCacheWhereInput is used for filtering ServiceStatusCache objects.
+Input was generated by ent.
 """
-enum ServiceStatusLogStatus {
-  """Discovery is turned off for this service (enabled = false)"""
-  DISABLED
+input ServiceStatusCacheWhereInput {
+  not: ServiceStatusCacheWhereInput
+  and: [ServiceStatusCacheWhereInput!]
+  or: [ServiceStatusCacheWhereInput!]
 
-  """Service exists but has zero log volume in the time window"""
-  INACTIVE
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
 
-  """Discovery is failing repeatedly (5+ consecutive errors)"""
-  BROKEN
+  """service_id field predicates"""
+  serviceID: ID
+  serviceIDNEQ: ID
+  serviceIDIn: [ID!]
+  serviceIDNotIn: [ID!]
 
-  """Volume data exists but is older than 48 hours"""
-  STALE
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
 
-  """Discovery is enabled but no volume data exists yet"""
-  DISCOVERING
-  ANALYZING
+  """datadog_account_id field predicates"""
+  datadogAccountID: ID
+  datadogAccountIDNEQ: ID
+  datadogAccountIDIn: [ID!]
+  datadogAccountIDNotIn: [ID!]
 
-  """Fresh volume data with 90%+ coverage - fully discovered"""
-  READY
+  """health field predicates"""
+  health: ServiceStatusCacheHealth
+  healthNEQ: ServiceStatusCacheHealth
+  healthIn: [ServiceStatusCacheHealth!]
+  healthNotIn: [ServiceStatusCacheHealth!]
+
+  """log_event_count field predicates"""
+  logEventCount: Int
+  logEventCountNEQ: Int
+  logEventCountIn: [Int!]
+  logEventCountNotIn: [Int!]
+  logEventCountGT: Int
+  logEventCountGTE: Int
+  logEventCountLT: Int
+  logEventCountLTE: Int
+
+  """log_event_analyzed_count field predicates"""
+  logEventAnalyzedCount: Int
+  logEventAnalyzedCountNEQ: Int
+  logEventAnalyzedCountIn: [Int!]
+  logEventAnalyzedCountNotIn: [Int!]
+  logEventAnalyzedCountGT: Int
+  logEventAnalyzedCountGTE: Int
+  logEventAnalyzedCountLT: Int
+  logEventAnalyzedCountLTE: Int
+
+  """log_event_quarantined_count field predicates"""
+  logEventQuarantinedCount: Int
+  logEventQuarantinedCountNEQ: Int
+  logEventQuarantinedCountIn: [Int!]
+  logEventQuarantinedCountNotIn: [Int!]
+  logEventQuarantinedCountGT: Int
+  logEventQuarantinedCountGTE: Int
+  logEventQuarantinedCountLT: Int
+  logEventQuarantinedCountLTE: Int
+
+  """policy_pending_count field predicates"""
+  policyPendingCount: Int
+  policyPendingCountNEQ: Int
+  policyPendingCountIn: [Int!]
+  policyPendingCountNotIn: [Int!]
+  policyPendingCountGT: Int
+  policyPendingCountGTE: Int
+  policyPendingCountLT: Int
+  policyPendingCountLTE: Int
+
+  """policy_approved_count field predicates"""
+  policyApprovedCount: Int
+  policyApprovedCountNEQ: Int
+  policyApprovedCountIn: [Int!]
+  policyApprovedCountNotIn: [Int!]
+  policyApprovedCountGT: Int
+  policyApprovedCountGTE: Int
+  policyApprovedCountLT: Int
+  policyApprovedCountLTE: Int
+
+  """policy_dismissed_count field predicates"""
+  policyDismissedCount: Int
+  policyDismissedCountNEQ: Int
+  policyDismissedCountIn: [Int!]
+  policyDismissedCountNotIn: [Int!]
+  policyDismissedCountGT: Int
+  policyDismissedCountGTE: Int
+  policyDismissedCountLT: Int
+  policyDismissedCountLTE: Int
+
+  """service_volume_per_hour field predicates"""
+  serviceVolumePerHour: Float
+  serviceVolumePerHourNEQ: Float
+  serviceVolumePerHourIn: [Float!]
+  serviceVolumePerHourNotIn: [Float!]
+  serviceVolumePerHourGT: Float
+  serviceVolumePerHourGTE: Float
+  serviceVolumePerHourLT: Float
+  serviceVolumePerHourLTE: Float
+  serviceVolumePerHourIsNil: Boolean
+  serviceVolumePerHourNotNil: Boolean
+
+  """service_cost_per_hour_volume_usd field predicates"""
+  serviceCostPerHourVolumeUsd: Float
+  serviceCostPerHourVolumeUsdNEQ: Float
+  serviceCostPerHourVolumeUsdIn: [Float!]
+  serviceCostPerHourVolumeUsdNotIn: [Float!]
+  serviceCostPerHourVolumeUsdGT: Float
+  serviceCostPerHourVolumeUsdGTE: Float
+  serviceCostPerHourVolumeUsdLT: Float
+  serviceCostPerHourVolumeUsdLTE: Float
+  serviceCostPerHourVolumeUsdIsNil: Boolean
+  serviceCostPerHourVolumeUsdNotNil: Boolean
+
+  """log_event_volume_per_hour field predicates"""
+  logEventVolumePerHour: Float
+  logEventVolumePerHourNEQ: Float
+  logEventVolumePerHourIn: [Float!]
+  logEventVolumePerHourNotIn: [Float!]
+  logEventVolumePerHourGT: Float
+  logEventVolumePerHourGTE: Float
+  logEventVolumePerHourLT: Float
+  logEventVolumePerHourLTE: Float
+  logEventVolumePerHourIsNil: Boolean
+  logEventVolumePerHourNotNil: Boolean
+
+  """log_event_bytes_per_hour field predicates"""
+  logEventBytesPerHour: Float
+  logEventBytesPerHourNEQ: Float
+  logEventBytesPerHourIn: [Float!]
+  logEventBytesPerHourNotIn: [Float!]
+  logEventBytesPerHourGT: Float
+  logEventBytesPerHourGTE: Float
+  logEventBytesPerHourLT: Float
+  logEventBytesPerHourLTE: Float
+  logEventBytesPerHourIsNil: Boolean
+  logEventBytesPerHourNotNil: Boolean
+
+  """log_event_cost_per_hour_bytes_usd field predicates"""
+  logEventCostPerHourBytesUsd: Float
+  logEventCostPerHourBytesUsdNEQ: Float
+  logEventCostPerHourBytesUsdIn: [Float!]
+  logEventCostPerHourBytesUsdNotIn: [Float!]
+  logEventCostPerHourBytesUsdGT: Float
+  logEventCostPerHourBytesUsdGTE: Float
+  logEventCostPerHourBytesUsdLT: Float
+  logEventCostPerHourBytesUsdLTE: Float
+  logEventCostPerHourBytesUsdIsNil: Boolean
+  logEventCostPerHourBytesUsdNotNil: Boolean
+
+  """log_event_cost_per_hour_volume_usd field predicates"""
+  logEventCostPerHourVolumeUsd: Float
+  logEventCostPerHourVolumeUsdNEQ: Float
+  logEventCostPerHourVolumeUsdIn: [Float!]
+  logEventCostPerHourVolumeUsdNotIn: [Float!]
+  logEventCostPerHourVolumeUsdGT: Float
+  logEventCostPerHourVolumeUsdGTE: Float
+  logEventCostPerHourVolumeUsdLT: Float
+  logEventCostPerHourVolumeUsdLTE: Float
+  logEventCostPerHourVolumeUsdIsNil: Boolean
+  logEventCostPerHourVolumeUsdNotNil: Boolean
+
+  """log_event_cost_per_hour_usd field predicates"""
+  logEventCostPerHourUsd: Float
+  logEventCostPerHourUsdNEQ: Float
+  logEventCostPerHourUsdIn: [Float!]
+  logEventCostPerHourUsdNotIn: [Float!]
+  logEventCostPerHourUsdGT: Float
+  logEventCostPerHourUsdGTE: Float
+  logEventCostPerHourUsdLT: Float
+  logEventCostPerHourUsdLTE: Float
+  logEventCostPerHourUsdIsNil: Boolean
+  logEventCostPerHourUsdNotNil: Boolean
+
+  """estimated_volume_reduction_per_hour field predicates"""
+  estimatedVolumeReductionPerHour: Float
+  estimatedVolumeReductionPerHourNEQ: Float
+  estimatedVolumeReductionPerHourIn: [Float!]
+  estimatedVolumeReductionPerHourNotIn: [Float!]
+  estimatedVolumeReductionPerHourGT: Float
+  estimatedVolumeReductionPerHourGTE: Float
+  estimatedVolumeReductionPerHourLT: Float
+  estimatedVolumeReductionPerHourLTE: Float
+  estimatedVolumeReductionPerHourIsNil: Boolean
+  estimatedVolumeReductionPerHourNotNil: Boolean
+
+  """estimated_bytes_reduction_per_hour field predicates"""
+  estimatedBytesReductionPerHour: Float
+  estimatedBytesReductionPerHourNEQ: Float
+  estimatedBytesReductionPerHourIn: [Float!]
+  estimatedBytesReductionPerHourNotIn: [Float!]
+  estimatedBytesReductionPerHourGT: Float
+  estimatedBytesReductionPerHourGTE: Float
+  estimatedBytesReductionPerHourLT: Float
+  estimatedBytesReductionPerHourLTE: Float
+  estimatedBytesReductionPerHourIsNil: Boolean
+  estimatedBytesReductionPerHourNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourBytesUsdNEQ: Float
+  estimatedCostReductionPerHourBytesUsdIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdGT: Float
+  estimatedCostReductionPerHourBytesUsdGTE: Float
+  estimatedCostReductionPerHourBytesUsdLT: Float
+  estimatedCostReductionPerHourBytesUsdLTE: Float
+  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
+  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourVolumeUsdNEQ: Float
+  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdGT: Float
+  estimatedCostReductionPerHourVolumeUsdGTE: Float
+  estimatedCostReductionPerHourVolumeUsdLT: Float
+  estimatedCostReductionPerHourVolumeUsdLTE: Float
+  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
+  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_usd field predicates"""
+  estimatedCostReductionPerHourUsd: Float
+  estimatedCostReductionPerHourUsdNEQ: Float
+  estimatedCostReductionPerHourUsdIn: [Float!]
+  estimatedCostReductionPerHourUsdNotIn: [Float!]
+  estimatedCostReductionPerHourUsdGT: Float
+  estimatedCostReductionPerHourUsdGTE: Float
+  estimatedCostReductionPerHourUsdLT: Float
+  estimatedCostReductionPerHourUsdLTE: Float
+  estimatedCostReductionPerHourUsdIsNil: Boolean
+  estimatedCostReductionPerHourUsdNotNil: Boolean
+
+  """observed_volume_per_hour_before field predicates"""
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourBeforeNEQ: Float
+  observedVolumePerHourBeforeIn: [Float!]
+  observedVolumePerHourBeforeNotIn: [Float!]
+  observedVolumePerHourBeforeGT: Float
+  observedVolumePerHourBeforeGTE: Float
+  observedVolumePerHourBeforeLT: Float
+  observedVolumePerHourBeforeLTE: Float
+  observedVolumePerHourBeforeIsNil: Boolean
+  observedVolumePerHourBeforeNotNil: Boolean
+
+  """observed_volume_per_hour_after field predicates"""
+  observedVolumePerHourAfter: Float
+  observedVolumePerHourAfterNEQ: Float
+  observedVolumePerHourAfterIn: [Float!]
+  observedVolumePerHourAfterNotIn: [Float!]
+  observedVolumePerHourAfterGT: Float
+  observedVolumePerHourAfterGTE: Float
+  observedVolumePerHourAfterLT: Float
+  observedVolumePerHourAfterLTE: Float
+  observedVolumePerHourAfterIsNil: Boolean
+  observedVolumePerHourAfterNotNil: Boolean
+
+  """observed_bytes_per_hour_before field predicates"""
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourBeforeNEQ: Float
+  observedBytesPerHourBeforeIn: [Float!]
+  observedBytesPerHourBeforeNotIn: [Float!]
+  observedBytesPerHourBeforeGT: Float
+  observedBytesPerHourBeforeGTE: Float
+  observedBytesPerHourBeforeLT: Float
+  observedBytesPerHourBeforeLTE: Float
+  observedBytesPerHourBeforeIsNil: Boolean
+  observedBytesPerHourBeforeNotNil: Boolean
+
+  """observed_bytes_per_hour_after field predicates"""
+  observedBytesPerHourAfter: Float
+  observedBytesPerHourAfterNEQ: Float
+  observedBytesPerHourAfterIn: [Float!]
+  observedBytesPerHourAfterNotIn: [Float!]
+  observedBytesPerHourAfterGT: Float
+  observedBytesPerHourAfterGTE: Float
+  observedBytesPerHourAfterLT: Float
+  observedBytesPerHourAfterLTE: Float
+  observedBytesPerHourAfterIsNil: Boolean
+  observedBytesPerHourAfterNotNil: Boolean
+
+  """observed_cost_per_hour_before_bytes_usd field predicates"""
+  observedCostPerHourBeforeBytesUsd: Float
+  observedCostPerHourBeforeBytesUsdNEQ: Float
+  observedCostPerHourBeforeBytesUsdIn: [Float!]
+  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
+  observedCostPerHourBeforeBytesUsdGT: Float
+  observedCostPerHourBeforeBytesUsdGTE: Float
+  observedCostPerHourBeforeBytesUsdLT: Float
+  observedCostPerHourBeforeBytesUsdLTE: Float
+  observedCostPerHourBeforeBytesUsdIsNil: Boolean
+  observedCostPerHourBeforeBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_volume_usd field predicates"""
+  observedCostPerHourBeforeVolumeUsd: Float
+  observedCostPerHourBeforeVolumeUsdNEQ: Float
+  observedCostPerHourBeforeVolumeUsdIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
+  observedCostPerHourBeforeVolumeUsdGT: Float
+  observedCostPerHourBeforeVolumeUsdGTE: Float
+  observedCostPerHourBeforeVolumeUsdLT: Float
+  observedCostPerHourBeforeVolumeUsdLTE: Float
+  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
+  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_before_usd field predicates"""
+  observedCostPerHourBeforeUsd: Float
+  observedCostPerHourBeforeUsdNEQ: Float
+  observedCostPerHourBeforeUsdIn: [Float!]
+  observedCostPerHourBeforeUsdNotIn: [Float!]
+  observedCostPerHourBeforeUsdGT: Float
+  observedCostPerHourBeforeUsdGTE: Float
+  observedCostPerHourBeforeUsdLT: Float
+  observedCostPerHourBeforeUsdLTE: Float
+  observedCostPerHourBeforeUsdIsNil: Boolean
+  observedCostPerHourBeforeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_bytes_usd field predicates"""
+  observedCostPerHourAfterBytesUsd: Float
+  observedCostPerHourAfterBytesUsdNEQ: Float
+  observedCostPerHourAfterBytesUsdIn: [Float!]
+  observedCostPerHourAfterBytesUsdNotIn: [Float!]
+  observedCostPerHourAfterBytesUsdGT: Float
+  observedCostPerHourAfterBytesUsdGTE: Float
+  observedCostPerHourAfterBytesUsdLT: Float
+  observedCostPerHourAfterBytesUsdLTE: Float
+  observedCostPerHourAfterBytesUsdIsNil: Boolean
+  observedCostPerHourAfterBytesUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_volume_usd field predicates"""
+  observedCostPerHourAfterVolumeUsd: Float
+  observedCostPerHourAfterVolumeUsdNEQ: Float
+  observedCostPerHourAfterVolumeUsdIn: [Float!]
+  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
+  observedCostPerHourAfterVolumeUsdGT: Float
+  observedCostPerHourAfterVolumeUsdGTE: Float
+  observedCostPerHourAfterVolumeUsdLT: Float
+  observedCostPerHourAfterVolumeUsdLTE: Float
+  observedCostPerHourAfterVolumeUsdIsNil: Boolean
+  observedCostPerHourAfterVolumeUsdNotNil: Boolean
+
+  """observed_cost_per_hour_after_usd field predicates"""
+  observedCostPerHourAfterUsd: Float
+  observedCostPerHourAfterUsdNEQ: Float
+  observedCostPerHourAfterUsdIn: [Float!]
+  observedCostPerHourAfterUsdNotIn: [Float!]
+  observedCostPerHourAfterUsdGT: Float
+  observedCostPerHourAfterUsdGTE: Float
+  observedCostPerHourAfterUsdLT: Float
+  observedCostPerHourAfterUsdLTE: Float
+  observedCostPerHourAfterUsdIsNil: Boolean
+  observedCostPerHourAfterUsdNotNil: Boolean
+
+  """error field predicates"""
+  error: String
+  errorNEQ: String
+  errorIn: [String!]
+  errorNotIn: [String!]
+  errorGT: String
+  errorGTE: String
+  errorLT: String
+  errorLTE: String
+  errorContains: String
+  errorHasPrefix: String
+  errorHasSuffix: String
+  errorIsNil: Boolean
+  errorNotNil: Boolean
+  errorEqualFold: String
+  errorContainsFold: String
+
+  """error_at field predicates"""
+  errorAt: Time
+  errorAtNEQ: Time
+  errorAtIn: [Time!]
+  errorAtNotIn: [Time!]
+  errorAtGT: Time
+  errorAtGTE: Time
+  errorAtLT: Time
+  errorAtLTE: Time
+  errorAtIsNil: Boolean
+  errorAtNotNil: Boolean
+
+  """warning field predicates"""
+  warning: String
+  warningNEQ: String
+  warningIn: [String!]
+  warningNotIn: [String!]
+  warningGT: String
+  warningGTE: String
+  warningLT: String
+  warningLTE: String
+  warningContains: String
+  warningHasPrefix: String
+  warningHasSuffix: String
+  warningIsNil: Boolean
+  warningNotNil: Boolean
+  warningEqualFold: String
+  warningContainsFold: String
+
+  """warning_at field predicates"""
+  warningAt: Time
+  warningAtNEQ: Time
+  warningAtIn: [Time!]
+  warningAtNotIn: [Time!]
+  warningAtGT: Time
+  warningAtGTE: Time
+  warningAtLT: Time
+  warningAtLTE: Time
+  warningAtIsNil: Boolean
+  warningAtNotNil: Boolean
+
+  """refreshed_at field predicates"""
+  refreshedAt: Time
+  refreshedAtNEQ: Time
+  refreshedAtIn: [Time!]
+  refreshedAtNotIn: [Time!]
+  refreshedAtGT: Time
+  refreshedAtGTE: Time
+  refreshedAtLT: Time
+  refreshedAtLTE: Time
 }
 
 """

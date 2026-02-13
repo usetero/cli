@@ -46,13 +46,13 @@ func TestLoadCLIConfig_Local(t *testing.T) {
 	if cfg.Env != "local" {
 		t.Errorf("Env = %q, want %q", cfg.Env, "local")
 	}
-	if cfg.APIEndpoint != "http://localhost:8081" {
+	if cfg.APIEndpoint != "http://localhost:18081" {
 		t.Errorf("APIEndpoint = %q, want localhost", cfg.APIEndpoint)
 	}
-	if cfg.PowerSyncEndpoint != "http://localhost:8084" {
+	if cfg.PowerSyncEndpoint != "http://localhost:18084" {
 		t.Errorf("PowerSyncEndpoint = %q, want localhost", cfg.PowerSyncEndpoint)
 	}
-	if cfg.ChatEndpoint != "http://localhost:8083" {
+	if cfg.ChatEndpoint != "http://localhost:18083" {
 		t.Errorf("ChatEndpoint = %q, want localhost", cfg.ChatEndpoint)
 	}
 	if cfg.WorkOSClientID != "client_01JQCC2CJMTB8AY2JRMZXFY9R1" {

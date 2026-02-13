@@ -11,8 +11,6 @@ import (
 	"github.com/usetero/cli/internal/log/logtest"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func TestDatadogAccountService_HasAccount(t *testing.T) {
 	t.Parallel()
 	t.Run("returns true when datadog account exists", func(t *testing.T) {
@@ -282,7 +280,7 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 
 func TestDatadogAccountService_GetStatus(t *testing.T) {
 	t.Parallel()
-	t.Run("returns status with percent complete", func(t *testing.T) {
+	t.Run("returns status with health and counts", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
 			GetDatadogAccountStatusFunc: func(ctx context.Context, id string) (*gen.GetDatadogAccountStatusResponse, error) {
@@ -292,13 +290,19 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 							{
 								Node: &gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
 									Id: "dd-123",
-									Status: gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus{
-										LogStatus:            gen.DatadogAccountStatusLogStatusAnalyzing,
-										LogPercentComplete:   ptr(75.5),
-										LogServiceCount:      10,
-										LogReadyServices:     7,
-										LogAnalyzingServices: 2,
-										LogBrokenServices:    1,
+									Status: &gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache{
+										Health:                gen.DatadogAccountStatusCacheHealthOk,
+										ReadyForUse:           true,
+										LogServiceCount:       10,
+										LogActiveServices:     8,
+										OkServices:            7,
+										ErrorServices:         1,
+										StaleServices:         0,
+										DisabledServices:      1,
+										InactiveServices:      1,
+										LogEventCount:         200,
+										LogEventAnalyzedCount: 180,
+										PolicyPendingCount:    12,
 									},
 								},
 							},
@@ -317,17 +321,23 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		if status == nil {
 			t.Fatal("expected status, got nil")
 		}
-		if status.Status != api.DatadogAccountStatusAnalyzing {
-			t.Errorf("Status = %q, want %q", status.Status, api.DatadogAccountStatusAnalyzing)
-		}
-		if status.PercentComplete != 75.5 {
-			t.Errorf("PercentComplete = %v, want 75.5", status.PercentComplete)
+		if status.Health != api.DatadogAccountHealthOK {
+			t.Errorf("Health = %q, want %q", status.Health, api.DatadogAccountHealthOK)
 		}
 		if status.ServiceCount != 10 {
 			t.Errorf("ServiceCount = %d, want 10", status.ServiceCount)
 		}
-		if status.ReadyServices != 7 {
-			t.Errorf("ReadyServices = %d, want 7", status.ReadyServices)
+		if status.OkServices != 7 {
+			t.Errorf("OkServices = %d, want 7", status.OkServices)
+		}
+		if status.EventCount != 200 {
+			t.Errorf("EventCount = %d, want 200", status.EventCount)
+		}
+		if status.AnalyzedCount != 180 {
+			t.Errorf("AnalyzedCount = %d, want 180", status.AnalyzedCount)
+		}
+		if status.PendingPolicyCount != 12 {
+			t.Errorf("PendingPolicyCount = %d, want 12", status.PendingPolicyCount)
 		}
 	})
 
