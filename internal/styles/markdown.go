@@ -65,9 +65,8 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 	text := stringPtr(colorToHex(t.Text))
 	muted := stringPtr(colorToHex(t.TextMuted))
 	accent := stringPtr(colorToHex(t.Accent))
-	codeBg := stringPtr(colorToHex(t.BgElevated))
-
 	bg := stringPtr(colorToHex(t.Bg))
+	codeBg := stringPtr(colorToHex(t.BgElevated))
 
 	return ansi.StyleConfig{
 		Document: ansi.StyleBlock{
@@ -186,7 +185,8 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 		CodeBlock: ansi.StyleCodeBlock{
 			StyleBlock: ansi.StyleBlock{
 				StylePrimitive: ansi.StylePrimitive{
-					Color: text,
+					Color:           text,
+					BackgroundColor: codeBg,
 				},
 				Margin: uintPtr(0),
 			},
