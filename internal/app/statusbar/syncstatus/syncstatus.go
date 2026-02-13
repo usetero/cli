@@ -239,6 +239,7 @@ func (m *Model) ExpandedView(width, _ int) string {
 
 	var lines []string
 	lines = append(lines, headline)
+	lines = append(lines, "")
 	lines = append(lines, muted.Render(description))
 
 	if m.totalPending > 0 {
