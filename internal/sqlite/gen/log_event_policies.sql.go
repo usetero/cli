@@ -24,7 +24,6 @@ const listPIIPolicies = `-- name: ListPIIPolicies :many
 SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
-  COALESCE(leps.risk_level, '') AS risk_level,
   COALESCE(leps.status, '') AS status,
   COALESCE(lep.analysis, '') AS analysis
 FROM log_event_policy_statuses_cache leps
@@ -33,7 +32,6 @@ JOIN services s ON s.id = le.service_id
 LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
 WHERE leps.category = 'pii_leakage'
 ORDER BY
-  CASE leps.risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
   CASE leps.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END,
   s.name, le.name
 `
@@ -41,7 +39,6 @@ ORDER BY
 type ListPIIPoliciesRow struct {
 	ServiceName  string
 	LogEventName string
-	RiskLevel    string
 	Status       string
 	Analysis     string
 }
@@ -58,7 +55,6 @@ func (q *Queries) ListPIIPolicies(ctx context.Context) ([]ListPIIPoliciesRow, er
 		if err := rows.Scan(
 			&i.ServiceName,
 			&i.LogEventName,
-			&i.RiskLevel,
 			&i.Status,
 			&i.Analysis,
 		); err != nil {
@@ -84,17 +80,6 @@ SELECT
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
-  CASE MAX(CASE leps.risk_level
-    WHEN 'high' THEN 3
-    WHEN 'medium' THEN 2
-    WHEN 'low' THEN 1
-    ELSE 0
-  END)
-    WHEN 3 THEN 'high'
-    WHEN 2 THEN 'medium'
-    WHEN 1 THEN 'low'
-    ELSE ''
-  END AS risk_level,
   CAST(COALESCE(GROUP_CONCAT(DISTINCT leps.benefits), '') AS TEXT) AS benefits,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
@@ -118,7 +103,6 @@ type ListPolicyCategoryStatusesRow struct {
 	EstimatedVolumePerHour *float64
 	EstimatedBytesPerHour  *float64
 	EstimatedCostPerHour   *float64
-	RiskLevel              string
 	Benefits               string
 	ObservedVolumeBefore   *float64
 	ObservedVolumeAfter    *float64
@@ -145,7 +129,6 @@ func (q *Queries) ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyC
 			&i.EstimatedVolumePerHour,
 			&i.EstimatedBytesPerHour,
 			&i.EstimatedCostPerHour,
-			&i.RiskLevel,
 			&i.Benefits,
 			&i.ObservedVolumeBefore,
 			&i.ObservedVolumeAfter,

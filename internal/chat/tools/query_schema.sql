@@ -139,7 +139,6 @@ CREATE TABLE log_event_policies (
     log_event_id TEXT, -- The log event this policy applies to
     model TEXT, -- AI model that generated this policy (e.g., 'claude-sonnet-4-20250514')
     objectivity TEXT, -- How verifiable is this policy? factual: user can confirm by looking at the data, reasoned: requires AI judgment. Auto-set by trigger from category.
-    risk_level TEXT, -- How bad is it if this policy is wrong? low: safe to apply, medium: review recommended, high: could break things. Set by AI per policy.
     updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
 );
@@ -162,7 +161,6 @@ CREATE TABLE log_event_policy_statuses_cache (
     objectivity TEXT, -- How verifiable: factual (user can confirm) or reasoned (AI judgment)
     policy_id TEXT, -- The policy this status belongs to
     refreshed_at TEXT,
-    risk_level TEXT, -- Consequence if wrong: low, medium, high
     status TEXT, -- PENDING: awaiting action, APPROVED: user approved, DISMISSED: user rejected
     workspace_id TEXT -- The workspace that owns this policy
 );

@@ -122,7 +122,6 @@ CREATE TABLE log_event_policies (
     log_event_id TEXT,
     model TEXT,
     objectivity TEXT,
-    risk_level TEXT,
     updated_at TEXT,
     workspace_id TEXT
 );
@@ -144,7 +143,6 @@ CREATE TABLE log_event_policy_statuses_cache (
     objectivity TEXT,
     policy_id TEXT,
     refreshed_at TEXT,
-    risk_level TEXT,
     status TEXT,
     workspace_id TEXT
 );

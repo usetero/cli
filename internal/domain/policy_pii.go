@@ -14,17 +14,37 @@ const (
 	PIITypeGeneral     = "general"
 )
 
+// PIISeverity indicates how sensitive a PII type is.
+type PIISeverity int
+
+const (
+	PIISeverityMedium   PIISeverity = iota // general
+	PIISeverityHigh                        // email, name, phone, address, ip_address, date_of_birth
+	PIISeverityCritical                    // credit_card, ssn, password
+)
+
 // PIIField identifies an attribute path that contains PII and its type.
 type PIIField struct {
 	Path    []string `json:"path"`
 	PIIType string   `json:"pii_type"`
 }
 
+// Severity returns the derived sensitivity level for this field's PII type.
+func (f PIIField) Severity() PIISeverity {
+	switch f.PIIType {
+	case PIITypeCreditCard, PIITypeSSN, PIITypePassword:
+		return PIISeverityCritical
+	case PIITypeEmail, PIITypeName, PIITypePhone, PIITypeAddress, PIITypeIPAddress, PIITypeDateOfBirth:
+		return PIISeverityHigh
+	default:
+		return PIISeverityMedium
+	}
+}
+
 // PIILeakageAnalysis is the category-specific analysis for PII leakage policies.
 // Stored as JSON in the log_event_policies.analysis column under the "pii_leakage" key.
 type PIILeakageAnalysis struct {
 	Rationale string     `json:"rationale"`
-	RiskLevel string     `json:"risk_level"`
 	Benefits  []string   `json:"benefits"`
 	Fields    []PIIField `json:"fields"`
 }
@@ -38,7 +58,6 @@ type PIIAnalysisEnvelope struct {
 type PIIPolicy struct {
 	LogEventName string
 	ServiceName  string
-	RiskLevel    RiskLevel
 	Status       PolicyLogStatus
 	Fields       []PIIField // Parsed from analysis JSON
 }

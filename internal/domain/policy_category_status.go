@@ -1,16 +1,5 @@
 package domain
 
-// RiskLevel represents the risk level of a policy.
-type RiskLevel string
-
-const (
-	RiskLevelLow    RiskLevel = "low"
-	RiskLevelMedium RiskLevel = "medium"
-	RiskLevelHigh   RiskLevel = "high"
-)
-
-func (r RiskLevel) String() string { return string(r) }
-
 // categoryDisplayNames maps category slugs to human-readable names.
 var categoryDisplayNames = map[string]string{
 	"instrumentation_bloat":       "Instrumentation Bloat",
@@ -29,7 +18,6 @@ type PolicyCategoryStatus struct {
 	EstimatedVolumePerHour float64
 	EstimatedBytesPerHour  float64
 	EstimatedCostPerHour   float64
-	RiskLevel              RiskLevel
 	Benefit                string
 
 	// Observed impact from approved policies (before/after).

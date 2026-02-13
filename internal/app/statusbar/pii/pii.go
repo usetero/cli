@@ -181,35 +181,71 @@ func (m *Model) renderTable(width int) string {
 		tbl.Row(
 			p.LogEventName,
 			p.ServiceName,
-			formatPIITypes(p.Fields, 3),
+			m.formatPIITypes(p.Fields, 3),
 		)
 	}
 
 	return tbl.View()
 }
 
-// formatPIITypes returns deduplicated PII type labels, showing at most maxShow
-// before truncating with "+N". For example: "email, phone, +2".
-func formatPIITypes(fields []domain.PIIField, maxShow int) string {
+// piiEntry holds a deduplicated PII type with its highest severity.
+type piiEntry struct {
+	label    string
+	severity domain.PIISeverity
+}
+
+// formatPIITypes returns deduplicated, severity-colored PII type labels,
+// showing at most maxShow before truncating with "+N".
+func (m *Model) formatPIITypes(fields []domain.PIIField, maxShow int) string {
 	if len(fields) == 0 {
 		return "—"
 	}
 
-	// Deduplicate and preserve first-seen order.
-	seen := make(map[string]bool)
-	var types []string
+	// Deduplicate and preserve first-seen order, keeping highest severity.
+	seen := make(map[string]int) // label → index in entries
+	var entries []piiEntry
 	for _, f := range fields {
 		label := displayPIIType(f.PIIType)
-		if !seen[label] {
-			seen[label] = true
-			types = append(types, label)
+		if idx, ok := seen[label]; ok {
+			if f.Severity() > entries[idx].severity {
+				entries[idx].severity = f.Severity()
+			}
+		} else {
+			seen[label] = len(entries)
+			entries = append(entries, piiEntry{label, f.Severity()})
 		}
 	}
 
-	if len(types) <= maxShow {
-		return strings.Join(types, ", ")
+	visible := entries
+	remaining := 0
+	if len(entries) > maxShow {
+		visible = entries[:maxShow]
+		remaining = len(entries) - maxShow
 	}
-	return strings.Join(types[:maxShow], ", ") + fmt.Sprintf(", +%d", len(types)-maxShow)
+
+	parts := make([]string, len(visible))
+	for i, e := range visible {
+		parts[i] = m.colorSeverity(e.label, e.severity)
+	}
+
+	result := strings.Join(parts, ", ")
+	if remaining > 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		result += muted.Render(fmt.Sprintf(", +%d", remaining))
+	}
+	return result
+}
+
+// colorSeverity applies theme color based on PII severity.
+func (m *Model) colorSeverity(label string, s domain.PIISeverity) string {
+	switch s {
+	case domain.PIISeverityCritical:
+		return lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg).Render(label)
+	case domain.PIISeverityHigh:
+		return lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render(label)
+	default:
+		return label // table cell style handles default color
+	}
 }
 
 // displayPIIType returns a human-readable label for a pii_type value.

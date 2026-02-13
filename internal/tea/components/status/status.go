@@ -100,26 +100,6 @@ func WasteShort(theme styles.Theme, pct int) string {
 	return dot + text
 }
 
-// --- Risk levels: HIGH > MEDIUM > LOW ---
-
-// Risk renders a colored status badge for a risk level.
-func Risk(theme styles.Theme, r domain.RiskLevel, showLabel bool) string {
-	return badge(riskColor(theme, r), theme.Bg, r.String(), showLabel)
-}
-
-func riskColor(theme styles.Theme, r domain.RiskLevel) color.Color {
-	switch r {
-	case domain.RiskLevelHigh:
-		return theme.Error
-	case domain.RiskLevelMedium:
-		return theme.Warning
-	case domain.RiskLevelLow:
-		return theme.Success
-	default:
-		return theme.TextMuted
-	}
-}
-
 // --- Policy statuses: PENDING > APPROVED > DISMISSED ---
 
 // Policy renders a colored status badge for a policy status.

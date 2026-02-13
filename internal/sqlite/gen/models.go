@@ -138,7 +138,6 @@ type LogEventPolicy struct {
 	LogEventID  *string
 	Model       *string
 	Objectivity *string
-	RiskLevel   *string
 	UpdatedAt   *string
 	WorkspaceID *string
 }
@@ -160,7 +159,6 @@ type LogEventPolicyStatusesCache struct {
 	Objectivity                            *string
 	PolicyID                               *string
 	RefreshedAt                            *string
-	RiskLevel                              *string
 	Status                                 *string
 	WorkspaceID                            *string
 }

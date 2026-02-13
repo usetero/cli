@@ -46,7 +46,6 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			EstimatedVolumePerHour: derefFloat(row.EstimatedVolumePerHour),
 			EstimatedBytesPerHour:  derefFloat(row.EstimatedBytesPerHour),
 			EstimatedCostPerHour:   derefFloat(row.EstimatedCostPerHour),
-			RiskLevel:              domain.RiskLevel(row.RiskLevel),
 			Benefit:                row.Benefits,
 			ObservedVolumeBefore:   derefFloat(row.ObservedVolumeBefore),
 			ObservedVolumeAfter:    derefFloat(row.ObservedVolumeAfter),
@@ -71,7 +70,6 @@ func (l *logEventPoliciesImpl) ListPIIPolicies(ctx context.Context) ([]domain.PI
 		p := domain.PIIPolicy{
 			LogEventName: row.LogEventName,
 			ServiceName:  row.ServiceName,
-			RiskLevel:    domain.RiskLevel(row.RiskLevel),
 			Status:       domain.PolicyLogStatus(row.Status),
 		}
 

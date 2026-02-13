@@ -2205,12 +2205,6 @@ type LogEventPolicy implements Node {
   objectivity: LogEventPolicyObjectivity!
 
   """
-  How bad is it if this policy is wrong? low: safe to apply, medium: review
-  recommended, high: could break things. Set by AI per policy.
-  """
-  riskLevel: LogEventPolicyRiskLevel!
-
-  """
   What benefits this policy provides. volume_reduction: fewer events,
   bytes_reduction: smaller events, signal_quality: less noise, compliance:
   regulatory/policy, resilience: system stability.
@@ -2282,18 +2276,10 @@ input LogEventPolicyOrder {
 enum LogEventPolicyOrderField {
   CATEGORY
   OBJECTIVITY
-  RISK_LEVEL
   APPROVED_AT
   DISMISSED_AT
   CREATED_AT
   UPDATED_AT
-}
-
-"""LogEventPolicyRiskLevel is enum for the field risk_level"""
-enum LogEventPolicyRiskLevel {
-  low
-  medium
-  high
 }
 
 """
@@ -2324,9 +2310,6 @@ type LogEventPolicyStatus {
 
   """How verifiable: factual (user can confirm) or reasoned (AI judgment)"""
   objectivity: LogEventPolicyStatusObjectivity!
-
-  """Consequence if wrong: low, medium, high"""
-  riskLevel: LogEventPolicyStatusRiskLevel!
 
   """
   What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
@@ -2364,13 +2347,6 @@ type LogEventPolicyStatus {
 enum LogEventPolicyStatusObjectivity {
   factual
   reasoned
-}
-
-"""Consequence if wrong: low, medium, high"""
-enum LogEventPolicyStatusRiskLevel {
-  low
-  medium
-  high
 }
 
 """
@@ -2443,12 +2419,6 @@ input LogEventPolicyWhereInput {
   objectivityNEQ: LogEventPolicyObjectivity
   objectivityIn: [LogEventPolicyObjectivity!]
   objectivityNotIn: [LogEventPolicyObjectivity!]
-
-  """risk_level field predicates"""
-  riskLevel: LogEventPolicyRiskLevel
-  riskLevelNEQ: LogEventPolicyRiskLevel
-  riskLevelIn: [LogEventPolicyRiskLevel!]
-  riskLevelNotIn: [LogEventPolicyRiskLevel!]
 
   """approved_at field predicates"""
   approvedAt: Time
