@@ -9,7 +9,7 @@ import (
 
 // Workspaces provides access to workspaces.
 type Workspaces interface {
-	List(ctx context.Context, accountID string) ([]domain.Workspace, error)
+	List(ctx context.Context, accountID domain.AccountID) ([]domain.Workspace, error)
 }
 
 // WorkspaceService handles workspace-related API operations.
@@ -30,9 +30,9 @@ func NewWorkspaceService(client Client, scope log.Scope) *WorkspaceService {
 }
 
 // List fetches all workspaces for an account.
-func (s *WorkspaceService) List(ctx context.Context, accountID string) ([]domain.Workspace, error) {
+func (s *WorkspaceService) List(ctx context.Context, accountID domain.AccountID) ([]domain.Workspace, error) {
 	s.scope.Debug("fetching workspaces from API", "accountID", accountID)
-	resp, err := s.client.ListWorkspaces(ctx, accountID)
+	resp, err := s.client.ListWorkspaces(ctx, accountID.String())
 	if err != nil {
 		s.scope.Error("failed to fetch workspaces", "error", err, "accountID", accountID)
 		return nil, err

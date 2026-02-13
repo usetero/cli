@@ -5,16 +5,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
 )
 
 // Conversations provides type-safe access to conversations.
 type Conversations interface {
 	Count(ctx context.Context) (int64, error)
-	Create(ctx context.Context, accountID, workspaceID string) (string, error)
-	UpdateTitle(ctx context.Context, id, title string) error
-	List(ctx context.Context, accountID string) ([]gen.Conversation, error)
-	Get(ctx context.Context, id string) (gen.Conversation, error)
+	Create(ctx context.Context, accountID domain.AccountID, workspaceID domain.WorkspaceID) (domain.ConversationID, error)
+	UpdateTitle(ctx context.Context, id domain.ConversationID, title string) error
+	List(ctx context.Context, accountID domain.AccountID) ([]gen.Conversation, error)
+	Get(ctx context.Context, id domain.ConversationID) (gen.Conversation, error)
 }
 
 // conversationsImpl implements Conversations.
@@ -33,14 +34,16 @@ func (c *conversationsImpl) Count(ctx context.Context) (int64, error) {
 }
 
 // Create creates a new conversation and returns its ID.
-func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID string) (string, error) {
+func (c *conversationsImpl) Create(ctx context.Context, accountID domain.AccountID, workspaceID domain.WorkspaceID) (domain.ConversationID, error) {
 	convID := uuid.New().String()
 	now := time.Now().UTC().Format(time.RFC3339)
+	accountIDStr := accountID.String()
+	workspaceIDStr := workspaceID.String()
 
 	err := c.write.InsertConversation(ctx, gen.InsertConversationParams{
 		ID:          &convID,
-		AccountID:   &accountID,
-		WorkspaceID: &workspaceID,
+		AccountID:   &accountIDStr,
+		WorkspaceID: &workspaceIDStr,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
 	})
@@ -48,26 +51,29 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID, workspaceID s
 		return "", WrapSQLiteError(err, "insert conversation")
 	}
 
-	return convID, nil
+	return domain.ConversationID(convID), nil
 }
 
 // UpdateTitle sets the title on a conversation.
-func (c *conversationsImpl) UpdateTitle(ctx context.Context, id, title string) error {
+func (c *conversationsImpl) UpdateTitle(ctx context.Context, id domain.ConversationID, title string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
+	idStr := id.String()
 	err := c.write.UpdateConversationTitle(ctx, gen.UpdateConversationTitleParams{
 		Title:     &title,
 		UpdatedAt: &now,
-		ID:        &id,
+		ID:        &idStr,
 	})
 	return WrapSQLiteError(err, "update conversation title")
 }
 
 // List returns all conversations for an account.
-func (c *conversationsImpl) List(ctx context.Context, accountID string) ([]gen.Conversation, error) {
-	return c.read.ListConversationsByAccount(ctx, &accountID)
+func (c *conversationsImpl) List(ctx context.Context, accountID domain.AccountID) ([]gen.Conversation, error) {
+	accountIDStr := accountID.String()
+	return c.read.ListConversationsByAccount(ctx, &accountIDStr)
 }
 
 // Get returns a conversation by ID.
-func (c *conversationsImpl) Get(ctx context.Context, id string) (gen.Conversation, error) {
-	return c.read.GetConversation(ctx, &id)
+func (c *conversationsImpl) Get(ctx context.Context, id domain.ConversationID) (gen.Conversation, error) {
+	idStr := id.String()
+	return c.read.GetConversation(ctx, &idStr)
 }

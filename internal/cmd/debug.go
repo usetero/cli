@@ -67,7 +67,7 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			}
 
 			// Get the datadog account for this account
-			ddAccount, err := services.DatadogAccounts.GetAccount(cmd.Context(), accountID.String())
+			ddAccount, err := services.DatadogAccounts.GetAccount(cmd.Context(), accountID)
 			if err != nil {
 				return fmt.Errorf("failed to get datadog account: %w", err)
 			}

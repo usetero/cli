@@ -71,7 +71,7 @@ func (m *SelectModel) Init() tea.Cmd {
 
 func (m *SelectModel) loadWorkspaces() tea.Cmd {
 	return func() tea.Msg {
-		workspaces, err := m.services.Workspaces.List(m.ctx, m.account.ID.String())
+		workspaces, err := m.services.Workspaces.List(m.ctx, m.account.ID)
 		if err != nil {
 			m.scope.Error("failed to load workspaces", slog.Any("error", err))
 			return remotelist.LoadResult{Err: err}

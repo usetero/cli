@@ -125,7 +125,7 @@ func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
 		id := uuid.New()
 		ddAccount, err := m.services.DatadogAccounts.CreateAccount(m.ctx, api.CreateDatadogAccountInput{
 			ID:        id,
-			AccountID: m.account.ID.String(),
+			AccountID: m.account.ID,
 			Name:      m.account.Name,
 			Site:      m.site.String(),
 			APIKey:    m.apiKey,
@@ -134,7 +134,7 @@ func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
 		if err != nil {
 			return accountCreatedMsg{err: err}
 		}
-		return accountCreatedMsg{datadogAccountID: domain.DatadogAccountID(ddAccount.ID)}
+		return accountCreatedMsg{datadogAccountID: ddAccount.ID}
 	}
 }
 

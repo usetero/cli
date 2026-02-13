@@ -345,7 +345,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Persist title in background
 			go func() {
 				ctx := context.Background()
-				if err := m.db.Conversations().UpdateTitle(ctx, string(m.chat.ConversationID()), msg.Title); err != nil {
+				if err := m.db.Conversations().UpdateTitle(ctx, m.chat.ConversationID(), msg.Title); err != nil {
 					m.scope.Error("failed to update conversation title", "error", err)
 				}
 			}()

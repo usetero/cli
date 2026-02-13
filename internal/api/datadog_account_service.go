@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/api/gen"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -17,7 +18,7 @@ type ValidateAPIKeyInput struct {
 // CreateDatadogAccountInput contains the fields for creating a Datadog account with credentials.
 type CreateDatadogAccountInput struct {
 	ID        uuid.UUID
-	AccountID string
+	AccountID domain.AccountID
 	Name      string
 	Site      string
 	APIKey    string
@@ -26,11 +27,11 @@ type CreateDatadogAccountInput struct {
 
 // DatadogAccounts provides access to Datadog account operations.
 type DatadogAccounts interface {
-	HasAccount(ctx context.Context, accountID string) (bool, error)
-	GetAccount(ctx context.Context, accountID string) (*DatadogAccount, error)
+	HasAccount(ctx context.Context, accountID domain.AccountID) (bool, error)
+	GetAccount(ctx context.Context, accountID domain.AccountID) (*DatadogAccount, error)
 	ValidateAPIKey(ctx context.Context, input ValidateAPIKeyInput) (bool, string, error)
 	CreateAccount(ctx context.Context, input CreateDatadogAccountInput) (*DatadogAccount, error)
-	GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error)
+	GetStatus(ctx context.Context, datadogAccountID domain.DatadogAccountID) (*DatadogAccountStatus, error)
 }
 
 // DatadogAccountService handles Datadog account operations via the control plane API.
@@ -52,7 +53,7 @@ func NewDatadogAccountService(client Client, scope log.Scope) *DatadogAccountSer
 
 // DatadogAccount is the domain model for a Datadog account.
 type DatadogAccount struct {
-	ID   string
+	ID   domain.DatadogAccountID
 	Name string
 	Site string // GraphQL enum value (US1, US5, EU1, etc.)
 }
@@ -88,9 +89,9 @@ type DatadogAccountStatus struct {
 }
 
 // HasAccount checks if an account has a Datadog integration configured
-func (s *DatadogAccountService) HasAccount(ctx context.Context, accountID string) (bool, error) {
+func (s *DatadogAccountService) HasAccount(ctx context.Context, accountID domain.AccountID) (bool, error) {
 	s.scope.Debug("checking for datadog account via API", "accountID", accountID)
-	resp, err := s.client.GetAccount(ctx, accountID)
+	resp, err := s.client.GetAccount(ctx, accountID.String())
 	if err != nil {
 		s.scope.Error("failed to check datadog account", "error", err, "accountID", accountID)
 		return false, err
@@ -109,9 +110,9 @@ func (s *DatadogAccountService) HasAccount(ctx context.Context, accountID string
 }
 
 // GetAccount retrieves the Datadog account for the given account ID, or nil if none exists
-func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID string) (*DatadogAccount, error) {
+func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID domain.AccountID) (*DatadogAccount, error) {
 	s.scope.Debug("fetching datadog account via API", "accountID", accountID)
-	resp, err := s.client.GetAccount(ctx, accountID)
+	resp, err := s.client.GetAccount(ctx, accountID.String())
 	if err != nil {
 		s.scope.Error("failed to fetch datadog account", "error", err, "accountID", accountID)
 		return nil, err
@@ -122,7 +123,7 @@ func (s *DatadogAccountService) GetAccount(ctx context.Context, accountID string
 		account := resp.Accounts.Edges[0].Node
 		if account.DatadogAccount != nil && account.DatadogAccount.Id != "" {
 			ddAccount := &DatadogAccount{
-				ID:   account.DatadogAccount.Id,
+				ID:   domain.DatadogAccountID(account.DatadogAccount.Id),
 				Name: account.DatadogAccount.Name,
 				Site: string(account.DatadogAccount.Site),
 			}
@@ -174,7 +175,7 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateD
 	genInput := gen.CreateDatadogAccountWithCredentialsInput{
 		Attributes: gen.CreateDatadogAccountInput{
 			Id:        ptr(input.ID.String()),
-			AccountID: input.AccountID,
+			AccountID: input.AccountID.String(),
 			Name:      input.Name,
 			Site:      gen.DatadogAccountSite(input.Site),
 		},
@@ -192,7 +193,7 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateD
 
 	s.scope.Debug("created datadog account via API", "id", resp.CreateDatadogAccount.Id, "site", string(resp.CreateDatadogAccount.Site))
 	return &DatadogAccount{
-		ID:   resp.CreateDatadogAccount.Id,
+		ID:   domain.DatadogAccountID(resp.CreateDatadogAccount.Id),
 		Name: resp.CreateDatadogAccount.Name,
 		Site: string(resp.CreateDatadogAccount.Site),
 	}, nil
@@ -200,10 +201,10 @@ func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateD
 
 // GetStatus gets the health status for a Datadog account.
 // This is used during onboarding to track overall progress.
-func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID string) (*DatadogAccountStatus, error) {
+func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID domain.DatadogAccountID) (*DatadogAccountStatus, error) {
 	s.scope.Debug("fetching datadog account status", "datadogAccountID", datadogAccountID)
 
-	resp, err := s.client.GetDatadogAccountStatus(ctx, datadogAccountID)
+	resp, err := s.client.GetDatadogAccountStatus(ctx, datadogAccountID.String())
 	if err != nil {
 		s.scope.Error("failed to fetch datadog account status", "error", err)
 		return nil, err

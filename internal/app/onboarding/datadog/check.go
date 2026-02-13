@@ -60,7 +60,7 @@ func (m *CheckModel) Init() tea.Cmd {
 
 func (m *CheckModel) checkDatadog() tea.Cmd {
 	return func() tea.Msg {
-		hasDatadog, err := m.services.DatadogAccounts.HasAccount(m.ctx, m.account.ID.String())
+		hasDatadog, err := m.services.DatadogAccounts.HasAccount(m.ctx, m.account.ID)
 		if err != nil {
 			return checkResultMsg{err: err}
 		}

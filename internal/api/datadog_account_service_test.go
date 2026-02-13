@@ -8,6 +8,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/api/gen"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 )
 
@@ -37,7 +38,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -68,7 +69,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -91,7 +92,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		hasAccount, err := svc.HasAccount(context.Background(), "acc-1")
+		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -128,7 +129,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		account, err := svc.GetAccount(context.Background(), "acc-1")
+		account, err := svc.GetAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -136,7 +137,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 		if account == nil {
 			t.Fatal("expected account, got nil")
 		}
-		if account.ID != "dd-123" {
+		if account.ID != domain.DatadogAccountID("dd-123") {
 			t.Errorf("account.ID = %q, want %q", account.ID, "dd-123")
 		}
 		if account.Name != "Production DD" {
@@ -167,7 +168,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		account, err := svc.GetAccount(context.Background(), "acc-1")
+		account, err := svc.GetAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -313,7 +314,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		status, err := svc.GetStatus(context.Background(), "dd-123")
+		status, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -354,7 +355,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		status, err := svc.GetStatus(context.Background(), "dd-123")
+		status, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -373,7 +374,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		}
 
 		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		_, err := svc.GetStatus(context.Background(), "dd-123")
+		_, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err == nil {
 			t.Fatal("expected error, got nil")
