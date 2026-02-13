@@ -11,6 +11,15 @@ const (
 
 func (r RiskLevel) String() string { return string(r) }
 
+// categoryDisplayNames maps category slugs to human-readable names.
+var categoryDisplayNames = map[string]string{
+	"instrumentation_bloat":       "Instrumentation Bloat",
+	"duplicate_fields":            "Duplicate Fields",
+	"accidental_debug_statements": "Debug Statements",
+	"noise":                       "Noise",
+	"pii_leakage":                 "PII Leakage",
+}
+
 // PolicyCategoryStatus is the per-category policy breakdown.
 type PolicyCategoryStatus struct {
 	Category               string
@@ -22,4 +31,12 @@ type PolicyCategoryStatus struct {
 	EstimatedCostPerHour   float64
 	RiskLevel              RiskLevel
 	Benefit                string
+}
+
+// DisplayName returns a human-readable name for the category.
+func (c PolicyCategoryStatus) DisplayName() string {
+	if name, ok := categoryDisplayNames[c.Category]; ok {
+		return name
+	}
+	return c.Category
 }

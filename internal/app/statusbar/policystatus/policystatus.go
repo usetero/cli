@@ -261,7 +261,7 @@ func (m *Model) renderWasteTable(width, maxRows int) string {
 
 	for _, c := range visible {
 		tbl.Row(
-			c.Category,
+			c.DisplayName(),
 			fmt.Sprintf("%d", c.PendingCount),
 			formatCategoryVolume(c),
 			formatCategoryBytes(c),
