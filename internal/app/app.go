@@ -258,6 +258,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+	case tea.MouseClickMsg:
+		if m.statusBar.IsDrawerOpen() {
+			m.statusBar.CloseDrawer()
+		}
+
 	case msgs.UserSubmittedInput:
 		// Intercept "exit" and "quit" commands
 		text := strings.TrimSpace(msg.Text)
