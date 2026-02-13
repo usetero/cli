@@ -24,26 +24,28 @@ func badge(c color.Color, bg color.Color, label string, showLabel bool) string {
 	return style.Render("●")
 }
 
-// --- Service statuses: DISABLED > INACTIVE > BROKEN > STALE > DISCOVERING > ANALYZING > READY ---
+// --- Service health: ERROR > STALE > OK > DISABLED > INACTIVE ---
 
-// Service renders a colored status badge for a service status.
-func Service(theme styles.Theme, s domain.ServiceLogStatus, showLabel bool) string {
-	return badge(serviceColor(theme, s), theme.Bg, s.String(), showLabel)
+// Service renders a colored status badge for a service health.
+func Service(theme styles.Theme, h domain.ServiceHealth, showLabel bool) string {
+	return badge(serviceColor(theme, h), theme.Bg, h.String(), showLabel)
 }
 
-// ServiceDot renders just the colored dot for a service status.
-func ServiceDot(theme styles.Theme, s domain.ServiceLogStatus) string {
-	return badge(serviceColor(theme, s), theme.Bg, "", false)
+// ServiceDot renders just the colored dot for a service health.
+func ServiceDot(theme styles.Theme, h domain.ServiceHealth) string {
+	return badge(serviceColor(theme, h), theme.Bg, "", false)
 }
 
-func serviceColor(theme styles.Theme, s domain.ServiceLogStatus) color.Color {
-	switch s {
-	case domain.ServiceLogStatusBroken, domain.ServiceLogStatusDisabled, domain.ServiceLogStatusInactive:
+func serviceColor(theme styles.Theme, h domain.ServiceHealth) color.Color {
+	switch h {
+	case domain.ServiceHealthError:
 		return theme.Error
-	case domain.ServiceLogStatusStale, domain.ServiceLogStatusDiscovering, domain.ServiceLogStatusAnalyzing:
+	case domain.ServiceHealthStale:
 		return theme.Warning
-	case domain.ServiceLogStatusReady:
+	case domain.ServiceHealthOK:
 		return theme.Success
+	case domain.ServiceHealthDisabled, domain.ServiceHealthInactive:
+		return theme.TextMuted
 	default:
 		return theme.TextMuted
 	}
