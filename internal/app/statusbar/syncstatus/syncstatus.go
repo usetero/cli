@@ -16,21 +16,12 @@ import (
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/tea/components/table"
 )
 
 const pollInterval = 500 * time.Millisecond
 
 // pollMsg triggers a sync status check.
 type pollMsg struct{}
-
-// entityRow holds record and pending upload counts for a single entity.
-type entityRow struct {
-	name    string
-	table   sqlite.Table
-	records int64
-	pending int64
-}
 
 // Model renders sync connection status.
 type Model struct {
@@ -41,9 +32,7 @@ type Model struct {
 
 	// Cached state for change detection
 	lastState    powersync.State
-	entities     []entityRow
 	totalPending int64
-	lastDataKey  string
 }
 
 // New creates a new sync status model.
@@ -94,7 +83,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.lastState = currentState
 		}
 
-		m.pollCounts()
+		m.pollPendingUploads()
 
 		cmds := []tea.Cmd{m.poll()}
 		if stateChanged {
@@ -111,20 +100,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// entityDefs defines which entities to show and in what order.
-var entityDefs = []struct {
-	name  string
-	table sqlite.Table
-}{
-	{"Services", sqlite.TableServices},
-	{"Log Events", sqlite.TableLogEvents},
-	{"Policies", sqlite.TableLogEventPolicies},
-	{"Conversations", sqlite.TableConversations},
-	{"Messages", sqlite.TableMessages},
-}
-
-// pollCounts fetches record counts and pending uploads from the database.
-func (m *Model) pollCounts() {
+// pollPendingUploads checks for pending uploads in the crud queue.
+func (m *Model) pollPendingUploads() {
 	if m.db == nil {
 		return
 	}
@@ -134,36 +111,11 @@ func (m *Model) pollCounts() {
 
 	pending, _ := m.db.PendingUploadCounts(ctx)
 
-	rows := make([]entityRow, len(entityDefs))
 	var total int64
-	var key string
-
-	for i, def := range entityDefs {
-		rows[i] = entityRow{name: def.name, table: def.table}
-
-		switch def.table {
-		case sqlite.TableServices:
-			rows[i].records, _ = m.db.Services().Count(ctx)
-		case sqlite.TableLogEvents:
-			rows[i].records, _ = m.db.LogEvents().Count(ctx)
-		case sqlite.TableLogEventPolicies:
-			rows[i].records, _ = m.db.LogEventPolicies().Count(ctx)
-		case sqlite.TableConversations:
-			rows[i].records, _ = m.db.Conversations().Count(ctx)
-		case sqlite.TableMessages:
-			rows[i].records, _ = m.db.Messages().Count(ctx)
-		}
-
-		rows[i].pending = pending[def.table]
-		total += rows[i].pending
-		key += fmt.Sprintf("%s:%d:%d|", def.name, rows[i].records, rows[i].pending)
+	for _, count := range pending {
+		total += count
 	}
-
-	if key != m.lastDataKey {
-		m.entities = rows
-		m.totalPending = total
-		m.lastDataKey = key
-	}
+	m.totalPending = total
 }
 
 // stateChanged returns true if the sync state has meaningfully changed.
@@ -240,81 +192,62 @@ func (m *Model) ExpandedView(width, _ int) string {
 		return ""
 	}
 
-	var lines []string
-	lines = append(lines, m.renderStatusLine())
-	lines = append(lines, "")
-	lines = append(lines, m.renderEntityTable(width))
-	return strings.Join(lines, "\n")
-}
-
-// renderStatusLine renders sync and upload status on one line.
-func (m *Model) renderStatusLine() string {
 	colors := m.theme
+	text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
 
-	var syncPart string
+	var headline string
+	var description string
+
 	switch state := m.lastState.(type) {
 	case *powersync.Disconnected:
-		syncPart = dot(colors.TextSubtle, colors.Bg) + " " + muted.Render("Disconnected")
+		headline = dot(colors.TextSubtle, colors.Bg) + " " + text.Render("Disconnected")
+		description = "Sync has not started yet."
+
 	case *powersync.Connecting:
-		syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Connecting")
+		headline = dot(colors.Warning, colors.Bg) + " " + text.Render("Connecting...")
+		description = "Establishing connection to the control plane."
+
 	case *powersync.Syncing:
 		if state.Progress != nil && state.Progress.Total > 0 {
 			pct := state.Progress.Downloaded * 100 / state.Progress.Total
-			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render(fmt.Sprintf("Syncing %d%%", pct))
+			headline = dot(colors.Warning, colors.Bg) + " " + text.Render(fmt.Sprintf("Syncing your data... %d%%", pct))
+			description = fmt.Sprintf("%d / %d rows downloaded.", state.Progress.Downloaded, state.Progress.Total)
 		} else {
-			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Syncing")
+			headline = dot(colors.Warning, colors.Bg) + " " + text.Render("Syncing your data...")
+			description = "Downloading from the control plane."
 		}
+
 	case *powersync.Ready:
-		syncPart = dot(colors.Success, colors.Bg) + " " + muted.Render("Connected")
+		headline = dot(colors.Success, colors.Bg) + " " + text.Render("Connected")
+		description = "Your data is synced and up to date."
+
 	case *powersync.Reconnecting:
 		if state.Degraded {
-			syncPart = dot(colors.Error, colors.Bg) + " " + muted.Render("Reconnecting (degraded)")
+			headline = dot(colors.Error, colors.Bg) + " " + text.Render("Connection issues")
+			description = "Multiple retries failed. Still trying to reconnect."
 		} else {
-			syncPart = dot(colors.Warning, colors.Bg) + " " + muted.Render("Reconnecting")
+			headline = dot(colors.Warning, colors.Bg) + " " + text.Render("Reconnecting...")
+			description = "Temporarily lost connection. Retrying automatically."
 		}
+
 	case *powersync.Error:
 		errStyle := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
-		syncPart = errStyle.Render("○") + " " + errStyle.Render(state.Err.Error())
+		headline = dot(colors.Error, colors.Bg) + " " + errStyle.Render("Sync failed")
+		description = state.Err.Error()
 	}
 
-	var uploadPart string
+	var lines []string
+	lines = append(lines, headline)
+	lines = append(lines, muted.Render(description))
+
 	if m.totalPending > 0 {
+		lines = append(lines, "")
 		warn := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
-		uploadPart = warn.Render(fmt.Sprintf("%d uploading", m.totalPending))
-	} else {
-		uploadPart = muted.Render("Upload queue empty")
+		lines = append(lines, warn.Render(fmt.Sprintf("%d pending uploads", m.totalPending)))
 	}
 
-	return syncPart + muted.Render(" · ") + uploadPart
-}
-
-// renderEntityTable renders record counts with optional pending column.
-func (m *Model) renderEntityTable(width int) string {
-	if len(m.entities) == 0 {
-		return ""
-	}
-
-	tbl := table.New(m.theme)
-	tbl.SetWidth(width)
-
-	if m.totalPending > 0 {
-		tbl.Headers("Entity", "Records", "Pending")
-		for _, e := range m.entities {
-			p := "-"
-			if e.pending > 0 {
-				p = fmt.Sprintf("%d", e.pending)
-			}
-			tbl.Row(e.name, fmt.Sprintf("%d", e.records), p)
-		}
-	} else {
-		tbl.Headers("Entity", "Records")
-		for _, e := range m.entities {
-			tbl.Row(e.name, fmt.Sprintf("%d", e.records))
-		}
-	}
-
-	return tbl.View()
+	return strings.Join(lines, "\n")
 }
 
 func dot(c color.Color, bg color.Color) string {
