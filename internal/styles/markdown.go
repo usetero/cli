@@ -3,6 +3,7 @@ package styles
 import (
 	"fmt"
 	"image/color"
+	"strings"
 	"sync"
 
 	"charm.land/glamour/v2"
@@ -57,6 +58,15 @@ func RenderMarkdown(theme Theme, text string, width int) string {
 	if err != nil {
 		return text // fallback to plain text
 	}
+
+	// Chroma's syntax highlighter emits \033[0m (full SGR reset) after every
+	// token. This kills any background colour set by a parent lipgloss style,
+	// causing black rectangles in code blocks. Re-establish the theme background
+	// after every reset so the background is continuous.
+	r_, g_, b_, _ := theme.Bg.RGBA()
+	bgSeq := fmt.Sprintf("\033[48;2;%d;%d;%dm", r_>>8, g_>>8, b_>>8)
+	out = strings.ReplaceAll(out, "\033[0m", "\033[0m"+bgSeq)
+
 	return out
 }
 
@@ -66,8 +76,6 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 	muted := stringPtr(colorToHex(t.TextMuted))
 	accent := stringPtr(colorToHex(t.Accent))
 	bg := stringPtr(colorToHex(t.Bg))
-	codeBg := stringPtr(colorToHex(t.BgElevated))
-
 	return ansi.StyleConfig{
 		Document: ansi.StyleBlock{
 			StylePrimitive: ansi.StylePrimitive{
@@ -176,23 +184,21 @@ func markdownStyle(t Theme) ansi.StyleConfig {
 		},
 		Code: ansi.StyleBlock{
 			StylePrimitive: ansi.StylePrimitive{
-				Color:           accent,
-				BackgroundColor: codeBg,
-				Prefix:          " ",
-				Suffix:          " ",
+				Color:  accent,
+				Prefix: " ",
+				Suffix: " ",
 			},
 		},
 		CodeBlock: ansi.StyleCodeBlock{
 			StyleBlock: ansi.StyleBlock{
 				StylePrimitive: ansi.StylePrimitive{
-					Color:           text,
-					BackgroundColor: codeBg,
+					Color: text,
 				},
 				Margin: uintPtr(0),
 			},
 			Chroma: &ansi.Chroma{
-				// Base — code blocks render on BgElevated, so set Background to match.
-				Background: ansi.StylePrimitive{BackgroundColor: codeBg},
+				// Base — no explicit background; inherits from parent lipgloss style.
+				Background: ansi.StylePrimitive{},
 				Text:       ansi.StylePrimitive{Color: text},
 				Error:      ansi.StylePrimitive{Color: stringPtr(colorToHex(t.Error))},
 
