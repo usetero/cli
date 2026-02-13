@@ -52,6 +52,9 @@ func New(theme styles.Theme, cols []Column, rows []Row) *Model {
 		table.WithHeight(len(rows)+1),
 	)
 
+	// Remove space from PageDown so consuming components can use it for toggle/selection.
+	t.KeyMap.PageDown.SetKeys("f", "pgdown")
+
 	return &Model{
 		theme: theme,
 		table: t,

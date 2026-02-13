@@ -1,5 +1,7 @@
 package msgs
 
+import "github.com/usetero/cli/internal/domain"
+
 type Policy struct {
 	ID                     string
 	ServiceName            string
@@ -14,7 +16,8 @@ type Start struct {
 }
 
 type PoliciesSelected struct {
-	PolicyIDs []string
+	Category string
+	Policies []domain.PolicyDetail
 }
 
 type Confirmed struct{}

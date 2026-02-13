@@ -300,7 +300,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Intercept "approve", "approval", etc. to open wizard directly
 		if strings.HasPrefix(strings.ToLower(text), "approv") {
 			m.state = statePolicyApproval
-			m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, "", m.scope)
+			m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, "", m.getUserID(), m.scope)
 			m.updateLayout()
 			return m, m.policyApproval.Init()
 		}
@@ -372,7 +372,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case policyapprovalmsg.Start:
 		m.state = statePolicyApproval
-		m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, msg.ToolUseID, m.scope)
+		m.policyApproval = policyapproval.New(m.ctx, m.theme, m.db, msg.ToolUseID, m.getUserID(), m.scope)
 		// m.policyApproval.SetPolicies(msg.Policies)
 		m.updateLayout()
 		return m, m.policyApproval.Init()
@@ -449,6 +449,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.updateKeyBar()
 
 	return m, tea.Batch(cmds...)
+}
+
+// getUserID returns the authenticated user's ID, or empty string if not yet available.
+func (m *Model) getUserID() string {
+	if m.user != nil {
+		return m.user.ID
+	}
+	return ""
 }
 
 // updateLayout propagates sizes to children based on current dimensions.

@@ -49,6 +49,59 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const listApprovedPoliciesByCategory = `-- name: ListApprovedPoliciesByCategory :many
+SELECT
+  c.policy_id,
+  c.risk_level,
+  c.benefits,
+  c.estimated_cost_reduction_per_hour_usd,
+  c.estimated_volume_reduction_per_hour,
+  COALESCE(e.name, '') AS log_event_name
+FROM log_event_policy_statuses_cache c
+LEFT JOIN log_events e ON c.log_event_id = e.id
+WHERE c.category = ? AND c.status = 'APPROVED'
+ORDER BY c.estimated_cost_reduction_per_hour_usd DESC
+`
+
+type ListApprovedPoliciesByCategoryRow struct {
+	PolicyID                         *string
+	RiskLevel                        *string
+	Benefits                         *string
+	EstimatedCostReductionPerHourUsd *float64
+	EstimatedVolumeReductionPerHour  *float64
+	LogEventName                     string
+}
+
+func (q *Queries) ListApprovedPoliciesByCategory(ctx context.Context, category *string) ([]ListApprovedPoliciesByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listApprovedPoliciesByCategory, category)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListApprovedPoliciesByCategoryRow
+	for rows.Next() {
+		var i ListApprovedPoliciesByCategoryRow
+		if err := rows.Scan(
+			&i.PolicyID,
+			&i.RiskLevel,
+			&i.Benefits,
+			&i.EstimatedCostReductionPerHourUsd,
+			&i.EstimatedVolumeReductionPerHour,
+			&i.LogEventName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingPIIPolicies = `-- name: ListPendingPIIPolicies :many
 SELECT
   COALESCE(s.name, '') AS service_name,

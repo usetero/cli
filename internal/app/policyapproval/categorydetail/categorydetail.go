@@ -102,12 +102,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				m.selected[p.PolicyID] = false
 			}
 			m.rebuildRows()
-		case key.Matches(msg, keyEnter):
+		case key.Matches(msg, keyToggle):
 			if m.tbl != nil && len(m.policies) > 0 {
 				p := m.policies[m.tbl.Cursor()]
 				m.selected[p.PolicyID] = !m.selected[p.PolicyID]
 				m.rebuildRows()
 			}
+		case key.Matches(msg, keySubmit):
+			return m.submit()
 		case key.Matches(msg, keyBack):
 			return func() tea.Msg { return msgs.BackToSummary{} }
 		case key.Matches(msg, keyEscape):
@@ -121,20 +123,23 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// submit emits PoliciesSelected with the currently selected policy IDs.
+// submit emits PoliciesSelected with the currently selected policies.
 func (m *Model) submit() tea.Cmd {
-	var ids []string
+	var selected []domain.PolicyDetail
 	for _, p := range m.policies {
 		if m.selected[p.PolicyID] {
-			ids = append(ids, p.PolicyID)
+			selected = append(selected, p)
 		}
 	}
-	if len(ids) == 0 {
+	if len(selected) == 0 {
 		return nil
 	}
-	m.scope.Info("policies selected", "count", len(ids))
+	m.scope.Info("policies selected", "count", len(selected))
 	return func() tea.Msg {
-		return msgs.PoliciesSelected{PolicyIDs: ids}
+		return msgs.PoliciesSelected{
+			Category: m.category,
+			Policies: selected,
+		}
 	}
 }
 
@@ -245,12 +250,13 @@ func (m *Model) SetSize(width, height int) {
 
 // ShortHelp returns key bindings.
 func (m *Model) ShortHelp() []key.Binding {
-	return []key.Binding{keyEnter, keySelectAll, keySelectNone, keyBack, keyEscape}
+	return []key.Binding{keyToggle, keySubmit, keySelectAll, keySelectNone, keyBack, keyEscape}
 }
 
 // Key bindings.
 var (
-	keyEnter      = key.NewBinding(key.WithKeys("enter", " "), key.WithHelp("enter", "toggle"))
+	keyToggle     = key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "toggle"))
+	keySubmit     = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "submit"))
 	keySelectAll  = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "select all"))
 	keySelectNone = key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "select none"))
 	keyBack       = key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "back"))

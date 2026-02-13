@@ -11,7 +11,10 @@ import (
 
 	"github.com/usetero/cli/internal/app/policyapproval/categorydetail"
 	"github.com/usetero/cli/internal/app/policyapproval/categorysummary"
+	"github.com/usetero/cli/internal/app/policyapproval/confirm"
+	"github.com/usetero/cli/internal/app/policyapproval/execute"
 	"github.com/usetero/cli/internal/app/policyapproval/msgs"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -32,11 +35,11 @@ type Model struct {
 
 	// Input from tool
 	toolUseID string
+	userID    string
 
-	// Accumulated state from step completions
-	selectedIDs   []string
-	approvedCount int
-	failedCount   int
+	// Accumulated from step completions
+	selectedCategory string
+	selectedPolicies []domain.PolicyDetail
 
 	// Steps
 	summary *categorysummary.Model // persistent, created once
@@ -53,6 +56,7 @@ func New(
 	theme styles.Theme,
 	db sqlite.DB,
 	toolUseID string,
+	userID string,
 	scope log.Scope,
 ) *Model {
 	return &Model{
@@ -60,6 +64,7 @@ func New(
 		theme:     theme,
 		db:        db,
 		toolUseID: toolUseID,
+		userID:    userID,
 		scope:     scope.Child("policyapproval"),
 	}
 }
@@ -94,9 +99,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.propagateSize()
 		return nil // summary already loaded, no re-init
 
-		// TODO: Handle remaining step completion messages
-		// case msgs.PoliciesSelected:
-		// case msgs.Confirmed:
+	case msgs.PoliciesSelected:
+		m.selectedCategory = msg.Category
+		m.selectedPolicies = msg.Policies
+		c := confirm.New(m.theme, msg.Category, msg.Policies, m.scope)
+		m.detail = c
+		m.step = c
+		m.propagateSize()
+		return c.Init()
+
+	case msgs.Confirmed:
+		exec := execute.New(m.ctx, m.theme, m.db, m.userID, m.toolUseID, m.selectedPolicies, m.scope)
+		m.detail = exec
+		m.step = exec
+		m.propagateSize()
+		return exec.Init()
 	}
 
 	// Delegate to current step

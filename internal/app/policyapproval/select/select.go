@@ -64,17 +64,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// confirm emits PoliciesSelected with the selected IDs.
+// confirm emits PoliciesSelected with the selected policies.
 func (m *Model) confirm() tea.Cmd {
-	var ids []string
-	for id, selected := range m.selected {
-		if selected {
-			ids = append(ids, id)
-		}
-	}
-	m.scope.Info("policies selected", "count", len(ids))
+	// TODO: convert msgs.Policy to domain.PolicyDetail when this step is fully implemented
+	m.scope.Info("policies selected (stub)")
 	return func() tea.Msg {
-		return msgs.PoliciesSelected{PolicyIDs: ids}
+		return msgs.PoliciesSelected{}
 	}
 }
 
