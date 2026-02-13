@@ -162,8 +162,33 @@ func (m *Model) IsDrawerOpen() bool {
 	return m.drawerOpen
 }
 
+// HandleKeyPress forwards key events to the active tab's key handler.
+func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+	switch m.activeTab {
+	case TabWaste:
+		return m.wasteStatus.HandleKeyPress(msg)
+	}
+	return nil
+}
+
+// HandleEsc lets the active tab consume an esc press before the drawer closes.
+// Returns true if the tab consumed the event (e.g. back from detail view).
+func (m *Model) HandleEsc() bool {
+	if m.activeTab == TabWaste && m.wasteStatus.InDetail() {
+		m.wasteStatus.CloseDetail()
+		return true
+	}
+	return false
+}
+
 // ShortHelp returns keybindings shown in the keybar when the drawer is open.
 func (m *Model) ShortHelp() []key.Binding {
+	if m.activeTab == TabWaste && m.wasteStatus.HasData() {
+		if m.wasteStatus.InDetail() {
+			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+		}
+		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
+	}
 	return []key.Binding{keymap.NextTab, keymap.CloseDrawer}
 }
 

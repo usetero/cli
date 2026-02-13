@@ -4,6 +4,8 @@ package format
 import (
 	"fmt"
 	"math"
+	"strings"
+	"unicode"
 )
 
 // Cost formats a dollar amount: $142, $9.4k, $1.2M.
@@ -62,4 +64,16 @@ func Count(n int64) string {
 		return "—"
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+// TitleCase converts a snake_case slug to Title Case.
+// "bot_traffic" → "Bot Traffic", "pii_leakage" → "Pii Leakage".
+func TitleCase(slug string) string {
+	words := strings.Split(slug, "_")
+	for i, w := range words {
+		if len(w) > 0 {
+			words[i] = string(unicode.ToUpper(rune(w[0]))) + w[1:]
+		}
+	}
+	return strings.Join(words, " ")
 }

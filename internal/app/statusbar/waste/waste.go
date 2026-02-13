@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
+	"github.com/usetero/cli/internal/tea/keymap"
 )
 
 const pollInterval = 2 * time.Second
@@ -32,6 +34,10 @@ type Model struct {
 	categories []domain.PolicyCategoryStatus
 	hasData    bool
 	lastState  string
+
+	// Drawer navigation
+	cursor int     // selected row in category list
+	detail *detail // non-nil when viewing a single category's policies
 }
 
 // New creates a new policy status model.
@@ -96,6 +102,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.categories = categories
 			m.hasData = summary.PendingPolicyCount+summary.ApprovedPolicyCount+summary.DismissedPolicyCount > 0
 			m.lastState = key
+
+			// Clamp cursor if categories shrank.
+			if m.cursor >= len(m.categories) && len(m.categories) > 0 {
+				m.cursor = len(m.categories) - 1
+			}
 		}
 
 		return m.poll()
@@ -133,6 +144,56 @@ func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategorySt
 // HasData returns true when policy data has been loaded.
 func (m *Model) HasData() bool {
 	return m.hasData
+}
+
+// HandleKeyPress handles keyboard navigation in the expanded drawer view.
+func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+	if !m.hasData || len(m.categories) == 0 {
+		return nil
+	}
+
+	// Detail mode: backspace returns to category list (esc handled by statusbar).
+	if m.detail != nil {
+		if key.Matches(msg, keymap.DrawerBack) {
+			m.detail = nil
+		}
+		return nil
+	}
+
+	// Category list mode.
+	switch {
+	case key.Matches(msg, keymap.DrawerUp):
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case key.Matches(msg, keymap.DrawerDown):
+		if m.cursor < len(m.categories)-1 {
+			m.cursor++
+		}
+	case key.Matches(msg, keymap.DrawerSelect):
+		cat := m.categories[m.cursor]
+		if cat.PendingCount == 0 {
+			return nil
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		policies, err := m.db.LogEventPolicies().ListTopPendingPoliciesByCategory(ctx, cat.Category, 25)
+		if err != nil {
+			return nil
+		}
+		m.detail = newDetail(m.theme, cat, policies)
+	}
+	return nil
+}
+
+// InDetail returns true when the detail sub-view is active.
+func (m *Model) InDetail() bool {
+	return m.detail != nil
+}
+
+// CloseDetail exits the detail sub-view, returning to the category list.
+func (m *Model) CloseDetail() {
+	m.detail = nil
 }
 
 // CompactView renders the policy status for the statusbar.
@@ -202,6 +263,11 @@ func (m *Model) ExpandedView(width, height int) string {
 		return dot + " " + muted.Render("No waste detected. Your logs look clean.")
 	}
 
+	// Detail sub-view for a single category.
+	if m.detail != nil {
+		return m.detail.View(width)
+	}
+
 	var lines []string
 	lines = append(lines, m.renderWasteHeadline())
 	lines = append(lines, "")
@@ -255,7 +321,7 @@ func (m *Model) renderWasteHeadline() string {
 	return strings.Join(parts, sep)
 }
 
-// renderCategoryTable renders all waste categories in a single table.
+// renderCategoryTable renders all waste categories in a single table with cursor highlighting.
 func (m *Model) renderCategoryTable(width int) string {
 	if len(m.categories) == 0 {
 		return ""
@@ -267,15 +333,23 @@ func (m *Model) renderCategoryTable(width int) string {
 
 	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
+	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
 
-	for _, c := range m.categories {
+	for i, c := range m.categories {
 		dot := ok.Render("●")
 		if c.PendingCount > 0 {
 			dot = warn.Render("●")
 		}
 
+		name := c.DisplayName()
+		if i == m.cursor {
+			name = accent.Render("▶ " + name)
+		} else {
+			name = dot + " " + name
+		}
+
 		tbl.Row(
-			dot+" "+c.DisplayName(),
+			name,
 			format.Count(c.PendingCount),
 			formatCategoryCost(c),
 			format.Count(c.ApprovedCount),

@@ -234,6 +234,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if key.Matches(msg, keymap.Exit) {
 			if m.statusBar.IsDrawerOpen() {
+				// Let the active tab handle esc first (e.g. back from detail view).
+				if m.statusBar.HandleEsc() {
+					return m, nil
+				}
 				m.statusBar.CloseDrawer()
 				return m, nil
 			}
@@ -253,9 +257,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.statusBar.IsDrawerOpen() {
 			if key.Matches(msg, keymap.Tab) {
 				m.statusBar.NextTab()
+				return m, nil
 			}
-			// Consume all keys when drawer is open
-			return m, nil
+			// Forward to active tab for navigation (up/down/enter).
+			cmd := m.statusBar.HandleKeyPress(msg)
+			return m, cmd
 		}
 
 	case tea.MouseClickMsg:

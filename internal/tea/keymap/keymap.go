@@ -3,7 +3,7 @@ package keymap
 
 import "charm.land/bubbles/v2/key"
 
-// Common key bindings.
+// Global bindings — always active.
 var (
 	Quit = key.NewBinding(
 		key.WithKeys("ctrl+c"),
@@ -13,6 +13,13 @@ var (
 		key.WithKeys("esc"),
 		key.WithHelp("", ""),
 	)
+
+	// Global is shown in the keybar across all screens.
+	Global = []key.Binding{Quit}
+)
+
+// App bindings — active during normal interaction.
+var (
 	Tab = key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "switch focus"),
@@ -33,7 +40,10 @@ var (
 		key.WithKeys("/"),
 		key.WithHelp("/", "commands"),
 	)
-	// Drawer bindings (shown when the statusbar drawer is open).
+)
+
+// Drawer bindings — active when the statusbar drawer is open.
+var (
 	NextTab = key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "next tab"),
@@ -42,9 +52,22 @@ var (
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "close"),
 	)
-
-	// Global is shown in the keybar across all screens.
-	Global = []key.Binding{Quit}
+	DrawerUp = key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑/k", "up"),
+	)
+	DrawerDown = key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓/j", "down"),
+	)
+	DrawerSelect = key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "select"),
+	)
+	DrawerBack = key.NewBinding(
+		key.WithKeys("esc", "backspace"),
+		key.WithHelp("esc/bksp", "back"),
+	)
 )
 
 // Simple implements help.KeyMap with a basic list of key bindings.

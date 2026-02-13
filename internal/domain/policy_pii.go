@@ -54,10 +54,11 @@ type PIIAnalysisEnvelope struct {
 	PIILeakage *PIILeakageAnalysis `json:"pii_leakage,omitempty"`
 }
 
-// PIIPolicy is a single PII leakage finding with context from joined tables.
+// PIIPolicy is a single pending PII leakage finding with context from joined tables.
 type PIIPolicy struct {
-	LogEventName string
-	ServiceName  string
-	Status       PolicyLogStatus
-	Fields       []PIIField // Parsed from analysis JSON
+	LogEventName  string
+	ServiceName   string
+	Fields        []PIIField  // Parsed from analysis JSON
+	VolumePerHour float64     // Log event volume from log_event_statuses_cache
+	MaxSeverity   PIISeverity // Highest severity across fields, computed in SQL
 }

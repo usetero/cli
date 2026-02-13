@@ -1,13 +1,6 @@
 package domain
 
-// categoryDisplayNames maps category slugs to human-readable names.
-var categoryDisplayNames = map[string]string{
-	"instrumentation_bloat":       "Instrumentation Bloat",
-	"duplicate_fields":            "Duplicate Fields",
-	"accidental_debug_statements": "Debug Statements",
-	"noise":                       "Noise",
-	"pii_leakage":                 "PII Leakage",
-}
+import "github.com/usetero/cli/internal/format"
 
 // PolicyCategoryStatus is the per-category policy breakdown.
 type PolicyCategoryStatus struct {
@@ -30,9 +23,7 @@ type PolicyCategoryStatus struct {
 }
 
 // DisplayName returns a human-readable name for the category.
+// Converts slugs like "bot_traffic" to "Bot Traffic".
 func (c PolicyCategoryStatus) DisplayName() string {
-	if name, ok := categoryDisplayNames[c.Category]; ok {
-		return name
-	}
-	return c.Category
+	return format.TitleCase(c.Category)
 }

@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	CountConversations(ctx context.Context) (int64, error)
+	CountFixedPIIPolicies(ctx context.Context) (int64, error)
 	CountLogEventPolicies(ctx context.Context) (int64, error)
 	CountLogEvents(ctx context.Context) (int64, error)
 	CountMessages(ctx context.Context) (int64, error)
@@ -29,10 +30,11 @@ type Querier interface {
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
-	ListPIIPolicies(ctx context.Context) ([]ListPIIPoliciesRow, error)
+	ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error)
 	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
+	ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error)
 	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error

@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
@@ -26,9 +27,10 @@ type Model struct {
 	theme styles.Theme
 	db    sqlite.DB
 
-	policies  []domain.PIIPolicy
-	hasData   bool
-	lastState string
+	policies   []domain.PIIPolicy // pending only, sorted by severity then volume
+	fixedCount int64              // number of approved PII policies
+	hasData    bool
+	lastState  string
 }
 
 // New creates a new PII status model.
@@ -69,15 +71,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		policies, err := m.db.LogEventPolicies().ListPIIPolicies(ctx)
+		policies, err := m.db.LogEventPolicies().ListPendingPIIPolicies(ctx)
 		if err != nil {
 			return m.poll()
 		}
 
-		key := m.stateKey(policies)
+		fixedCount, err := m.db.LogEventPolicies().CountFixedPIIPolicies(ctx)
+		if err != nil {
+			fixedCount = 0
+		}
+
+		key := m.stateKey(policies, fixedCount)
 		if key != m.lastState {
 			m.policies = policies
-			m.hasData = len(policies) > 0
+			m.fixedCount = fixedCount
+			m.hasData = len(policies) > 0 || fixedCount > 0
 			m.lastState = key
 		}
 
@@ -88,12 +96,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 // stateKey builds a string key for change detection.
-func (m *Model) stateKey(policies []domain.PIIPolicy) string {
+func (m *Model) stateKey(policies []domain.PIIPolicy, fixedCount int64) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%d", len(policies))
+	fmt.Fprintf(&b, "%d:%d", len(policies), fixedCount)
 	for _, p := range policies {
-		fmt.Fprintf(&b, "|%s:%s:%s:%d",
-			p.ServiceName, p.LogEventName, p.Status, len(p.Fields))
+		fmt.Fprintf(&b, "|%s:%s:%d:%.0f:%d",
+			p.ServiceName, p.LogEventName, len(p.Fields), p.VolumePerHour, p.MaxSeverity)
 		for _, f := range p.Fields {
 			fmt.Fprintf(&b, ":%s", f.PIIType)
 		}
@@ -108,19 +116,14 @@ func (m *Model) HasData() bool {
 
 // CompactView renders the PII indicator for the collapsed statusbar.
 func (m *Model) CompactView() string {
-	if !m.hasData {
-		return ""
-	}
-
-	pending := m.pendingCount()
-	if pending == 0 {
+	if !m.hasData || len(m.policies) == 0 {
 		return ""
 	}
 
 	colors := m.theme
 	dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
-	return dot + " " + muted.Render(fmt.Sprintf("%d PII", pending))
+	return dot + " " + muted.Render(fmt.Sprintf("%d PII", len(m.policies)))
 }
 
 // ExpandedView renders the detailed PII status for the drawer.
@@ -144,27 +147,58 @@ func (m *Model) ExpandedView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderHeadline renders the PII summary line.
+// renderHeadline renders the PII summary line with per-severity counts.
 func (m *Model) renderHeadline() string {
 	colors := m.theme
-
-	pending := m.pendingCount()
-	total := len(m.policies)
-	services := m.uniqueServiceCount()
+	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	sep := muted.Render(" · ")
 
 	var parts []string
 
-	if pending > 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
-		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d PII findings across %d services", total, services)))
-	} else {
-		dot := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render("●")
-		muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
-		parts = append(parts, dot+" "+muted.Render(fmt.Sprintf("%d PII findings reviewed", total)))
+	if len(m.policies) > 0 {
+		// Count by severity.
+		var critical, high, medium int
+		for _, p := range m.policies {
+			switch p.MaxSeverity {
+			case domain.PIISeverityCritical:
+				critical++
+			case domain.PIISeverityHigh:
+				high++
+			default:
+				medium++
+			}
+		}
+
+		if critical > 0 {
+			dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
+			text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
+			parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d critical", critical)))
+		}
+		if high > 0 {
+			dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
+			text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
+			parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d high", high)))
+		}
+		if medium > 0 {
+			dot := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render("●")
+			parts = append(parts, dot+" "+muted.Render(fmt.Sprintf("%d general", medium)))
+		}
+
+		services := m.uniqueServiceCount()
+		parts = append(parts, muted.Render(fmt.Sprintf("across %d services", services)))
 	}
 
-	return strings.Join(parts, "")
+	if m.fixedCount > 0 {
+		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
+		parts = append(parts, ok.Render(fmt.Sprintf("%d fixed", m.fixedCount)))
+	}
+
+	if len(parts) == 0 {
+		dot := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render("●")
+		return dot + " " + muted.Render("No PII leakage detected.")
+	}
+
+	return strings.Join(parts, sep)
 }
 
 // renderTable renders the per-policy PII table.
@@ -174,14 +208,15 @@ func (m *Model) renderTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(40))
-	tbl.Headers("Log Event", "Service", "Leaking")
+	tbl.Headers("Log Event", "Service", "Volume", "Leaking")
 	tbl.SetWidth(width)
 
 	for _, p := range m.policies {
 		tbl.Row(
 			p.LogEventName,
 			p.ServiceName,
-			m.formatPIITypes(p.Fields, 3),
+			format.Volume(p.VolumePerHour)+" evt/hr",
+			m.severityDot(p.MaxSeverity)+" "+m.formatPIITypes(p.Fields, 3),
 		)
 	}
 
@@ -236,6 +271,18 @@ func (m *Model) formatPIITypes(fields []domain.PIIField, maxShow int) string {
 	return result
 }
 
+// severityDot returns a colored dot for the given severity level.
+func (m *Model) severityDot(s domain.PIISeverity) string {
+	switch s {
+	case domain.PIISeverityCritical:
+		return lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg).Render("●")
+	case domain.PIISeverityHigh:
+		return lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render("●")
+	default:
+		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("●")
+	}
+}
+
 // colorSeverity applies theme color based on PII severity.
 func (m *Model) colorSeverity(label string, s domain.PIISeverity) string {
 	switch s {
@@ -262,16 +309,6 @@ func displayPIIType(t string) string {
 	default:
 		return t
 	}
-}
-
-func (m *Model) pendingCount() int {
-	count := 0
-	for _, p := range m.policies {
-		if p.Status == domain.PolicyLogStatusPending {
-			count++
-		}
-	}
-	return count
 }
 
 func (m *Model) uniqueServiceCount() int {

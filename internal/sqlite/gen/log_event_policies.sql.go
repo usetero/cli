@@ -9,6 +9,18 @@ import (
 	"context"
 )
 
+const countFixedPIIPolicies = `-- name: CountFixedPIIPolicies :one
+SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
+WHERE category = 'pii_leakage' AND status = 'APPROVED'
+`
+
+func (q *Queries) CountFixedPIIPolicies(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFixedPIIPolicies)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countLogEventPolicies = `-- name: CountLogEventPolicies :one
 SELECT COUNT(*) FROM log_event_policies
 `
@@ -20,43 +32,52 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const listPIIPolicies = `-- name: ListPIIPolicies :many
+const listPendingPIIPolicies = `-- name: ListPendingPIIPolicies :many
 SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
-  COALESCE(leps.status, '') AS status,
-  COALESCE(lep.analysis, '') AS analysis
+  COALESCE(lep.analysis, '') AS analysis,
+  COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
+  CAST(COALESCE((
+    SELECT MAX(CASE json_extract(f.value, '$.pii_type')
+      WHEN 'credit_card' THEN 2 WHEN 'ssn' THEN 2 WHEN 'password' THEN 2
+      WHEN 'email' THEN 1 WHEN 'name' THEN 1 WHEN 'phone' THEN 1
+      WHEN 'address' THEN 1 WHEN 'ip_address' THEN 1 WHEN 'date_of_birth' THEN 1
+      ELSE 0 END)
+    FROM json_each(json_extract(lep.analysis, '$.pii_leakage.fields')) f
+  ), 0) AS INTEGER) AS max_severity
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
 LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
-WHERE leps.category = 'pii_leakage'
-ORDER BY
-  CASE leps.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END,
-  s.name, le.name
+LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
+WHERE leps.category = 'pii_leakage' AND leps.status = 'PENDING'
+ORDER BY max_severity DESC, les.volume_per_hour DESC
 `
 
-type ListPIIPoliciesRow struct {
-	ServiceName  string
-	LogEventName string
-	Status       string
-	Analysis     string
+type ListPendingPIIPoliciesRow struct {
+	ServiceName   string
+	LogEventName  string
+	Analysis      string
+	VolumePerHour float64
+	MaxSeverity   int64
 }
 
-func (q *Queries) ListPIIPolicies(ctx context.Context) ([]ListPIIPoliciesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPIIPolicies)
+func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingPIIPolicies)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPIIPoliciesRow
+	var items []ListPendingPIIPoliciesRow
 	for rows.Next() {
-		var i ListPIIPoliciesRow
+		var i ListPendingPIIPoliciesRow
 		if err := rows.Scan(
 			&i.ServiceName,
 			&i.LogEventName,
-			&i.Status,
 			&i.Analysis,
+			&i.VolumePerHour,
+			&i.MaxSeverity,
 		); err != nil {
 			return nil, err
 		}
@@ -136,6 +157,64 @@ func (q *Queries) ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyC
 			&i.ObservedBytesAfter,
 			&i.ObservedCostBefore,
 			&i.ObservedCostAfter,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTopPendingPoliciesByCategory = `-- name: ListTopPendingPoliciesByCategory :many
+SELECT
+  COALESCE(s.name, '') AS service_name,
+  COALESCE(le.name, '') AS log_event_name,
+  COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
+  COALESCE(leps.estimated_cost_reduction_per_hour_usd, 0) AS estimated_cost_per_hour,
+  COALESCE(leps.estimated_bytes_reduction_per_hour, 0) AS estimated_bytes_per_hour
+FROM log_event_policy_statuses_cache leps
+JOIN log_events le ON le.id = leps.log_event_id
+JOIN services s ON s.id = le.service_id
+LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
+WHERE leps.category = ?1 AND leps.status = 'PENDING'
+ORDER BY leps.estimated_cost_reduction_per_hour_usd DESC, les.volume_per_hour DESC
+LIMIT ?2
+`
+
+type ListTopPendingPoliciesByCategoryParams struct {
+	Category *string
+	Limit    int64
+}
+
+type ListTopPendingPoliciesByCategoryRow struct {
+	ServiceName           string
+	LogEventName          string
+	VolumePerHour         float64
+	EstimatedCostPerHour  float64
+	EstimatedBytesPerHour float64
+}
+
+func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTopPendingPoliciesByCategory, arg.Category, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTopPendingPoliciesByCategoryRow
+	for rows.Next() {
+		var i ListTopPendingPoliciesByCategoryRow
+		if err := rows.Scan(
+			&i.ServiceName,
+			&i.LogEventName,
+			&i.VolumePerHour,
+			&i.EstimatedCostPerHour,
+			&i.EstimatedBytesPerHour,
 		); err != nil {
 			return nil, err
 		}
