@@ -6,7 +6,7 @@ set -euo pipefail
 # If version is omitted, fetches the latest release.
 
 REPO="powersync-ja/powersync-sqlite-core"
-DEST_DIR="internal/powersync/extensions"
+DEST_DIR="internal/powersync/extension/extensions"
 
 # Get version (argument or latest)
 if [ $# -ge 1 ]; then
@@ -45,11 +45,11 @@ download() {
     fi
 }
 
-# Map release assets to our naming convention
-download "libpowersync_aarch64.dylib" "libpowersync_aarch64.macos.dylib"
-download "libpowersync_x64.dylib" "libpowersync_x64.macos.dylib"
-download "libpowersync_aarch64.so" "libpowersync_aarch64.linux.so"
-download "libpowersync_x64.so" "libpowersync_x64.linux.so"
+# Download platform binaries (asset names match our expected names)
+download "libpowersync_aarch64.macos.dylib" "libpowersync_aarch64.macos.dylib"
+download "libpowersync_x64.macos.dylib" "libpowersync_x64.macos.dylib"
+download "libpowersync_aarch64.linux.so" "libpowersync_aarch64.linux.so"
+download "libpowersync_x64.linux.so" "libpowersync_x64.linux.so"
 
 # Move to destination
 echo "Installing to ${DEST_DIR}..."
