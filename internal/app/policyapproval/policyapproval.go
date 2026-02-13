@@ -3,6 +3,7 @@ package policyapproval
 
 import (
 	"context"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -14,6 +15,11 @@ import (
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
+)
+
+const (
+	sideBySideMinWidth = 125 // ~61 per table + 3 gap
+	sideBySideGap      = 3
 )
 
 // Model is the policy approval wizard orchestrator.
@@ -32,8 +38,11 @@ type Model struct {
 	approvedCount int
 	failedCount   int
 
-	// Current step
-	step   Step
+	// Steps
+	summary *categorysummary.Model // persistent, created once
+	detail  Step                   // nil when not drilled in
+	step    Step                   // active step for input (summary or detail)
+
 	width  int
 	height int
 }
@@ -58,7 +67,10 @@ func New(
 // Init starts the wizard with the category summary step.
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("policy approval wizard started")
-	return m.setStep(categorysummary.New(m.ctx, m.theme, m.db, m.scope))
+	m.summary = categorysummary.New(m.ctx, m.theme, m.db, m.scope)
+	m.step = m.summary
+	m.propagateSize()
+	return m.summary.Init()
 }
 
 // Update handles messages and orchestrates step transitions.
@@ -67,16 +79,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		if m.step != nil {
-			m.step.SetSize(m.width, m.height)
-		}
+		m.propagateSize()
 		return nil
 
 	case msgs.CategorySelected:
-		return m.setStep(categorydetail.New(m.ctx, m.theme, m.db, msg.Category, m.scope))
+		m.detail = categorydetail.New(m.ctx, m.theme, m.db, msg.Category, m.scope)
+		m.step = m.detail
+		m.propagateSize()
+		return m.detail.Init()
 
 	case msgs.BackToSummary:
-		return m.setStep(categorysummary.New(m.ctx, m.theme, m.db, m.scope))
+		m.detail = nil
+		m.step = m.summary
+		m.propagateSize()
+		return nil // summary already loaded, no re-init
 
 		// TODO: Handle remaining step completion messages
 		// case msgs.PoliciesSelected:
@@ -90,33 +106,56 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// setStep sets the current step and initializes it.
-func (m *Model) setStep(step Step) tea.Cmd {
-	m.step = step
-	m.step.SetSize(m.width, m.height)
-	return m.step.Init()
+// isWide returns true if the viewport is wide enough for side-by-side layout.
+func (m *Model) isWide() bool {
+	return m.width >= sideBySideMinWidth
+}
+
+// propagateSize distributes width/height to summary and detail based on layout.
+func (m *Model) propagateSize() {
+	if m.summary == nil {
+		return
+	}
+	if m.detail != nil && m.isWide() {
+		half := (m.width - sideBySideGap) / 2
+		m.summary.SetSize(half, m.height)
+		m.detail.SetSize(m.width-half-sideBySideGap, m.height)
+	} else if m.detail != nil {
+		m.detail.SetSize(m.width, m.height)
+	} else {
+		m.summary.SetSize(m.width, m.height)
+	}
 }
 
 // View renders the current step.
 func (m *Model) View() string {
-	if m.step == nil {
+	if m.summary == nil {
 		return ""
+	}
+
+	var content string
+	if m.detail != nil && m.isWide() {
+		gap := strings.Repeat(" ", sideBySideGap)
+		content = lipgloss.JoinHorizontal(lipgloss.Bottom,
+			m.summary.View(), gap, m.detail.View())
+	} else if m.detail != nil {
+		content = m.detail.View()
+	} else {
+		content = m.summary.View()
 	}
 
 	return lipgloss.NewStyle().
 		Width(m.width).
 		Height(m.height).
 		AlignVertical(lipgloss.Bottom).
-		Render(m.step.View())
+		Render(content)
 }
 
 // SetSize updates the model's dimensions.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
-	if m.step != nil {
-		m.step.SetSize(width, height)
-	}
+	m.propagateSize()
 }
 
 // ShortHelp returns the key bindings for the short help view.

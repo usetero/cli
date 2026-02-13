@@ -149,6 +149,24 @@ func (m *Model) buildTable() {
 
 	rows := m.makeRows()
 	m.tbl = tableselect.New(m.theme, cols, rows)
+	m.updateTableHeight()
+}
+
+// updateTableHeight constrains the table to the available viewport.
+// View chrome: header (1) + blank (1) + border top/bottom (2) + blank (1) + footer (1) = 6 lines.
+func (m *Model) updateTableHeight() {
+	if m.tbl == nil {
+		return
+	}
+	const chrome = 6
+	maxRows := m.height - chrome
+	if maxRows < 2 {
+		maxRows = 2 // header + at least 1 row
+	}
+	total := len(m.policies) + 1 // +1 for table header
+	if total > maxRows {
+		m.tbl.SetHeight(maxRows)
+	}
 }
 
 // rebuildRows updates table rows with current checkbox state.
@@ -218,10 +236,11 @@ func (m *Model) View() string {
 	return strings.Join(lines, "\n")
 }
 
-// SetSize updates dimensions.
+// SetSize updates dimensions and constrains the table to fit.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+	m.updateTableHeight()
 }
 
 // ShortHelp returns key bindings.
