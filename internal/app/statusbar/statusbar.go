@@ -26,14 +26,14 @@ const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabPolicy  = 0
+	TabWaste   = 0
 	TabCatalog = 1
 	TabSync    = 2
 	tabCount   = 3
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Policy", "Catalog", "Sync"}
+var tabLabels = [tabCount]string{"Waste", "Catalog", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
@@ -264,7 +264,7 @@ func (m *Model) DrawerView(width, height int) string {
 		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
 	case TabCatalog:
 		content = m.catalogStatus.ExpandedView(contentWidth, contentHeight)
-	case TabPolicy:
+	case TabWaste:
 		content = m.policyStatus.ExpandedView(contentWidth, contentHeight)
 	}
 

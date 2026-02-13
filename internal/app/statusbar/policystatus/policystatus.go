@@ -110,10 +110,9 @@ func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategorySt
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%s:%s",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
-			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
-			c.RiskLevel, c.Benefit)
+			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour)
 	}
 
 	return key
@@ -185,14 +184,14 @@ func (m *Model) ExpandedView(width, height int) string {
 	}
 
 	var lines []string
-	lines = append(lines, m.renderHeadline())
+	lines = append(lines, m.renderWasteHeadline())
 	lines = append(lines, "")
-	lines = append(lines, m.renderCategoryTable(width, maxRows))
+	lines = append(lines, m.renderWasteTable(width, maxRows))
 	return strings.Join(lines, "\n")
 }
 
-// renderHeadline renders the summary: waste %, pending count, and savings breakdown on one line.
-func (m *Model) renderHeadline() string {
+// renderWasteHeadline renders the waste summary: waste % and pending count.
+func (m *Model) renderWasteHeadline() string {
 	s := m.summary
 	colors := m.theme
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
@@ -221,9 +220,6 @@ func (m *Model) renderHeadline() string {
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount)))
 	}
 
-	// Per-dimension savings breakdown.
-	parts = append(parts, formatSavingsBreakdown(s, sep)...)
-
 	if len(parts) == 0 {
 		return muted.Render("All policies reviewed")
 	}
@@ -231,78 +227,45 @@ func (m *Model) renderHeadline() string {
 	return strings.Join(parts, sep)
 }
 
-// formatSavingsBreakdown returns per-dimension savings segments for joining
-// into the headline, e.g. ["bytes: ~$4.6k/yr", "volume: ~$7.3k/yr", "~$11.9k/yr total"].
-func formatSavingsBreakdown(s domain.AccountSummary, sep string) []string {
-	if s.EstimatedCostPerHour == nil {
-		return nil
-	}
-
-	total := *s.EstimatedCostPerHour * 8760
-	if total < 1 {
-		return nil
-	}
-
-	var dims []string
-
-	if s.EstimatedCostPerHourBytes != nil {
-		yearly := *s.EstimatedCostPerHourBytes * 8760
-		if yearly >= 1 {
-			dims = append(dims, "bytes: ~"+formatCost(yearly)+"/yr")
-		}
-	}
-
-	if s.EstimatedCostPerHourVolume != nil {
-		yearly := *s.EstimatedCostPerHourVolume * 8760
-		if yearly >= 1 {
-			dims = append(dims, "volume: ~"+formatCost(yearly)+"/yr")
-		}
-	}
-
-	// No per-dimension data: show total only.
-	if len(dims) == 0 {
-		return []string{"~" + formatCost(total) + "/yr savings"}
-	}
-
-	// Single dimension: no need for total.
-	if len(dims) == 1 {
-		return []string{dims[0] + " savings"}
-	}
-
-	// Multiple dimensions: show each + total.
-	result := make([]string, 0, len(dims)+1)
-	result = append(result, dims...)
-	result = append(result, "~"+formatCost(total)+"/yr total")
-	return result
+// isWasteCategory returns true for categories with cost or data impact.
+func isWasteCategory(c domain.PolicyCategoryStatus) bool {
+	return c.EstimatedCostPerHour > 0 || c.EstimatedVolumePerHour > 0 || c.EstimatedBytesPerHour > 0
 }
 
-// renderCategoryTable renders the per-category breakdown.
-func (m *Model) renderCategoryTable(width, maxRows int) string {
-	if len(m.categories) == 0 {
+// renderWasteTable renders the waste category breakdown.
+func (m *Model) renderWasteTable(width, maxRows int) string {
+	// Filter to waste-related categories only.
+	var waste []domain.PolicyCategoryStatus
+	for _, c := range m.categories {
+		if isWasteCategory(c) {
+			waste = append(waste, c)
+		}
+	}
+
+	if len(waste) == 0 {
 		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		return muted.Render("No policy data")
+		return muted.Render("No waste data")
 	}
 
 	// Reserve a row for "+N more" if we need to clip.
 	clipped := 0
-	visible := m.categories
-	if len(m.categories) > maxRows {
-		visible = m.categories[:maxRows-1]
-		clipped = len(m.categories) - len(visible)
+	visible := waste
+	if len(waste) > maxRows {
+		visible = waste[:maxRows-1]
+		clipped = len(waste) - len(visible)
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Risk", "Benefit", "Impact", "Savings")
+	tbl.Headers("Category", "Pending", "Volume", "Bytes", "Savings")
 	tbl.SetWidth(width)
 
 	for _, c := range visible {
 		tbl.Row(
 			c.Category,
 			fmt.Sprintf("%d", c.PendingCount),
-			m.renderRisk(c.RiskLevel),
-			formatBenefitLabel(c.Benefit),
-			formatCategoryImpact(c),
-			formatCategorySavings(c),
+			formatCategoryVolume(c),
+			formatCategoryBytes(c),
+			formatCategoryCost(c),
 		)
 	}
 
@@ -314,24 +277,8 @@ func (m *Model) renderCategoryTable(width, maxRows int) string {
 	return result
 }
 
-// renderRisk returns a color-coded risk label.
-func (m *Model) renderRisk(level domain.RiskLevel) string {
-	colors := m.theme
-	s := level.String()
-	switch level {
-	case domain.RiskLevelHigh:
-		return lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render(s)
-	case domain.RiskLevelMedium:
-		return lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render(s)
-	case domain.RiskLevelLow:
-		return lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render(s)
-	default:
-		return lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render(s)
-	}
-}
-
-// formatCategorySavings returns estimated yearly cost savings for a category.
-func formatCategorySavings(c domain.PolicyCategoryStatus) string {
+// formatCategoryCost returns estimated yearly cost for a category.
+func formatCategoryCost(c domain.PolicyCategoryStatus) string {
 	if c.EstimatedCostPerHour > 0 {
 		yearly := c.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
@@ -341,51 +288,20 @@ func formatCategorySavings(c domain.PolicyCategoryStatus) string {
 	return "—"
 }
 
-// formatCategoryImpact returns the data quality impact for a category.
-// Shows volume (evt/hr) for event-eliminating categories, bytes (MB/hr) for
-// byte-trimming categories, dash for non-estimable categories.
-func formatCategoryImpact(c domain.PolicyCategoryStatus) string {
+// formatCategoryVolume returns the volume impact for a category.
+func formatCategoryVolume(c domain.PolicyCategoryStatus) string {
 	if c.EstimatedVolumePerHour > 0 {
-		return formatVolume(c.EstimatedVolumePerHour) + " evt/hr"
-	}
-	if c.EstimatedBytesPerHour > 0 {
-		return formatBytes(c.EstimatedBytesPerHour) + "/hr"
+		return formatVolume(c.EstimatedVolumePerHour) + "/hr"
 	}
 	return "—"
 }
 
-// formatBenefitLabel returns human-readable benefit labels.
-// The input may contain JSON arrays like '["volume_reduction","signal_quality"]'
-// concatenated by GROUP_CONCAT.
-func formatBenefitLabel(benefits string) string {
-	labelFor := map[string]string{
-		"volume_reduction": "cost",
-		"bytes_reduction":  "bytes",
-		"signal_quality":   "signal",
-		"compliance":       "compliance",
-		"resilience":       "resilience",
+// formatCategoryBytes returns the bytes impact for a category.
+func formatCategoryBytes(c domain.PolicyCategoryStatus) string {
+	if c.EstimatedBytesPerHour > 0 {
+		return formatBytes(c.EstimatedBytesPerHour) + "/hr"
 	}
-
-	// Strip JSON array noise: brackets, quotes, whitespace
-	cleaned := strings.NewReplacer("[", "", "]", "", "\"", "").Replace(benefits)
-
-	seen := make(map[string]bool)
-	var labels []string
-	for _, part := range strings.Split(cleaned, ",") {
-		key := strings.TrimSpace(part)
-		label, ok := labelFor[key]
-		if !ok {
-			continue
-		}
-		if !seen[label] {
-			seen[label] = true
-			labels = append(labels, label)
-		}
-	}
-	if len(labels) == 0 {
-		return ""
-	}
-	return strings.Join(labels, ", ")
+	return "—"
 }
 
 // formatObservedSaving returns the observed savings from approved policies.
