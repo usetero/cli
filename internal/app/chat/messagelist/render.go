@@ -68,7 +68,7 @@ func (m *Model) renderVisible() []string {
 			if sLine >= 0 {
 				cw := m.contentWidth()
 				h := lipgloss.Height(rendered)
-				area := image.Rect(0, 0, cw, h)
+				area := image.Rect(block.BorderWidth, 0, cw, h)
 				rendered = highlight.Apply(rendered, area, sLine, sCol, eLine, eCol, highlighter)
 			}
 		}
