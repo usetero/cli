@@ -2,9 +2,12 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain/tools"
@@ -20,7 +23,7 @@ func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
 			map[string]chat.Property{
 				"service_id": {
 					Type:        "string",
-					Description: "The ID of the service to enable or disable",
+					Description: "UUID of the service (e.g., '4a3b1c2d-...'). Use the query tool to look up service IDs: SELECT id, name FROM services",
 				},
 				"enabled": {
 					Type:        "boolean",
@@ -39,14 +42,31 @@ func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
 
 		ctx := context.Background()
 
+		svc, err := db.Services().Get(ctx, in.ServiceID)
+		if errors.Is(err, sql.ErrNoRows) {
+			if _, parseErr := uuid.Parse(in.ServiceID.String()); parseErr != nil {
+				return tools.Result{}, fmt.Errorf(
+					"no service found with ID %q — this looks like a name, not a UUID. "+
+						"Use the query tool: SELECT id, name FROM services WHERE name LIKE '%%%s%%'",
+					in.ServiceID, in.ServiceID,
+				)
+			}
+			return tools.Result{}, fmt.Errorf(
+				"no service found with ID %q. Use the query tool: SELECT id, name FROM services",
+				in.ServiceID,
+			)
+		}
+		if err != nil {
+			return tools.Result{}, fmt.Errorf("get service: %w", err)
+		}
+
 		if err := db.Services().SetEnabled(ctx, in.ServiceID, in.Enabled); err != nil {
 			return tools.Result{}, fmt.Errorf("set service enabled: %w", err)
 		}
 
 		var serviceName string
-		row := db.QueryRow(ctx, "SELECT name FROM services WHERE id = ?", in.ServiceID.String())
-		if err := row.Scan(&serviceName); err != nil {
-			serviceName = in.ServiceID.String()
+		if svc.Name != nil {
+			serviceName = *svc.Name
 		}
 
 		return tools.Result{

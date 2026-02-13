@@ -10,6 +10,7 @@ import (
 // Services provides type-safe access to services.
 type Services interface {
 	Count(ctx context.Context) (int64, error)
+	Get(ctx context.Context, id domain.ServiceID) (gen.Service, error)
 	SetEnabled(ctx context.Context, id domain.ServiceID, enabled bool) error
 }
 
@@ -26,6 +27,16 @@ func (s *servicesImpl) Count(ctx context.Context) (int64, error) {
 		return 0, WrapSQLiteError(err, "count services")
 	}
 	return count, nil
+}
+
+// Get returns a service by ID.
+func (s *servicesImpl) Get(ctx context.Context, id domain.ServiceID) (gen.Service, error) {
+	idStr := id.String()
+	svc, err := s.read.GetService(ctx, &idStr)
+	if err != nil {
+		return gen.Service{}, WrapSQLiteError(err, "get service")
+	}
+	return svc, nil
 }
 
 // SetEnabled enables or disables a service.
