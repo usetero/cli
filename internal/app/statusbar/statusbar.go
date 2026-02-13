@@ -13,9 +13,9 @@ import (
 	"charm.land/lipgloss/v2"
 
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
-	"github.com/usetero/cli/internal/app/statusbar/catalogstatus"
-	"github.com/usetero/cli/internal/app/statusbar/policystatus"
+	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
+	"github.com/usetero/cli/internal/app/statusbar/waste"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -26,23 +26,23 @@ const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabWaste   = 0
-	TabCatalog = 1
-	TabSync    = 2
-	tabCount   = 3
+	TabWaste    = 0
+	TabServices = 1
+	TabSync     = 2
+	tabCount    = 3
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Waste", "Catalog", "Sync"}
+var tabLabels = [tabCount]string{"Waste", "Services", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
-	theme         styles.Theme
-	env           string
-	syncStatus    *syncstatus.Model
-	catalogStatus *catalogstatus.Model
-	policyStatus  *policystatus.Model
-	width         int
+	theme          styles.Theme
+	env            string
+	syncStatus     *syncstatus.Model
+	servicesStatus *services.Model
+	wasteStatus    *waste.Model
+	width          int
 
 	// Account context
 	org            string
@@ -63,11 +63,11 @@ type Model struct {
 // New creates a new statusbar.
 func New(theme styles.Theme, syncer powersync.Syncer, host string, env string) *Model {
 	return &Model{
-		theme:         theme,
-		env:           env,
-		syncStatus:    syncstatus.New(theme, syncer, host),
-		catalogStatus: catalogstatus.New(theme),
-		policyStatus:  policystatus.New(theme),
+		theme:          theme,
+		env:            env,
+		syncStatus:     syncstatus.New(theme, syncer, host),
+		servicesStatus: services.New(theme),
+		wasteStatus:    waste.New(theme),
 	}
 }
 
@@ -81,8 +81,8 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 
 	return tea.Batch(
 		m.syncStatus.SetDB(db),
-		m.catalogStatus.SetDB(db),
-		m.policyStatus.SetDB(db),
+		m.servicesStatus.SetDB(db),
+		m.wasteStatus.SetDB(db),
 	)
 }
 
@@ -90,8 +90,8 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.syncStatus.Init(),
-		m.catalogStatus.Init(),
-		m.policyStatus.Init(),
+		m.servicesStatus.Init(),
+		m.wasteStatus.Init(),
 	)
 }
 
@@ -108,8 +108,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	return tea.Batch(
 		m.syncStatus.Update(msg),
-		m.catalogStatus.Update(msg),
-		m.policyStatus.Update(msg),
+		m.servicesStatus.Update(msg),
+		m.wasteStatus.Update(msg),
 	)
 }
 
@@ -135,7 +135,7 @@ func (m *Model) ToggleDrawer() {
 		m.drawerOpen = false
 		return
 	}
-	if m.catalogStatus.HasData() || m.policyStatus.HasData() {
+	if m.servicesStatus.HasData() || m.wasteStatus.HasData() {
 		m.drawerOpen = true
 	}
 }
@@ -182,16 +182,16 @@ func (m *Model) View() string {
 	// 1. Brand + sync dot + org context (always shown)
 	segments = append(segments, m.renderBrand())
 
-	// 2. Catalog health (dot + service count or discovery phase)
-	catalogView := m.catalogStatus.CompactView()
-	if catalogView != "" {
-		segments = append(segments, catalogView)
+	// 2. Services health (dot + service count + discovery)
+	servicesView := m.servicesStatus.CompactView()
+	if servicesView != "" {
+		segments = append(segments, servicesView)
 	}
 
-	// 3. Policy status (pending count, estimated/observed savings)
-	policyView := m.policyStatus.CompactView()
-	if policyView != "" {
-		segments = append(segments, policyView)
+	// 3. Waste status (pending count, estimated/observed savings)
+	wasteView := m.wasteStatus.CompactView()
+	if wasteView != "" {
+		segments = append(segments, wasteView)
 	}
 
 	// Calculate what fits
@@ -262,14 +262,14 @@ func (m *Model) DrawerView(width, height int) string {
 	switch m.activeTab {
 	case TabSync:
 		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
-	case TabCatalog:
-		content = m.catalogStatus.ExpandedView(contentWidth, contentHeight)
+	case TabServices:
+		content = m.servicesStatus.ExpandedView(contentWidth, contentHeight)
 	case TabWaste:
-		content = m.policyStatus.ExpandedView(contentWidth, contentHeight)
+		content = m.wasteStatus.ExpandedView(contentWidth, contentHeight)
 	}
 
 	if content == "" {
-		content = lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg).Render("No data")
+		content = lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render("Waiting for data...")
 	}
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, tabBar, "", content)
@@ -306,7 +306,7 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	// Hide hint until data is loaded and the drawer can open.
-	if !m.drawerOpen && !m.catalogStatus.HasData() && !m.policyStatus.HasData() {
+	if !m.drawerOpen && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
 		return ""
 	}
 

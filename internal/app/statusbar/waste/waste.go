@@ -1,5 +1,5 @@
-// Package policystatus renders the policy work indicator in the status bar.
-package policystatus
+// Package waste renders the waste indicator in the status bar.
+package waste
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
@@ -85,7 +86,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if key != m.lastState {
 			m.summary = summary
 			m.categories = categories
-			m.hasData = summary.PolicyCount > 0
+			m.hasData = summary.PendingPolicyCount+summary.ApprovedPolicyCount+summary.DismissedPolicyCount > 0
 			m.lastState = key
 		}
 
@@ -97,9 +98,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%v:%v:%v:%.0f:%.0f:%v:%v:%.0f:%.0f:%v:%.0f:%.0f:%d",
-		s.ReadyForUse, s.PendingPolicyCount,
-		s.PolicyCount, s.ApprovedPolicyCount,
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%v:%v:%v:%.0f:%.0f:%v:%v:%.0f:%.0f:%v:%.0f:%.0f:%d",
+		s.ReadyForUse, s.EventCount, s.AnalyzedCount, s.PendingPolicyCount,
+		s.ApprovedPolicyCount, s.DismissedPolicyCount,
 		ptrVal(s.EstimatedCostPerHour),
 		ptrVal(s.EstimatedCostPerHourBytes),
 		ptrVal(s.EstimatedCostPerHourVolume),
@@ -110,9 +111,12 @@ func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategorySt
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%.0f:%.0f:%.0f:%.0f:%.2f:%.2f",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
-			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour)
+			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
+			c.ObservedVolumeBefore, c.ObservedVolumeAfter,
+			c.ObservedBytesBefore, c.ObservedBytesAfter,
+			c.ObservedCostBefore, c.ObservedCostAfter)
 	}
 
 	return key
@@ -155,6 +159,11 @@ func (m *Model) CompactView() string {
 		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
 	}
 
+	// Analysis progress when not fully analyzed.
+	if s.EventCount > 0 && s.AnalyzedCount < s.EventCount {
+		segments = append(segments, muted.Render(fmt.Sprintf("%d/%d analyzed", s.AnalyzedCount, s.EventCount)))
+	}
+
 	if len(segments) == 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render("●")
 		return dot + " " + muted.Render("healthy")
@@ -174,19 +183,25 @@ func wastePercent(s domain.AccountSummary) int {
 // ExpandedView renders the detailed policy status for the drawer.
 func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
-		return ""
-	}
-
-	// Height budget: headline (1) + gap (1) + table header+border (2) = 4 lines overhead.
-	maxRows := height - 4
-	if maxRows < 1 {
-		maxRows = 1
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		if m.db == nil {
+			return muted.Render("Waiting for sync to start...")
+		}
+		if m.summary.ActiveServices == 0 {
+			return muted.Render("No services discovered yet.")
+		}
+		dot := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg).Render("●")
+		return dot + " " + muted.Render("No waste detected. Your logs look clean.")
 	}
 
 	var lines []string
 	lines = append(lines, m.renderWasteHeadline())
 	lines = append(lines, "")
-	lines = append(lines, m.renderWasteTable(width, maxRows))
+
+	if tbl := m.renderCategoryTable(width); tbl != "" {
+		lines = append(lines, tbl)
+	}
+
 	return strings.Join(lines, "\n")
 }
 
@@ -220,6 +235,11 @@ func (m *Model) renderWasteHeadline() string {
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
 	}
 
+	// Analysis progress when not fully analyzed.
+	if s.EventCount > 0 && s.AnalyzedCount < s.EventCount {
+		parts = append(parts, muted.Render(fmt.Sprintf("%d/%d analyzed", s.AnalyzedCount, s.EventCount)))
+	}
+
 	if len(parts) == 0 {
 		return muted.Render("All policies reviewed")
 	}
@@ -227,54 +247,35 @@ func (m *Model) renderWasteHeadline() string {
 	return strings.Join(parts, sep)
 }
 
-// isWasteCategory returns true for categories with cost or data impact.
-func isWasteCategory(c domain.PolicyCategoryStatus) bool {
-	return c.EstimatedCostPerHour > 0 || c.EstimatedVolumePerHour > 0 || c.EstimatedBytesPerHour > 0
-}
-
-// renderWasteTable renders the waste category breakdown.
-func (m *Model) renderWasteTable(width, maxRows int) string {
-	// Filter to waste-related categories only.
-	var waste []domain.PolicyCategoryStatus
-	for _, c := range m.categories {
-		if isWasteCategory(c) {
-			waste = append(waste, c)
-		}
-	}
-
-	if len(waste) == 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		return muted.Render("No waste data")
-	}
-
-	// Reserve a row for "+N more" if we need to clip.
-	clipped := 0
-	visible := waste
-	if len(waste) > maxRows {
-		visible = waste[:maxRows-1]
-		clipped = len(waste) - len(visible)
+// renderCategoryTable renders all waste categories in a single table.
+func (m *Model) renderCategoryTable(width int) string {
+	if len(m.categories) == 0 {
+		return ""
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Policies", "Volume", "Bytes", "Savings")
+	tbl.Headers("Category", "Pending", "Est. Savings", "Approved", "Saved")
 	tbl.SetWidth(width)
 
-	for _, c := range visible {
+	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
+	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
+
+	for _, c := range m.categories {
+		dot := ok.Render("●")
+		if c.PendingCount > 0 {
+			dot = warn.Render("●")
+		}
+
 		tbl.Row(
-			c.DisplayName(),
-			fmt.Sprintf("%d", c.PendingCount),
-			formatCategoryVolume(c),
-			formatCategoryBytes(c),
+			dot+" "+c.DisplayName(),
+			format.Count(c.PendingCount),
 			formatCategoryCost(c),
+			format.Count(c.ApprovedCount),
+			formatObservedCost(c),
 		)
 	}
 
-	result := tbl.View()
-	if clipped > 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		result += "\n" + muted.Render(fmt.Sprintf("+%d more", clipped))
-	}
-	return result
+	return tbl.View()
 }
 
 // formatCategoryCost returns estimated yearly cost for a category.
@@ -282,24 +283,20 @@ func formatCategoryCost(c domain.PolicyCategoryStatus) string {
 	if c.EstimatedCostPerHour > 0 {
 		yearly := c.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
-			return "~" + formatCost(yearly) + "/yr"
+			return "~" + format.Cost(yearly) + "/yr"
 		}
 	}
 	return "—"
 }
 
-// formatCategoryVolume returns the volume impact for a category.
-func formatCategoryVolume(c domain.PolicyCategoryStatus) string {
-	if c.EstimatedVolumePerHour > 0 {
-		return formatVolume(c.EstimatedVolumePerHour) + "/hr"
-	}
-	return "—"
-}
-
-// formatCategoryBytes returns the bytes impact for a category.
-func formatCategoryBytes(c domain.PolicyCategoryStatus) string {
-	if c.EstimatedBytesPerHour > 0 {
-		return formatBytes(c.EstimatedBytesPerHour) + "/hr"
+// formatObservedCost returns the observed cost reduction for a category.
+func formatObservedCost(c domain.PolicyCategoryStatus) string {
+	diff := c.ObservedCostBefore - c.ObservedCostAfter
+	if diff > 0 {
+		yearly := diff * 8760
+		if yearly >= 1 {
+			return "-" + format.Cost(yearly) + "/yr"
+		}
 	}
 	return "—"
 }
@@ -309,56 +306,15 @@ func formatObservedSaving(s domain.AccountSummary) string {
 	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
 		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 8760
 		if diff >= 1 {
-			return formatCost(diff) + "/yr"
+			return format.Cost(diff) + "/yr"
 		}
 		return ""
 	}
 	diff := s.ObservedVolumeBefore - s.ObservedVolumeAfter
 	if diff > 0 {
-		return formatVolume(diff) + " evt/hr"
+		return format.Volume(diff) + " evt/hr"
 	}
 	return ""
-}
-
-// formatCost formats a dollar amount: $142, $9.4k, $1.2M.
-func formatCost(dollars float64) string {
-	abs := math.Abs(dollars)
-	switch {
-	case abs >= 1_000_000:
-		return fmt.Sprintf("$%.1fM", dollars/1_000_000)
-	case abs >= 1_000:
-		return fmt.Sprintf("$%.1fk", dollars/1_000)
-	default:
-		return fmt.Sprintf("$%.0f", dollars)
-	}
-}
-
-// formatVolume formats events/hr: 892, 45.3k, 2.1M.
-func formatVolume(eventsPerHour float64) string {
-	abs := math.Abs(eventsPerHour)
-	switch {
-	case abs >= 1_000_000:
-		return fmt.Sprintf("%.1fM", eventsPerHour/1_000_000)
-	case abs >= 1_000:
-		return fmt.Sprintf("%.1fk", eventsPerHour/1_000)
-	default:
-		return fmt.Sprintf("%.0f", eventsPerHour)
-	}
-}
-
-// formatBytes formats bytes/hr: 540 B, 12.4 KB, 1.2 MB, 3.4 GB.
-func formatBytes(b float64) string {
-	abs := math.Abs(b)
-	switch {
-	case abs >= 1_000_000_000:
-		return fmt.Sprintf("%.1f GB", b/1_000_000_000)
-	case abs >= 1_000_000:
-		return fmt.Sprintf("%.1f MB", b/1_000_000)
-	case abs >= 1_000:
-		return fmt.Sprintf("%.1f KB", b/1_000)
-	default:
-		return fmt.Sprintf("%.0f B", b)
-	}
 }
 
 func ptrVal(p *float64) float64 {
