@@ -13,6 +13,7 @@ type LogEventPolicies interface {
 	Count(ctx context.Context) (int64, error)
 	ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error)
+	ListPendingByCategory(ctx context.Context, category string) ([]domain.PolicyDetail, error)
 	Approve(ctx context.Context, id, userID string) error
 }
 
@@ -86,6 +87,27 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 	return result, nil
 }
 
+// ListPendingByCategory returns individual pending policies for a category.
+func (l *logEventPoliciesImpl) ListPendingByCategory(ctx context.Context, category string) ([]domain.PolicyDetail, error) {
+	rows, err := l.read.ListPendingPoliciesByCategory(ctx, &category)
+	if err != nil {
+		return nil, WrapSQLiteError(err, "list pending policies by category")
+	}
+
+	result := make([]domain.PolicyDetail, len(rows))
+	for i, row := range rows {
+		result[i] = domain.PolicyDetail{
+			PolicyID:               derefString(row.PolicyID),
+			LogEventName:           row.LogEventName,
+			RiskLevel:              domain.RiskLevel(derefString(row.RiskLevel)),
+			Benefits:               derefString(row.Benefits),
+			EstimatedCostPerHour:   derefFloat(row.EstimatedCostReductionPerHourUsd),
+			EstimatedVolumePerHour: derefFloat(row.EstimatedVolumeReductionPerHour),
+		}
+	}
+	return result, nil
+}
+
 func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	err := l.write.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
@@ -102,6 +124,13 @@ func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) e
 func derefFloat(p *float64) float64 {
 	if p == nil {
 		return 0
+	}
+	return *p
+}
+
+func derefString(p *string) string {
+	if p == nil {
+		return ""
 	}
 	return *p
 }

@@ -27,6 +27,8 @@ type ApproveAllLowRisk struct {
 	Categories []string
 }
 
+type BackToSummary struct{}
+
 type Cancelled struct {
 	ToolUseID string
 }

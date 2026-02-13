@@ -105,6 +105,59 @@ func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIP
 	return items, nil
 }
 
+const listPendingPoliciesByCategory = `-- name: ListPendingPoliciesByCategory :many
+SELECT
+  c.policy_id,
+  c.risk_level,
+  c.benefits,
+  c.estimated_cost_reduction_per_hour_usd,
+  c.estimated_volume_reduction_per_hour,
+  COALESCE(e.name, '') AS log_event_name
+FROM log_event_policy_statuses_cache c
+LEFT JOIN log_events e ON c.log_event_id = e.id
+WHERE c.category = ? AND c.status = 'PENDING'
+ORDER BY c.estimated_cost_reduction_per_hour_usd DESC
+`
+
+type ListPendingPoliciesByCategoryRow struct {
+	PolicyID                         *string
+	RiskLevel                        *string
+	Benefits                         *string
+	EstimatedCostReductionPerHourUsd *float64
+	EstimatedVolumeReductionPerHour  *float64
+	LogEventName                     string
+}
+
+func (q *Queries) ListPendingPoliciesByCategory(ctx context.Context, category *string) ([]ListPendingPoliciesByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingPoliciesByCategory, category)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingPoliciesByCategoryRow
+	for rows.Next() {
+		var i ListPendingPoliciesByCategoryRow
+		if err := rows.Scan(
+			&i.PolicyID,
+			&i.RiskLevel,
+			&i.Benefits,
+			&i.EstimatedCostReductionPerHourUsd,
+			&i.EstimatedVolumeReductionPerHour,
+			&i.LogEventName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPolicyCategoryStatuses = `-- name: ListPolicyCategoryStatuses :many
 SELECT
   COALESCE(leps.category, '') AS category,

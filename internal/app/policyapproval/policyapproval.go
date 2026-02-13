@@ -8,7 +8,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/usetero/cli/internal/app/policyapproval/categorydetail"
 	"github.com/usetero/cli/internal/app/policyapproval/categorysummary"
+	"github.com/usetero/cli/internal/app/policyapproval/msgs"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -70,10 +72,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 		return nil
 
-		// TODO: Handle step completion messages
+	case msgs.CategorySelected:
+		return m.setStep(categorydetail.New(m.ctx, m.theme, m.db, msg.Category, m.scope))
+
+	case msgs.BackToSummary:
+		return m.setStep(categorysummary.New(m.ctx, m.theme, m.db, m.scope))
+
+		// TODO: Handle remaining step completion messages
 		// case msgs.PoliciesSelected:
-		// case msgs.ApprovalConfirmed:
-		// case msgs.ExecutionComplete:
+		// case msgs.Confirmed:
 	}
 
 	// Delegate to current step

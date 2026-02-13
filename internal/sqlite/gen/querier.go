@@ -41,6 +41,7 @@ type Querier interface {
 	// Returns pending compliance policies for a specific category, sorted by observed then volume.
 	ListPendingCompliancePoliciesByCategory(ctx context.Context, arg ListPendingCompliancePoliciesByCategoryParams) ([]ListPendingCompliancePoliciesByCategoryRow, error)
 	ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error)
+	ListPendingPoliciesByCategory(ctx context.Context, category *string) ([]ListPendingPoliciesByCategoryRow, error)
 	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
