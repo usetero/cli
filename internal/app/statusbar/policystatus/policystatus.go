@@ -152,7 +152,7 @@ func (m *Model) CompactView() string {
 		segments = append(segments, dot+" "+muted.Render(waste))
 	} else if s.PendingPolicyCount > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount)))
+		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
 	}
 
 	if len(segments) == 0 {
@@ -211,13 +211,13 @@ func (m *Model) renderWasteHeadline() string {
 		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 		waste := dot + " " + text.Render(fmt.Sprintf("%d%% waste", wp))
 		if s.PendingPolicyCount > 0 {
-			waste += sep + text.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount))
+			waste += sep + text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount))
 		}
 		parts = append(parts, waste)
 	} else if s.PendingPolicyCount > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
 		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", s.PendingPolicyCount)))
+		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
 	}
 
 	if len(parts) == 0 {
@@ -256,7 +256,7 @@ func (m *Model) renderWasteTable(width, maxRows int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Volume", "Bytes", "Savings")
+	tbl.Headers("Category", "Policies", "Volume", "Bytes", "Savings")
 	tbl.SetWidth(width)
 
 	for _, c := range visible {
