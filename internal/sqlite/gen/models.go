@@ -124,6 +124,17 @@ type LogEvent struct {
 	UpdatedAt   *string
 }
 
+type LogEventField struct {
+	ID                     *string
+	AccountID              *string
+	AvgBytes               *float64
+	CreatedAt              *string
+	DistributionObservedAt *string
+	FieldPath              *string
+	LogEventID             *string
+	ValueDistribution      *string
+}
+
 type LogEventPolicy struct {
 	ID          *string
 	AccountID   *string

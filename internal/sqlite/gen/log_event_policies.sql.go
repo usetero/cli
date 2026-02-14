@@ -39,20 +39,17 @@ SELECT
   COALESCE(lep.analysis, '') AS analysis,
   COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
   CAST(COALESCE((
-    SELECT MAX(CASE json_extract(f.value, '$.pii_type')
-      WHEN 'credit_card' THEN 2 WHEN 'ssn' THEN 2 WHEN 'password' THEN 2
-      WHEN 'email' THEN 1 WHEN 'name' THEN 1 WHEN 'phone' THEN 1
-      WHEN 'address' THEN 1 WHEN 'ip_address' THEN 1 WHEN 'date_of_birth' THEN 1
-      ELSE 0 END)
+    SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
     FROM json_each(json_extract(lep.analysis, '$.pii_leakage.fields')) f
-  ), 0) AS INTEGER) AS max_severity
+  ), 0) AS INTEGER) AS any_observed,
+  CAST(COALESCE(les.has_volumes, 0) AS INTEGER) AS has_volumes
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
 LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
 LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category = 'pii_leakage' AND leps.status = 'PENDING'
-ORDER BY max_severity DESC, les.volume_per_hour DESC
+ORDER BY any_observed DESC, les.volume_per_hour DESC
 `
 
 type ListPendingPIIPoliciesRow struct {
@@ -60,7 +57,8 @@ type ListPendingPIIPoliciesRow struct {
 	LogEventName  string
 	Analysis      string
 	VolumePerHour float64
-	MaxSeverity   int64
+	AnyObserved   int64
+	HasVolumes    int64
 }
 
 func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error) {
@@ -77,7 +75,8 @@ func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIP
 			&i.LogEventName,
 			&i.Analysis,
 			&i.VolumePerHour,
-			&i.MaxSeverity,
+			&i.AnyObserved,
+			&i.HasVolumes,
 		); err != nil {
 			return nil, err
 		}
@@ -107,7 +106,9 @@ SELECT
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_after ELSE 0 END) AS observed_bytes_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_usd ELSE 0 END) AS observed_cost_before,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after,
+  CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
+  CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
 FROM log_event_policy_statuses_cache leps
 LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category IS NOT NULL AND leps.category != ''
@@ -131,6 +132,8 @@ type ListPolicyCategoryStatusesRow struct {
 	ObservedBytesAfter     *float64
 	ObservedCostBefore     *float64
 	ObservedCostAfter      *float64
+	EventsWithVolumes      int64
+	TotalEvents            int64
 }
 
 func (q *Queries) ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error) {
@@ -157,6 +160,8 @@ func (q *Queries) ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyC
 			&i.ObservedBytesAfter,
 			&i.ObservedCostBefore,
 			&i.ObservedCostAfter,
+			&i.EventsWithVolumes,
+			&i.TotalEvents,
 		); err != nil {
 			return nil, err
 		}
@@ -177,7 +182,8 @@ SELECT
   COALESCE(le.name, '') AS log_event_name,
   COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
   COALESCE(leps.estimated_cost_reduction_per_hour_usd, 0) AS estimated_cost_per_hour,
-  COALESCE(leps.estimated_bytes_reduction_per_hour, 0) AS estimated_bytes_per_hour
+  COALESCE(leps.estimated_bytes_reduction_per_hour, 0) AS estimated_bytes_per_hour,
+  CAST(COALESCE(les.has_volumes, 0) AS INTEGER) AS has_volumes
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
@@ -198,6 +204,7 @@ type ListTopPendingPoliciesByCategoryRow struct {
 	VolumePerHour         float64
 	EstimatedCostPerHour  float64
 	EstimatedBytesPerHour float64
+	HasVolumes            int64
 }
 
 func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error) {
@@ -215,6 +222,7 @@ func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg List
 			&i.VolumePerHour,
 			&i.EstimatedCostPerHour,
 			&i.EstimatedBytesPerHour,
+			&i.HasVolumes,
 		); err != nil {
 			return nil, err
 		}

@@ -124,6 +124,18 @@ CREATE TABLE discovery_statuses (
     updated_at TEXT -- When the status was last updated
 );
 
+-- Ground truth record for a field in a log event. Accumulates metadata as more production data is observed.
+CREATE TABLE log_event_fields (
+    id TEXT, -- Unique identifier
+    account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
+    avg_bytes REAL, -- Average serialized byte size of this field's value. Initially estimated from example log records, refined by trigger from log_event_volumes data.
+    created_at TEXT, -- When this field was discovered
+    distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
+    field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
+    log_event_id TEXT, -- The log event this field belongs to
+    value_distribution TEXT -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
+);
+
 -- AI-generated recommendation for a specific quality category on a log event, scoped to a workspace for approval
 CREATE TABLE log_event_policies (
     id TEXT, -- Unique identifier
@@ -132,7 +144,7 @@ CREATE TABLE log_event_policies (
     approved_at TEXT, -- When this policy was approved by a user
     approved_by TEXT, -- User ID who approved this policy
     benefits TEXT, -- What benefits this policy provides. volume_reduction: fewer events, bytes_reduction: smaller events, signal_quality: less noise, compliance: regulatory/policy, resilience: system stability.
-    category TEXT, -- Quality issue category this policy addresses, e.g. health_checks, bot_traffic, pii_leakage, duplicate_fields
+    category TEXT, -- Quality issue category this policy addresses Values: health_checks, bot_traffic, low_value, accidental_debug_statements, malformed_data, noise, pii_leakage, duplicate_fields, instrumentation_bloat, oversized_fields.
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy

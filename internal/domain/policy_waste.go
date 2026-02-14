@@ -7,4 +7,5 @@ type WastePolicy struct {
 	VolumePerHour         float64
 	EstimatedCostPerHour  float64
 	EstimatedBytesPerHour float64
+	HasVolumes            bool // Whether volume data exists for this log event
 }

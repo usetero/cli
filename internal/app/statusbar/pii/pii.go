@@ -4,9 +4,11 @@ package pii
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -17,7 +19,14 @@ import (
 	"github.com/usetero/cli/internal/tea/components/table"
 )
 
-const pollInterval = 2 * time.Second
+const (
+	pollInterval = 2 * time.Second
+
+	// discoveryDoneThreshold is the classification coverage percentage above
+	// which we consider discovery complete. Volume ratios are never exactly
+	// 100% due to throughput fluctuations.
+	discoveryDoneThreshold = 95
+)
 
 // pollMsg triggers a PII policy check.
 type pollMsg struct{}
@@ -27,7 +36,8 @@ type Model struct {
 	theme styles.Theme
 	db    sqlite.DB
 
-	policies   []domain.PIIPolicy // pending only, sorted by severity then volume
+	summary    domain.AccountSummary
+	policies   []domain.PIIPolicy // pending only, sorted by observed then volume
 	fixedCount int64              // number of approved PII policies
 	hasData    bool
 	lastState  string
@@ -71,6 +81,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
+		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
+		if err != nil {
+			return m.poll()
+		}
+
 		policies, err := m.db.LogEventPolicies().ListPendingPIIPolicies(ctx)
 		if err != nil {
 			return m.poll()
@@ -81,8 +96,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			fixedCount = 0
 		}
 
-		key := m.stateKey(policies, fixedCount)
+		key := m.stateKey(summary, policies, fixedCount)
 		if key != m.lastState {
+			m.summary = summary
 			m.policies = policies
 			m.fixedCount = fixedCount
 			m.hasData = len(policies) > 0 || fixedCount > 0
@@ -96,14 +112,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 // stateKey builds a string key for change detection.
-func (m *Model) stateKey(policies []domain.PIIPolicy, fixedCount int64) string {
+func (m *Model) stateKey(summary domain.AccountSummary, policies []domain.PIIPolicy, fixedCount int64) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%d:%d", len(policies), fixedCount)
+	fmt.Fprintf(&b, "%.0f:%.0f:%d:%d",
+		ptrVal(summary.TotalServiceVolumePerHour), summary.TotalVolumePerHour,
+		len(policies), fixedCount)
 	for _, p := range policies {
-		fmt.Fprintf(&b, "|%s:%s:%d:%.0f:%d",
-			p.ServiceName, p.LogEventName, len(p.Fields), p.VolumePerHour, p.MaxSeverity)
+		fmt.Fprintf(&b, "|%s:%s:%d:%.0f:%v:%v",
+			p.ServiceName, p.LogEventName, len(p.Fields), p.VolumePerHour, p.AnyObserved, p.HasVolumes)
 		for _, f := range p.Fields {
-			fmt.Fprintf(&b, ":%s", f.PIIType)
+			fmt.Fprintf(&b, ":%v", f.Observed)
+			for _, t := range f.PIITypes {
+				fmt.Fprintf(&b, ":%s", t)
+			}
 		}
 	}
 	return b.String()
@@ -121,8 +142,22 @@ func (m *Model) CompactView() string {
 	}
 
 	colors := m.theme
-	dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+
+	// Red dot if any policy has observed PII, warning otherwise.
+	var anyObserved bool
+	for _, p := range m.policies {
+		if p.AnyObserved {
+			anyObserved = true
+			break
+		}
+	}
+	dotColor := colors.Warning
+	if anyObserved {
+		dotColor = colors.Error
+	}
+	dot := lipgloss.NewStyle().Foreground(dotColor).Background(colors.Bg).Render("●")
+
 	return dot + " " + muted.Render(fmt.Sprintf("%d PII", len(m.policies)))
 }
 
@@ -147,7 +182,7 @@ func (m *Model) ExpandedView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderHeadline renders the PII summary line with per-severity counts.
+// renderHeadline renders the PII summary line: leaking vs at-risk counts.
 func (m *Model) renderHeadline() string {
 	colors := m.theme
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
@@ -156,36 +191,33 @@ func (m *Model) renderHeadline() string {
 	var parts []string
 
 	if len(m.policies) > 0 {
-		// Count by severity.
-		var critical, high, medium int
+		var leaking, atRisk int
 		for _, p := range m.policies {
-			switch p.MaxSeverity {
-			case domain.PIISeverityCritical:
-				critical++
-			case domain.PIISeverityHigh:
-				high++
-			default:
-				medium++
+			if p.AnyObserved {
+				leaking++
+			} else {
+				atRisk++
 			}
 		}
 
-		if critical > 0 {
+		if leaking > 0 {
 			dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
 			text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-			parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d critical", critical)))
+			parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d leaking", leaking)))
 		}
-		if high > 0 {
-			dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-			text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-			parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d high", high)))
-		}
-		if medium > 0 {
+		if atRisk > 0 {
 			dot := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg).Render("●")
-			parts = append(parts, dot+" "+muted.Render(fmt.Sprintf("%d general", medium)))
+			parts = append(parts, dot+" "+muted.Render(fmt.Sprintf("%d at risk", atRisk)))
 		}
 
 		services := m.uniqueServiceCount()
 		parts = append(parts, muted.Render(fmt.Sprintf("across %d services", services)))
+
+		// Discovery progress when classification coverage is below threshold.
+		if pct := summaryDiscoveryPercent(m.summary); pct < discoveryDoneThreshold {
+			bar := m.discoveryBar()
+			parts = append(parts, bar.ViewAs(float64(pct)/100)+" "+muted.Render(fmt.Sprintf("%d%%", pct)))
+		}
 	}
 
 	if m.fixedCount > 0 {
@@ -212,87 +244,67 @@ func (m *Model) renderTable(width int) string {
 	tbl.SetWidth(width)
 
 	for _, p := range m.policies {
+		vol := "—"
+		if p.HasVolumes {
+			vol = format.Volume(p.VolumePerHour) + " evt/hr"
+		}
 		tbl.Row(
 			p.LogEventName,
 			p.ServiceName,
-			format.Volume(p.VolumePerHour)+" evt/hr",
-			m.severityDot(p.MaxSeverity)+" "+m.formatPIITypes(p.Fields, 3),
+			vol,
+			m.observedDot(p.AnyObserved)+" "+m.formatPIITypes(p.Fields, 3),
 		)
 	}
 
 	return tbl.View()
 }
 
-// piiEntry holds a deduplicated PII type with its highest severity.
-type piiEntry struct {
-	label    string
-	severity domain.PIISeverity
+// observedDot returns a colored dot based on whether PII was observed.
+// Red for observed (leaking), muted for at-risk.
+func (m *Model) observedDot(observed bool) string {
+	if observed {
+		return lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg).Render("●")
+	}
+	return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("●")
 }
 
-// formatPIITypes returns deduplicated, severity-colored PII type labels,
+// formatPIITypes returns deduplicated PII type labels from all fields,
 // showing at most maxShow before truncating with "+N".
 func (m *Model) formatPIITypes(fields []domain.PIIField, maxShow int) string {
 	if len(fields) == 0 {
 		return "—"
 	}
 
-	// Deduplicate and preserve first-seen order, keeping highest severity.
-	seen := make(map[string]int) // label → index in entries
-	var entries []piiEntry
+	// Flatten all pii_types across fields, deduplicate, preserve first-seen order.
+	seen := make(map[string]struct{})
+	var types []string
 	for _, f := range fields {
-		label := displayPIIType(f.PIIType)
-		if idx, ok := seen[label]; ok {
-			if f.Severity() > entries[idx].severity {
-				entries[idx].severity = f.Severity()
+		for _, t := range f.PIITypes {
+			label := displayPIIType(t)
+			if _, ok := seen[label]; !ok {
+				seen[label] = struct{}{}
+				types = append(types, label)
 			}
-		} else {
-			seen[label] = len(entries)
-			entries = append(entries, piiEntry{label, f.Severity()})
 		}
 	}
 
-	visible := entries
+	if len(types) == 0 {
+		return "—"
+	}
+
+	visible := types
 	remaining := 0
-	if len(entries) > maxShow {
-		visible = entries[:maxShow]
-		remaining = len(entries) - maxShow
+	if len(types) > maxShow {
+		visible = types[:maxShow]
+		remaining = len(types) - maxShow
 	}
 
-	parts := make([]string, len(visible))
-	for i, e := range visible {
-		parts[i] = m.colorSeverity(e.label, e.severity)
-	}
-
-	result := strings.Join(parts, ", ")
+	result := strings.Join(visible, ", ")
 	if remaining > 0 {
 		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 		result += muted.Render(fmt.Sprintf(", +%d", remaining))
 	}
 	return result
-}
-
-// severityDot returns a colored dot for the given severity level.
-func (m *Model) severityDot(s domain.PIISeverity) string {
-	switch s {
-	case domain.PIISeverityCritical:
-		return lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg).Render("●")
-	case domain.PIISeverityHigh:
-		return lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render("●")
-	default:
-		return lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("●")
-	}
-}
-
-// colorSeverity applies theme color based on PII severity.
-func (m *Model) colorSeverity(label string, s domain.PIISeverity) string {
-	switch s {
-	case domain.PIISeverityCritical:
-		return lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg).Render(label)
-	case domain.PIISeverityHigh:
-		return lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render(label)
-	default:
-		return label // table cell style handles default color
-	}
 }
 
 // displayPIIType returns a human-readable label for a pii_type value.
@@ -317,4 +329,35 @@ func (m *Model) uniqueServiceCount() int {
 		seen[p.ServiceName] = struct{}{}
 	}
 	return len(seen)
+}
+
+// discoveryBar creates a small progress bar for inline use in the headline.
+func (m *Model) discoveryBar() progress.Model {
+	bar := progress.New(
+		progress.WithColors(m.theme.GradientStart),
+		progress.WithWidth(10),
+		progress.WithFillCharacters('█', '░'),
+	)
+	bar.ShowPercentage = false
+	bar.EmptyColor = m.theme.TextMuted
+	return bar
+}
+
+// summaryDiscoveryPercent computes account-level classification coverage.
+func summaryDiscoveryPercent(s domain.AccountSummary) int {
+	if s.TotalServiceVolumePerHour == nil || *s.TotalServiceVolumePerHour <= 0 {
+		return 100
+	}
+	pct := int(math.Round(s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
+	if pct > 100 {
+		pct = 100
+	}
+	return pct
+}
+
+func ptrVal(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }

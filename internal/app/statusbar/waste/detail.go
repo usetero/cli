@@ -78,11 +78,19 @@ func (d *detail) renderTable(width int) string {
 	dot := lipgloss.NewStyle().Foreground(d.theme.Warning).Background(d.theme.Bg).Render("●")
 
 	for _, p := range d.policies {
+		vol := "—"
+		if p.HasVolumes {
+			vol = format.Volume(p.VolumePerHour) + " evt/hr"
+		}
+		savings := "—"
+		if p.HasVolumes {
+			savings = formatPolicyCost(p)
+		}
 		tbl.Row(
 			dot+" "+p.LogEventName,
 			p.ServiceName,
-			format.Volume(p.VolumePerHour)+" evt/hr",
-			formatPolicyCost(p),
+			vol,
+			savings,
 		)
 	}
 

@@ -55,6 +55,8 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			ObservedBytesAfter:     derefFloat(row.ObservedBytesAfter),
 			ObservedCostBefore:     derefFloat(row.ObservedCostBefore),
 			ObservedCostAfter:      derefFloat(row.ObservedCostAfter),
+			EventsWithVolumes:      row.EventsWithVolumes,
+			TotalEvents:            row.TotalEvents,
 		}
 	}
 	return result, nil
@@ -78,6 +80,7 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 			VolumePerHour:         row.VolumePerHour,
 			EstimatedCostPerHour:  row.EstimatedCostPerHour,
 			EstimatedBytesPerHour: row.EstimatedBytesPerHour,
+			HasVolumes:            row.HasVolumes != 0,
 		}
 	}
 	return result, nil
@@ -96,7 +99,8 @@ func (l *logEventPoliciesImpl) ListPendingPIIPolicies(ctx context.Context) ([]do
 			LogEventName:  row.LogEventName,
 			ServiceName:   row.ServiceName,
 			VolumePerHour: row.VolumePerHour,
-			MaxSeverity:   domain.PIISeverity(row.MaxSeverity),
+			AnyObserved:   row.AnyObserved != 0,
+			HasVolumes:    row.HasVolumes != 0,
 		}
 
 		// Parse the analysis JSON to extract PII field paths.

@@ -1059,6 +1059,7 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeEdgeApiKey
 // GetServiceNodeEdgeInstance
 // GetServiceNodeLogEvent
+// GetServiceNodeLogEventField
 // GetServiceNodeLogEventPolicy
 // GetServiceNodeLogEventStatusCache
 // GetServiceNodeLogSample
@@ -1089,6 +1090,7 @@ func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode
 func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()                {}
 func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()              {}
 func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()                  {}
+func (v *GetServiceNodeLogEventField) implementsGraphQLInterfaceGetServiceNode()             {}
 func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()            {}
 func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode()       {}
 func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()                 {}
@@ -1141,6 +1143,9 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "LogEvent":
 		*v = new(GetServiceNodeLogEvent)
+		return json.Unmarshal(b, *v)
+	case "LogEventField":
+		*v = new(GetServiceNodeLogEventField)
 		return json.Unmarshal(b, *v)
 	case "LogEventPolicy":
 		*v = new(GetServiceNodeLogEventPolicy)
@@ -1258,6 +1263,14 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeLogEvent
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeLogEventField:
+		typename = "LogEventField"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeLogEventField
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeLogEventPolicy:
@@ -1427,6 +1440,14 @@ type GetServiceNodeLogEvent struct {
 
 // GetTypename returns GetServiceNodeLogEvent.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEvent) GetTypename() *string { return v.Typename }
+
+// GetServiceNodeLogEventField includes the requested fields of the GraphQL type LogEventField.
+type GetServiceNodeLogEventField struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeLogEventField.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventField) GetTypename() *string { return v.Typename }
 
 // GetServiceNodeLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
 type GetServiceNodeLogEventPolicy struct {

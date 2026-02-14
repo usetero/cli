@@ -20,6 +20,10 @@ type PolicyCategoryStatus struct {
 	ObservedBytesAfter   float64
 	ObservedCostBefore   float64
 	ObservedCostAfter    float64
+
+	// Volume discovery coverage.
+	EventsWithVolumes int64 // Log events in this category that have volume data
+	TotalEvents       int64 // Total log events in this category
 }
 
 // DisplayName returns a human-readable name for the category.

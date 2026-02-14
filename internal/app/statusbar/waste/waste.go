@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -130,12 +131,13 @@ func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategorySt
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%.0f:%.0f:%.0f:%.0f:%.2f:%.2f",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%.0f:%.0f:%.0f:%.0f:%.2f:%.2f:%d:%d",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
 			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
 			c.ObservedVolumeBefore, c.ObservedVolumeAfter,
 			c.ObservedBytesBefore, c.ObservedBytesAfter,
-			c.ObservedCostBefore, c.ObservedCostAfter)
+			c.ObservedCostBefore, c.ObservedCostAfter,
+			c.EventsWithVolumes, c.TotalEvents)
 	}
 
 	return key
@@ -334,6 +336,8 @@ func (m *Model) renderCategoryTable(width int) string {
 	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
+	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+	bar := m.discoveryBar()
 
 	for i, c := range m.categories {
 		dot := ok.Render("●")
@@ -348,16 +352,34 @@ func (m *Model) renderCategoryTable(width int) string {
 			name = dot + " " + name
 		}
 
+		savings := formatCategoryCost(c)
+		if c.TotalEvents > 0 && c.EventsWithVolumes < c.TotalEvents {
+			pct := int(c.EventsWithVolumes * 100 / c.TotalEvents)
+			savings += " " + bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%d%%", pct))
+		}
+
 		tbl.Row(
 			name,
 			format.Count(c.PendingCount),
-			formatCategoryCost(c),
+			savings,
 			format.Count(c.ApprovedCount),
 			formatObservedCost(c),
 		)
 	}
 
 	return tbl.View()
+}
+
+// discoveryBar creates a small progress bar for inline use in table cells.
+func (m *Model) discoveryBar() progress.Model {
+	bar := progress.New(
+		progress.WithColors(m.theme.GradientStart),
+		progress.WithWidth(10),
+		progress.WithFillCharacters('█', '░'),
+	)
+	bar.ShowPercentage = false
+	bar.EmptyColor = m.theme.TextMuted
+	return bar
 }
 
 // formatCategoryCost returns estimated yearly cost for a category.

@@ -14,31 +14,11 @@ const (
 	PIITypeGeneral     = "general"
 )
 
-// PIISeverity indicates how sensitive a PII type is.
-type PIISeverity int
-
-const (
-	PIISeverityMedium   PIISeverity = iota // general
-	PIISeverityHigh                        // email, name, phone, address, ip_address, date_of_birth
-	PIISeverityCritical                    // credit_card, ssn, password
-)
-
-// PIIField identifies an attribute path that contains PII and its type.
+// PIIField identifies an attribute path that contains PII and its types.
 type PIIField struct {
-	Path    []string `json:"path"`
-	PIIType string   `json:"pii_type"`
-}
-
-// Severity returns the derived sensitivity level for this field's PII type.
-func (f PIIField) Severity() PIISeverity {
-	switch f.PIIType {
-	case PIITypeCreditCard, PIITypeSSN, PIITypePassword:
-		return PIISeverityCritical
-	case PIITypeEmail, PIITypeName, PIITypePhone, PIITypeAddress, PIITypeIPAddress, PIITypeDateOfBirth:
-		return PIISeverityHigh
-	default:
-		return PIISeverityMedium
-	}
+	Path     []string `json:"path"`
+	PIITypes []string `json:"pii_types"`
+	Observed bool     `json:"observed"` // True if actual PII was seen in log values; false means at-risk based on name/context.
 }
 
 // PIILeakageAnalysis is the category-specific analysis for PII leakage policies.
@@ -58,7 +38,8 @@ type PIIAnalysisEnvelope struct {
 type PIIPolicy struct {
 	LogEventName  string
 	ServiceName   string
-	Fields        []PIIField  // Parsed from analysis JSON
-	VolumePerHour float64     // Log event volume from log_event_statuses_cache
-	MaxSeverity   PIISeverity // Highest severity across fields, computed in SQL
+	Fields        []PIIField // Parsed from analysis JSON
+	VolumePerHour float64    // Log event volume from log_event_statuses_cache
+	AnyObserved   bool       // True if any field has observed PII, computed in SQL
+	HasVolumes    bool       // Whether volume data exists for this log event
 }
