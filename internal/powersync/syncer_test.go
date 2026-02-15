@@ -250,7 +250,7 @@ func TestSyncer_Stop(t *testing.T) {
 func TestSyncer_ErrorHandling(t *testing.T) {
 	t.Parallel()
 
-	t.Run("refreshes token on 401 and retries", func(t *testing.T) {
+	t.Run("force-refreshes token on 401 and retries", func(t *testing.T) {
 		t.Parallel()
 
 		db := dbtest.OpenTestDB(t)
@@ -268,6 +268,9 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		refresher := &powersynctest.MockTokenRefresher{
 			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "stale-token", nil
+			},
+			ForceRefreshAccessTokenFunc: func(ctx context.Context) (string, error) {
 				return "new-token", nil
 			},
 		}
@@ -289,8 +292,8 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 		syncer.Stop()
 
-		if refresher.Calls == 0 {
-			t.Error("expected token refresh to be called")
+		if refresher.ForceRefreshCalls == 0 {
+			t.Error("expected ForceRefreshAccessToken to be called on 401")
 		}
 		if mock.Token != "new-token" {
 			t.Errorf("Token = %q, want %q", mock.Token, "new-token")

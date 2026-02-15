@@ -231,6 +231,36 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 	return accessToken, nil
 }
 
+// ForceRefreshAccessToken refreshes the access token unconditionally, bypassing
+// the local expiration check. This is needed when a server rejects a token that
+// the client still considers valid (e.g. due to clock skew).
+func (s *Service) ForceRefreshAccessToken(ctx context.Context) (string, error) {
+	s.scope.Debug("force-refreshing access token")
+
+	refreshToken, err := s.storage.Get("refresh_token")
+	if err != nil {
+		s.scope.Error("failed to get refresh token", "error", err)
+		return "", err
+	}
+	if refreshToken == "" {
+		return "", errors.New("no refresh token found")
+	}
+
+	resp, err := s.provider.RefreshToken(ctx, refreshToken)
+	if err != nil {
+		s.scope.Error("failed to refresh token", "error", err)
+		return "", err
+	}
+
+	if err := s.saveTokens(resp.AccessToken, resp.RefreshToken); err != nil {
+		s.scope.Error("failed to save refreshed tokens", "error", err)
+		return "", err
+	}
+
+	s.scope.Debug("token force-refreshed successfully")
+	return resp.AccessToken, nil
+}
+
 // ClearTokens removes all stored authentication tokens.
 func (s *Service) ClearTokens() error {
 	s.scope.Info("clearing authentication tokens")

@@ -24,6 +24,10 @@ const (
 // TokenRefresher provides access tokens for authentication.
 type TokenRefresher interface {
 	GetAccessToken(ctx context.Context) (string, error)
+	// ForceRefreshAccessToken refreshes the token unconditionally, bypassing
+	// local expiration checks. Used when the server rejects a token the
+	// client still considers valid (e.g. clock skew).
+	ForceRefreshAccessToken(ctx context.Context) (string, error)
 }
 
 // Syncer manages PowerSync synchronization.
@@ -196,9 +200,9 @@ func (s *syncer) run(ctx context.Context) {
 					s.setError(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
 					return
 				}
-				s.scope.Debug("auth error, refreshing token", log.Int("attempt", authRetries))
+				s.scope.Debug("auth error, force-refreshing token", log.Int("attempt", authRetries))
 				s.setState(NewReconnecting(false))
-				if err := s.refreshToken(ctx); err != nil {
+				if err := s.forceRefreshToken(ctx); err != nil {
 					s.setError(fmt.Errorf("token refresh: %w", err))
 					return
 				}
@@ -342,6 +346,20 @@ func (s *syncer) fireFirstSync() {
 
 func (s *syncer) refreshToken(ctx context.Context) error {
 	token, err := s.tokenRefresher.GetAccessToken(ctx)
+	if err != nil {
+		return err
+	}
+	s.client.SetToken(token)
+	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
+		return fmt.Errorf("notify token refreshed: %w", err)
+	}
+	return nil
+}
+
+// forceRefreshToken unconditionally refreshes the token, bypassing local
+// expiration checks. Used when the server has rejected the current token.
+func (s *syncer) forceRefreshToken(ctx context.Context) error {
+	token, err := s.tokenRefresher.ForceRefreshAccessToken(ctx)
 	if err != nil {
 		return err
 	}
