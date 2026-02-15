@@ -78,12 +78,12 @@ func mapServiceStatus(
 	health, errStr, errorAt, warning, warningAt string,
 	eventCount, analyzedCount, quarantinedCount int64,
 	policyPending, policyApproved, policyDismissed int64,
-	svcVolume, svcCostVolume float64,
-	volume, bytes, costUSD, costBytes, costVolume float64,
-	estVolume, estBytes, estCostUSD, estCostBytes, estCostVolume float64,
-	obsVolBefore, obsVolAfter, obsBytesBefore, obsBytesAfter float64,
-	obsCostBefore, obsCostBeforeBytes, obsCostBeforeVolume float64,
-	obsCostAfter, obsCostAfterBytes, obsCostAfterVolume float64,
+	svcVolume, svcCostVolume *float64,
+	volume, bytes, costUSD, costBytes, costVolume *float64,
+	estVolume, estBytes, estCostUSD, estCostBytes, estCostVolume *float64,
+	obsVolBefore, obsVolAfter, obsBytesBefore, obsBytesAfter *float64,
+	obsCostBefore, obsCostBeforeBytes, obsCostBeforeVolume *float64,
+	obsCostAfter, obsCostAfterBytes, obsCostAfterVolume *float64,
 ) domain.ServiceStatus {
 	name := ""
 	if serviceName != nil {

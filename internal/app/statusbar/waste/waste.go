@@ -118,20 +118,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%v:%v:%v:%.0f:%.0f:%v:%v:%.0f:%.0f:%v:%.0f:%.0f:%d",
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%d",
 		s.ReadyForUse, s.EventCount, s.AnalyzedCount, s.PendingPolicyCount,
 		s.ApprovedPolicyCount, s.DismissedPolicyCount,
-		ptrVal(s.EstimatedCostPerHour),
-		ptrVal(s.EstimatedCostPerHourBytes),
-		ptrVal(s.EstimatedCostPerHourVolume),
+		s.EstimatedCostPerHour, s.EstimatedCostPerHourBytes, s.EstimatedCostPerHourVolume,
 		s.EstimatedVolumePerHour, s.EstimatedBytesPerHour,
-		ptrVal(s.ObservedCostBefore), ptrVal(s.ObservedCostAfter),
+		s.ObservedCostBefore, s.ObservedCostAfter,
 		s.ObservedVolumeBefore, s.ObservedVolumeAfter,
-		ptrVal(s.TotalCostPerHour), s.TotalVolumePerHour,
+		s.TotalCostPerHour, s.TotalVolumePerHour,
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%.0f:%.0f:%.2f:%.0f:%.0f:%.0f:%.0f:%.2f:%.2f:%d:%d",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%v:%v:%v:%v:%v:%v:%v:%v:%d:%d",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
 			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
 			c.ObservedVolumeBefore, c.ObservedVolumeAfter,
@@ -245,8 +243,9 @@ func (m *Model) CompactView() string {
 
 // wastePercent computes the estimated waste as a percentage of total bytes.
 func wastePercent(s domain.AccountSummary) int {
-	if s.TotalBytesPerHour > 0 && s.EstimatedBytesPerHour > 0 {
-		return int(math.Round(s.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
+	if s.TotalBytesPerHour != nil && *s.TotalBytesPerHour > 0 &&
+		s.EstimatedBytesPerHour != nil && *s.EstimatedBytesPerHour > 0 {
+		return int(math.Round(*s.EstimatedBytesPerHour / *s.TotalBytesPerHour * 100))
 	}
 	return 0
 }
@@ -384,8 +383,8 @@ func (m *Model) discoveryBar() progress.Model {
 
 // formatCategoryCost returns estimated yearly cost for a category.
 func formatCategoryCost(c domain.PolicyCategoryStatus) string {
-	if c.EstimatedCostPerHour > 0 {
-		yearly := c.EstimatedCostPerHour * 8760
+	if c.EstimatedCostPerHour != nil && *c.EstimatedCostPerHour > 0 {
+		yearly := *c.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
 			return "~" + format.Cost(yearly) + "/yr"
 		}
@@ -395,11 +394,13 @@ func formatCategoryCost(c domain.PolicyCategoryStatus) string {
 
 // formatObservedCost returns the observed cost reduction for a category.
 func formatObservedCost(c domain.PolicyCategoryStatus) string {
-	diff := c.ObservedCostBefore - c.ObservedCostAfter
-	if diff > 0 {
-		yearly := diff * 8760
-		if yearly >= 1 {
-			return "-" + format.Cost(yearly) + "/yr"
+	if c.ObservedCostBefore != nil && c.ObservedCostAfter != nil {
+		diff := *c.ObservedCostBefore - *c.ObservedCostAfter
+		if diff > 0 {
+			yearly := diff * 8760
+			if yearly >= 1 {
+				return "-" + format.Cost(yearly) + "/yr"
+			}
 		}
 	}
 	return "—"
@@ -414,16 +415,11 @@ func formatObservedSaving(s domain.AccountSummary) string {
 		}
 		return ""
 	}
-	diff := s.ObservedVolumeBefore - s.ObservedVolumeAfter
-	if diff > 0 {
-		return format.Volume(diff) + " evt/hr"
+	if s.ObservedVolumeBefore != nil && s.ObservedVolumeAfter != nil {
+		diff := *s.ObservedVolumeBefore - *s.ObservedVolumeAfter
+		if diff > 0 {
+			return format.Volume(diff) + " evt/hr"
+		}
 	}
 	return ""
-}
-
-func ptrVal(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }

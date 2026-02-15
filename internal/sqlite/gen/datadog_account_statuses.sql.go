@@ -44,23 +44,23 @@ SELECT
   SUM(estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,
   SUM(estimated_cost_reduction_per_hour_bytes_usd) AS estimated_cost_per_hour_bytes,
   SUM(estimated_cost_reduction_per_hour_volume_usd) AS estimated_cost_per_hour_volume,
-  CAST(COALESCE(SUM(estimated_volume_reduction_per_hour), 0.0) AS REAL) AS estimated_volume_per_hour,
-  CAST(COALESCE(SUM(estimated_bytes_reduction_per_hour), 0.0) AS REAL) AS estimated_bytes_per_hour,
+  SUM(estimated_volume_reduction_per_hour) AS estimated_volume_per_hour,
+  SUM(estimated_bytes_reduction_per_hour) AS estimated_bytes_per_hour,
 
   -- observed impact
   SUM(observed_cost_per_hour_before_usd) AS observed_cost_before,
   SUM(observed_cost_per_hour_after_usd) AS observed_cost_after,
-  CAST(COALESCE(SUM(observed_volume_per_hour_before), 0.0) AS REAL) AS observed_volume_before,
-  CAST(COALESCE(SUM(observed_volume_per_hour_after), 0.0) AS REAL) AS observed_volume_after,
-  CAST(COALESCE(SUM(observed_bytes_per_hour_before), 0.0) AS REAL) AS observed_bytes_before,
-  CAST(COALESCE(SUM(observed_bytes_per_hour_after), 0.0) AS REAL) AS observed_bytes_after,
+  SUM(observed_volume_per_hour_before) AS observed_volume_before,
+  SUM(observed_volume_per_hour_after) AS observed_volume_after,
+  SUM(observed_bytes_per_hour_before) AS observed_bytes_before,
+  SUM(observed_bytes_per_hour_after) AS observed_bytes_after,
 
   -- totals
   SUM(log_event_cost_per_hour_usd) AS total_cost_per_hour,
   SUM(log_event_cost_per_hour_bytes_usd) AS total_cost_per_hour_bytes,
   SUM(log_event_cost_per_hour_volume_usd) AS total_cost_per_hour_volume,
-  CAST(COALESCE(SUM(log_event_volume_per_hour), 0.0) AS REAL) AS total_volume_per_hour,
-  CAST(COALESCE(SUM(log_event_bytes_per_hour), 0.0) AS REAL) AS total_bytes_per_hour,
+  SUM(log_event_volume_per_hour) AS total_volume_per_hour,
+  SUM(log_event_bytes_per_hour) AS total_bytes_per_hour,
 
   -- service-level throughput
   SUM(service_volume_per_hour) AS total_service_volume_per_hour,
@@ -91,19 +91,19 @@ type GetAccountSummaryRow struct {
 	EstimatedCostPerHour       *float64
 	EstimatedCostPerHourBytes  *float64
 	EstimatedCostPerHourVolume *float64
-	EstimatedVolumePerHour     float64
-	EstimatedBytesPerHour      float64
+	EstimatedVolumePerHour     *float64
+	EstimatedBytesPerHour      *float64
 	ObservedCostBefore         *float64
 	ObservedCostAfter          *float64
-	ObservedVolumeBefore       float64
-	ObservedVolumeAfter        float64
-	ObservedBytesBefore        float64
-	ObservedBytesAfter         float64
+	ObservedVolumeBefore       *float64
+	ObservedVolumeAfter        *float64
+	ObservedBytesBefore        *float64
+	ObservedBytesAfter         *float64
 	TotalCostPerHour           *float64
 	TotalCostPerHourBytes      *float64
 	TotalCostPerHourVolume     *float64
-	TotalVolumePerHour         float64
-	TotalBytesPerHour          float64
+	TotalVolumePerHour         *float64
+	TotalBytesPerHour          *float64
 	TotalServiceVolumePerHour  *float64
 	TotalServiceCostPerHour    *float64
 }

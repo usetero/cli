@@ -35,33 +35,33 @@ type ServiceStatus struct {
 	PolicyApprovedCount  int64
 	PolicyDismissedCount int64
 
-	// Service-level throughput (ground truth from service_log_volumes).
-	ServiceVolumePerHour        float64
-	ServiceCostPerHourVolumeUSD float64
+	// Service-level throughput (ground truth from service_log_volumes). Nil when unmeasured.
+	ServiceVolumePerHour        *float64
+	ServiceCostPerHourVolumeUSD *float64
 
-	// Log event throughput (discovered events subset).
-	LogEventVolumePerHour        float64
-	LogEventBytesPerHour         float64
-	LogEventCostPerHourUSD       float64
-	LogEventCostPerHourBytesUSD  float64
-	LogEventCostPerHourVolumeUSD float64
+	// Log event throughput (discovered events subset). Nil when unmeasured.
+	LogEventVolumePerHour        *float64
+	LogEventBytesPerHour         *float64
+	LogEventCostPerHourUSD       *float64
+	LogEventCostPerHourBytesUSD  *float64
+	LogEventCostPerHourVolumeUSD *float64
 
-	// Estimated savings from pending policies.
-	EstimatedVolumeReductionPerHour     float64
-	EstimatedBytesReductionPerHour      float64
-	EstimatedCostReductionPerHourUSD    float64
-	EstimatedCostReductionPerHourBytes  float64
-	EstimatedCostReductionPerHourVolume float64
+	// Estimated savings from pending policies. Nil when unmeasured.
+	EstimatedVolumeReductionPerHour     *float64
+	EstimatedBytesReductionPerHour      *float64
+	EstimatedCostReductionPerHourUSD    *float64
+	EstimatedCostReductionPerHourBytes  *float64
+	EstimatedCostReductionPerHourVolume *float64
 
-	// Observed impact from approved policies (before/after).
-	ObservedVolumePerHourBefore        float64
-	ObservedVolumePerHourAfter         float64
-	ObservedBytesPerHourBefore         float64
-	ObservedBytesPerHourAfter          float64
-	ObservedCostPerHourBeforeUSD       float64
-	ObservedCostPerHourBeforeBytesUSD  float64
-	ObservedCostPerHourBeforeVolumeUSD float64
-	ObservedCostPerHourAfterUSD        float64
-	ObservedCostPerHourAfterBytesUSD   float64
-	ObservedCostPerHourAfterVolumeUSD  float64
+	// Observed impact from approved policies (before/after). Nil when unmeasured.
+	ObservedVolumePerHourBefore        *float64
+	ObservedVolumePerHourAfter         *float64
+	ObservedBytesPerHourBefore         *float64
+	ObservedBytesPerHourAfter          *float64
+	ObservedCostPerHourBeforeUSD       *float64
+	ObservedCostPerHourBeforeBytesUSD  *float64
+	ObservedCostPerHourBeforeVolumeUSD *float64
+	ObservedCostPerHourAfterUSD        *float64
+	ObservedCostPerHourAfterBytesUSD   *float64
+	ObservedCostPerHourAfterVolumeUSD  *float64
 }

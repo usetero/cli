@@ -31,12 +31,11 @@ SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
   COALESCE(lep.analysis, '') AS analysis,
-  COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
+  les.volume_per_hour,
   CAST(COALESCE((
     SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
     FROM json_each(json_extract(lep.analysis, '$.pii_leakage.fields')) f
-  ), 0) AS INTEGER) AS any_observed,
-  CAST(COALESCE(les.has_volumes, 0) AS INTEGER) AS has_volumes
+  ), 0) AS INTEGER) AS any_observed
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
@@ -49,10 +48,10 @@ ORDER BY any_observed DESC, les.volume_per_hour DESC;
 SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
-  COALESCE(les.volume_per_hour, 0) AS volume_per_hour,
-  COALESCE(leps.estimated_cost_reduction_per_hour_usd, 0) AS estimated_cost_per_hour,
-  COALESCE(leps.estimated_bytes_reduction_per_hour, 0) AS estimated_bytes_per_hour,
-  CAST(COALESCE(les.has_volumes, 0) AS INTEGER) AS has_volumes
+  les.volume_per_hour,
+  les.bytes_per_hour,
+  leps.estimated_cost_reduction_per_hour_usd AS estimated_cost_per_hour,
+  leps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id

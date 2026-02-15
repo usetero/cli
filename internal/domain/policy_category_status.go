@@ -1,25 +1,32 @@
 package domain
 
-import "github.com/usetero/cli/internal/format"
+import (
+	"strings"
+
+	"github.com/usetero/cli/internal/format"
+)
 
 // PolicyCategoryStatus is the per-category policy breakdown.
+// Float pointers are nil when no data exists (e.g. no pending/approved policies contribute).
 type PolicyCategoryStatus struct {
-	Category               string
-	PendingCount           int64
-	ApprovedCount          int64
-	DismissedCount         int64
-	EstimatedVolumePerHour float64
-	EstimatedBytesPerHour  float64
-	EstimatedCostPerHour   float64
-	Benefit                string
+	Category       string
+	PendingCount   int64
+	ApprovedCount  int64
+	DismissedCount int64
+	Benefit        string
+
+	// Estimated impact from pending policies.
+	EstimatedVolumePerHour *float64
+	EstimatedBytesPerHour  *float64
+	EstimatedCostPerHour   *float64
 
 	// Observed impact from approved policies (before/after).
-	ObservedVolumeBefore float64
-	ObservedVolumeAfter  float64
-	ObservedBytesBefore  float64
-	ObservedBytesAfter   float64
-	ObservedCostBefore   float64
-	ObservedCostAfter    float64
+	ObservedVolumeBefore *float64
+	ObservedVolumeAfter  *float64
+	ObservedBytesBefore  *float64
+	ObservedBytesAfter   *float64
+	ObservedCostBefore   *float64
+	ObservedCostAfter    *float64
 
 	// Volume discovery coverage.
 	EventsWithVolumes int64 // Log events in this category that have volume data
@@ -30,4 +37,9 @@ type PolicyCategoryStatus struct {
 // Converts slugs like "bot_traffic" to "Bot Traffic".
 func (c PolicyCategoryStatus) DisplayName() string {
 	return format.TitleCase(c.Category)
+}
+
+// ReducesVolume reports whether this category's policies drop entire events.
+func (c PolicyCategoryStatus) ReducesVolume() bool {
+	return strings.Contains(c.Benefit, "volume_reduction")
 }

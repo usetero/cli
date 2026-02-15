@@ -67,7 +67,7 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		ObservedVolumeBefore: row.ObservedVolumeBefore,
 		ObservedVolumeAfter:  row.ObservedVolumeAfter,
 		ObservedBytesBefore:  row.ObservedBytesBefore,
-		ObservedBytesAfter:   row.ObservedBytesAfter,
+		ObservedBytesAfter:   row.ObservedBytesAfter, // all *float64 passthrough now
 
 		// Totals
 		TotalCostPerHour:       row.TotalCostPerHour,

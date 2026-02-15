@@ -108,16 +108,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s:%.0f:%.0f:%d",
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s:%v:%v:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.OkServices,
 		s.ErrorServices, s.StaleServices, s.QuarantinedCount,
 		s.Health, s.Error, s.Warning,
-		ptrVal(s.TotalServiceVolumePerHour), s.TotalVolumePerHour,
+		s.TotalServiceVolumePerHour, s.TotalVolumePerHour,
 		len(services))
 
 	for _, svc := range services {
-		key += fmt.Sprintf("|%s:%s:%s:%d:%d:%.0f:%.0f:%.2f",
+		key += fmt.Sprintf("|%s:%s:%s:%d:%d:%v:%v:%v",
 			svc.Name, svc.Health, svc.Warning, svc.LogEventCount, svc.LogEventAnalyzedCount,
 			svc.ServiceVolumePerHour, svc.LogEventVolumePerHour, svc.ServiceCostPerHourVolumeUSD)
 	}
@@ -199,8 +199,8 @@ func (m *Model) renderSummary() string {
 	}
 
 	// Total volume.
-	if s.TotalVolumePerHour > 0 {
-		parts = append(parts, format.Volume(s.TotalVolumePerHour)+" evt/hr")
+	if s.TotalVolumePerHour != nil && *s.TotalVolumePerHour > 0 {
+		parts = append(parts, format.Volume(*s.TotalVolumePerHour)+" evt/hr")
 	}
 
 	// Total cost from account summary (pre-aggregated by control plane).
@@ -238,11 +238,19 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 
 	bar := m.discoveryBar()
 	for _, svc := range visible {
+		vol := "—"
+		if svc.ServiceVolumePerHour != nil {
+			vol = format.Volume(*svc.ServiceVolumePerHour) + "/hr"
+		}
+		cost := "—"
+		if svc.ServiceCostPerHourVolumeUSD != nil {
+			cost = format.YearlyCost(*svc.ServiceCostPerHourVolumeUSD)
+		}
 		tbl.Row(
 			m.renderServiceName(svc),
 			m.renderLogEvents(svc, bar),
-			format.Volume(svc.ServiceVolumePerHour)+"/hr",
-			format.YearlyCost(svc.ServiceCostPerHourVolumeUSD),
+			vol,
+			cost,
 		)
 	}
 
@@ -294,7 +302,7 @@ func (m *Model) discoveryBar() progress.Model {
 // never exactly 100% due to throughput fluctuations).
 func (m *Model) renderLogEvents(svc domain.ServiceStatus, bar progress.Model) string {
 	count := fmt.Sprintf("%-5d", svc.LogEventCount)
-	if svc.ServiceVolumePerHour <= 0 {
+	if svc.ServiceVolumePerHour == nil || *svc.ServiceVolumePerHour <= 0 {
 		return count
 	}
 	pct := discoveryPercent(svc)
@@ -310,7 +318,10 @@ func summaryDiscoveryPercent(s domain.AccountSummary) int {
 	if s.TotalServiceVolumePerHour == nil || *s.TotalServiceVolumePerHour <= 0 {
 		return 100
 	}
-	pct := int(math.Round(s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
+	if s.TotalVolumePerHour == nil {
+		return 0
+	}
+	pct := int(math.Round(*s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
 	if pct > 100 {
 		pct = 100
 	}
@@ -319,19 +330,15 @@ func summaryDiscoveryPercent(s domain.AccountSummary) int {
 
 // discoveryPercent computes how much of a service's volume has been classified.
 func discoveryPercent(svc domain.ServiceStatus) int {
-	if svc.ServiceVolumePerHour <= 0 {
+	if svc.ServiceVolumePerHour == nil || *svc.ServiceVolumePerHour <= 0 {
 		return 100
 	}
-	pct := int(math.Round(svc.LogEventVolumePerHour / svc.ServiceVolumePerHour * 100))
+	if svc.LogEventVolumePerHour == nil {
+		return 0
+	}
+	pct := int(math.Round(*svc.LogEventVolumePerHour / *svc.ServiceVolumePerHour * 100))
 	if pct > 100 {
 		pct = 100
 	}
 	return pct
-}
-
-func ptrVal(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }

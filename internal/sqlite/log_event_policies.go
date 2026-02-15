@@ -45,16 +45,16 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			PendingCount:           row.PendingCount,
 			ApprovedCount:          row.ApprovedCount,
 			DismissedCount:         row.DismissedCount,
-			EstimatedVolumePerHour: derefFloat(row.EstimatedVolumePerHour),
-			EstimatedBytesPerHour:  derefFloat(row.EstimatedBytesPerHour),
-			EstimatedCostPerHour:   derefFloat(row.EstimatedCostPerHour),
+			EstimatedVolumePerHour: row.EstimatedVolumePerHour,
+			EstimatedBytesPerHour:  row.EstimatedBytesPerHour,
+			EstimatedCostPerHour:   row.EstimatedCostPerHour,
 			Benefit:                row.Benefits,
-			ObservedVolumeBefore:   derefFloat(row.ObservedVolumeBefore),
-			ObservedVolumeAfter:    derefFloat(row.ObservedVolumeAfter),
-			ObservedBytesBefore:    derefFloat(row.ObservedBytesBefore),
-			ObservedBytesAfter:     derefFloat(row.ObservedBytesAfter),
-			ObservedCostBefore:     derefFloat(row.ObservedCostBefore),
-			ObservedCostAfter:      derefFloat(row.ObservedCostAfter),
+			ObservedVolumeBefore:   row.ObservedVolumeBefore,
+			ObservedVolumeAfter:    row.ObservedVolumeAfter,
+			ObservedBytesBefore:    row.ObservedBytesBefore,
+			ObservedBytesAfter:     row.ObservedBytesAfter,
+			ObservedCostBefore:     row.ObservedCostBefore,
+			ObservedCostAfter:      row.ObservedCostAfter,
 			EventsWithVolumes:      row.EventsWithVolumes,
 			TotalEvents:            row.TotalEvents,
 		}
@@ -78,9 +78,9 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 			LogEventName:          row.LogEventName,
 			ServiceName:           row.ServiceName,
 			VolumePerHour:         row.VolumePerHour,
+			BytesPerHour:          row.BytesPerHour,
 			EstimatedCostPerHour:  row.EstimatedCostPerHour,
 			EstimatedBytesPerHour: row.EstimatedBytesPerHour,
-			HasVolumes:            row.HasVolumes != 0,
 		}
 	}
 	return result, nil
@@ -100,7 +100,6 @@ func (l *logEventPoliciesImpl) ListPendingPIIPolicies(ctx context.Context) ([]do
 			ServiceName:   row.ServiceName,
 			VolumePerHour: row.VolumePerHour,
 			AnyObserved:   row.AnyObserved != 0,
-			HasVolumes:    row.HasVolumes != 0,
 		}
 
 		// Parse the analysis JSON to extract PII field paths.
@@ -123,11 +122,4 @@ func (l *logEventPoliciesImpl) CountFixedPIIPolicies(ctx context.Context) (int64
 		return 0, WrapSQLiteError(err, "count fixed pii policies")
 	}
 	return count, nil
-}
-
-func derefFloat(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }

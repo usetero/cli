@@ -46,25 +46,25 @@ type AccountSummary struct {
 	TotalServiceVolumePerHour *float64
 	TotalServiceCostPerHour   *float64
 
-	// Log event throughput (discovered events).
-	TotalCostPerHour       *float64 // nil when pricing unavailable
+	// Log event throughput (discovered events). Nil when unmeasured.
+	TotalCostPerHour       *float64
 	TotalCostPerHourBytes  *float64
 	TotalCostPerHourVolume *float64
-	TotalVolumePerHour     float64
-	TotalBytesPerHour      float64
+	TotalVolumePerHour     *float64
+	TotalBytesPerHour      *float64
 
-	// Estimated savings from pending policies.
-	EstimatedCostPerHour       *float64 // nil when pricing unavailable
+	// Estimated savings from pending policies. Nil when unmeasured.
+	EstimatedCostPerHour       *float64
 	EstimatedCostPerHourBytes  *float64
 	EstimatedCostPerHourVolume *float64
-	EstimatedVolumePerHour     float64
-	EstimatedBytesPerHour      float64
+	EstimatedVolumePerHour     *float64
+	EstimatedBytesPerHour      *float64
 
-	// Observed impact from approved policies (before/after).
-	ObservedCostBefore   *float64 // nil when pricing unavailable
+	// Observed impact from approved policies (before/after). Nil when unmeasured.
+	ObservedCostBefore   *float64
 	ObservedCostAfter    *float64
-	ObservedVolumeBefore float64
-	ObservedVolumeAfter  float64
-	ObservedBytesBefore  float64
-	ObservedBytesAfter   float64
+	ObservedVolumeBefore *float64
+	ObservedVolumeAfter  *float64
+	ObservedBytesBefore  *float64
+	ObservedBytesAfter   *float64
 }

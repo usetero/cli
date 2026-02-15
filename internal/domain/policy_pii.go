@@ -39,7 +39,6 @@ type PIIPolicy struct {
 	LogEventName  string
 	ServiceName   string
 	Fields        []PIIField // Parsed from analysis JSON
-	VolumePerHour float64    // Log event volume from log_event_statuses_cache
+	VolumePerHour *float64   // Log event volume; nil when unmeasured
 	AnyObserved   bool       // True if any field has observed PII, computed in SQL
-	HasVolumes    bool       // Whether volume data exists for this log event
 }

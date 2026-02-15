@@ -114,12 +114,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(summary domain.AccountSummary, policies []domain.PIIPolicy, fixedCount int64) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%.0f:%.0f:%d:%d",
-		ptrVal(summary.TotalServiceVolumePerHour), summary.TotalVolumePerHour,
+	fmt.Fprintf(&b, "%v:%v:%d:%d",
+		summary.TotalServiceVolumePerHour, summary.TotalVolumePerHour,
 		len(policies), fixedCount)
 	for _, p := range policies {
-		fmt.Fprintf(&b, "|%s:%s:%d:%.0f:%v:%v",
-			p.ServiceName, p.LogEventName, len(p.Fields), p.VolumePerHour, p.AnyObserved, p.HasVolumes)
+		fmt.Fprintf(&b, "|%s:%s:%d:%v:%v",
+			p.ServiceName, p.LogEventName, len(p.Fields), p.VolumePerHour, p.AnyObserved)
 		for _, f := range p.Fields {
 			fmt.Fprintf(&b, ":%v", f.Observed)
 			for _, t := range f.PIITypes {
@@ -245,8 +245,8 @@ func (m *Model) renderTable(width int) string {
 
 	for _, p := range m.policies {
 		vol := "—"
-		if p.HasVolumes {
-			vol = format.Volume(p.VolumePerHour) + " evt/hr"
+		if p.VolumePerHour != nil {
+			vol = format.Volume(*p.VolumePerHour) + " evt/hr"
 		}
 		tbl.Row(
 			p.LogEventName,
@@ -348,16 +348,12 @@ func summaryDiscoveryPercent(s domain.AccountSummary) int {
 	if s.TotalServiceVolumePerHour == nil || *s.TotalServiceVolumePerHour <= 0 {
 		return 100
 	}
-	pct := int(math.Round(s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
+	if s.TotalVolumePerHour == nil {
+		return 0
+	}
+	pct := int(math.Round(*s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
 	if pct > 100 {
 		pct = 100
 	}
 	return pct
-}
-
-func ptrVal(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }

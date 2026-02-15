@@ -62,8 +62,8 @@ func (d *detail) renderHeader() string {
 		parts = append(parts, warn.Render("●")+" "+warn.Render(fmt.Sprintf("%d pending", d.category.PendingCount)))
 	}
 
-	if d.category.EstimatedCostPerHour > 0 {
-		parts = append(parts, muted.Render("~"+format.YearlyCost(d.category.EstimatedCostPerHour)))
+	if d.category.EstimatedCostPerHour != nil && *d.category.EstimatedCostPerHour > 0 {
+		parts = append(parts, muted.Render("~"+format.YearlyCost(*d.category.EstimatedCostPerHour)))
 	}
 
 	return strings.Join(parts, sep)
@@ -72,26 +72,33 @@ func (d *detail) renderHeader() string {
 // renderTable renders the per-policy table.
 func (d *detail) renderTable(width int) string {
 	tbl := table.New(d.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Log Event", "Service", "Volume", "Est. Savings")
+
+	showVolume := d.category.ReducesVolume()
+	if showVolume {
+		tbl.Headers("Log Event", "Service", "Volume", "Bytes", "Est. Savings")
+	} else {
+		tbl.Headers("Log Event", "Service", "Bytes", "Est. Savings")
+	}
 	tbl.SetWidth(width)
 
 	dot := lipgloss.NewStyle().Foreground(d.theme.Warning).Background(d.theme.Bg).Render("●")
 
 	for _, p := range d.policies {
-		vol := "—"
-		if p.HasVolumes {
-			vol = format.Volume(p.VolumePerHour) + " evt/hr"
+		bytes := "—"
+		if p.BytesPerHour != nil {
+			bytes = format.Bytes(*p.BytesPerHour) + "/hr"
 		}
-		savings := "—"
-		if p.HasVolumes {
-			savings = formatPolicyCost(p)
+		savings := formatPolicyCost(p)
+
+		if showVolume {
+			vol := "—"
+			if p.VolumePerHour != nil {
+				vol = format.Volume(*p.VolumePerHour) + " evt/hr"
+			}
+			tbl.Row(dot+" "+p.LogEventName, p.ServiceName, vol, bytes, savings)
+		} else {
+			tbl.Row(dot+" "+p.LogEventName, p.ServiceName, bytes, savings)
 		}
-		tbl.Row(
-			dot+" "+p.LogEventName,
-			p.ServiceName,
-			vol,
-			savings,
-		)
 	}
 
 	return tbl.View()
@@ -99,11 +106,11 @@ func (d *detail) renderTable(width int) string {
 
 // formatPolicyCost returns the estimated yearly cost for a single policy.
 func formatPolicyCost(p domain.WastePolicy) string {
-	if p.EstimatedCostPerHour > 0 {
-		yearly := p.EstimatedCostPerHour * 8760
+	if p.EstimatedCostPerHour != nil && *p.EstimatedCostPerHour > 0 {
+		yearly := *p.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
 			return "~" + format.Cost(yearly) + "/yr"
 		}
 	}
-	return "-"
+	return "—"
 }

@@ -529,14 +529,16 @@ func (m *Model) emptyStateContent() string {
 
 // wastePercent computes waste % preferring bytes.
 func wastePercent(s domain.AccountSummary) int {
-	if s.TotalBytesPerHour > 0 && s.EstimatedBytesPerHour > 0 {
-		return int(math.Round(s.EstimatedBytesPerHour / s.TotalBytesPerHour * 100))
+	if s.TotalBytesPerHour != nil && *s.TotalBytesPerHour > 0 &&
+		s.EstimatedBytesPerHour != nil && *s.EstimatedBytesPerHour > 0 {
+		return int(math.Round(*s.EstimatedBytesPerHour / *s.TotalBytesPerHour * 100))
 	}
 	if s.EstimatedCostPerHour != nil && s.TotalCostPerHour != nil && *s.TotalCostPerHour > 0 {
 		return int(math.Round(*s.EstimatedCostPerHour / *s.TotalCostPerHour * 100))
 	}
-	if s.TotalVolumePerHour > 0 && s.EstimatedVolumePerHour > 0 {
-		return int(math.Round(s.EstimatedVolumePerHour / s.TotalVolumePerHour * 100))
+	if s.TotalVolumePerHour != nil && *s.TotalVolumePerHour > 0 &&
+		s.EstimatedVolumePerHour != nil && *s.EstimatedVolumePerHour > 0 {
+		return int(math.Round(*s.EstimatedVolumePerHour / *s.TotalVolumePerHour * 100))
 	}
 	return 0
 }

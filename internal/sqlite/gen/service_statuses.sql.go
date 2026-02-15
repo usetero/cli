@@ -23,28 +23,28 @@ SELECT
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
-  COALESCE(ssc.service_volume_per_hour, 0.0) AS service_volume_per_hour,
-  COALESCE(ssc.service_cost_per_hour_volume_usd, 0.0) AS service_cost_per_hour_volume_usd,
-  COALESCE(ssc.log_event_volume_per_hour, 0.0) AS log_event_volume_per_hour,
-  COALESCE(ssc.log_event_bytes_per_hour, 0.0) AS log_event_bytes_per_hour,
-  COALESCE(ssc.log_event_cost_per_hour_usd, 0.0) AS log_event_cost_per_hour_usd,
-  COALESCE(ssc.log_event_cost_per_hour_bytes_usd, 0.0) AS log_event_cost_per_hour_bytes_usd,
-  COALESCE(ssc.log_event_cost_per_hour_volume_usd, 0.0) AS log_event_cost_per_hour_volume_usd,
-  COALESCE(ssc.estimated_volume_reduction_per_hour, 0.0) AS estimated_volume_reduction_per_hour,
-  COALESCE(ssc.estimated_bytes_reduction_per_hour, 0.0) AS estimated_bytes_reduction_per_hour,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_usd, 0.0) AS estimated_cost_reduction_per_hour_usd,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_bytes_usd, 0.0) AS estimated_cost_reduction_per_hour_bytes_usd,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_volume_usd, 0.0) AS estimated_cost_reduction_per_hour_volume_usd,
-  COALESCE(ssc.observed_volume_per_hour_before, 0.0) AS observed_volume_per_hour_before,
-  COALESCE(ssc.observed_volume_per_hour_after, 0.0) AS observed_volume_per_hour_after,
-  COALESCE(ssc.observed_bytes_per_hour_before, 0.0) AS observed_bytes_per_hour_before,
-  COALESCE(ssc.observed_bytes_per_hour_after, 0.0) AS observed_bytes_per_hour_after,
-  COALESCE(ssc.observed_cost_per_hour_before_usd, 0.0) AS observed_cost_per_hour_before_usd,
-  COALESCE(ssc.observed_cost_per_hour_before_bytes_usd, 0.0) AS observed_cost_per_hour_before_bytes_usd,
-  COALESCE(ssc.observed_cost_per_hour_before_volume_usd, 0.0) AS observed_cost_per_hour_before_volume_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_usd, 0.0) AS observed_cost_per_hour_after_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_bytes_usd, 0.0) AS observed_cost_per_hour_after_bytes_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_volume_usd, 0.0) AS observed_cost_per_hour_after_volume_usd
+  ssc.service_volume_per_hour,
+  ssc.service_cost_per_hour_volume_usd,
+  ssc.log_event_volume_per_hour,
+  ssc.log_event_bytes_per_hour,
+  ssc.log_event_cost_per_hour_usd,
+  ssc.log_event_cost_per_hour_bytes_usd,
+  ssc.log_event_cost_per_hour_volume_usd,
+  ssc.estimated_volume_reduction_per_hour,
+  ssc.estimated_bytes_reduction_per_hour,
+  ssc.estimated_cost_reduction_per_hour_usd,
+  ssc.estimated_cost_reduction_per_hour_bytes_usd,
+  ssc.estimated_cost_reduction_per_hour_volume_usd,
+  ssc.observed_volume_per_hour_before,
+  ssc.observed_volume_per_hour_after,
+  ssc.observed_bytes_per_hour_before,
+  ssc.observed_bytes_per_hour_after,
+  ssc.observed_cost_per_hour_before_usd,
+  ssc.observed_cost_per_hour_before_bytes_usd,
+  ssc.observed_cost_per_hour_before_volume_usd,
+  ssc.observed_cost_per_hour_after_usd,
+  ssc.observed_cost_per_hour_after_bytes_usd,
+  ssc.observed_cost_per_hour_after_volume_usd
 FROM service_statuses_cache ssc
 JOIN services s ON ssc.service_id = s.id
 ORDER BY
@@ -73,28 +73,28 @@ type ListAllServiceStatusesRow struct {
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
-	ServiceVolumePerHour                   float64
-	ServiceCostPerHourVolumeUsd            float64
-	LogEventVolumePerHour                  float64
-	LogEventBytesPerHour                   float64
-	LogEventCostPerHourUsd                 float64
-	LogEventCostPerHourBytesUsd            float64
-	LogEventCostPerHourVolumeUsd           float64
-	EstimatedVolumeReductionPerHour        float64
-	EstimatedBytesReductionPerHour         float64
-	EstimatedCostReductionPerHourUsd       float64
-	EstimatedCostReductionPerHourBytesUsd  float64
-	EstimatedCostReductionPerHourVolumeUsd float64
-	ObservedVolumePerHourBefore            float64
-	ObservedVolumePerHourAfter             float64
-	ObservedBytesPerHourBefore             float64
-	ObservedBytesPerHourAfter              float64
-	ObservedCostPerHourBeforeUsd           float64
-	ObservedCostPerHourBeforeBytesUsd      float64
-	ObservedCostPerHourBeforeVolumeUsd     float64
-	ObservedCostPerHourAfterUsd            float64
-	ObservedCostPerHourAfterBytesUsd       float64
-	ObservedCostPerHourAfterVolumeUsd      float64
+	ServiceVolumePerHour                   *float64
+	ServiceCostPerHourVolumeUsd            *float64
+	LogEventVolumePerHour                  *float64
+	LogEventBytesPerHour                   *float64
+	LogEventCostPerHourUsd                 *float64
+	LogEventCostPerHourBytesUsd            *float64
+	LogEventCostPerHourVolumeUsd           *float64
+	EstimatedVolumeReductionPerHour        *float64
+	EstimatedBytesReductionPerHour         *float64
+	EstimatedCostReductionPerHourUsd       *float64
+	EstimatedCostReductionPerHourBytesUsd  *float64
+	EstimatedCostReductionPerHourVolumeUsd *float64
+	ObservedVolumePerHourBefore            *float64
+	ObservedVolumePerHourAfter             *float64
+	ObservedBytesPerHourBefore             *float64
+	ObservedBytesPerHourAfter              *float64
+	ObservedCostPerHourBeforeUsd           *float64
+	ObservedCostPerHourBeforeBytesUsd      *float64
+	ObservedCostPerHourBeforeVolumeUsd     *float64
+	ObservedCostPerHourAfterUsd            *float64
+	ObservedCostPerHourAfterBytesUsd       *float64
+	ObservedCostPerHourAfterVolumeUsd      *float64
 }
 
 func (q *Queries) ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error) {
@@ -169,28 +169,28 @@ SELECT
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
-  COALESCE(ssc.service_volume_per_hour, 0.0) AS service_volume_per_hour,
-  COALESCE(ssc.service_cost_per_hour_volume_usd, 0.0) AS service_cost_per_hour_volume_usd,
-  COALESCE(ssc.log_event_volume_per_hour, 0.0) AS log_event_volume_per_hour,
-  COALESCE(ssc.log_event_bytes_per_hour, 0.0) AS log_event_bytes_per_hour,
-  COALESCE(ssc.log_event_cost_per_hour_usd, 0.0) AS log_event_cost_per_hour_usd,
-  COALESCE(ssc.log_event_cost_per_hour_bytes_usd, 0.0) AS log_event_cost_per_hour_bytes_usd,
-  COALESCE(ssc.log_event_cost_per_hour_volume_usd, 0.0) AS log_event_cost_per_hour_volume_usd,
-  COALESCE(ssc.estimated_volume_reduction_per_hour, 0.0) AS estimated_volume_reduction_per_hour,
-  COALESCE(ssc.estimated_bytes_reduction_per_hour, 0.0) AS estimated_bytes_reduction_per_hour,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_usd, 0.0) AS estimated_cost_reduction_per_hour_usd,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_bytes_usd, 0.0) AS estimated_cost_reduction_per_hour_bytes_usd,
-  COALESCE(ssc.estimated_cost_reduction_per_hour_volume_usd, 0.0) AS estimated_cost_reduction_per_hour_volume_usd,
-  COALESCE(ssc.observed_volume_per_hour_before, 0.0) AS observed_volume_per_hour_before,
-  COALESCE(ssc.observed_volume_per_hour_after, 0.0) AS observed_volume_per_hour_after,
-  COALESCE(ssc.observed_bytes_per_hour_before, 0.0) AS observed_bytes_per_hour_before,
-  COALESCE(ssc.observed_bytes_per_hour_after, 0.0) AS observed_bytes_per_hour_after,
-  COALESCE(ssc.observed_cost_per_hour_before_usd, 0.0) AS observed_cost_per_hour_before_usd,
-  COALESCE(ssc.observed_cost_per_hour_before_bytes_usd, 0.0) AS observed_cost_per_hour_before_bytes_usd,
-  COALESCE(ssc.observed_cost_per_hour_before_volume_usd, 0.0) AS observed_cost_per_hour_before_volume_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_usd, 0.0) AS observed_cost_per_hour_after_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_bytes_usd, 0.0) AS observed_cost_per_hour_after_bytes_usd,
-  COALESCE(ssc.observed_cost_per_hour_after_volume_usd, 0.0) AS observed_cost_per_hour_after_volume_usd
+  ssc.service_volume_per_hour,
+  ssc.service_cost_per_hour_volume_usd,
+  ssc.log_event_volume_per_hour,
+  ssc.log_event_bytes_per_hour,
+  ssc.log_event_cost_per_hour_usd,
+  ssc.log_event_cost_per_hour_bytes_usd,
+  ssc.log_event_cost_per_hour_volume_usd,
+  ssc.estimated_volume_reduction_per_hour,
+  ssc.estimated_bytes_reduction_per_hour,
+  ssc.estimated_cost_reduction_per_hour_usd,
+  ssc.estimated_cost_reduction_per_hour_bytes_usd,
+  ssc.estimated_cost_reduction_per_hour_volume_usd,
+  ssc.observed_volume_per_hour_before,
+  ssc.observed_volume_per_hour_after,
+  ssc.observed_bytes_per_hour_before,
+  ssc.observed_bytes_per_hour_after,
+  ssc.observed_cost_per_hour_before_usd,
+  ssc.observed_cost_per_hour_before_bytes_usd,
+  ssc.observed_cost_per_hour_before_volume_usd,
+  ssc.observed_cost_per_hour_after_usd,
+  ssc.observed_cost_per_hour_after_bytes_usd,
+  ssc.observed_cost_per_hour_after_volume_usd
 FROM service_statuses_cache ssc
 JOIN services s ON ssc.service_id = s.id
 WHERE ssc.health NOT IN ('DISABLED', 'INACTIVE')
@@ -219,28 +219,28 @@ type ListEnabledServiceStatusesRow struct {
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
-	ServiceVolumePerHour                   float64
-	ServiceCostPerHourVolumeUsd            float64
-	LogEventVolumePerHour                  float64
-	LogEventBytesPerHour                   float64
-	LogEventCostPerHourUsd                 float64
-	LogEventCostPerHourBytesUsd            float64
-	LogEventCostPerHourVolumeUsd           float64
-	EstimatedVolumeReductionPerHour        float64
-	EstimatedBytesReductionPerHour         float64
-	EstimatedCostReductionPerHourUsd       float64
-	EstimatedCostReductionPerHourBytesUsd  float64
-	EstimatedCostReductionPerHourVolumeUsd float64
-	ObservedVolumePerHourBefore            float64
-	ObservedVolumePerHourAfter             float64
-	ObservedBytesPerHourBefore             float64
-	ObservedBytesPerHourAfter              float64
-	ObservedCostPerHourBeforeUsd           float64
-	ObservedCostPerHourBeforeBytesUsd      float64
-	ObservedCostPerHourBeforeVolumeUsd     float64
-	ObservedCostPerHourAfterUsd            float64
-	ObservedCostPerHourAfterBytesUsd       float64
-	ObservedCostPerHourAfterVolumeUsd      float64
+	ServiceVolumePerHour                   *float64
+	ServiceCostPerHourVolumeUsd            *float64
+	LogEventVolumePerHour                  *float64
+	LogEventBytesPerHour                   *float64
+	LogEventCostPerHourUsd                 *float64
+	LogEventCostPerHourBytesUsd            *float64
+	LogEventCostPerHourVolumeUsd           *float64
+	EstimatedVolumeReductionPerHour        *float64
+	EstimatedBytesReductionPerHour         *float64
+	EstimatedCostReductionPerHourUsd       *float64
+	EstimatedCostReductionPerHourBytesUsd  *float64
+	EstimatedCostReductionPerHourVolumeUsd *float64
+	ObservedVolumePerHourBefore            *float64
+	ObservedVolumePerHourAfter             *float64
+	ObservedBytesPerHourBefore             *float64
+	ObservedBytesPerHourAfter              *float64
+	ObservedCostPerHourBeforeUsd           *float64
+	ObservedCostPerHourBeforeBytesUsd      *float64
+	ObservedCostPerHourBeforeVolumeUsd     *float64
+	ObservedCostPerHourAfterUsd            *float64
+	ObservedCostPerHourAfterBytesUsd       *float64
+	ObservedCostPerHourAfterVolumeUsd      *float64
 }
 
 func (q *Queries) ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error) {
