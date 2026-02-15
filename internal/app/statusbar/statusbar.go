@@ -13,7 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
-	"github.com/usetero/cli/internal/app/statusbar/pii"
+	"github.com/usetero/cli/internal/app/statusbar/compliance"
 	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/app/statusbar/waste"
@@ -27,25 +27,25 @@ const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabPII      = 0
-	TabWaste    = 1
-	TabServices = 2
-	TabSync     = 3
-	tabCount    = 4
+	TabCompliance = 0
+	TabWaste      = 1
+	TabServices   = 2
+	TabSync       = 3
+	tabCount      = 4
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"PII", "Waste", "Services", "Sync"}
+var tabLabels = [tabCount]string{"Compliance", "Waste", "Services", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
-	theme          styles.Theme
-	env            string
-	syncStatus     *syncstatus.Model
-	servicesStatus *services.Model
-	wasteStatus    *waste.Model
-	piiStatus      *pii.Model
-	width          int
+	theme            styles.Theme
+	env              string
+	syncStatus       *syncstatus.Model
+	servicesStatus   *services.Model
+	wasteStatus      *waste.Model
+	complianceStatus *compliance.Model
+	width            int
 
 	// Account context
 	org            string
@@ -66,12 +66,12 @@ type Model struct {
 // New creates a new statusbar.
 func New(theme styles.Theme, syncer powersync.Syncer, host string, env string) *Model {
 	return &Model{
-		theme:          theme,
-		env:            env,
-		syncStatus:     syncstatus.New(theme, syncer, host),
-		servicesStatus: services.New(theme),
-		wasteStatus:    waste.New(theme),
-		piiStatus:      pii.New(theme),
+		theme:            theme,
+		env:              env,
+		syncStatus:       syncstatus.New(theme, syncer, host),
+		servicesStatus:   services.New(theme),
+		wasteStatus:      waste.New(theme),
+		complianceStatus: compliance.New(theme),
 	}
 }
 
@@ -87,7 +87,7 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 		m.syncStatus.SetDB(db),
 		m.servicesStatus.SetDB(db),
 		m.wasteStatus.SetDB(db),
-		m.piiStatus.SetDB(db),
+		m.complianceStatus.SetDB(db),
 	)
 }
 
@@ -97,7 +97,7 @@ func (m *Model) Init() tea.Cmd {
 		m.syncStatus.Init(),
 		m.servicesStatus.Init(),
 		m.wasteStatus.Init(),
-		m.piiStatus.Init(),
+		m.complianceStatus.Init(),
 	)
 }
 
@@ -116,7 +116,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.syncStatus.Update(msg),
 		m.servicesStatus.Update(msg),
 		m.wasteStatus.Update(msg),
-		m.piiStatus.Update(msg),
+		m.complianceStatus.Update(msg),
 	)
 }
 
@@ -142,7 +142,7 @@ func (m *Model) ToggleDrawer() {
 		m.drawerOpen = false
 		return
 	}
-	if m.piiStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() {
+	if m.complianceStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() {
 		m.drawerOpen = true
 	}
 }
@@ -165,6 +165,8 @@ func (m *Model) IsDrawerOpen() bool {
 // HandleKeyPress forwards key events to the active tab's key handler.
 func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	switch m.activeTab {
+	case TabCompliance:
+		return m.complianceStatus.HandleKeyPress(msg)
 	case TabWaste:
 		return m.wasteStatus.HandleKeyPress(msg)
 	}
@@ -174,6 +176,10 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 // HandleEsc lets the active tab consume an esc press before the drawer closes.
 // Returns true if the tab consumed the event (e.g. back from detail view).
 func (m *Model) HandleEsc() bool {
+	if m.activeTab == TabCompliance && m.complianceStatus.InDetail() {
+		m.complianceStatus.CloseDetail()
+		return true
+	}
 	if m.activeTab == TabWaste && m.wasteStatus.InDetail() {
 		m.wasteStatus.CloseDetail()
 		return true
@@ -183,6 +189,12 @@ func (m *Model) HandleEsc() bool {
 
 // ShortHelp returns keybindings shown in the keybar when the drawer is open.
 func (m *Model) ShortHelp() []key.Binding {
+	if m.activeTab == TabCompliance && m.complianceStatus.HasData() {
+		if m.complianceStatus.InDetail() {
+			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+		}
+		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
+	}
 	if m.activeTab == TabWaste && m.wasteStatus.HasData() {
 		if m.wasteStatus.InDetail() {
 			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
@@ -226,10 +238,10 @@ func (m *Model) View() string {
 		segments = append(segments, wasteView)
 	}
 
-	// 4. PII leakage (red dot + count when findings exist)
-	piiView := m.piiStatus.CompactView()
-	if piiView != "" {
-		segments = append(segments, piiView)
+	// 4. Compliance status (leaking/at-risk counts across PII, Secrets, PHI, Payment Data)
+	complianceView := m.complianceStatus.CompactView()
+	if complianceView != "" {
+		segments = append(segments, complianceView)
 	}
 
 	// Calculate what fits
@@ -298,8 +310,8 @@ func (m *Model) DrawerView(width, height int) string {
 	contentHeight := height - 4 // border (2) + tab bar (1) + gap (1)
 	var content string
 	switch m.activeTab {
-	case TabPII:
-		content = m.piiStatus.ExpandedView(contentWidth, contentHeight)
+	case TabCompliance:
+		content = m.complianceStatus.ExpandedView(contentWidth, contentHeight)
 	case TabSync:
 		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
 	case TabServices:
@@ -346,7 +358,7 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	// Hide hint until data is loaded and the drawer can open.
-	if !m.drawerOpen && !m.piiStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
+	if !m.drawerOpen && !m.complianceStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
 		return ""
 	}
 

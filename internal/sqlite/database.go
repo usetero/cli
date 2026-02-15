@@ -34,6 +34,7 @@ type DB interface {
 	// Domain entities
 	Conversations() Conversations
 	LogEventPolicies() LogEventPolicies
+	CompliancePolicies() CompliancePolicies
 	LogEvents() LogEvents
 	Messages() Messages
 	Services() Services
@@ -265,6 +266,11 @@ func (d *database) LogEvents() LogEvents {
 // LogEventPolicies returns type-safe log event policy operations.
 func (d *database) LogEventPolicies() LogEventPolicies {
 	return &logEventPoliciesImpl{queries: d.ReadQueries()}
+}
+
+// CompliancePolicies returns type-safe compliance policy operations.
+func (d *database) CompliancePolicies() CompliancePolicies {
+	return &compliancePoliciesImpl{queries: d.ReadQueries()}
 }
 
 // ---------------------------------------------------------------------------

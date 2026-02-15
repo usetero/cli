@@ -129,22 +129,66 @@ CREATE TABLE log_event_fields (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
     avg_bytes REAL, -- Average serialized byte size of this field's value. Initially estimated from example log records, refined by trigger from log_event_volumes data.
-    created_at TEXT, -- When this field was discovered
+    created_at TEXT, -- When this field was first discovered
     distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
-    field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
+    -- Unambiguous path segments, e.g. {attributes, http, status}
+    -- JSON array of strings.
+    -- $[0] - First element
+    -- 
+    -- Example: json_extract(field_path, '$[0]')
+    field_path TEXT,
     log_event_id TEXT, -- The log event this field belongs to
-    value_distribution TEXT -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
+    -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
+    -- Opaque JSON data. Query using SQLite json_extract() or json_each().
+    value_distribution TEXT
 );
 
 -- AI-generated recommendation for a specific quality category on a log event, scoped to a workspace for approval
 CREATE TABLE log_event_policies (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
-    analysis TEXT, -- Category-specific analysis from AI. JSON object with one field populated matching the category, containing the analysis and recommended actions.
+    -- Category-specific analysis from AI. JSON object with one field populated matching the category, containing the analysis and recommended actions.
+    -- JSON object. Fields:
+    -- $.pii_leakage                  - PII leakage analysis (optional)
+    -- $.pii_leakage.fields[]         - List of fields that may contain PII
+    -- $.pii_leakage.fields[].path[]  string[]   - Path to field as array of segments
+    -- $.pii_leakage.fields[].types[] string[]   - List of sensitive data types this field may contain
+    -- $.pii_leakage.fields[].observed boolean    - Whether actual sensitive data was seen in examples
+    -- $.secrets_leakage              - Secrets leakage analysis (optional)
+    -- $.secrets_leakage.fields[]     - List of fields that may contain secrets
+    -- $.phi_leakage                  - PHI leakage analysis (optional)
+    -- $.phi_leakage.fields[]         - List of fields that may contain PHI
+    -- $.payment_data_leakage         - Payment data leakage analysis (optional)
+    -- $.payment_data_leakage.fields[] - List of fields that may contain payment data
+    -- $.health_checks                - Health checks analysis (optional)
+    -- $.bot_traffic                  - Bot traffic analysis (optional)
+    -- $.bot_traffic.user_agent_field[] string[]   - Path to user-agent field as array of segments
+    -- $.bot_traffic.bot_proportion   number     - Fraction of traffic identified as bot/crawler (optional)
+    -- $.low_value                    - Low value analysis (optional)
+    -- $.accidental_debug_statements  - Accidental debug statements analysis (optional)
+    -- $.malformed_data               - Malformed data analysis (optional)
+    -- $.noise                        - Noise analysis (optional)
+    -- $.noise.min_interval_seconds   number     - Suggested minimum interval between kept events in seconds
+    -- $.duplicate_fields             - Duplicate fields analysis (optional)
+    -- $.duplicate_fields.pairs[]     - List of duplicate field pairs
+    -- $.duplicate_fields.pairs[].remove[] string[][] - List of duplicate field paths to remove
+    -- $.duplicate_fields.pairs[].keep[] string[]   - Canonical field path to keep
+    -- $.instrumentation_bloat        - Instrumentation bloat analysis (optional)
+    -- $.instrumentation_bloat.fields[] string[][] - List of field paths that are instrumentation bloat
+    -- $.oversized_fields             - Oversized fields analysis (optional)
+    -- $.oversized_fields.fields[]    string[][] - List of field paths that are oversized
+    -- 
+    -- Example: json_extract(analysis, '$.field_name')
+    analysis TEXT,
     approved_at TEXT, -- When this policy was approved by a user
     approved_by TEXT, -- User ID who approved this policy
-    benefits TEXT, -- What benefits this policy provides. volume_reduction: fewer events, bytes_reduction: smaller events, signal_quality: less noise, compliance: regulatory/policy, resilience: system stability.
-    category TEXT, -- Quality issue category this policy addresses Values: health_checks, bot_traffic, low_value, accidental_debug_statements, malformed_data, noise, pii_leakage, duplicate_fields, instrumentation_bloat, oversized_fields.
+    -- What benefits this policy provides. volume_reduction: fewer events, bytes_reduction: smaller events, signal_quality: less noise, compliance: regulatory/policy, resilience: system stability.
+    -- JSON array of strings.
+    -- $[0] - First element
+    -- 
+    -- Example: json_extract(benefits, '$[0]')
+    benefits TEXT,
+    category TEXT, -- Quality issue category this policy addresses Values: health_checks, bot_traffic, low_value, accidental_debug_statements, malformed_data, noise, pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage, duplicate_fields, instrumentation_bloat, oversized_fields.
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy
@@ -160,7 +204,12 @@ CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
     approved_at TEXT, -- When the policy was approved
-    benefits TEXT, -- What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
+    -- What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
+    -- JSON array of strings.
+    -- $[0] - First element
+    -- 
+    -- Example: json_extract(benefits, '$[0]')
+    benefits TEXT,
     category TEXT, -- Quality issue category (e.g., health_checks, pii_leakage, duplicate_fields)
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When the policy was dismissed
@@ -223,8 +272,30 @@ CREATE TABLE log_events (
     analyzed_at TEXT, -- When AI last analyzed this log event for quality issues
     created_at TEXT, -- When the log event was created
     description TEXT, -- What this event pattern represents
-    examples TEXT, -- Sample log records captured during discovery, used for AI analysis and pattern validation
-    matchers TEXT, -- JSON rules that match incoming logs to this event. Each matcher specifies a field path, operator, and value.
+    -- Sample log records captured during discovery, used for AI analysis and pattern validation
+    -- JSON array of objects. Each element:
+    -- $[0].timestamp                 - When the log event occurred (RFC3339)
+    -- $[0].body                      string     - Log message content
+    -- $[0].severity_text             string     - Severity level as text (e.g., INFO, ERROR)
+    -- $[0].severity_number           number     - OTel severity level number (1-24)
+    -- $[0].trace_id                  string     - Distributed trace ID (optional)
+    -- $[0].span_id                   string     - Span ID within trace (optional)
+    -- $[0].attributes                object     - Log-level attributes (http.status, error.message, etc.)
+    -- $[0].resource_attributes       object     - Resource attributes (service.name, deployment.environment, etc.)
+    -- $[0].scope_attributes          object     - Instrumentation scope attributes (optional)
+    -- 
+    -- Example: json_extract(examples, '$[0].field_name')
+    examples TEXT,
+    -- JSON rules that match incoming logs to this event. Each matcher specifies a field path, operator, and value.
+    -- JSON array of objects. Each element:
+    -- $[0].field_path[]              string[]   - Path to field as array of segments
+    -- $[0].match_type                string     - Match operator: exact, contains, starts_with, ends_with, regex, exists
+    -- $[0].match_value               string     - Value to match against
+    -- $[0].case_insensitive          boolean    - Whether matching is case-insensitive (optional)
+    -- $[0].negate                    boolean    - Whether to invert match result (optional)
+    -- 
+    -- Example: json_extract(matchers, '$[0].field_name')
+    matchers TEXT,
     name TEXT, -- Snake_case identifier unique per service, e.g. nginx_access_log
     service_id TEXT, -- Service that produces this event
     updated_at TEXT -- When the log event was last updated
@@ -234,7 +305,25 @@ CREATE TABLE log_events (
 CREATE TABLE messages (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from conversation.account_id.
-    content TEXT, -- Array of typed content blocks: text, thinking, tool_use, tool_result
+    -- Array of typed content blocks: text, thinking, tool_use, tool_result
+    -- JSON array of objects. Each element:
+    -- $[0].type                      string     - Block type discriminator: text, thinking, tool_use, tool_result
+    -- $[0].text                      - Text content (when type=text)
+    -- $[0].text.content              string     - Text content
+    -- $[0].thinking                  - AI reasoning content (when type=thinking)
+    -- $[0].thinking.content          string     - AI reasoning content
+    -- $[0].tool_use                  - Tool call (when type=tool_use)
+    -- $[0].tool_use.id               string     - Unique tool call identifier
+    -- $[0].tool_use.name             string     - Tool name
+    -- $[0].tool_use.input[]          number[]   - Tool input parameters as JSON object
+    -- $[0].tool_result               - Tool response (when type=tool_result)
+    -- $[0].tool_result.tool_use_id   string     - ID of the tool use this result corresponds to
+    -- $[0].tool_result.is_error      boolean    - Whether the tool call failed
+    -- $[0].tool_result.error         string     - Human-readable error message (when is_error=true)
+    -- $[0].tool_result.content[]     number[]   - Structured result data (when is_error=false)
+    -- 
+    -- Example: json_extract(content, '$[0].field_name')
+    content TEXT,
     conversation_id TEXT, -- Conversation this message belongs to
     created_at TEXT, -- When the message was created
     model TEXT, -- AI model that produced this message. Null for user messages.

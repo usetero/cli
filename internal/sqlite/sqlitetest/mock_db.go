@@ -31,6 +31,9 @@ type MockDB struct {
 	// LogEventPoliciesImpl is the mock log event policies implementation.
 	LogEventPoliciesImpl sqlite.LogEventPolicies
 
+	// CompliancePoliciesImpl is the mock compliance policies implementation.
+	CompliancePoliciesImpl sqlite.CompliancePolicies
+
 	// QueryFunc is called by Query.
 	QueryFunc func(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 
@@ -124,6 +127,11 @@ func (m *MockDB) LogEvents() sqlite.LogEvents {
 // LogEventPolicies implements sqlite.DB.
 func (m *MockDB) LogEventPolicies() sqlite.LogEventPolicies {
 	return m.LogEventPoliciesImpl
+}
+
+// CompliancePolicies implements sqlite.DB.
+func (m *MockDB) CompliancePolicies() sqlite.CompliancePolicies {
+	return m.CompliancePoliciesImpl
 }
 
 // PendingUploadCounts implements sqlite.DB.

@@ -10,12 +10,16 @@ import (
 
 type Querier interface {
 	CountConversations(ctx context.Context) (int64, error)
+	// Returns the total number of approved compliance policies across all 4 categories.
+	CountFixedCompliancePolicies(ctx context.Context) (int64, error)
 	CountFixedPIIPolicies(ctx context.Context) (int64, error)
 	CountLogEventPolicies(ctx context.Context) (int64, error)
 	CountLogEvents(ctx context.Context) (int64, error)
 	CountMessages(ctx context.Context) (int64, error)
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
 	CountServices(ctx context.Context) (int64, error)
+	// Returns the total number of pending compliance policies across all 4 categories.
+	CountTotalCompliancePolicies(ctx context.Context) (int64, error)
 	DeleteMessage(ctx context.Context, id *string) error
 	GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, error)
 	GetConversation(ctx context.Context, id *string) (Conversation, error)
@@ -26,10 +30,15 @@ type Querier interface {
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
 	ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error)
+	// Compliance policy queries for PII, Secrets, PHI, and Payment Data leakage.
+	// Returns summary stats for each of the 4 compliance categories.
+	ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error)
 	ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error)
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
+	// Returns pending compliance policies for a specific category, sorted by observed then volume.
+	ListPendingCompliancePoliciesByCategory(ctx context.Context, arg ListPendingCompliancePoliciesByCategoryParams) ([]ListPendingCompliancePoliciesByCategoryRow, error)
 	ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error)
 	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)

@@ -2185,7 +2185,10 @@ type LogEventField implements Node {
   """
   avgBytes: Float
 
-  """When this field was discovered"""
+  """When this field was last seen in production log samples."""
+  lastSeenAt: Time!
+
+  """When this field was first discovered"""
   createdAt: Time!
 
   """The log event this field belongs to"""
@@ -2238,6 +2241,16 @@ input LogEventFieldWhereInput {
   avgBytesLTE: Float
   avgBytesIsNil: Boolean
   avgBytesNotNil: Boolean
+
+  """last_seen_at field predicates"""
+  lastSeenAt: Time
+  lastSeenAtNEQ: Time
+  lastSeenAtIn: [Time!]
+  lastSeenAtNotIn: [Time!]
+  lastSeenAtGT: Time
+  lastSeenAtGTE: Time
+  lastSeenAtLT: Time
+  lastSeenAtLTE: Time
 
   """created_at field predicates"""
   createdAt: Time
@@ -2329,13 +2342,16 @@ type LogEventPolicy implements Node {
 
 """LogEventPolicyCategory is enum for the field category"""
 enum LogEventPolicyCategory {
+  pii_leakage
+  secrets_leakage
+  phi_leakage
+  payment_data_leakage
   health_checks
   bot_traffic
   low_value
   accidental_debug_statements
   malformed_data
   noise
-  pii_leakage
   duplicate_fields
   instrumentation_bloat
   oversized_fields
@@ -3225,19 +3241,6 @@ type LogSample implements Node {
   """Latest log timestamp in this page"""
   timeTo: Time!
 
-  """
-  Queue state: pending (awaiting analysis), processing (being analyzed), processed (done), failed (analysis error)
-  """
-  status: LogSampleStatus!
-
-  """
-  When this sample was claimed for processing — used to detect stale claims
-  """
-  claimedAt: Time
-
-  """When analysis of this sample completed"""
-  processedAt: Time
-
   """When this sample was ingested"""
   createdAt: Time!
 
@@ -3255,14 +3258,6 @@ type LogSample implements Node {
 
   """Log events discovered from this sample"""
   logEvents: [LogEvent!]
-}
-
-"""LogSampleStatus is enum for the field status"""
-enum LogSampleStatus {
-  pending
-  processing
-  processed
-  failed
 }
 
 """
@@ -3356,36 +3351,6 @@ input LogSampleWhereInput {
   timeToGTE: Time
   timeToLT: Time
   timeToLTE: Time
-
-  """status field predicates"""
-  status: LogSampleStatus
-  statusNEQ: LogSampleStatus
-  statusIn: [LogSampleStatus!]
-  statusNotIn: [LogSampleStatus!]
-
-  """claimed_at field predicates"""
-  claimedAt: Time
-  claimedAtNEQ: Time
-  claimedAtIn: [Time!]
-  claimedAtNotIn: [Time!]
-  claimedAtGT: Time
-  claimedAtGTE: Time
-  claimedAtLT: Time
-  claimedAtLTE: Time
-  claimedAtIsNil: Boolean
-  claimedAtNotNil: Boolean
-
-  """processed_at field predicates"""
-  processedAt: Time
-  processedAtNEQ: Time
-  processedAtIn: [Time!]
-  processedAtNotIn: [Time!]
-  processedAtGT: Time
-  processedAtGTE: Time
-  processedAtLT: Time
-  processedAtLTE: Time
-  processedAtIsNil: Boolean
-  processedAtNotNil: Boolean
 
   """created_at field predicates"""
   createdAt: Time
