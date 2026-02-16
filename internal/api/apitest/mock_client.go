@@ -26,7 +26,6 @@ type MockClient struct {
 	CreateMessageFunc                       func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error)
 	EnableServiceFunc                       func(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
 	DisableServiceFunc                      func(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
-	ApproveLogEventPolicyFunc               func(ctx context.Context, id string) (*gen.ApproveLogEventPolicyResponse, error)
 }
 
 // NewMockClient creates a MockClient with sensible defaults.
@@ -148,13 +147,6 @@ func (m *MockClient) EnableService(ctx context.Context, serviceID string) (*gen.
 func (m *MockClient) DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error) {
 	if m.DisableServiceFunc != nil {
 		return m.DisableServiceFunc(ctx, serviceID)
-	}
-	return nil, nil
-}
-
-func (m *MockClient) ApproveLogEventPolicy(ctx context.Context, id string) (*gen.ApproveLogEventPolicyResponse, error) {
-	if m.ApproveLogEventPolicyFunc != nil {
-		return m.ApproveLogEventPolicyFunc(ctx, id)
 	}
 	return nil, nil
 }

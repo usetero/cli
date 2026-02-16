@@ -6,12 +6,3 @@ mutation ApproveLogEventPolicy($id: ID!) {
         approvedBy
     }
 }
-
-mutation DismissLogEventPolicy($id: ID!) {
-    dismissLogEventPolicy(id: $id) {
-        id
-        category
-        dismissedAt
-        dismissedBy
-    }
-}
