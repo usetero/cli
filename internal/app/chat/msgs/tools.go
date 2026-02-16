@@ -43,7 +43,6 @@ func (m StartPolicyApprovalCompleted) GetResult() domaintools.Result {
 		Error:               errorResultFromErr(m.Error),
 	}
 }
-func (m StartPolicyApprovalCompleted) toolCompleted() {}
 
 func errorResultFromErr(err error) *domaintools.ErrorResult {
 	if err == nil {

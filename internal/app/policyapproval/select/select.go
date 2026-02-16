@@ -20,7 +20,6 @@ type Model struct {
 	scope    log.Scope
 	policies []msgs.Policy
 	selected map[string]bool // policy ID -> selected
-	cursor   int
 	width    int
 	height   int
 }
