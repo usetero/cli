@@ -52,7 +52,6 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 const listApprovedPoliciesByCategory = `-- name: ListApprovedPoliciesByCategory :many
 SELECT
   c.policy_id,
-  c.risk_level,
   c.benefits,
   c.estimated_cost_reduction_per_hour_usd,
   c.estimated_volume_reduction_per_hour,
@@ -65,7 +64,6 @@ ORDER BY c.estimated_cost_reduction_per_hour_usd DESC
 
 type ListApprovedPoliciesByCategoryRow struct {
 	PolicyID                         *string
-	RiskLevel                        *string
 	Benefits                         *string
 	EstimatedCostReductionPerHourUsd *float64
 	EstimatedVolumeReductionPerHour  *float64
@@ -83,7 +81,6 @@ func (q *Queries) ListApprovedPoliciesByCategory(ctx context.Context, category *
 		var i ListApprovedPoliciesByCategoryRow
 		if err := rows.Scan(
 			&i.PolicyID,
-			&i.RiskLevel,
 			&i.Benefits,
 			&i.EstimatedCostReductionPerHourUsd,
 			&i.EstimatedVolumeReductionPerHour,
@@ -161,7 +158,6 @@ func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIP
 const listPendingPoliciesByCategory = `-- name: ListPendingPoliciesByCategory :many
 SELECT
   c.policy_id,
-  c.risk_level,
   c.benefits,
   c.estimated_cost_reduction_per_hour_usd,
   c.estimated_volume_reduction_per_hour,
@@ -174,7 +170,6 @@ ORDER BY c.estimated_cost_reduction_per_hour_usd DESC
 
 type ListPendingPoliciesByCategoryRow struct {
 	PolicyID                         *string
-	RiskLevel                        *string
 	Benefits                         *string
 	EstimatedCostReductionPerHourUsd *float64
 	EstimatedVolumeReductionPerHour  *float64
@@ -192,7 +187,6 @@ func (q *Queries) ListPendingPoliciesByCategory(ctx context.Context, category *s
 		var i ListPendingPoliciesByCategoryRow
 		if err := rows.Scan(
 			&i.PolicyID,
-			&i.RiskLevel,
 			&i.Benefits,
 			&i.EstimatedCostReductionPerHourUsd,
 			&i.EstimatedVolumeReductionPerHour,

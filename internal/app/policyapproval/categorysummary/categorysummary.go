@@ -118,7 +118,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 func (m *Model) buildTable() {
 	cols := []tableselect.Column{
 		{Title: "Category", Width: 25},
-		{Title: "Risk", Width: 8},
 		{Title: "Pending", Width: 8},
 		{Title: "Savings", Width: 12},
 	}
@@ -127,7 +126,6 @@ func (m *Model) buildTable() {
 	for i, c := range m.categories {
 		rows[i] = tableselect.Row{
 			c.Category,
-			c.RiskLevel.String(),
 			fmt.Sprintf("%d", c.PendingCount),
 			formatSavings(c),
 		}
@@ -136,27 +134,27 @@ func (m *Model) buildTable() {
 	m.tbl = tableselect.New(m.theme, cols, rows)
 }
 
-// approveAllLowRisk collects all policy IDs from low-risk categories.
+// approveAllLowRisk collects all policy IDs from categories with pending policies.
 func (m *Model) approveAllLowRisk() tea.Cmd {
-	var lowRiskCategories []string
+	var categories []string
 	for _, c := range m.categories {
-		if c.RiskLevel == domain.RiskLevelLow && c.PendingCount > 0 {
-			lowRiskCategories = append(lowRiskCategories, c.Category)
+		if c.PendingCount > 0 {
+			categories = append(categories, c.Category)
 		}
 	}
-	if len(lowRiskCategories) == 0 {
+	if len(categories) == 0 {
 		return nil
 	}
-	m.scope.Info("approve all low-risk", "categories", len(lowRiskCategories))
+	m.scope.Info("approve all", "categories", len(categories))
 	return func() tea.Msg {
-		return msgs.ApproveAllLowRisk{Categories: lowRiskCategories}
+		return msgs.ApproveAllLowRisk{Categories: categories}
 	}
 }
 
 // View renders the category summary table.
 func (m *Model) View() string {
 	if m.err != nil {
-		errStyle := lipgloss.NewStyle().Foreground(m.theme.ErrorBg)
+		errStyle := lipgloss.NewStyle().Foreground(m.theme.Error)
 		return errStyle.Render(fmt.Sprintf("Error loading policies: %v", m.err))
 	}
 
@@ -199,7 +197,9 @@ func (m *Model) totals() (int64, float64) {
 	var cost float64
 	for _, c := range m.categories {
 		pending += c.PendingCount
-		cost += c.EstimatedCostPerHour
+		if c.EstimatedCostPerHour != nil {
+			cost += *c.EstimatedCostPerHour
+		}
 	}
 	return pending, cost
 }
@@ -224,8 +224,8 @@ var (
 
 // formatSavings returns estimated yearly cost savings for a category.
 func formatSavings(c domain.PolicyCategoryStatus) string {
-	if c.EstimatedCostPerHour > 0 {
-		yearly := c.EstimatedCostPerHour * 8760
+	if c.EstimatedCostPerHour != nil && *c.EstimatedCostPerHour > 0 {
+		yearly := *c.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
 			return "~" + formatCost(yearly) + "/yr"
 		}

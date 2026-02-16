@@ -67,7 +67,6 @@ WHERE category = 'pii_leakage' AND status = 'APPROVED';
 -- name: ListPendingPoliciesByCategory :many
 SELECT
   c.policy_id,
-  c.risk_level,
   c.benefits,
   c.estimated_cost_reduction_per_hour_usd,
   c.estimated_volume_reduction_per_hour,
@@ -80,7 +79,6 @@ ORDER BY c.estimated_cost_reduction_per_hour_usd DESC;
 -- name: ListApprovedPoliciesByCategory :many
 SELECT
   c.policy_id,
-  c.risk_level,
   c.benefits,
   c.estimated_cost_reduction_per_hour_usd,
   c.estimated_volume_reduction_per_hour,

@@ -27,40 +27,6 @@ func (m ToolCompleted) GetResult() domaintools.Result {
 	return r
 }
 
-// StartJourneyCompleted is fired when a start_journey tool finishes executing.
-type StartJourneyCompleted struct {
-	ToolUseID string
-	Result    domaintools.StartJourneyResult
-	Error     error
-}
-
-func (m StartJourneyCompleted) GetToolUseID() string { return m.ToolUseID }
-func (m StartJourneyCompleted) GetError() error      { return m.Error }
-func (m StartJourneyCompleted) GetResult() domaintools.Result {
-	return domaintools.Result{
-		ToolUseID:    m.ToolUseID,
-		StartJourney: &m.Result,
-		Error:        errorResultFromErr(m.Error),
-	}
-}
-
-// EndJourneyCompleted is fired when an end_journey tool finishes executing.
-type EndJourneyCompleted struct {
-	ToolUseID string
-	Result    domaintools.EndJourneyResult
-	Error     error
-}
-
-func (m EndJourneyCompleted) GetToolUseID() string { return m.ToolUseID }
-func (m EndJourneyCompleted) GetError() error      { return m.Error }
-func (m EndJourneyCompleted) GetResult() domaintools.Result {
-	return domaintools.Result{
-		ToolUseID:  m.ToolUseID,
-		EndJourney: &m.Result,
-		Error:      errorResultFromErr(m.Error),
-	}
-}
-
 // StartPolicyApprovalCompleted is fired when the policy approval wizard is triggered.
 type StartPolicyApprovalCompleted struct {
 	ToolUseID string

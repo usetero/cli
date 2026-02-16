@@ -155,7 +155,7 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
-	case m.toolRegistry.StartPolicyApproval.Name():
+	case m.toolRegistry.StartPolicyApproval != nil && toolUse.Name == m.toolRegistry.StartPolicyApproval.Name():
 		child = startpolicyapproval.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.StartPolicyApproval, m.scope)
 	default:
 		entry, ok := m.toolRegistry.Lookup(toolUse.Name)

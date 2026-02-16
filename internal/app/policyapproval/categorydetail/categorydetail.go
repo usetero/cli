@@ -148,7 +148,6 @@ func (m *Model) buildTable() {
 	cols := []tableselect.Column{
 		{Title: " ", Width: 3},
 		{Title: "Log Event", Width: 30},
-		{Title: "Risk", Width: 8},
 		{Title: "Savings", Width: 12},
 	}
 
@@ -192,7 +191,6 @@ func (m *Model) makeRows() []tableselect.Row {
 		rows[i] = tableselect.Row{
 			check,
 			truncate(p.LogEventName, 28),
-			p.RiskLevel.String(),
 			formatSavings(p.EstimatedCostPerHour),
 		}
 	}
@@ -202,7 +200,7 @@ func (m *Model) makeRows() []tableselect.Row {
 // View renders the category detail table.
 func (m *Model) View() string {
 	if m.err != nil {
-		errStyle := lipgloss.NewStyle().Foreground(m.theme.ErrorBg)
+		errStyle := lipgloss.NewStyle().Foreground(m.theme.Error)
 		return errStyle.Render(fmt.Sprintf("Error loading policies: %v", m.err))
 	}
 

@@ -139,6 +139,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.ToolCompleted:
 		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
 
+	case msgs.StartPolicyApprovalCompleted:
+		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
+
 	case assistantPersisted:
 		m.persisted = true
 		// If tools are already done, fire now that persist is complete.

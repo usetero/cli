@@ -203,10 +203,10 @@ func (m *Model) renderPolicyLine(index int) string {
 		// Completed
 		if m.results[index].err != nil {
 			symbol = "✗"
-			style = lipgloss.NewStyle().Foreground(colors.ErrorFg)
+			style = lipgloss.NewStyle().Foreground(colors.Error)
 		} else {
 			symbol = "✓"
-			style = lipgloss.NewStyle().Foreground(colors.SuccessFg)
+			style = lipgloss.NewStyle().Foreground(colors.Success)
 		}
 	case index == m.current && !m.done:
 		// In progress

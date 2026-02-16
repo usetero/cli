@@ -114,6 +114,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.step = exec
 		m.propagateSize()
 		return exec.Init()
+
+	case msgs.Cancelled:
+		toolUseID := m.toolUseID
+		return func() tea.Msg {
+			return msgs.PolicyApprovalComplete{ToolUseID: toolUseID}
+		}
 	}
 
 	// Delegate to current step

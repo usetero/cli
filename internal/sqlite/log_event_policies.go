@@ -65,7 +65,7 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 
 // ListTopPendingPoliciesByCategory returns the top pending policies for a category, ordered by cost then volume.
 func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error) {
-	rows, err := l.queries.ListTopPendingPoliciesByCategory(ctx, gen.ListTopPendingPoliciesByCategoryParams{
+	rows, err := l.read.ListTopPendingPoliciesByCategory(ctx, gen.ListTopPendingPoliciesByCategoryParams{
 		Category: &category,
 		Limit:    limit,
 	})
@@ -99,7 +99,6 @@ func (l *logEventPoliciesImpl) ListPendingByCategory(ctx context.Context, catego
 		result[i] = domain.PolicyDetail{
 			PolicyID:               derefString(row.PolicyID),
 			LogEventName:           row.LogEventName,
-			RiskLevel:              domain.RiskLevel(derefString(row.RiskLevel)),
 			Benefits:               derefString(row.Benefits),
 			EstimatedCostPerHour:   derefFloat(row.EstimatedCostReductionPerHourUsd),
 			EstimatedVolumePerHour: derefFloat(row.EstimatedVolumeReductionPerHour),
