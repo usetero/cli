@@ -49,31 +49,6 @@ func serviceColor(theme styles.Theme, h domain.ServiceHealth) color.Color {
 	}
 }
 
-// --- Log event statuses: BROKEN > RESOLVED > CLEAN > PENDING > ANALYZING > DISCOVERING ---
-
-// LogEvent renders a colored status badge for a log event status.
-func LogEvent(theme styles.Theme, s domain.LogEventStatus, showLabel bool) string {
-	return badge(logEventColor(theme, s), theme.Bg, s.String(), showLabel)
-}
-
-// LogEventDot renders just the colored dot for a log event status.
-func LogEventDot(theme styles.Theme, s domain.LogEventStatus) string {
-	return badge(logEventColor(theme, s), theme.Bg, "", false)
-}
-
-func logEventColor(theme styles.Theme, s domain.LogEventStatus) color.Color {
-	switch s {
-	case domain.LogEventStatusBroken, domain.LogEventStatusQuarantined:
-		return theme.Error
-	case domain.LogEventStatusResolved, domain.LogEventStatusClean:
-		return theme.Success
-	case domain.LogEventStatusPending, domain.LogEventStatusAnalyzing, domain.LogEventStatusDiscovering:
-		return theme.Warning
-	default:
-		return theme.TextMuted
-	}
-}
-
 // --- Waste badge: ● N% ---
 
 // Waste renders a colored dot with a waste percentage.
