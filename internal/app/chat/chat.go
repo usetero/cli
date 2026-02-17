@@ -197,7 +197,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 		cmds = append(cmds, m.inputBar.Update(msg))
-		cmds = append(cmds, appmsg.ErrorCmd("Failed to get response", msg.Err, false))
+		cmds = append(cmds, appmsg.ErrorCmd(msg.Err.Error(), nil, false))
 		return tea.Batch(cmds...)
 
 	case tea.MouseClickMsg:

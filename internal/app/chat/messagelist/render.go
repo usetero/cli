@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
 	"github.com/usetero/cli/internal/tea/highlight"
@@ -199,7 +200,16 @@ func (m *Model) divider(r *round.Model) string {
 		prefix = fmt.Sprintf("◇ Cancelled %s ", durationStr)
 		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
 	case round.StateFailed:
-		prefix = fmt.Sprintf("◇ Error %s ", durationStr)
+		base := fmt.Sprintf("◇ Error %s", durationStr)
+		errMsg := ""
+		if r.Err() != nil {
+			// Truncate error to fit: base + " — " + msg + " " + min 3 "─"
+			maxErr := cw - block.BorderWidth - lipgloss.Width(base) - len(" — ") - 1 - 3
+			if maxErr > 0 {
+				errMsg = " — " + ansi.Truncate(r.Err().Error(), maxErr, "…")
+			}
+		}
+		prefix = base + errMsg + " "
 		prefixStyle = lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
 	default:
 		prefix = fmt.Sprintf("◇ Tero %s ", durationStr)

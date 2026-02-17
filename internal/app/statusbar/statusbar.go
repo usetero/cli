@@ -244,33 +244,38 @@ func (m *Model) View() string {
 		segments = append(segments, complianceView)
 	}
 
+	// Build right-aligned segment first so we know how much space is left.
+	rightSeg := m.renderDrawerHint()
+	rightWidth := lipgloss.Width(rightSeg)
+
+	// Reserved: left diags (2) + spaces (3) + right diags (2) + right segment + min middle diags (3)
+	reserved := 7 + rightWidth + 3
+	if rightSeg == "" {
+		reserved = 3 + 1 // left diags (2) + space + trailing min (1)
+	}
+
 	// Calculate what fits
+	sepWidth := lipgloss.Width(sep)
 	baseContent := strings.Join(segments, sep)
 	baseWidth := lipgloss.Width(baseContent)
 
 	// 5. Title (if fits)
 	if m.title != "" {
-		titleSeg := m.renderTitle(m.width - baseWidth - 20) // leave room for context
+		maxTitle := m.width - baseWidth - sepWidth - reserved
+		titleSeg := m.renderTitle(maxTitle)
 		if titleSeg != "" {
-			testContent := baseContent + sep + titleSeg
-			if lipgloss.Width(testContent) < m.width-15 {
-				segments = append(segments, titleSeg)
-			}
+			segments = append(segments, titleSeg)
 		}
 	}
 
 	// 6. Context window usage (only shown when high)
 	if m.contextPercent >= 75 {
 		pctSeg := m.renderContextPercent()
-		testContent := strings.Join(segments, sep) + sep + pctSeg
-		if lipgloss.Width(testContent) < m.width-3 {
+		testWidth := lipgloss.Width(strings.Join(segments, sep)) + sepWidth + lipgloss.Width(pctSeg)
+		if testWidth < m.width-reserved {
 			segments = append(segments, pctSeg)
 		}
 	}
-
-	// Build right-aligned segment: ctrl+d hint
-	rightSeg := m.renderDrawerHint()
-	rightWidth := lipgloss.Width(rightSeg)
 
 	// Join left segments
 	content := strings.Join(segments, sep)
