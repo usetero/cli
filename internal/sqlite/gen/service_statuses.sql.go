@@ -50,11 +50,10 @@ JOIN services s ON ssc.service_id = s.id
 ORDER BY
   CASE ssc.health
     WHEN 'ERROR' THEN 1
-    WHEN 'STALE' THEN 2
-    WHEN 'OK' THEN 3
-    WHEN 'DISABLED' THEN 4
-    WHEN 'INACTIVE' THEN 5
-    ELSE 6
+    WHEN 'OK' THEN 2
+    WHEN 'DISABLED' THEN 3
+    WHEN 'INACTIVE' THEN 4
+    ELSE 5
   END,
   ssc.log_event_cost_per_hour_usd DESC,
   s.name
@@ -197,9 +196,8 @@ WHERE ssc.health NOT IN ('DISABLED', 'INACTIVE')
 ORDER BY
   CASE ssc.health
     WHEN 'ERROR' THEN 1
-    WHEN 'STALE' THEN 2
-    WHEN 'OK' THEN 3
-    ELSE 4
+    WHEN 'OK' THEN 2
+    ELSE 3
   END,
   ssc.log_event_cost_per_hour_usd DESC,
   s.name

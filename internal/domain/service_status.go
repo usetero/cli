@@ -7,7 +7,6 @@ const (
 	ServiceHealthDisabled ServiceHealth = "DISABLED"
 	ServiceHealthInactive ServiceHealth = "INACTIVE"
 	ServiceHealthError    ServiceHealth = "ERROR"
-	ServiceHealthStale    ServiceHealth = "STALE"
 	ServiceHealthOK       ServiceHealth = "OK"
 )
 

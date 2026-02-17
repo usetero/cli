@@ -40,7 +40,6 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		ActiveServices:   row.ActiveServices,
 		OkServices:       row.OkServices,
 		ErrorServices:    row.ErrorServices,
-		StaleServices:    row.StaleServices,
 		DisabledServices: row.DisabledServices,
 		InactiveServices: row.InactiveServices,
 

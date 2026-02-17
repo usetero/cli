@@ -88,91 +88,6 @@ func (q *Queries) ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIP
 	return items, nil
 }
 
-const listPolicyCategoryStatuses = `-- name: ListPolicyCategoryStatuses :many
-SELECT
-  COALESCE(leps.category, '') AS category,
-  CAST(COALESCE(SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END), 0) AS INTEGER) AS pending_count,
-  CAST(COALESCE(SUM(CASE WHEN leps.status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS INTEGER) AS approved_count,
-  CAST(COALESCE(SUM(CASE WHEN leps.status = 'DISMISSED' THEN 1 ELSE 0 END), 0) AS INTEGER) AS dismissed_count,
-  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
-  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
-  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
-  CAST(COALESCE(GROUP_CONCAT(DISTINCT leps.benefits), '') AS TEXT) AS benefits,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_after ELSE 0 END) AS observed_bytes_after,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_usd ELSE 0 END) AS observed_cost_before,
-  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after,
-  CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
-  CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
-FROM log_event_policy_statuses_cache leps
-LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
-WHERE leps.category IS NOT NULL AND leps.category != ''
-GROUP BY leps.category
-ORDER BY
-  SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END) DESC
-`
-
-type ListPolicyCategoryStatusesRow struct {
-	Category               string
-	PendingCount           int64
-	ApprovedCount          int64
-	DismissedCount         int64
-	EstimatedVolumePerHour *float64
-	EstimatedBytesPerHour  *float64
-	EstimatedCostPerHour   *float64
-	Benefits               string
-	ObservedVolumeBefore   *float64
-	ObservedVolumeAfter    *float64
-	ObservedBytesBefore    *float64
-	ObservedBytesAfter     *float64
-	ObservedCostBefore     *float64
-	ObservedCostAfter      *float64
-	EventsWithVolumes      int64
-	TotalEvents            int64
-}
-
-func (q *Queries) ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPolicyCategoryStatuses)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListPolicyCategoryStatusesRow
-	for rows.Next() {
-		var i ListPolicyCategoryStatusesRow
-		if err := rows.Scan(
-			&i.Category,
-			&i.PendingCount,
-			&i.ApprovedCount,
-			&i.DismissedCount,
-			&i.EstimatedVolumePerHour,
-			&i.EstimatedBytesPerHour,
-			&i.EstimatedCostPerHour,
-			&i.Benefits,
-			&i.ObservedVolumeBefore,
-			&i.ObservedVolumeAfter,
-			&i.ObservedBytesBefore,
-			&i.ObservedBytesAfter,
-			&i.ObservedCostBefore,
-			&i.ObservedCostAfter,
-			&i.EventsWithVolumes,
-			&i.TotalEvents,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listTopPendingPoliciesByCategory = `-- name: ListTopPendingPoliciesByCategory :many
 SELECT
   COALESCE(s.name, '') AS service_name,
@@ -220,6 +135,90 @@ func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg List
 			&i.BytesPerHour,
 			&i.EstimatedCostPerHour,
 			&i.EstimatedBytesPerHour,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWasteCategoryStatuses = `-- name: ListWasteCategoryStatuses :many
+SELECT
+  COALESCE(leps.category, '') AS category,
+  CAST(COALESCE(SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END), 0) AS INTEGER) AS pending_count,
+  CAST(COALESCE(SUM(CASE WHEN leps.status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS INTEGER) AS approved_count,
+  CAST(COALESCE(SUM(CASE WHEN leps.status = 'DISMISSED' THEN 1 ELSE 0 END), 0) AS INTEGER) AS dismissed_count,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_after ELSE 0 END) AS observed_bytes_after,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_usd ELSE 0 END) AS observed_cost_before,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after,
+  CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
+  CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
+FROM log_event_policy_statuses_cache leps
+LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
+WHERE leps.category IS NOT NULL AND leps.category != ''
+  AND leps.category_type = 'waste'
+GROUP BY leps.category
+ORDER BY
+  SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END) DESC
+`
+
+type ListWasteCategoryStatusesRow struct {
+	Category               string
+	PendingCount           int64
+	ApprovedCount          int64
+	DismissedCount         int64
+	EstimatedVolumePerHour *float64
+	EstimatedBytesPerHour  *float64
+	EstimatedCostPerHour   *float64
+	ObservedVolumeBefore   *float64
+	ObservedVolumeAfter    *float64
+	ObservedBytesBefore    *float64
+	ObservedBytesAfter     *float64
+	ObservedCostBefore     *float64
+	ObservedCostAfter      *float64
+	EventsWithVolumes      int64
+	TotalEvents            int64
+}
+
+// Categories where category_type is waste (waste tab).
+func (q *Queries) ListWasteCategoryStatuses(ctx context.Context) ([]ListWasteCategoryStatusesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listWasteCategoryStatuses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWasteCategoryStatusesRow
+	for rows.Next() {
+		var i ListWasteCategoryStatusesRow
+		if err := rows.Scan(
+			&i.Category,
+			&i.PendingCount,
+			&i.ApprovedCount,
+			&i.DismissedCount,
+			&i.EstimatedVolumePerHour,
+			&i.EstimatedBytesPerHour,
+			&i.EstimatedCostPerHour,
+			&i.ObservedVolumeBefore,
+			&i.ObservedVolumeAfter,
+			&i.ObservedBytesBefore,
+			&i.ObservedBytesAfter,
+			&i.ObservedCostBefore,
+			&i.ObservedCostAfter,
+			&i.EventsWithVolumes,
+			&i.TotalEvents,
 		); err != nil {
 			return nil, err
 		}

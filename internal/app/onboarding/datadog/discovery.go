@@ -186,8 +186,6 @@ func (m *DiscoveryModel) statusText() string {
 		return "Services healthy, analyzing log patterns..."
 	case api.DatadogAccountHealthError:
 		return "Error encountered during discovery"
-	case api.DatadogAccountHealthStale:
-		return "Waiting for recent data..."
 	default:
 		return "Processing..."
 	}

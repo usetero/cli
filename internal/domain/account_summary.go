@@ -11,6 +11,10 @@ const (
 
 func (s PolicyLogStatus) String() string { return string(s) }
 
+// analysisThreshold is the fraction of discovered events that must be
+// analyzed before waste and compliance numbers are meaningful.
+const analysisThreshold = 0.8
+
 // AccountSummary mirrors datadog_account_statuses_cache aggregated across
 // all Datadog accounts. All columns included; callers pick what they need.
 type AccountSummary struct {
@@ -28,7 +32,6 @@ type AccountSummary struct {
 	ActiveServices   int64
 	OkServices       int64
 	ErrorServices    int64
-	StaleServices    int64
 	DisabledServices int64
 	InactiveServices int64
 
@@ -67,4 +70,10 @@ type AccountSummary struct {
 	ObservedVolumeAfter  *float64
 	ObservedBytesBefore  *float64
 	ObservedBytesAfter   *float64
+}
+
+// AnalysisReady returns true when enough discovered events have been
+// analyzed for waste and compliance numbers to be meaningful.
+func (s AccountSummary) AnalysisReady() bool {
+	return s.EventCount > 0 && float64(s.AnalyzedCount)/float64(s.EventCount) >= analysisThreshold
 }

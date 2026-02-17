@@ -65,7 +65,6 @@ CREATE TABLE datadog_account_statuses_cache (
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL,
     service_volume_per_hour REAL,
-    stale_services INTEGER,
     warning TEXT,
     warning_at TEXT
 );
@@ -125,14 +124,14 @@ CREATE TABLE log_event_policies (
     analysis TEXT,
     approved_at TEXT,
     approved_by TEXT,
-    benefits TEXT,
     category TEXT,
+    category_type TEXT,
     created_at TEXT,
     dismissed_at TEXT,
     dismissed_by TEXT,
     log_event_id TEXT,
     model TEXT,
-    objectivity TEXT,
+    subjective INTEGER,
     updated_at TEXT,
     workspace_id TEXT
 );
@@ -141,8 +140,8 @@ CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT,
     approved_at TEXT,
-    benefits TEXT,
     category TEXT,
+    category_type TEXT,
     created_at TEXT,
     dismissed_at TEXT,
     estimated_bytes_reduction_per_hour REAL,
@@ -150,11 +149,13 @@ CREATE TABLE log_event_policy_statuses_cache (
     estimated_cost_reduction_per_hour_usd REAL,
     estimated_cost_reduction_per_hour_volume_usd REAL,
     estimated_volume_reduction_per_hour REAL,
+    impact_type TEXT,
     log_event_id TEXT,
-    objectivity TEXT,
     policy_id TEXT,
     refreshed_at TEXT,
     status TEXT,
+    subjective INTEGER,
+    survival_rate REAL,
     workspace_id TEXT
 );
 
@@ -166,10 +167,8 @@ CREATE TABLE log_event_statuses_cache (
     cost_per_hour_bytes_usd REAL,
     cost_per_hour_usd REAL,
     cost_per_hour_volume_usd REAL,
-    datadog_account_id TEXT,
     dismissed_policy_count INTEGER,
     error TEXT,
-    estimable_policy_count INTEGER,
     estimated_bytes_reduction_per_hour REAL,
     estimated_cost_reduction_per_hour_bytes_usd REAL,
     estimated_cost_reduction_per_hour_usd REAL,
@@ -177,6 +176,8 @@ CREATE TABLE log_event_statuses_cache (
     estimated_volume_reduction_per_hour REAL,
     has_been_analyzed INTEGER,
     has_volumes INTEGER,
+    is_broken INTEGER,
+    is_quarantined INTEGER,
     log_event_id TEXT,
     observed_bytes_per_hour_after REAL,
     observed_bytes_per_hour_before REAL,
@@ -192,7 +193,6 @@ CREATE TABLE log_event_statuses_cache (
     policy_count INTEGER,
     refreshed_at TEXT,
     service_id TEXT,
-    status TEXT,
     volume_per_hour REAL
 );
 

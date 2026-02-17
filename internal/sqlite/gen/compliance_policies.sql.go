@@ -11,7 +11,7 @@ import (
 
 const countFixedCompliancePolicies = `-- name: CountFixedCompliancePolicies :one
 SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
-WHERE category IN ('pii_leakage', 'secrets_leakage', 'phi_leakage', 'payment_data_leakage')
+WHERE category_type = 'compliance'
   AND status = 'APPROVED'
 `
 
@@ -25,7 +25,7 @@ func (q *Queries) CountFixedCompliancePolicies(ctx context.Context) (int64, erro
 
 const countTotalCompliancePolicies = `-- name: CountTotalCompliancePolicies :one
 SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
-WHERE category IN ('pii_leakage', 'secrets_leakage', 'phi_leakage', 'payment_data_leakage')
+WHERE category_type = 'compliance'
   AND status = 'PENDING'
 `
 
@@ -62,7 +62,7 @@ FROM (
   JOIN services s ON s.id = le.service_id
   LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
   LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
-  WHERE leps.category IN ('pii_leakage', 'secrets_leakage', 'phi_leakage', 'payment_data_leakage')
+  WHERE leps.category_type = 'compliance'
     AND leps.status = 'PENDING'
 
   UNION ALL
@@ -76,7 +76,7 @@ FROM (
   FROM log_event_policy_statuses_cache leps
   JOIN log_events le ON le.id = leps.log_event_id
   JOIN services s ON s.id = le.service_id
-  WHERE leps.category IN ('pii_leakage', 'secrets_leakage', 'phi_leakage', 'payment_data_leakage')
+  WHERE leps.category_type = 'compliance'
     AND leps.status = 'APPROVED'
 )
 GROUP BY category

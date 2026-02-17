@@ -1,9 +1,13 @@
 package domain
 
 import (
-	"strings"
-
 	"github.com/usetero/cli/internal/format"
+)
+
+// CategoryType constants. Drives which tab owns a category.
+const (
+	CategoryTypeCompliance = "compliance" // Legal/security risk
+	CategoryTypeWaste      = "waste"      // Cost reduction
 )
 
 // PolicyCategoryStatus is the per-category policy breakdown.
@@ -13,7 +17,6 @@ type PolicyCategoryStatus struct {
 	PendingCount   int64
 	ApprovedCount  int64
 	DismissedCount int64
-	Benefit        string
 
 	// Estimated impact from pending policies.
 	EstimatedVolumePerHour *float64
@@ -41,5 +44,5 @@ func (c PolicyCategoryStatus) DisplayName() string {
 
 // ReducesVolume reports whether this category's policies drop entire events.
 func (c PolicyCategoryStatus) ReducesVolume() bool {
-	return strings.Contains(c.Benefit, "volume_reduction")
+	return c.EstimatedVolumePerHour != nil && *c.EstimatedVolumePerHour > 0
 }

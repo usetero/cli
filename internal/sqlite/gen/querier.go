@@ -40,10 +40,11 @@ type Querier interface {
 	// Returns pending compliance policies for a specific category, sorted by observed then volume.
 	ListPendingCompliancePoliciesByCategory(ctx context.Context, arg ListPendingCompliancePoliciesByCategoryParams) ([]ListPendingCompliancePoliciesByCategoryRow, error)
 	ListPendingPIIPolicies(ctx context.Context) ([]ListPendingPIIPoliciesRow, error)
-	ListPolicyCategoryStatuses(ctx context.Context) ([]ListPolicyCategoryStatusesRow, error)
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error)
+	// Categories where category_type is waste (waste tab).
+	ListWasteCategoryStatuses(ctx context.Context) ([]ListWasteCategoryStatusesRow, error)
 	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error

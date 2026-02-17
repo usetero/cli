@@ -4,7 +4,6 @@ package compliance
 import (
 	"context"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -21,14 +20,7 @@ import (
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
-const (
-	pollInterval = 2 * time.Second
-
-	// discoveryDoneThreshold is the classification coverage percentage above
-	// which we consider discovery complete. Volume ratios are never exactly
-	// 100% due to throughput fluctuations.
-	discoveryDoneThreshold = 95
-)
+const pollInterval = 2 * time.Second
 
 // pollMsg triggers a compliance policy check.
 type pollMsg struct{}
@@ -131,8 +123,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.ComplianceCategorySummary, pending, fixed int64) string {
-	key := fmt.Sprintf("%v:%v:%d:%d",
-		summary.TotalServiceVolumePerHour, summary.TotalVolumePerHour,
+	key := fmt.Sprintf("%d:%d:%d:%d",
+		summary.EventCount, summary.AnalyzedCount,
 		pending, fixed)
 
 	for _, c := range cats {
@@ -211,14 +203,14 @@ func (m *Model) CompactView() string {
 
 	var segments []string
 
-	// Count leaking vs at-risk across all categories.
+	// Compliance counts are accurate immediately — either sensitive data
+	// was observed or it wasn't. No need to gate on analysis threshold.
 	var leaking, atRisk int64
 	for _, c := range m.categories {
 		leaking += c.LeakingCount
 		atRisk += c.AtRiskCount
 	}
 
-	// Red dot if any category has leaking data, warning otherwise.
 	if leaking > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
 		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d leaking", leaking)))
@@ -268,10 +260,13 @@ func (m *Model) ExpandedView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderHeadline renders the compliance summary: leaking/at-risk counts and discovery progress.
+// renderHeadline renders the compliance summary: leaking/at-risk counts and analysis progress.
+// Dots always shown as a legend for row colors. Progress appended when analysis is incomplete.
 func (m *Model) renderHeadline() string {
+	s := m.summary
 	colors := m.theme
 	muted := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 	sep := muted.Render(" · ")
 
 	var parts []string
@@ -285,7 +280,6 @@ func (m *Model) renderHeadline() string {
 
 	if leaking > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
-		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d leaking", leaking)))
 	}
 	if atRisk > 0 {
@@ -299,10 +293,11 @@ func (m *Model) renderHeadline() string {
 		parts = append(parts, muted.Render(fmt.Sprintf("across %d services", serviceCount)))
 	}
 
-	// Discovery progress when classification coverage is below threshold.
-	if pct := summaryDiscoveryPercent(m.summary); pct < discoveryDoneThreshold {
-		bar := m.discoveryBar()
-		parts = append(parts, bar.ViewAs(float64(pct)/100)+" "+muted.Render(fmt.Sprintf("%d%%", pct)))
+	// Analysis progress when not yet ready.
+	if s.EventCount > 0 && !s.AnalysisReady() {
+		pct := float64(s.AnalyzedCount) / float64(s.EventCount)
+		bar := m.analysisBar()
+		parts = append(parts, bar.ViewAs(pct)+" "+muted.Render(fmt.Sprintf("%d/%d analyzed", s.AnalyzedCount, s.EventCount)))
 	}
 
 	if m.totalFixed > 0 {
@@ -325,37 +320,25 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Leaking", "At Risk", "Fixed", "Services")
+	tbl.Headers("Category", "Status", "Services", "Volume", "Fixed")
 	tbl.SetWidth(width)
 
-	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 	err := lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg)
 	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
+	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
 	for i, c := range m.categories {
-		dot := ok.Render("●")
-		if c.LeakingCount > 0 {
-			dot = err.Render("●")
-		} else if c.AtRiskCount > 0 {
-			dot = warn.Render("●")
-		}
-
 		name := displayCategoryName(c.Category)
 		if i == m.cursor {
 			name = accent.Render("▶ " + name)
 		} else {
-			name = dot + " " + name
+			name = formatCategoryDot(m.theme, c) + " " + name
 		}
 
-		leakingStr := "—"
-		if c.LeakingCount > 0 {
-			leakingStr = err.Render(format.Count(c.LeakingCount))
-		}
-
-		atRiskStr := "—"
-		if c.AtRiskCount > 0 {
-			atRiskStr = format.Count(c.AtRiskCount)
+		vol := "—"
+		if c.VolumePerHour > 0 {
+			vol = format.Volume(c.VolumePerHour) + "/hr"
 		}
 
 		fixedStr := "—"
@@ -365,10 +348,10 @@ func (m *Model) renderCategoryTable(width int) string {
 
 		tbl.Row(
 			name,
-			leakingStr,
-			atRiskStr,
-			fixedStr,
+			formatCategoryStatus(m.theme, c, err, muted),
 			format.Count(int64(c.ServiceCount)),
+			vol,
+			fixedStr,
 		)
 	}
 
@@ -386,10 +369,10 @@ func (m *Model) uniqueServiceCount() int {
 	return len(seen)
 }
 
-// discoveryBar creates a small progress bar for inline use in the headline.
-func (m *Model) discoveryBar() progress.Model {
+// analysisBar creates a small progress bar for inline use in the headline.
+func (m *Model) analysisBar() progress.Model {
 	bar := progress.New(
-		progress.WithColors(m.theme.GradientStart),
+		progress.WithColors(m.theme.GradientStart, m.theme.GradientEnd),
 		progress.WithWidth(10),
 		progress.WithFillCharacters('█', '░'),
 	)
@@ -398,19 +381,32 @@ func (m *Model) discoveryBar() progress.Model {
 	return bar
 }
 
-// summaryDiscoveryPercent computes account-level classification coverage.
-func summaryDiscoveryPercent(s domain.AccountSummary) int {
-	if s.TotalServiceVolumePerHour == nil || *s.TotalServiceVolumePerHour <= 0 {
-		return 100
+// formatCategoryDot returns a colored dot for a category row.
+func formatCategoryDot(colors styles.Theme, c domain.ComplianceCategorySummary) string {
+	if c.LeakingCount > 0 {
+		return lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
 	}
-	if s.TotalVolumePerHour == nil {
-		return 0
+	if c.AtRiskCount > 0 {
+		return lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
 	}
-	pct := int(math.Round(*s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
-	if pct > 100 {
-		pct = 100
+	return lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render("●")
+}
+
+// formatCategoryStatus renders a combined status string like "4 leaking", "3 at risk",
+// or "2 leaking · 1 at risk" when both exist.
+func formatCategoryStatus(colors styles.Theme, c domain.ComplianceCategorySummary, errStyle, mutedStyle lipgloss.Style) string {
+	sep := mutedStyle.Render(" · ")
+	var parts []string
+	if c.LeakingCount > 0 {
+		parts = append(parts, errStyle.Render(fmt.Sprintf("%s leaking", format.Count(c.LeakingCount))))
 	}
-	return pct
+	if c.AtRiskCount > 0 {
+		parts = append(parts, mutedStyle.Render(fmt.Sprintf("%s at risk", format.Count(c.AtRiskCount))))
+	}
+	if len(parts) == 0 {
+		return "—"
+	}
+	return strings.Join(parts, sep)
 }
 
 // displayCategoryName returns a human-readable name for a compliance category.

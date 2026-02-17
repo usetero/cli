@@ -65,7 +65,6 @@ const (
 	DatadogAccountHealthDisabled DatadogAccountHealth = "DISABLED"
 	DatadogAccountHealthInactive DatadogAccountHealth = "INACTIVE"
 	DatadogAccountHealthError    DatadogAccountHealth = "ERROR"
-	DatadogAccountHealthStale    DatadogAccountHealth = "STALE"
 	DatadogAccountHealthOK       DatadogAccountHealth = "OK"
 )
 
@@ -77,7 +76,6 @@ type DatadogAccountStatus struct {
 	ActiveServices       int
 	OkServices           int
 	ErrorServices        int
-	StaleServices        int
 	DisabledServices     int
 	InactiveServices     int
 	EventCount           int
@@ -228,7 +226,6 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		ActiveServices:       statusNode.LogActiveServices,
 		OkServices:           statusNode.OkServices,
 		ErrorServices:        statusNode.ErrorServices,
-		StaleServices:        statusNode.StaleServices,
 		DisabledServices:     statusNode.DisabledServices,
 		InactiveServices:     statusNode.InactiveServices,
 		EventCount:           statusNode.LogEventCount,

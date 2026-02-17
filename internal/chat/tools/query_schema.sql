@@ -48,7 +48,7 @@ CREATE TABLE datadog_account_statuses_cache (
     estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated total USD/hour savings
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Account-wide estimated volume-based USD/hour savings
     estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
-    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > STALE > OK
+    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > OK
     inactive_services INTEGER, -- Services with INACTIVE health
     log_active_services INTEGER, -- Services not DISABLED or INACTIVE
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
@@ -78,7 +78,6 @@ CREATE TABLE datadog_account_statuses_cache (
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour across all services
     service_volume_per_hour REAL, -- Ground-truth throughput in events/hour from service_log_volumes across all services
-    stale_services INTEGER, -- Services with STALE health
     warning TEXT, -- Most recent warning message
     warning_at TEXT -- When the most recent warning occurred
 );
@@ -131,12 +130,7 @@ CREATE TABLE log_event_fields (
     avg_bytes REAL, -- Average serialized byte size of this field's value. Initially estimated from example log records, refined by trigger from log_event_volumes data.
     created_at TEXT, -- When this field was first discovered
     distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
-    -- Unambiguous path segments, e.g. {attributes, http, status}
-    -- JSON array of strings.
-    -- $[0] - First element
-    -- 
-    -- Example: json_extract(field_path, '$[0]')
-    field_path TEXT,
+    field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
     log_event_id TEXT, -- The log event this field belongs to
     -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
     -- Opaque JSON data. Query using SQLite json_extract() or json_each().
@@ -182,19 +176,14 @@ CREATE TABLE log_event_policies (
     analysis TEXT,
     approved_at TEXT, -- When this policy was approved by a user
     approved_by TEXT, -- User ID who approved this policy
-    -- What benefits this policy provides. volume_reduction: fewer events, bytes_reduction: smaller events, signal_quality: less noise, compliance: regulatory/policy, resilience: system stability.
-    -- JSON array of strings.
-    -- $[0] - First element
-    -- 
-    -- Example: json_extract(benefits, '$[0]')
-    benefits TEXT,
     category TEXT, -- Quality issue category this policy addresses Values: health_checks, bot_traffic, low_value, accidental_debug_statements, malformed_data, noise, pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage, duplicate_fields, instrumentation_bloat, oversized_fields.
+    category_type TEXT, -- Type of problem: compliance (legal/security risk) or waste (cost reduction). Auto-set via trigger from CategoryMeta.
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy
     log_event_id TEXT, -- The log event this policy applies to
     model TEXT, -- AI model that generated this policy (e.g., 'claude-sonnet-4-20250514')
-    objectivity TEXT, -- How verifiable is this policy? factual: user can confirm by looking at the data, reasoned: requires AI judgment. Auto-set by trigger from category.
+    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false). Auto-set via trigger from CategoryMeta.
     updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
 );
@@ -202,28 +191,25 @@ CREATE TABLE log_event_policies (
 -- Cache table for log_event_policy_statuses view. Refreshed by cron service.
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
-    account_id TEXT, -- Account ID for tenant isolation
-    approved_at TEXT, -- When the policy was approved
-    -- What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
-    -- JSON array of strings.
-    -- $[0] - First element
-    -- 
-    -- Example: json_extract(benefits, '$[0]')
-    benefits TEXT,
-    category TEXT, -- Quality issue category (e.g., health_checks, pii_leakage, duplicate_fields)
-    created_at TEXT, -- When this policy was created
-    dismissed_at TEXT, -- When the policy was dismissed
-    estimated_bytes_reduction_per_hour REAL, -- Projected bytes/hour eliminated. NULL when not estimable.
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Projected USD/hour savings from bytes reduction (ingestion cost component). NULL when not estimable.
-    estimated_cost_reduction_per_hour_usd REAL, -- Projected USD/hour savings from this policy (bytes + volume combined). Aggregated across all datadog accounts. NULL when not estimable.
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Projected USD/hour savings from volume reduction (indexing cost component). Zero for attribute-only policies. NULL when not estimable.
-    estimated_volume_reduction_per_hour REAL, -- Projected events/hour eliminated. NULL when not estimable (compliance, resilience policies).
-    log_event_id TEXT, -- The log event this policy applies to
-    objectivity TEXT, -- How verifiable: factual (user can confirm) or reasoned (AI judgment)
-    policy_id TEXT, -- The policy this status belongs to
+    account_id TEXT,
+    approved_at TEXT,
+    category TEXT,
+    category_type TEXT, -- Values: compliance, waste.
+    created_at TEXT,
+    dismissed_at TEXT,
+    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved if this policy applied alone. NULL if not estimable.
+    estimated_cost_reduction_per_hour_bytes_usd REAL,
+    estimated_cost_reduction_per_hour_usd REAL,
+    estimated_cost_reduction_per_hour_volume_usd REAL,
+    estimated_volume_reduction_per_hour REAL, -- Events/hour saved if this policy applied alone. NULL if not estimable.
+    impact_type TEXT, -- How policy achieves cost reduction: attribute (bytes only), volume (events), none (compliance only)
+    log_event_id TEXT,
+    policy_id TEXT,
     refreshed_at TEXT,
-    status TEXT, -- PENDING: awaiting action, APPROVED: user approved, DISMISSED: user rejected
-    workspace_id TEXT -- The workspace that owns this policy
+    status TEXT, -- Values: PENDING, APPROVED, DISMISSED.
+    subjective INTEGER,
+    survival_rate REAL, -- Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
+    workspace_id TEXT
 );
 
 -- Cache table for log_event_statuses view. Refreshed by cron service.
@@ -231,38 +217,37 @@ CREATE TABLE log_event_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID for tenant isolation
     approved_policy_count INTEGER, -- Policies approved by user
-    bytes_per_hour REAL, -- Current throughput in bytes/hour from the rolling 7-day window. Same baseline used for policy impact estimates, so directly comparable. NULL when no volume data exists.
-    cost_per_hour_bytes_usd REAL, -- Current bytes-based cost in USD/hour (ingestion component). NULL when no volume data exists.
-    cost_per_hour_usd REAL, -- Current cost in USD/hour (bytes + volume combined). Independent of policies. NULL when no volume data exists.
-    cost_per_hour_volume_usd REAL, -- Current volume-based cost in USD/hour (indexing component). NULL when no volume data exists.
-    datadog_account_id TEXT, -- The Datadog account performing discovery
+    bytes_per_hour REAL, -- Current throughput in bytes/hour (rolling 7-day)
+    cost_per_hour_bytes_usd REAL, -- Current ingestion cost in USD/hour
+    cost_per_hour_usd REAL, -- Current total cost in USD/hour (bytes + volume)
+    cost_per_hour_volume_usd REAL, -- Current indexing cost in USD/hour
     dismissed_policy_count INTEGER, -- Policies dismissed by user
-    error TEXT, -- Error message if status is BROKEN
-    estimable_policy_count INTEGER, -- Active policies whose category is estimable (deterministic categories where baseline = estimate). See is_estimable_category() in triggers/06_category_functions.sql.
-    estimated_bytes_reduction_per_hour REAL, -- Sum of estimated bytes reductions from all active estimable policies
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated USD/hour savings from bytes reduction (ingestion component).
-    estimated_cost_reduction_per_hour_usd REAL, -- Estimated USD/hour savings from active policies (bytes + volume combined).
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated USD/hour savings from volume reduction (indexing component).
-    estimated_volume_reduction_per_hour REAL, -- Sum of estimated volume reductions from all active estimable policies
-    has_been_analyzed INTEGER, -- Whether this log event has been analyzed for quality issues
-    has_volumes INTEGER, -- Whether log_event_volumes exist for this event from this integration
+    error TEXT, -- Error message when is_broken = true
+    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all policies combined
+    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour
+    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour (bytes + volume)
+    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour
+    estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all policies combined
+    has_been_analyzed INTEGER, -- Whether AI has analyzed this log event
+    has_volumes INTEGER, -- Whether volume data exists for this log event
+    is_broken INTEGER, -- Whether discovery has consecutive errors for this service
+    is_quarantined INTEGER, -- Whether this log event is excluded from analysis due to repeated failures
     log_event_id TEXT, -- The log event this status belongs to
-    observed_bytes_per_hour_after REAL, -- Measured bytes/hour in recent 7-day window
+    observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval (current)
     observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval
-    observed_cost_per_hour_after_bytes_usd REAL, -- Measured bytes-based USD/hour cost in recent window after policy approval. Only when approved and data is fresh.
-    observed_cost_per_hour_after_usd REAL, -- Measured USD/hour cost in recent window after policy approval (bytes + volume combined). Only when approved and data is fresh.
-    observed_cost_per_hour_after_volume_usd REAL, -- Measured volume-based USD/hour cost in recent window after policy approval. Only when approved and data is fresh.
-    observed_cost_per_hour_before_bytes_usd REAL, -- Measured bytes-based USD/hour cost before first policy approval. Only when approved and data is fresh.
-    observed_cost_per_hour_before_usd REAL, -- Measured USD/hour cost before first policy approval (bytes + volume combined). Only when approved and data is fresh.
-    observed_cost_per_hour_before_volume_usd REAL, -- Measured volume-based USD/hour cost before first policy approval. Only when approved and data is fresh.
-    observed_volume_per_hour_after REAL, -- Measured events/hour in recent 7-day window (only when approved and data is fresh)
-    observed_volume_per_hour_before REAL, -- Measured events/hour in 7-day window before first policy approval (only when approved and data is fresh)
+    observed_cost_per_hour_after_bytes_usd REAL, -- Measured ingestion cost after approval (current)
+    observed_cost_per_hour_after_usd REAL, -- Measured total cost after approval (current)
+    observed_cost_per_hour_after_volume_usd REAL, -- Measured indexing cost after approval (current)
+    observed_cost_per_hour_before_bytes_usd REAL, -- Measured ingestion cost before approval
+    observed_cost_per_hour_before_usd REAL, -- Measured total cost before approval
+    observed_cost_per_hour_before_volume_usd REAL, -- Measured indexing cost before approval
+    observed_volume_per_hour_after REAL, -- Measured events/hour after policy approval (current)
+    observed_volume_per_hour_before REAL, -- Measured events/hour before first policy approval
     pending_policy_count INTEGER, -- Policies awaiting user action
-    policy_count INTEGER, -- Total active (non-dismissed) policies on this log event
+    policy_count INTEGER, -- Total non-dismissed policies
     refreshed_at TEXT,
     service_id TEXT, -- Service ID (denormalized from log_event)
-    status TEXT, -- BROKEN: discovery errors, QUARANTINED: repeated AI analysis failures, RESOLVED: all policies acted on, CLEAN: analyzed with no issues, PENDING: has policies awaiting action, ANALYZING: AI working, DISCOVERING: collecting data
-    volume_per_hour REAL -- Current throughput in events/hour from the rolling 7-day window. Same baseline used for policy impact estimates, so directly comparable. NULL when no volume data exists.
+    volume_per_hour REAL -- Current throughput in events/hour (rolling 7-day)
 );
 
 -- Distinct log message pattern discovered within a service. Defines how to parse and match logs using codecs and matchers.
@@ -343,7 +328,7 @@ CREATE TABLE service_statuses_cache (
     estimated_cost_reduction_per_hour_usd REAL, -- Estimated total USD/hour savings from active policies
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated volume-based USD/hour savings from active policies
     estimated_volume_reduction_per_hour REAL, -- Estimated volume reduction from active policies
-    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > STALE > OK
+    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > OK
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
     log_event_bytes_per_hour REAL, -- Discovered log event throughput in bytes/hour from rolling 7-day window
     log_event_cost_per_hour_bytes_usd REAL, -- Discovered log event ingestion cost in USD/hour

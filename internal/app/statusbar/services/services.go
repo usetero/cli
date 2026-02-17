@@ -108,10 +108,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s:%v:%v:%d",
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s:%v:%v:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.OkServices,
-		s.ErrorServices, s.StaleServices, s.QuarantinedCount,
+		s.ErrorServices, s.QuarantinedCount,
 		s.Health, s.Error, s.Warning,
 		s.TotalServiceVolumePerHour, s.TotalVolumePerHour,
 		len(services))
@@ -173,7 +173,18 @@ func (m *Model) renderSummary() string {
 	s := m.summary
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
-	// Service count with hidden annotation from summary counts.
+	var parts []string
+
+	// Health legend: colored dots with counts, matching waste/compliance headline pattern.
+	okDot := status.ServiceDot(m.theme, domain.ServiceHealthOK)
+	if s.OkServices > 0 {
+		parts = append(parts, okDot+" "+muted.Render(fmt.Sprintf("%d ok", s.OkServices)))
+	}
+	if s.ErrorServices > 0 {
+		errDot := status.ServiceDot(m.theme, domain.ServiceHealthError)
+		parts = append(parts, errDot+" "+muted.Render(fmt.Sprintf("%d errors", s.ErrorServices)))
+	}
+	// Hidden services (not in the table).
 	var hiddenParts []string
 	if s.DisabledServices > 0 {
 		hiddenParts = append(hiddenParts, fmt.Sprintf("%d disabled", s.DisabledServices))
@@ -181,36 +192,34 @@ func (m *Model) renderSummary() string {
 	if s.InactiveServices > 0 {
 		hiddenParts = append(hiddenParts, fmt.Sprintf("%d inactive", s.InactiveServices))
 	}
-	svcLabel := fmt.Sprintf("%d services", s.ActiveServices)
 	if len(hiddenParts) > 0 {
-		svcLabel += fmt.Sprintf(" (+%s)", strings.Join(hiddenParts, ", "))
+		parts = append(parts, muted.Render(fmt.Sprintf("+%s", strings.Join(hiddenParts, ", "))))
 	}
-
-	var parts []string
-	parts = append(parts, svcLabel)
 
 	// Log event count with discovery progress.
 	if s.EventCount > 0 {
-		evtLabel := fmt.Sprintf("%d log events", s.EventCount)
+		evtLabel := muted.Render(fmt.Sprintf("%d log events", s.EventCount))
 		if pct := summaryDiscoveryPercent(s); pct < discoveryDoneThreshold {
-			evtLabel += fmt.Sprintf(" (%d%%)", pct)
+			bar := m.discoveryBar()
+			evtLabel += " " + bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%d%%", pct))
 		}
 		parts = append(parts, evtLabel)
 	}
 
 	// Total volume.
 	if s.TotalVolumePerHour != nil && *s.TotalVolumePerHour > 0 {
-		parts = append(parts, format.Volume(*s.TotalVolumePerHour)+" evt/hr")
+		parts = append(parts, muted.Render(format.Volume(*s.TotalVolumePerHour)+" evt/hr"))
 	}
 
 	// Total cost from account summary (pre-aggregated by control plane).
 	if s.TotalCostPerHour != nil {
 		if cost := format.YearlyCost(*s.TotalCostPerHour); cost != "$0/yr" {
-			parts = append(parts, cost)
+			parts = append(parts, muted.Render(cost))
 		}
 	}
 
-	result := status.ServiceDot(m.theme, s.Health) + " " + muted.Render(strings.Join(parts, " · "))
+	sep := muted.Render(" · ")
+	result := strings.Join(parts, sep)
 	if s.Warning != "" {
 		warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 		result += " " + warn.Render("⚠")
@@ -276,8 +285,6 @@ func (m *Model) renderServiceName(svc domain.ServiceStatus) string {
 		if svc.Error != "" {
 			name += " — " + svc.Error
 		}
-	case domain.ServiceHealthStale:
-		name += " — no recent data"
 	case domain.ServiceHealthDisabled, domain.ServiceHealthInactive, domain.ServiceHealthOK:
 		// No suffix needed.
 	}
@@ -288,7 +295,7 @@ func (m *Model) renderServiceName(svc domain.ServiceStatus) string {
 // discoveryBar creates a small progress bar for inline use in table cells.
 func (m *Model) discoveryBar() progress.Model {
 	bar := progress.New(
-		progress.WithColors(m.theme.GradientStart),
+		progress.WithColors(m.theme.GradientStart, m.theme.GradientEnd),
 		progress.WithWidth(10),
 		progress.WithFillCharacters('█', '░'),
 	)

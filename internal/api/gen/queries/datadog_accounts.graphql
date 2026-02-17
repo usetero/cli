@@ -48,7 +48,6 @@ query GetDatadogAccountStatus($id: ID!) {
                     disabledServices
                     inactiveServices
                     errorServices
-                    staleServices
                     okServices
                     policyPendingCount
                     policyApprovedCount

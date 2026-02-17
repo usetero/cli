@@ -26,7 +26,6 @@ SELECT
   CAST(COALESCE(SUM(log_active_services), 0) AS INTEGER) AS active_services,
   CAST(COALESCE(SUM(ok_services), 0) AS INTEGER) AS ok_services,
   CAST(COALESCE(SUM(error_services), 0) AS INTEGER) AS error_services,
-  CAST(COALESCE(SUM(stale_services), 0) AS INTEGER) AS stale_services,
   CAST(COALESCE(SUM(disabled_services), 0) AS INTEGER) AS disabled_services,
   CAST(COALESCE(SUM(inactive_services), 0) AS INTEGER) AS inactive_services,
 
@@ -79,7 +78,6 @@ type GetAccountSummaryRow struct {
 	ActiveServices             int64
 	OkServices                 int64
 	ErrorServices              int64
-	StaleServices              int64
 	DisabledServices           int64
 	InactiveServices           int64
 	EventCount                 int64
@@ -122,7 +120,6 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 		&i.ActiveServices,
 		&i.OkServices,
 		&i.ErrorServices,
-		&i.StaleServices,
 		&i.DisabledServices,
 		&i.InactiveServices,
 		&i.EventCount,

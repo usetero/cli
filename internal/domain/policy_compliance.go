@@ -34,7 +34,6 @@ const (
 // PIILeakageAnalysis is the category-specific analysis for PII leakage policies.
 type PIILeakageAnalysis struct {
 	Rationale string           `json:"rationale"`
-	Benefits  []string         `json:"benefits"`
 	Fields    []SensitiveField `json:"fields"`
 }
 
@@ -60,7 +59,6 @@ const (
 // SecretsLeakageAnalysis is the category-specific analysis for secrets leakage policies.
 type SecretsLeakageAnalysis struct {
 	Rationale string           `json:"rationale"`
-	Benefits  []string         `json:"benefits"`
 	Fields    []SensitiveField `json:"fields"`
 }
 
@@ -82,7 +80,6 @@ const (
 // PHILeakageAnalysis is the category-specific analysis for PHI leakage policies.
 type PHILeakageAnalysis struct {
 	Rationale string           `json:"rationale"`
-	Benefits  []string         `json:"benefits"`
 	Fields    []SensitiveField `json:"fields"`
 }
 
@@ -102,7 +99,6 @@ const (
 // PaymentDataLeakageAnalysis is the category-specific analysis for payment data leakage policies.
 type PaymentDataLeakageAnalysis struct {
 	Rationale string           `json:"rationale"`
-	Benefits  []string         `json:"benefits"`
 	Fields    []SensitiveField `json:"fields"`
 }
 

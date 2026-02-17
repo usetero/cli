@@ -298,7 +298,6 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 										LogActiveServices:     8,
 										OkServices:            7,
 										ErrorServices:         1,
-										StaleServices:         0,
 										DisabledServices:      1,
 										InactiveServices:      1,
 										LogEventCount:         200,

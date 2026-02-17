@@ -1,7 +1,8 @@
 -- name: CountLogEventPolicies :one
 SELECT COUNT(*) FROM log_event_policies;
 
--- name: ListPolicyCategoryStatuses :many
+-- name: ListWasteCategoryStatuses :many
+-- Categories where category_type is waste (waste tab).
 SELECT
   COALESCE(leps.category, '') AS category,
   CAST(COALESCE(SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END), 0) AS INTEGER) AS pending_count,
@@ -10,7 +11,6 @@ SELECT
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
-  CAST(COALESCE(GROUP_CONCAT(DISTINCT leps.benefits), '') AS TEXT) AS benefits,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
@@ -22,6 +22,7 @@ SELECT
 FROM log_event_policy_statuses_cache leps
 LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category IS NOT NULL AND leps.category != ''
+  AND leps.category_type = 'waste'
 GROUP BY leps.category
 ORDER BY
   SUM(CASE WHEN leps.status = 'PENDING' THEN 1 ELSE 0 END) DESC;

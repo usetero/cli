@@ -24,7 +24,7 @@ func badge(c color.Color, bg color.Color, label string, showLabel bool) string {
 	return style.Render("●")
 }
 
-// --- Service health: ERROR > STALE > OK > DISABLED > INACTIVE ---
+// --- Service health: ERROR > OK > DISABLED > INACTIVE ---
 
 // Service renders a colored status badge for a service health.
 func Service(theme styles.Theme, h domain.ServiceHealth, showLabel bool) string {
@@ -40,8 +40,6 @@ func serviceColor(theme styles.Theme, h domain.ServiceHealth) color.Color {
 	switch h {
 	case domain.ServiceHealthError:
 		return theme.Error
-	case domain.ServiceHealthStale:
-		return theme.Warning
 	case domain.ServiceHealthOK:
 		return theme.Success
 	case domain.ServiceHealthDisabled, domain.ServiceHealthInactive:

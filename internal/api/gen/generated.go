@@ -496,7 +496,6 @@ const (
 	DatadogAccountStatusCacheHealthDisabled DatadogAccountStatusCacheHealth = "DISABLED"
 	DatadogAccountStatusCacheHealthInactive DatadogAccountStatusCacheHealth = "INACTIVE"
 	DatadogAccountStatusCacheHealthError    DatadogAccountStatusCacheHealth = "ERROR"
-	DatadogAccountStatusCacheHealthStale    DatadogAccountStatusCacheHealth = "STALE"
 	DatadogAccountStatusCacheHealthOk       DatadogAccountStatusCacheHealth = "OK"
 )
 
@@ -504,7 +503,6 @@ var AllDatadogAccountStatusCacheHealth = []DatadogAccountStatusCacheHealth{
 	DatadogAccountStatusCacheHealthDisabled,
 	DatadogAccountStatusCacheHealthInactive,
 	DatadogAccountStatusCacheHealthError,
-	DatadogAccountStatusCacheHealthStale,
 	DatadogAccountStatusCacheHealthOk,
 }
 
@@ -713,7 +711,6 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	DisabledServices                       int                             `json:"disabledServices"`
 	InactiveServices                       int                             `json:"inactiveServices"`
 	ErrorServices                          int                             `json:"errorServices"`
-	StaleServices                          int                             `json:"staleServices"`
 	OkServices                             int                             `json:"okServices"`
 	PolicyPendingCount                     int                             `json:"policyPendingCount"`
 	PolicyApprovedCount                    int                             `json:"policyApprovedCount"`
@@ -794,11 +791,6 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetErrorServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ErrorServices, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetErrorServices() int {
 	return v.ErrorServices
-}
-
-// GetStaleServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.StaleServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetStaleServices() int {
-	return v.StaleServices
 }
 
 // GetOkServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.OkServices, and is useful for accessing the field via an interface.
@@ -1061,6 +1053,7 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeLogEvent
 // GetServiceNodeLogEventField
 // GetServiceNodeLogEventPolicy
+// GetServiceNodeLogEventPolicyStatusCache
 // GetServiceNodeLogEventStatusCache
 // GetServiceNodeLogSample
 // GetServiceNodeMessage
@@ -1092,6 +1085,7 @@ func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode() 
 func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()                  {}
 func (v *GetServiceNodeLogEventField) implementsGraphQLInterfaceGetServiceNode()             {}
 func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()            {}
+func (v *GetServiceNodeLogEventPolicyStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
 func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode()       {}
 func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()                 {}
 func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()                   {}
@@ -1149,6 +1143,9 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "LogEventPolicy":
 		*v = new(GetServiceNodeLogEventPolicy)
+		return json.Unmarshal(b, *v)
+	case "LogEventPolicyStatusCache":
+		*v = new(GetServiceNodeLogEventPolicyStatusCache)
 		return json.Unmarshal(b, *v)
 	case "LogEventStatusCache":
 		*v = new(GetServiceNodeLogEventStatusCache)
@@ -1279,6 +1276,14 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeLogEventPolicy
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeLogEventPolicyStatusCache:
+		typename = "LogEventPolicyStatusCache"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeLogEventPolicyStatusCache
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeLogEventStatusCache:
@@ -1456,6 +1461,14 @@ type GetServiceNodeLogEventPolicy struct {
 
 // GetTypename returns GetServiceNodeLogEventPolicy.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEventPolicy) GetTypename() *string { return v.Typename }
+
+// GetServiceNodeLogEventPolicyStatusCache includes the requested fields of the GraphQL type LogEventPolicyStatusCache.
+type GetServiceNodeLogEventPolicyStatusCache struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeLogEventPolicyStatusCache.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventPolicyStatusCache) GetTypename() *string { return v.Typename }
 
 // GetServiceNodeLogEventStatusCache includes the requested fields of the GraphQL type LogEventStatusCache.
 type GetServiceNodeLogEventStatusCache struct {
@@ -2688,7 +2701,6 @@ query GetDatadogAccountStatus ($id: ID!) {
 					disabledServices
 					inactiveServices
 					errorServices
-					staleServices
 					okServices
 					policyPendingCount
 					policyApprovedCount

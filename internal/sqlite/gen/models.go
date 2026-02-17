@@ -78,7 +78,6 @@ type DatadogAccountStatusesCache struct {
 	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
 	ServiceVolumePerHour                   *float64
-	StaleServices                          *int64
 	Warning                                *string
 	WarningAt                              *string
 }
@@ -136,29 +135,29 @@ type LogEventField struct {
 }
 
 type LogEventPolicy struct {
-	ID          *string
-	AccountID   *string
-	Analysis    *string
-	ApprovedAt  *string
-	ApprovedBy  *string
-	Benefits    *string
-	Category    *string
-	CreatedAt   *string
-	DismissedAt *string
-	DismissedBy *string
-	LogEventID  *string
-	Model       *string
-	Objectivity *string
-	UpdatedAt   *string
-	WorkspaceID *string
+	ID           *string
+	AccountID    *string
+	Analysis     *string
+	ApprovedAt   *string
+	ApprovedBy   *string
+	Category     *string
+	CategoryType *string
+	CreatedAt    *string
+	DismissedAt  *string
+	DismissedBy  *string
+	LogEventID   *string
+	Model        *string
+	Subjective   *int64
+	UpdatedAt    *string
+	WorkspaceID  *string
 }
 
 type LogEventPolicyStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
 	ApprovedAt                             *string
-	Benefits                               *string
 	Category                               *string
+	CategoryType                           *string
 	CreatedAt                              *string
 	DismissedAt                            *string
 	EstimatedBytesReductionPerHour         *float64
@@ -166,11 +165,13 @@ type LogEventPolicyStatusesCache struct {
 	EstimatedCostReductionPerHourUsd       *float64
 	EstimatedCostReductionPerHourVolumeUsd *float64
 	EstimatedVolumeReductionPerHour        *float64
+	ImpactType                             *string
 	LogEventID                             *string
-	Objectivity                            *string
 	PolicyID                               *string
 	RefreshedAt                            *string
 	Status                                 *string
+	Subjective                             *int64
+	SurvivalRate                           *float64
 	WorkspaceID                            *string
 }
 
@@ -182,10 +183,8 @@ type LogEventStatusesCache struct {
 	CostPerHourBytesUsd                    *float64
 	CostPerHourUsd                         *float64
 	CostPerHourVolumeUsd                   *float64
-	DatadogAccountID                       *string
 	DismissedPolicyCount                   *int64
 	Error                                  *string
-	EstimablePolicyCount                   *int64
 	EstimatedBytesReductionPerHour         *float64
 	EstimatedCostReductionPerHourBytesUsd  *float64
 	EstimatedCostReductionPerHourUsd       *float64
@@ -193,6 +192,8 @@ type LogEventStatusesCache struct {
 	EstimatedVolumeReductionPerHour        *float64
 	HasBeenAnalyzed                        *int64
 	HasVolumes                             *int64
+	IsBroken                               *int64
+	IsQuarantined                          *int64
 	LogEventID                             *string
 	ObservedBytesPerHourAfter              *float64
 	ObservedBytesPerHourBefore             *float64
@@ -208,7 +209,6 @@ type LogEventStatusesCache struct {
 	PolicyCount                            *int64
 	RefreshedAt                            *string
 	ServiceID                              *string
-	Status                                 *string
 	VolumePerHour                          *float64
 }
 

@@ -934,7 +934,6 @@ type DatadogAccountStatusCache implements Node {
   disabledServices: Int!
   inactiveServices: Int!
   errorServices: Int!
-  staleServices: Int!
   okServices: Int!
   logEventCount: Int!
   logEventQuarantinedCount: Int!
@@ -975,7 +974,6 @@ enum DatadogAccountStatusCacheHealth {
   DISABLED
   INACTIVE
   ERROR
-  STALE
   OK
 }
 
@@ -1083,16 +1081,6 @@ input DatadogAccountStatusCacheWhereInput {
   errorServicesGTE: Int
   errorServicesLT: Int
   errorServicesLTE: Int
-
-  """stale_services field predicates"""
-  staleServices: Int
-  staleServicesNEQ: Int
-  staleServicesIn: [Int!]
-  staleServicesNotIn: [Int!]
-  staleServicesGT: Int
-  staleServicesGTE: Int
-  staleServicesLT: Int
-  staleServicesLTE: Int
 
   """ok_services field predicates"""
   okServices: Int
@@ -2136,11 +2124,11 @@ type LogEvent implements Node {
   logEventFields: [LogEventField!]
 
   """
-  Status of this log event for a specific workspace and Datadog account.
+  Status of this log event.
   Shows where the log event is in the preparation pipeline.
   Returns null if cache has not been populated yet.
   """
-  status(workspaceID: ID!, datadogAccountID: ID!): LogEventStatusCache
+  status: LogEventStatusCache
 }
 
 """A connection to a list of items."""
@@ -2230,6 +2218,16 @@ input LogEventFieldWhereInput {
   logEventIDIn: [ID!]
   logEventIDNotIn: [ID!]
 
+  """field_path field predicates"""
+  fieldPath: [String!]
+  fieldPathNEQ: [String!]
+  fieldPathIn: [[String!]!]
+  fieldPathNotIn: [[String!]!]
+  fieldPathGT: [String!]
+  fieldPathGTE: [String!]
+  fieldPathLT: [String!]
+  fieldPathLTE: [String!]
+
   """avg_bytes field predicates"""
   avgBytes: Float
   avgBytesNEQ: Float
@@ -2303,17 +2301,21 @@ type LogEventPolicy implements Node {
   category: LogEventPolicyCategory!
 
   """
-  How verifiable is this policy? factual: user can confirm by looking at the
-  data, reasoned: requires AI judgment. Auto-set by trigger from category.
+  Whether this category requires AI judgment (true) vs mechanically verifiable
+  (false). Auto-set via trigger from CategoryMeta.
   """
-  objectivity: LogEventPolicyObjectivity!
+  subjective: Boolean
 
   """
-  What benefits this policy provides. volume_reduction: fewer events,
-  bytes_reduction: smaller events, signal_quality: less noise, compliance:
-  regulatory/policy, resilience: system stability.
+  Type of problem: compliance (legal/security risk) or waste (cost reduction). Auto-set via trigger from CategoryMeta.
   """
-  benefits: [String!]!
+  categoryType: LogEventPolicyCategoryType
+
+  """
+  How this policy reduces cost: 'attribute' (modifies fields), 'volume' (drops
+  events), 'none' (compliance only). Auto-set via trigger.
+  """
+  impactType: LogEventPolicyImpactType!
 
   """When this policy was approved by a user"""
   approvedAt: Time
@@ -2357,6 +2359,12 @@ enum LogEventPolicyCategory {
   oversized_fields
 }
 
+"""LogEventPolicyCategoryType is enum for the field category_type"""
+enum LogEventPolicyCategoryType {
+  compliance
+  waste
+}
+
 """A connection to a list of items."""
 type LogEventPolicyConnection {
   """A list of edges."""
@@ -2378,10 +2386,11 @@ type LogEventPolicyEdge {
   cursor: Cursor!
 }
 
-"""LogEventPolicyObjectivity is enum for the field objectivity"""
-enum LogEventPolicyObjectivity {
-  factual
-  reasoned
+"""LogEventPolicyImpactType is enum for the field impact_type"""
+enum LogEventPolicyImpactType {
+  attribute
+  volume
+  none
 }
 
 """Ordering options for LogEventPolicy connections"""
@@ -2396,99 +2405,271 @@ input LogEventPolicyOrder {
 """Properties by which LogEventPolicy connections can be ordered."""
 enum LogEventPolicyOrderField {
   CATEGORY
-  OBJECTIVITY
+  SUBJECTIVE
+  CATEGORY_TYPE
+  IMPACT_TYPE
   APPROVED_AT
   DISMISSED_AT
   CREATED_AT
   UPDATED_AT
 }
 
-"""
-Policy lifecycle status with classification dimensions and estimated impact
-"""
-type LogEventPolicyStatus {
-  """The policy"""
-  policyId: ID!
-
-  """Account ID for tenant isolation"""
-  accountId: ID!
-
-  """The log event this policy applies to"""
-  logEventId: ID!
-
-  """The workspace that owns this policy"""
-  workspaceId: ID!
-
-  """Quality issue category"""
-  category: LogEventPolicyStatusCategory!
-
-  """
-  PENDING: awaiting action, APPROVED: user approved, DISMISSED: user rejected
-  """
-  status: LogEventPolicyStatusState!
-
-  """How verifiable: factual (user can confirm) or reasoned (AI judgment)"""
-  objectivity: LogEventPolicyStatusObjectivity!
-
-  """
-  What this policy provides (volume_reduction, bytes_reduction, signal_quality, compliance, resilience)
-  """
-  benefits: String!
-
-  """When the policy was approved"""
+type LogEventPolicyStatusCache implements Node {
+  id: ID!
+  accountID: UUID!
+  policyID: ID!
+  logEventID: UUID!
+  workspaceID: UUID!
+  category: String!
+  status: LogEventPolicyStatusCacheStatus!
+  subjective: Boolean!
+  categoryType: LogEventPolicyStatusCacheCategoryType!
   approvedAt: Time
-
-  """When the policy was dismissed"""
   dismissedAt: Time
-
-  """Projected events/hour eliminated. NULL when not estimable."""
-  estimatedVolumeReductionPerHour: Float
-
-  """Projected bytes/hour eliminated. NULL when not estimable."""
-  estimatedBytesReductionPerHour: Float
-
-  """Projected bytes-based USD/hour savings. NULL when not estimable."""
-  estimatedCostReductionPerHourBytesUsd: Float
-
-  """Projected volume-based USD/hour savings. NULL when not estimable."""
-  estimatedCostReductionPerHourVolumeUsd: Float
-
-  """
-  Projected USD/hour savings (bytes + volume combined). NULL when not estimable.
-  """
-  estimatedCostReductionPerHourUsd: Float
-
-  """When this policy was created"""
   createdAt: Time!
-}
-
-"""Quality issue category"""
-enum LogEventPolicyStatusCategory {
-  health_checks
-  bot_traffic
-  low_value
-  accidental_debug_statements
-  malformed_data
-  noise
-  pii_leakage
-  duplicate_fields
-  instrumentation_bloat
-  oversized_fields
-}
-
-"""How verifiable: factual (user can confirm) or reasoned (AI judgment)"""
-enum LogEventPolicyStatusObjectivity {
-  factual
-  reasoned
+  impactType: String
+  survivalRate: Float
+  estimatedVolumeReductionPerHour: Float
+  estimatedBytesReductionPerHour: Float
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourUsd: Float
+  refreshedAt: Time!
 }
 
 """
-PENDING: awaiting action, APPROVED: user approved, DISMISSED: user rejected
+LogEventPolicyStatusCacheCategoryType is enum for the field category_type
 """
-enum LogEventPolicyStatusState {
+enum LogEventPolicyStatusCacheCategoryType {
+  compliance
+  waste
+}
+
+"""LogEventPolicyStatusCacheStatus is enum for the field status"""
+enum LogEventPolicyStatusCacheStatus {
   PENDING
   APPROVED
   DISMISSED
+}
+
+"""
+LogEventPolicyStatusCacheWhereInput is used for filtering LogEventPolicyStatusCache objects.
+Input was generated by ent.
+"""
+input LogEventPolicyStatusCacheWhereInput {
+  not: LogEventPolicyStatusCacheWhereInput
+  and: [LogEventPolicyStatusCacheWhereInput!]
+  or: [LogEventPolicyStatusCacheWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
+  """policy_id field predicates"""
+  policyID: ID
+  policyIDNEQ: ID
+  policyIDIn: [ID!]
+  policyIDNotIn: [ID!]
+
+  """log_event_id field predicates"""
+  logEventID: UUID
+  logEventIDNEQ: UUID
+  logEventIDIn: [UUID!]
+  logEventIDNotIn: [UUID!]
+  logEventIDGT: UUID
+  logEventIDGTE: UUID
+  logEventIDLT: UUID
+  logEventIDLTE: UUID
+
+  """workspace_id field predicates"""
+  workspaceID: UUID
+  workspaceIDNEQ: UUID
+  workspaceIDIn: [UUID!]
+  workspaceIDNotIn: [UUID!]
+  workspaceIDGT: UUID
+  workspaceIDGTE: UUID
+  workspaceIDLT: UUID
+  workspaceIDLTE: UUID
+
+  """category field predicates"""
+  category: String
+  categoryNEQ: String
+  categoryIn: [String!]
+  categoryNotIn: [String!]
+  categoryGT: String
+  categoryGTE: String
+  categoryLT: String
+  categoryLTE: String
+  categoryContains: String
+  categoryHasPrefix: String
+  categoryHasSuffix: String
+  categoryEqualFold: String
+  categoryContainsFold: String
+
+  """status field predicates"""
+  status: LogEventPolicyStatusCacheStatus
+  statusNEQ: LogEventPolicyStatusCacheStatus
+  statusIn: [LogEventPolicyStatusCacheStatus!]
+  statusNotIn: [LogEventPolicyStatusCacheStatus!]
+
+  """subjective field predicates"""
+  subjective: Boolean
+  subjectiveNEQ: Boolean
+
+  """category_type field predicates"""
+  categoryType: LogEventPolicyStatusCacheCategoryType
+  categoryTypeNEQ: LogEventPolicyStatusCacheCategoryType
+  categoryTypeIn: [LogEventPolicyStatusCacheCategoryType!]
+  categoryTypeNotIn: [LogEventPolicyStatusCacheCategoryType!]
+
+  """approved_at field predicates"""
+  approvedAt: Time
+  approvedAtNEQ: Time
+  approvedAtIn: [Time!]
+  approvedAtNotIn: [Time!]
+  approvedAtGT: Time
+  approvedAtGTE: Time
+  approvedAtLT: Time
+  approvedAtLTE: Time
+  approvedAtIsNil: Boolean
+  approvedAtNotNil: Boolean
+
+  """dismissed_at field predicates"""
+  dismissedAt: Time
+  dismissedAtNEQ: Time
+  dismissedAtIn: [Time!]
+  dismissedAtNotIn: [Time!]
+  dismissedAtGT: Time
+  dismissedAtGTE: Time
+  dismissedAtLT: Time
+  dismissedAtLTE: Time
+  dismissedAtIsNil: Boolean
+  dismissedAtNotNil: Boolean
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """impact_type field predicates"""
+  impactType: String
+  impactTypeNEQ: String
+  impactTypeIn: [String!]
+  impactTypeNotIn: [String!]
+  impactTypeGT: String
+  impactTypeGTE: String
+  impactTypeLT: String
+  impactTypeLTE: String
+  impactTypeContains: String
+  impactTypeHasPrefix: String
+  impactTypeHasSuffix: String
+  impactTypeIsNil: Boolean
+  impactTypeNotNil: Boolean
+  impactTypeEqualFold: String
+  impactTypeContainsFold: String
+
+  """survival_rate field predicates"""
+  survivalRate: Float
+  survivalRateNEQ: Float
+  survivalRateIn: [Float!]
+  survivalRateNotIn: [Float!]
+  survivalRateGT: Float
+  survivalRateGTE: Float
+  survivalRateLT: Float
+  survivalRateLTE: Float
+  survivalRateIsNil: Boolean
+  survivalRateNotNil: Boolean
+
+  """estimated_volume_reduction_per_hour field predicates"""
+  estimatedVolumeReductionPerHour: Float
+  estimatedVolumeReductionPerHourNEQ: Float
+  estimatedVolumeReductionPerHourIn: [Float!]
+  estimatedVolumeReductionPerHourNotIn: [Float!]
+  estimatedVolumeReductionPerHourGT: Float
+  estimatedVolumeReductionPerHourGTE: Float
+  estimatedVolumeReductionPerHourLT: Float
+  estimatedVolumeReductionPerHourLTE: Float
+  estimatedVolumeReductionPerHourIsNil: Boolean
+  estimatedVolumeReductionPerHourNotNil: Boolean
+
+  """estimated_bytes_reduction_per_hour field predicates"""
+  estimatedBytesReductionPerHour: Float
+  estimatedBytesReductionPerHourNEQ: Float
+  estimatedBytesReductionPerHourIn: [Float!]
+  estimatedBytesReductionPerHourNotIn: [Float!]
+  estimatedBytesReductionPerHourGT: Float
+  estimatedBytesReductionPerHourGTE: Float
+  estimatedBytesReductionPerHourLT: Float
+  estimatedBytesReductionPerHourLTE: Float
+  estimatedBytesReductionPerHourIsNil: Boolean
+  estimatedBytesReductionPerHourNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
+  estimatedCostReductionPerHourBytesUsd: Float
+  estimatedCostReductionPerHourBytesUsdNEQ: Float
+  estimatedCostReductionPerHourBytesUsdIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
+  estimatedCostReductionPerHourBytesUsdGT: Float
+  estimatedCostReductionPerHourBytesUsdGTE: Float
+  estimatedCostReductionPerHourBytesUsdLT: Float
+  estimatedCostReductionPerHourBytesUsdLTE: Float
+  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
+  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
+  estimatedCostReductionPerHourVolumeUsd: Float
+  estimatedCostReductionPerHourVolumeUsdNEQ: Float
+  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
+  estimatedCostReductionPerHourVolumeUsdGT: Float
+  estimatedCostReductionPerHourVolumeUsdGTE: Float
+  estimatedCostReductionPerHourVolumeUsdLT: Float
+  estimatedCostReductionPerHourVolumeUsdLTE: Float
+  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
+  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+
+  """estimated_cost_reduction_per_hour_usd field predicates"""
+  estimatedCostReductionPerHourUsd: Float
+  estimatedCostReductionPerHourUsdNEQ: Float
+  estimatedCostReductionPerHourUsdIn: [Float!]
+  estimatedCostReductionPerHourUsdNotIn: [Float!]
+  estimatedCostReductionPerHourUsdGT: Float
+  estimatedCostReductionPerHourUsdGTE: Float
+  estimatedCostReductionPerHourUsdLT: Float
+  estimatedCostReductionPerHourUsdLTE: Float
+  estimatedCostReductionPerHourUsdIsNil: Boolean
+  estimatedCostReductionPerHourUsdNotNil: Boolean
+
+  """refreshed_at field predicates"""
+  refreshedAt: Time
+  refreshedAtNEQ: Time
+  refreshedAtIn: [Time!]
+  refreshedAtNotIn: [Time!]
+  refreshedAtGT: Time
+  refreshedAtGTE: Time
+  refreshedAtLT: Time
+  refreshedAtLTE: Time
 }
 
 """
@@ -2538,11 +2719,25 @@ input LogEventPolicyWhereInput {
   categoryIn: [LogEventPolicyCategory!]
   categoryNotIn: [LogEventPolicyCategory!]
 
-  """objectivity field predicates"""
-  objectivity: LogEventPolicyObjectivity
-  objectivityNEQ: LogEventPolicyObjectivity
-  objectivityIn: [LogEventPolicyObjectivity!]
-  objectivityNotIn: [LogEventPolicyObjectivity!]
+  """subjective field predicates"""
+  subjective: Boolean
+  subjectiveNEQ: Boolean
+  subjectiveIsNil: Boolean
+  subjectiveNotNil: Boolean
+
+  """category_type field predicates"""
+  categoryType: LogEventPolicyCategoryType
+  categoryTypeNEQ: LogEventPolicyCategoryType
+  categoryTypeIn: [LogEventPolicyCategoryType!]
+  categoryTypeNotIn: [LogEventPolicyCategoryType!]
+  categoryTypeIsNil: Boolean
+  categoryTypeNotNil: Boolean
+
+  """impact_type field predicates"""
+  impactType: LogEventPolicyImpactType
+  impactTypeNEQ: LogEventPolicyImpactType
+  impactTypeIn: [LogEventPolicyImpactType!]
+  impactTypeNotIn: [LogEventPolicyImpactType!]
 
   """approved_at field predicates"""
   approvedAt: Time
@@ -2651,30 +2846,29 @@ type LogEventStatusCache implements Node {
   accountID: UUID!
   logEventID: ID!
   serviceID: UUID!
-  datadogAccountID: ID!
-  status: LogEventStatusCacheStatus!
   hasVolumes: Boolean!
   hasBeenAnalyzed: Boolean!
+  isQuarantined: Boolean!
+  isBroken: Boolean!
   error: String
   policyCount: Int!
   pendingPolicyCount: Int!
   approvedPolicyCount: Int!
   dismissedPolicyCount: Int!
-  estimablePolicyCount: Int!
   estimatedVolumeReductionPerHour: Float
   estimatedBytesReductionPerHour: Float
   volumePerHour: Float
   bytesPerHour: Float
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourAfter: Float
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourAfter: Float
   costPerHourBytesUsd: Float
   costPerHourVolumeUsd: Float
   costPerHourUsd: Float
   estimatedCostReductionPerHourBytesUsd: Float
   estimatedCostReductionPerHourVolumeUsd: Float
   estimatedCostReductionPerHourUsd: Float
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourAfter: Float
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourAfter: Float
   observedCostPerHourBeforeBytesUsd: Float
   observedCostPerHourBeforeVolumeUsd: Float
   observedCostPerHourBeforeUsd: Float
@@ -2682,17 +2876,6 @@ type LogEventStatusCache implements Node {
   observedCostPerHourAfterVolumeUsd: Float
   observedCostPerHourAfterUsd: Float
   refreshedAt: Time!
-}
-
-"""LogEventStatusCacheStatus is enum for the field status"""
-enum LogEventStatusCacheStatus {
-  BROKEN
-  RESOLVED
-  CLEAN
-  PENDING
-  ANALYZING
-  DISCOVERING
-  QUARANTINED
 }
 
 """
@@ -2740,18 +2923,6 @@ input LogEventStatusCacheWhereInput {
   serviceIDLT: UUID
   serviceIDLTE: UUID
 
-  """datadog_account_id field predicates"""
-  datadogAccountID: ID
-  datadogAccountIDNEQ: ID
-  datadogAccountIDIn: [ID!]
-  datadogAccountIDNotIn: [ID!]
-
-  """status field predicates"""
-  status: LogEventStatusCacheStatus
-  statusNEQ: LogEventStatusCacheStatus
-  statusIn: [LogEventStatusCacheStatus!]
-  statusNotIn: [LogEventStatusCacheStatus!]
-
   """has_volumes field predicates"""
   hasVolumes: Boolean
   hasVolumesNEQ: Boolean
@@ -2759,6 +2930,14 @@ input LogEventStatusCacheWhereInput {
   """has_been_analyzed field predicates"""
   hasBeenAnalyzed: Boolean
   hasBeenAnalyzedNEQ: Boolean
+
+  """is_quarantined field predicates"""
+  isQuarantined: Boolean
+  isQuarantinedNEQ: Boolean
+
+  """is_broken field predicates"""
+  isBroken: Boolean
+  isBrokenNEQ: Boolean
 
   """error field predicates"""
   error: String
@@ -2817,16 +2996,6 @@ input LogEventStatusCacheWhereInput {
   dismissedPolicyCountLT: Int
   dismissedPolicyCountLTE: Int
 
-  """estimable_policy_count field predicates"""
-  estimablePolicyCount: Int
-  estimablePolicyCountNEQ: Int
-  estimablePolicyCountIn: [Int!]
-  estimablePolicyCountNotIn: [Int!]
-  estimablePolicyCountGT: Int
-  estimablePolicyCountGTE: Int
-  estimablePolicyCountLT: Int
-  estimablePolicyCountLTE: Int
-
   """estimated_volume_reduction_per_hour field predicates"""
   estimatedVolumeReductionPerHour: Float
   estimatedVolumeReductionPerHourNEQ: Float
@@ -2874,54 +3043,6 @@ input LogEventStatusCacheWhereInput {
   bytesPerHourLTE: Float
   bytesPerHourIsNil: Boolean
   bytesPerHourNotNil: Boolean
-
-  """observed_volume_per_hour_before field predicates"""
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourBeforeNEQ: Float
-  observedVolumePerHourBeforeIn: [Float!]
-  observedVolumePerHourBeforeNotIn: [Float!]
-  observedVolumePerHourBeforeGT: Float
-  observedVolumePerHourBeforeGTE: Float
-  observedVolumePerHourBeforeLT: Float
-  observedVolumePerHourBeforeLTE: Float
-  observedVolumePerHourBeforeIsNil: Boolean
-  observedVolumePerHourBeforeNotNil: Boolean
-
-  """observed_volume_per_hour_after field predicates"""
-  observedVolumePerHourAfter: Float
-  observedVolumePerHourAfterNEQ: Float
-  observedVolumePerHourAfterIn: [Float!]
-  observedVolumePerHourAfterNotIn: [Float!]
-  observedVolumePerHourAfterGT: Float
-  observedVolumePerHourAfterGTE: Float
-  observedVolumePerHourAfterLT: Float
-  observedVolumePerHourAfterLTE: Float
-  observedVolumePerHourAfterIsNil: Boolean
-  observedVolumePerHourAfterNotNil: Boolean
-
-  """observed_bytes_per_hour_before field predicates"""
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourBeforeNEQ: Float
-  observedBytesPerHourBeforeIn: [Float!]
-  observedBytesPerHourBeforeNotIn: [Float!]
-  observedBytesPerHourBeforeGT: Float
-  observedBytesPerHourBeforeGTE: Float
-  observedBytesPerHourBeforeLT: Float
-  observedBytesPerHourBeforeLTE: Float
-  observedBytesPerHourBeforeIsNil: Boolean
-  observedBytesPerHourBeforeNotNil: Boolean
-
-  """observed_bytes_per_hour_after field predicates"""
-  observedBytesPerHourAfter: Float
-  observedBytesPerHourAfterNEQ: Float
-  observedBytesPerHourAfterIn: [Float!]
-  observedBytesPerHourAfterNotIn: [Float!]
-  observedBytesPerHourAfterGT: Float
-  observedBytesPerHourAfterGTE: Float
-  observedBytesPerHourAfterLT: Float
-  observedBytesPerHourAfterLTE: Float
-  observedBytesPerHourAfterIsNil: Boolean
-  observedBytesPerHourAfterNotNil: Boolean
 
   """cost_per_hour_bytes_usd field predicates"""
   costPerHourBytesUsd: Float
@@ -2994,6 +3115,54 @@ input LogEventStatusCacheWhereInput {
   estimatedCostReductionPerHourUsdLTE: Float
   estimatedCostReductionPerHourUsdIsNil: Boolean
   estimatedCostReductionPerHourUsdNotNil: Boolean
+
+  """observed_volume_per_hour_before field predicates"""
+  observedVolumePerHourBefore: Float
+  observedVolumePerHourBeforeNEQ: Float
+  observedVolumePerHourBeforeIn: [Float!]
+  observedVolumePerHourBeforeNotIn: [Float!]
+  observedVolumePerHourBeforeGT: Float
+  observedVolumePerHourBeforeGTE: Float
+  observedVolumePerHourBeforeLT: Float
+  observedVolumePerHourBeforeLTE: Float
+  observedVolumePerHourBeforeIsNil: Boolean
+  observedVolumePerHourBeforeNotNil: Boolean
+
+  """observed_volume_per_hour_after field predicates"""
+  observedVolumePerHourAfter: Float
+  observedVolumePerHourAfterNEQ: Float
+  observedVolumePerHourAfterIn: [Float!]
+  observedVolumePerHourAfterNotIn: [Float!]
+  observedVolumePerHourAfterGT: Float
+  observedVolumePerHourAfterGTE: Float
+  observedVolumePerHourAfterLT: Float
+  observedVolumePerHourAfterLTE: Float
+  observedVolumePerHourAfterIsNil: Boolean
+  observedVolumePerHourAfterNotNil: Boolean
+
+  """observed_bytes_per_hour_before field predicates"""
+  observedBytesPerHourBefore: Float
+  observedBytesPerHourBeforeNEQ: Float
+  observedBytesPerHourBeforeIn: [Float!]
+  observedBytesPerHourBeforeNotIn: [Float!]
+  observedBytesPerHourBeforeGT: Float
+  observedBytesPerHourBeforeGTE: Float
+  observedBytesPerHourBeforeLT: Float
+  observedBytesPerHourBeforeLTE: Float
+  observedBytesPerHourBeforeIsNil: Boolean
+  observedBytesPerHourBeforeNotNil: Boolean
+
+  """observed_bytes_per_hour_after field predicates"""
+  observedBytesPerHourAfter: Float
+  observedBytesPerHourAfterNEQ: Float
+  observedBytesPerHourAfterIn: [Float!]
+  observedBytesPerHourAfterNotIn: [Float!]
+  observedBytesPerHourAfterGT: Float
+  observedBytesPerHourAfterGTE: Float
+  observedBytesPerHourAfterLT: Float
+  observedBytesPerHourAfterLTE: Float
+  observedBytesPerHourAfterIsNil: Boolean
+  observedBytesPerHourAfterNotNil: Boolean
 
   """observed_cost_per_hour_before_bytes_usd field predicates"""
   observedCostPerHourBeforeBytesUsd: Float
@@ -4310,7 +4479,6 @@ enum ServiceStatusCacheHealth {
   DISABLED
   INACTIVE
   ERROR
-  STALE
   OK
 }
 

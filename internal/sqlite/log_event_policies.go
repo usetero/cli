@@ -10,7 +10,7 @@ import (
 // LogEventPolicies provides type-safe access to log event policies.
 type LogEventPolicies interface {
 	Count(ctx context.Context) (int64, error)
-	ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
+	ListWasteCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.WastePolicy, error)
 }
 
@@ -28,9 +28,10 @@ func (l *logEventPoliciesImpl) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-// ListCategoryStatuses returns policy counts and impact grouped by category.
-func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error) {
-	rows, err := l.queries.ListPolicyCategoryStatuses(ctx)
+// ListWasteCategoryStatuses returns policy counts and impact grouped by category,
+// excluding compliance categories (filtered at the SQL level by category_type).
+func (l *logEventPoliciesImpl) ListWasteCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error) {
+	rows, err := l.queries.ListWasteCategoryStatuses(ctx)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list policy category statuses")
 	}
@@ -45,7 +46,6 @@ func (l *logEventPoliciesImpl) ListCategoryStatuses(ctx context.Context) ([]doma
 			EstimatedVolumePerHour: row.EstimatedVolumePerHour,
 			EstimatedBytesPerHour:  row.EstimatedBytesPerHour,
 			EstimatedCostPerHour:   row.EstimatedCostPerHour,
-			Benefit:                row.Benefits,
 			ObservedVolumeBefore:   row.ObservedVolumeBefore,
 			ObservedVolumeAfter:    row.ObservedVolumeAfter,
 			ObservedBytesBefore:    row.ObservedBytesBefore,
