@@ -11,12 +11,18 @@ SELECT
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_bytes_usd ELSE 0 END) AS estimated_cost_per_hour_bytes,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_volume_usd ELSE 0 END) AS estimated_cost_per_hour_volume,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_after ELSE 0 END) AS observed_bytes_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_usd ELSE 0 END) AS observed_cost_before,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_bytes_usd ELSE 0 END) AS observed_cost_before_bytes,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_volume_usd ELSE 0 END) AS observed_cost_before_volume,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_bytes_usd ELSE 0 END) AS observed_cost_after_bytes,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_volume_usd ELSE 0 END) AS observed_cost_after_volume,
   CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
   CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
 FROM log_event_policy_statuses_cache leps
@@ -52,7 +58,10 @@ SELECT
   les.volume_per_hour,
   les.bytes_per_hour,
   leps.estimated_cost_reduction_per_hour_usd AS estimated_cost_per_hour,
-  leps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour
+  leps.estimated_cost_reduction_per_hour_bytes_usd AS estimated_cost_per_hour_bytes,
+  leps.estimated_cost_reduction_per_hour_volume_usd AS estimated_cost_per_hour_volume,
+  leps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour,
+  leps.estimated_volume_reduction_per_hour AS estimated_volume_per_hour
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id

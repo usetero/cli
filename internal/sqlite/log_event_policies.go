@@ -39,21 +39,27 @@ func (l *logEventPoliciesImpl) ListWasteCategoryStatuses(ctx context.Context) ([
 	result := make([]domain.PolicyCategoryStatus, len(rows))
 	for i, row := range rows {
 		result[i] = domain.PolicyCategoryStatus{
-			Category:               row.Category,
-			PendingCount:           row.PendingCount,
-			ApprovedCount:          row.ApprovedCount,
-			DismissedCount:         row.DismissedCount,
-			EstimatedVolumePerHour: row.EstimatedVolumePerHour,
-			EstimatedBytesPerHour:  row.EstimatedBytesPerHour,
-			EstimatedCostPerHour:   row.EstimatedCostPerHour,
-			ObservedVolumeBefore:   row.ObservedVolumeBefore,
-			ObservedVolumeAfter:    row.ObservedVolumeAfter,
-			ObservedBytesBefore:    row.ObservedBytesBefore,
-			ObservedBytesAfter:     row.ObservedBytesAfter,
-			ObservedCostBefore:     row.ObservedCostBefore,
-			ObservedCostAfter:      row.ObservedCostAfter,
-			EventsWithVolumes:      row.EventsWithVolumes,
-			TotalEvents:            row.TotalEvents,
+			Category:                   row.Category,
+			PendingCount:               row.PendingCount,
+			ApprovedCount:              row.ApprovedCount,
+			DismissedCount:             row.DismissedCount,
+			EstimatedVolumePerHour:     row.EstimatedVolumePerHour,
+			EstimatedBytesPerHour:      row.EstimatedBytesPerHour,
+			EstimatedCostPerHour:       row.EstimatedCostPerHour,
+			EstimatedCostPerHourBytes:  row.EstimatedCostPerHourBytes,
+			EstimatedCostPerHourVolume: row.EstimatedCostPerHourVolume,
+			ObservedVolumeBefore:       row.ObservedVolumeBefore,
+			ObservedVolumeAfter:        row.ObservedVolumeAfter,
+			ObservedBytesBefore:        row.ObservedBytesBefore,
+			ObservedBytesAfter:         row.ObservedBytesAfter,
+			ObservedCostBefore:         row.ObservedCostBefore,
+			ObservedCostBeforeBytes:    row.ObservedCostBeforeBytes,
+			ObservedCostBeforeVolume:   row.ObservedCostBeforeVolume,
+			ObservedCostAfter:          row.ObservedCostAfter,
+			ObservedCostAfterBytes:     row.ObservedCostAfterBytes,
+			ObservedCostAfterVolume:    row.ObservedCostAfterVolume,
+			EventsWithVolumes:          row.EventsWithVolumes,
+			TotalEvents:                row.TotalEvents,
 		}
 	}
 	return result, nil
@@ -72,12 +78,15 @@ func (l *logEventPoliciesImpl) ListTopPendingPoliciesByCategory(ctx context.Cont
 	result := make([]domain.WastePolicy, len(rows))
 	for i, row := range rows {
 		result[i] = domain.WastePolicy{
-			LogEventName:          row.LogEventName,
-			ServiceName:           row.ServiceName,
-			VolumePerHour:         row.VolumePerHour,
-			BytesPerHour:          row.BytesPerHour,
-			EstimatedCostPerHour:  row.EstimatedCostPerHour,
-			EstimatedBytesPerHour: row.EstimatedBytesPerHour,
+			LogEventName:               row.LogEventName,
+			ServiceName:                row.ServiceName,
+			VolumePerHour:              row.VolumePerHour,
+			BytesPerHour:               row.BytesPerHour,
+			EstimatedCostPerHour:       row.EstimatedCostPerHour,
+			EstimatedCostPerHourBytes:  row.EstimatedCostPerHourBytes,
+			EstimatedCostPerHourVolume: row.EstimatedCostPerHourVolume,
+			EstimatedBytesPerHour:      row.EstimatedBytesPerHour,
+			EstimatedVolumePerHour:     row.EstimatedVolumePerHour,
 		}
 	}
 	return result, nil

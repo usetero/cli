@@ -127,7 +127,6 @@ CREATE TABLE discovery_statuses (
 CREATE TABLE log_event_fields (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
-    avg_bytes REAL, -- Average serialized byte size of this field's value. Initially estimated from example log records, refined by trigger from log_event_volumes data.
     created_at TEXT, -- When this field was first discovered
     distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
     field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}

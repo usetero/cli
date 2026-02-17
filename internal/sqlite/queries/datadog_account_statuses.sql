@@ -37,7 +37,11 @@ SELECT
 
   -- observed impact
   SUM(observed_cost_per_hour_before_usd) AS observed_cost_before,
+  SUM(observed_cost_per_hour_before_bytes_usd) AS observed_cost_before_bytes,
+  SUM(observed_cost_per_hour_before_volume_usd) AS observed_cost_before_volume,
   SUM(observed_cost_per_hour_after_usd) AS observed_cost_after,
+  SUM(observed_cost_per_hour_after_bytes_usd) AS observed_cost_after_bytes,
+  SUM(observed_cost_per_hour_after_volume_usd) AS observed_cost_after_volume,
   SUM(observed_volume_per_hour_before) AS observed_volume_before,
   SUM(observed_volume_per_hour_after) AS observed_volume_after,
   SUM(observed_bytes_per_hour_before) AS observed_bytes_before,

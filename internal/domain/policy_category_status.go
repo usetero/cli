@@ -19,17 +19,23 @@ type PolicyCategoryStatus struct {
 	DismissedCount int64
 
 	// Estimated impact from pending policies.
-	EstimatedVolumePerHour *float64
-	EstimatedBytesPerHour  *float64
-	EstimatedCostPerHour   *float64
+	EstimatedVolumePerHour     *float64
+	EstimatedBytesPerHour      *float64
+	EstimatedCostPerHour       *float64
+	EstimatedCostPerHourBytes  *float64
+	EstimatedCostPerHourVolume *float64
 
 	// Observed impact from approved policies (before/after).
-	ObservedVolumeBefore *float64
-	ObservedVolumeAfter  *float64
-	ObservedBytesBefore  *float64
-	ObservedBytesAfter   *float64
-	ObservedCostBefore   *float64
-	ObservedCostAfter    *float64
+	ObservedVolumeBefore     *float64
+	ObservedVolumeAfter      *float64
+	ObservedBytesBefore      *float64
+	ObservedBytesAfter       *float64
+	ObservedCostBefore       *float64
+	ObservedCostBeforeBytes  *float64
+	ObservedCostBeforeVolume *float64
+	ObservedCostAfter        *float64
+	ObservedCostAfterBytes   *float64
+	ObservedCostAfterVolume  *float64
 
 	// Volume discovery coverage.
 	EventsWithVolumes int64 // Log events in this category that have volume data

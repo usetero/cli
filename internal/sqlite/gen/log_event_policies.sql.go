@@ -95,7 +95,10 @@ SELECT
   les.volume_per_hour,
   les.bytes_per_hour,
   leps.estimated_cost_reduction_per_hour_usd AS estimated_cost_per_hour,
-  leps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour
+  leps.estimated_cost_reduction_per_hour_bytes_usd AS estimated_cost_per_hour_bytes,
+  leps.estimated_cost_reduction_per_hour_volume_usd AS estimated_cost_per_hour_volume,
+  leps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour,
+  leps.estimated_volume_reduction_per_hour AS estimated_volume_per_hour
 FROM log_event_policy_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
@@ -111,12 +114,15 @@ type ListTopPendingPoliciesByCategoryParams struct {
 }
 
 type ListTopPendingPoliciesByCategoryRow struct {
-	ServiceName           string
-	LogEventName          string
-	VolumePerHour         *float64
-	BytesPerHour          *float64
-	EstimatedCostPerHour  *float64
-	EstimatedBytesPerHour *float64
+	ServiceName                string
+	LogEventName               string
+	VolumePerHour              *float64
+	BytesPerHour               *float64
+	EstimatedCostPerHour       *float64
+	EstimatedCostPerHourBytes  *float64
+	EstimatedCostPerHourVolume *float64
+	EstimatedBytesPerHour      *float64
+	EstimatedVolumePerHour     *float64
 }
 
 func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error) {
@@ -134,7 +140,10 @@ func (q *Queries) ListTopPendingPoliciesByCategory(ctx context.Context, arg List
 			&i.VolumePerHour,
 			&i.BytesPerHour,
 			&i.EstimatedCostPerHour,
+			&i.EstimatedCostPerHourBytes,
+			&i.EstimatedCostPerHourVolume,
 			&i.EstimatedBytesPerHour,
+			&i.EstimatedVolumePerHour,
 		); err != nil {
 			return nil, err
 		}
@@ -158,12 +167,18 @@ SELECT
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_volume_reduction_per_hour ELSE 0 END) AS estimated_volume_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_bytes_reduction_per_hour ELSE 0 END) AS estimated_bytes_per_hour,
   SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_usd ELSE 0 END) AS estimated_cost_per_hour,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_bytes_usd ELSE 0 END) AS estimated_cost_per_hour_bytes,
+  SUM(CASE WHEN leps.status = 'PENDING' THEN leps.estimated_cost_reduction_per_hour_volume_usd ELSE 0 END) AS estimated_cost_per_hour_volume,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_before ELSE 0 END) AS observed_volume_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_volume_per_hour_after ELSE 0 END) AS observed_volume_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_before ELSE 0 END) AS observed_bytes_before,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_bytes_per_hour_after ELSE 0 END) AS observed_bytes_after,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_usd ELSE 0 END) AS observed_cost_before,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_bytes_usd ELSE 0 END) AS observed_cost_before_bytes,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_before_volume_usd ELSE 0 END) AS observed_cost_before_volume,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_usd ELSE 0 END) AS observed_cost_after,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_bytes_usd ELSE 0 END) AS observed_cost_after_bytes,
+  SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_volume_usd ELSE 0 END) AS observed_cost_after_volume,
   CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
   CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
 FROM log_event_policy_statuses_cache leps
@@ -176,21 +191,27 @@ ORDER BY
 `
 
 type ListWasteCategoryStatusesRow struct {
-	Category               string
-	PendingCount           int64
-	ApprovedCount          int64
-	DismissedCount         int64
-	EstimatedVolumePerHour *float64
-	EstimatedBytesPerHour  *float64
-	EstimatedCostPerHour   *float64
-	ObservedVolumeBefore   *float64
-	ObservedVolumeAfter    *float64
-	ObservedBytesBefore    *float64
-	ObservedBytesAfter     *float64
-	ObservedCostBefore     *float64
-	ObservedCostAfter      *float64
-	EventsWithVolumes      int64
-	TotalEvents            int64
+	Category                   string
+	PendingCount               int64
+	ApprovedCount              int64
+	DismissedCount             int64
+	EstimatedVolumePerHour     *float64
+	EstimatedBytesPerHour      *float64
+	EstimatedCostPerHour       *float64
+	EstimatedCostPerHourBytes  *float64
+	EstimatedCostPerHourVolume *float64
+	ObservedVolumeBefore       *float64
+	ObservedVolumeAfter        *float64
+	ObservedBytesBefore        *float64
+	ObservedBytesAfter         *float64
+	ObservedCostBefore         *float64
+	ObservedCostBeforeBytes    *float64
+	ObservedCostBeforeVolume   *float64
+	ObservedCostAfter          *float64
+	ObservedCostAfterBytes     *float64
+	ObservedCostAfterVolume    *float64
+	EventsWithVolumes          int64
+	TotalEvents                int64
 }
 
 // Categories where category_type is waste (waste tab).
@@ -211,12 +232,18 @@ func (q *Queries) ListWasteCategoryStatuses(ctx context.Context) ([]ListWasteCat
 			&i.EstimatedVolumePerHour,
 			&i.EstimatedBytesPerHour,
 			&i.EstimatedCostPerHour,
+			&i.EstimatedCostPerHourBytes,
+			&i.EstimatedCostPerHourVolume,
 			&i.ObservedVolumeBefore,
 			&i.ObservedVolumeAfter,
 			&i.ObservedBytesBefore,
 			&i.ObservedBytesAfter,
 			&i.ObservedCostBefore,
+			&i.ObservedCostBeforeBytes,
+			&i.ObservedCostBeforeVolume,
 			&i.ObservedCostAfter,
+			&i.ObservedCostAfterBytes,
+			&i.ObservedCostAfterVolume,
 			&i.EventsWithVolumes,
 			&i.TotalEvents,
 		); err != nil {

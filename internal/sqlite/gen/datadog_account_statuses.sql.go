@@ -48,7 +48,11 @@ SELECT
 
   -- observed impact
   SUM(observed_cost_per_hour_before_usd) AS observed_cost_before,
+  SUM(observed_cost_per_hour_before_bytes_usd) AS observed_cost_before_bytes,
+  SUM(observed_cost_per_hour_before_volume_usd) AS observed_cost_before_volume,
   SUM(observed_cost_per_hour_after_usd) AS observed_cost_after,
+  SUM(observed_cost_per_hour_after_bytes_usd) AS observed_cost_after_bytes,
+  SUM(observed_cost_per_hour_after_volume_usd) AS observed_cost_after_volume,
   SUM(observed_volume_per_hour_before) AS observed_volume_before,
   SUM(observed_volume_per_hour_after) AS observed_volume_after,
   SUM(observed_bytes_per_hour_before) AS observed_bytes_before,
@@ -92,7 +96,11 @@ type GetAccountSummaryRow struct {
 	EstimatedVolumePerHour     *float64
 	EstimatedBytesPerHour      *float64
 	ObservedCostBefore         *float64
+	ObservedCostBeforeBytes    *float64
+	ObservedCostBeforeVolume   *float64
 	ObservedCostAfter          *float64
+	ObservedCostAfterBytes     *float64
+	ObservedCostAfterVolume    *float64
 	ObservedVolumeBefore       *float64
 	ObservedVolumeAfter        *float64
 	ObservedBytesBefore        *float64
@@ -134,7 +142,11 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 		&i.EstimatedVolumePerHour,
 		&i.EstimatedBytesPerHour,
 		&i.ObservedCostBefore,
+		&i.ObservedCostBeforeBytes,
+		&i.ObservedCostBeforeVolume,
 		&i.ObservedCostAfter,
+		&i.ObservedCostAfterBytes,
+		&i.ObservedCostAfterVolume,
 		&i.ObservedVolumeBefore,
 		&i.ObservedVolumeAfter,
 		&i.ObservedBytesBefore,
