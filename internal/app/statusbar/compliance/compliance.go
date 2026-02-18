@@ -401,7 +401,8 @@ func formatCategoryStatus(colors styles.Theme, c domain.ComplianceCategorySummar
 		parts = append(parts, errStyle.Render(fmt.Sprintf("%s leaking", format.Count(c.LeakingCount))))
 	}
 	if c.AtRiskCount > 0 {
-		parts = append(parts, mutedStyle.Render(fmt.Sprintf("%s at risk", format.Count(c.AtRiskCount))))
+		warnStyle := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
+		parts = append(parts, warnStyle.Render(fmt.Sprintf("%s at risk", format.Count(c.AtRiskCount))))
 	}
 	if len(parts) == 0 {
 		return "—"
