@@ -332,6 +332,11 @@ func (m *Model) renderCategoryTable(width int) string {
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 	bar := m.discoveryBar()
 
+	var totalCost float64
+	if m.summary.EstimatedCostPerHour != nil {
+		totalCost = *m.summary.EstimatedCostPerHour
+	}
+
 	for i, c := range m.categories {
 		dot := ok.Render("●")
 		if c.PendingCount > 0 {
@@ -345,7 +350,7 @@ func (m *Model) renderCategoryTable(width int) string {
 			name = dot + " " + name
 		}
 
-		savings := fmt.Sprintf("%-12s", formatCategoryCost(c))
+		savings := fmt.Sprintf("%-12s", formatCategoryCost(c, totalCost, ok, muted))
 		if c.TotalEvents > 0 {
 			pct := int(c.EventsWithVolumes * 100 / c.TotalEvents)
 			if pct < 95 {
@@ -389,12 +394,20 @@ func (m *Model) discoveryBar() progress.Model {
 	return bar
 }
 
-// formatCategoryCost returns estimated yearly cost for a category.
-func formatCategoryCost(c domain.PolicyCategoryStatus) string {
+// formatCategoryCost returns estimated yearly cost for a category, with its
+// share of total estimated waste when available.
+func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64, success, muted lipgloss.Style) string {
 	if c.EstimatedCostPerHour != nil && *c.EstimatedCostPerHour > 0 {
 		yearly := *c.EstimatedCostPerHour * 8760
 		if yearly >= 1 {
-			return "~" + format.Cost(yearly) + "/yr"
+			cost := success.Render("~" + format.Cost(yearly) + "/yr")
+			if totalCostPerHour > 0 {
+				pct := int(math.Round(*c.EstimatedCostPerHour / totalCostPerHour * 100))
+				if pct > 0 && pct < 100 {
+					cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
+				}
+			}
+			return cost
 		}
 	}
 	return "—"
