@@ -110,10 +110,10 @@ CREATE TABLE discovery_statuses (
 CREATE TABLE log_event_fields (
     id TEXT,
     account_id TEXT,
-    avg_bytes REAL,
     created_at TEXT,
     distribution_observed_at TEXT,
     field_path TEXT,
+    last_seen_at TEXT,
     log_event_id TEXT,
     value_distribution TEXT
 );
@@ -129,8 +129,8 @@ CREATE TABLE log_event_policies (
     created_at TEXT,
     dismissed_at TEXT,
     dismissed_by TEXT,
+    impact_type TEXT,
     log_event_id TEXT,
-    model TEXT,
     subjective INTEGER,
     updated_at TEXT,
     workspace_id TEXT

@@ -2105,6 +2105,16 @@ type LogEvent implements Node {
   """When AI last analyzed this log event for quality issues"""
   analyzedAt: Time
 
+  """
+  Current trailing 7-day average events/hour. Refreshed on volume ingestion.
+  """
+  baselineVolumePerHour: Float
+
+  """
+  Current trailing 7-day volume-weighted average bytes/event. Refreshed on volume ingestion.
+  """
+  baselineAvgBytes: Float
+
   """When the log event was created"""
   createdAt: Time!
 
@@ -2168,10 +2178,9 @@ type LogEventField implements Node {
   fieldPath: [String!]!
 
   """
-  Average serialized byte size of this field's value. Initially estimated from
-  example log records, refined by trigger from log_event_volumes data.
+  Current trailing 7-day volume-weighted average bytes for this attribute. Refreshed on volume ingestion.
   """
-  avgBytes: Float
+  baselineAvgBytes: Float
 
   """When this field was last seen in production log samples."""
   lastSeenAt: Time!
@@ -2228,17 +2237,17 @@ input LogEventFieldWhereInput {
   fieldPathLT: [String!]
   fieldPathLTE: [String!]
 
-  """avg_bytes field predicates"""
-  avgBytes: Float
-  avgBytesNEQ: Float
-  avgBytesIn: [Float!]
-  avgBytesNotIn: [Float!]
-  avgBytesGT: Float
-  avgBytesGTE: Float
-  avgBytesLT: Float
-  avgBytesLTE: Float
-  avgBytesIsNil: Boolean
-  avgBytesNotNil: Boolean
+  """baseline_avg_bytes field predicates"""
+  baselineAvgBytes: Float
+  baselineAvgBytesNEQ: Float
+  baselineAvgBytesIn: [Float!]
+  baselineAvgBytesNotIn: [Float!]
+  baselineAvgBytesGT: Float
+  baselineAvgBytesGTE: Float
+  baselineAvgBytesLT: Float
+  baselineAvgBytesLTE: Float
+  baselineAvgBytesIsNil: Boolean
+  baselineAvgBytesNotNil: Boolean
 
   """last_seen_at field predicates"""
   lastSeenAt: Time
@@ -2322,6 +2331,16 @@ type LogEventPolicy implements Node {
 
   """User ID who approved this policy"""
   approvedBy: String
+
+  """
+  Baseline volume/hour frozen at approval time. Snapshot of log_event.baseline_volume_per_hour.
+  """
+  approvedBaselineVolumePerHour: Float
+
+  """
+  Baseline avg bytes frozen at approval time. Snapshot of log_event.baseline_avg_bytes.
+  """
+  approvedBaselineAvgBytes: Float
 
   """When this policy was dismissed by a user"""
   dismissedAt: Time
@@ -2767,6 +2786,30 @@ input LogEventPolicyWhereInput {
   approvedByNotNil: Boolean
   approvedByEqualFold: String
   approvedByContainsFold: String
+
+  """approved_baseline_volume_per_hour field predicates"""
+  approvedBaselineVolumePerHour: Float
+  approvedBaselineVolumePerHourNEQ: Float
+  approvedBaselineVolumePerHourIn: [Float!]
+  approvedBaselineVolumePerHourNotIn: [Float!]
+  approvedBaselineVolumePerHourGT: Float
+  approvedBaselineVolumePerHourGTE: Float
+  approvedBaselineVolumePerHourLT: Float
+  approvedBaselineVolumePerHourLTE: Float
+  approvedBaselineVolumePerHourIsNil: Boolean
+  approvedBaselineVolumePerHourNotNil: Boolean
+
+  """approved_baseline_avg_bytes field predicates"""
+  approvedBaselineAvgBytes: Float
+  approvedBaselineAvgBytesNEQ: Float
+  approvedBaselineAvgBytesIn: [Float!]
+  approvedBaselineAvgBytesNotIn: [Float!]
+  approvedBaselineAvgBytesGT: Float
+  approvedBaselineAvgBytesGTE: Float
+  approvedBaselineAvgBytesLT: Float
+  approvedBaselineAvgBytesLTE: Float
+  approvedBaselineAvgBytesIsNil: Boolean
+  approvedBaselineAvgBytesNotNil: Boolean
 
   """dismissed_at field predicates"""
   dismissedAt: Time
@@ -3323,6 +3366,30 @@ input LogEventWhereInput {
   analyzedAtLTE: Time
   analyzedAtIsNil: Boolean
   analyzedAtNotNil: Boolean
+
+  """baseline_volume_per_hour field predicates"""
+  baselineVolumePerHour: Float
+  baselineVolumePerHourNEQ: Float
+  baselineVolumePerHourIn: [Float!]
+  baselineVolumePerHourNotIn: [Float!]
+  baselineVolumePerHourGT: Float
+  baselineVolumePerHourGTE: Float
+  baselineVolumePerHourLT: Float
+  baselineVolumePerHourLTE: Float
+  baselineVolumePerHourIsNil: Boolean
+  baselineVolumePerHourNotNil: Boolean
+
+  """baseline_avg_bytes field predicates"""
+  baselineAvgBytes: Float
+  baselineAvgBytesNEQ: Float
+  baselineAvgBytesIn: [Float!]
+  baselineAvgBytesNotIn: [Float!]
+  baselineAvgBytesGT: Float
+  baselineAvgBytesGTE: Float
+  baselineAvgBytesLT: Float
+  baselineAvgBytesLTE: Float
+  baselineAvgBytesIsNil: Boolean
+  baselineAvgBytesNotNil: Boolean
 
   """created_at field predicates"""
   createdAt: Time

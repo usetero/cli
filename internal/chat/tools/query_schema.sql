@@ -130,6 +130,7 @@ CREATE TABLE log_event_fields (
     created_at TEXT, -- When this field was first discovered
     distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
     field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
+    last_seen_at TEXT, -- When this field was last seen in production log samples.
     log_event_id TEXT, -- The log event this field belongs to
     -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
     -- Opaque JSON data. Query using SQLite json_extract() or json_each().
@@ -180,8 +181,8 @@ CREATE TABLE log_event_policies (
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy
+    impact_type TEXT, -- How this policy reduces cost: 'attribute' (modifies fields), 'volume' (drops events), 'none' (compliance only). Auto-set via trigger.
     log_event_id TEXT, -- The log event this policy applies to
-    model TEXT, -- AI model that generated this policy (e.g., 'claude-sonnet-4-20250514')
     subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false). Auto-set via trigger from CategoryMeta.
     updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
