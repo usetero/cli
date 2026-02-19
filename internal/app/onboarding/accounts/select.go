@@ -3,6 +3,8 @@ package accounts
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -18,6 +20,13 @@ import (
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
 
+const (
+	accountsProvisioningMaxWait  = 60 * time.Second
+	accountsProvisioningMaxTries = 6
+)
+
+type retryLoadAccountsMsg struct{}
+
 // SelectModel handles account selection.
 type SelectModel struct {
 	ctx      context.Context
@@ -31,6 +40,10 @@ type SelectModel struct {
 	accounts []domain.Account
 	width    int
 	height   int
+
+	// Retry state: handles short backend provisioning delays after org creation.
+	accountsLoadStartedAt time.Time
+	accountsLoadAttempts  int
 }
 
 // NewSelect creates a new account select step.
@@ -56,12 +69,15 @@ func NewSelect(
 		prefs:    prefs,
 		scope:    scope,
 		org:      org,
-		list:     remotelist.New(theme, "Loading accounts"),
+		list:     remotelist.New(theme, "Loading accounts…"),
 	}
 }
 
 // Init starts loading accounts.
 func (m *SelectModel) Init() tea.Cmd {
+	m.accountsLoadStartedAt = time.Now()
+	m.accountsLoadAttempts = 0
+
 	m.scope.Info("loading accounts", "orgID", m.org.ID)
 	return m.list.InitWithLoader(m.loadAccounts())
 }
@@ -84,8 +100,32 @@ func (m *SelectModel) loadAccounts() tea.Cmd {
 // Update handles messages.
 func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case retryLoadAccountsMsg:
+		// Re-run the accounts loader.
+		return m.list.InitWithLoader(m.loadAccounts())
+
 	case remotelist.LoadResult:
 		if msg.Err != nil {
+			// Only auto-retry during a short window and only for the known provisioning symptom.
+			errText := strings.ToLower(msg.Err.Error())
+			if strings.Contains(errText, "accounts internal error") &&
+				m.accountsLoadAttempts < accountsProvisioningMaxTries &&
+				time.Since(m.accountsLoadStartedAt) < accountsProvisioningMaxWait {
+
+				m.accountsLoadAttempts++
+				delay := time.Duration(m.accountsLoadAttempts) * time.Second // 1s, 2s, 3s...
+
+				m.scope.Info(
+					"accounts not ready yet; retrying",
+					"attempt", m.accountsLoadAttempts,
+					"delay", delay.String(),
+					"error", msg.Err,
+				)
+
+				// Keep the user in "loading" mode; don’t flip the list into an error state yet.
+				return tea.Tick(delay, func(time.Time) tea.Msg { return retryLoadAccountsMsg{} })
+			}
+
 			m.scope.Error("failed to load accounts", "error", msg.Err)
 			return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load accounts", msg.Err, false))
 		}
