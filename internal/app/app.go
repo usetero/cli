@@ -269,6 +269,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusBar.CloseDrawer()
 		}
 
+	case appmsg.DrawerPrompt:
+		// A drawer tab wants to submit a prompt to the chat.
+		m.statusBar.CloseDrawer()
+		return m, func() tea.Msg { return msgs.UserSubmittedInput{Text: msg.Text} }
+
 	case msgs.UserSubmittedInput:
 		// Intercept "exit" and "quit" commands
 		text := strings.TrimSpace(msg.Text)

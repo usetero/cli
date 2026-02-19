@@ -176,10 +176,21 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 
-	// Detail mode: backspace returns to service list (esc handled by statusbar).
+	// Detail mode: navigate log events or go back.
 	if m.detail != nil {
-		if key.Matches(msg, keymap.DrawerBack) {
+		switch {
+		case key.Matches(msg, keymap.DrawerBack):
 			m.detail = nil
+		case key.Matches(msg, keymap.DrawerUp):
+			if m.detail.cursor > 0 {
+				m.detail.cursor--
+			}
+		case key.Matches(msg, keymap.DrawerDown):
+			if m.detail.cursor < len(m.detail.logEvents)-1 {
+				m.detail.cursor++
+			}
+		case key.Matches(msg, keymap.DrawerSelect):
+			return m.detail.Prompt()
 		}
 		return nil
 	}

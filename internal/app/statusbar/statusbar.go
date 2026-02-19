@@ -199,19 +199,19 @@ func (m *Model) HandleEsc() bool {
 func (m *Model) ShortHelp() []key.Binding {
 	if m.activeTab == TabCompliance && m.complianceStatus.HasData() {
 		if m.complianceStatus.InDetail() {
-			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+			return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.DrawerBack, keymap.NextTab}
 		}
 		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
 	}
 	if m.activeTab == TabWaste && m.wasteStatus.HasData() {
 		if m.wasteStatus.InDetail() {
-			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+			return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.DrawerBack, keymap.NextTab}
 		}
 		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
 	}
 	if m.activeTab == TabServices && m.servicesStatus.HasData() {
 		if m.servicesStatus.InDetail() {
-			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+			return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.DrawerBack, keymap.NextTab}
 		}
 		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
 	}

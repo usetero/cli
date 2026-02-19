@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/styles"
@@ -17,6 +19,7 @@ type detail struct {
 	theme    styles.Theme
 	category domain.ComplianceCategorySummary
 	policies []domain.CompliancePolicy
+	cursor   int
 }
 
 // newDetail creates a detail view for the given category and pre-fetched policies.
@@ -26,6 +29,19 @@ func newDetail(theme styles.Theme, category domain.ComplianceCategorySummary, po
 		category: category,
 		policies: policies,
 	}
+}
+
+// Prompt returns a tea.Cmd that emits a DrawerPrompt for the selected policy.
+func (d *detail) Prompt() tea.Cmd {
+	if len(d.policies) == 0 {
+		return nil
+	}
+	p := d.policies[d.cursor]
+	text := fmt.Sprintf(
+		"Tell me about the %s compliance issue for the %q log event in the %s service.",
+		displayCategoryName(d.category.Category), p.LogEventName, p.ServiceName,
+	)
+	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
 }
 
 // View renders the detail: a header with category summary, then a policy table.
@@ -79,16 +95,25 @@ func (d *detail) renderTable(width int) string {
 	tbl.Headers("Log Event", "Service", "Volume", "Status")
 	tbl.SetWidth(width)
 
-	for _, p := range d.policies {
+	accent := lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg)
+
+	for i, p := range d.policies {
+		name := p.LogEventName
+		if i == d.cursor {
+			name = accent.Render("▶ " + name)
+		} else {
+			name = d.observedDot(p.AnyObserved) + " " + name
+		}
+
 		vol := "—"
 		if p.VolumePerHour != nil {
 			vol = format.Volume(*p.VolumePerHour) + " evt/hr"
 		}
 
-		status := d.observedDot(p.AnyObserved) + " " + d.formatSensitiveTypes(p.Fields, 3)
+		status := d.formatSensitiveTypes(p.Fields, 3)
 
 		tbl.Row(
-			p.LogEventName,
+			name,
 			p.ServiceName,
 			vol,
 			status,

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/styles"
@@ -18,6 +20,7 @@ type detail struct {
 	theme     styles.Theme
 	service   domain.ServiceStatus
 	logEvents []domain.LogEventStatus
+	cursor    int
 }
 
 // newDetail creates a detail view for the given service and pre-fetched log events.
@@ -27,6 +30,17 @@ func newDetail(theme styles.Theme, service domain.ServiceStatus, logEvents []dom
 		service:   service,
 		logEvents: logEvents,
 	}
+}
+
+// Prompt returns a tea.Cmd that emits a DrawerPrompt for the selected log event.
+func (d *detail) Prompt() tea.Cmd {
+	if len(d.logEvents) == 0 {
+		return nil
+	}
+	le := d.logEvents[d.cursor]
+	svc := d.service.Name
+	text := fmt.Sprintf("Tell me about the %q log event in the %s service.", le.Name, svc)
+	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
 }
 
 // View renders the detail: a header with service summary, then a log event table.
@@ -79,10 +93,13 @@ func (d *detail) renderTable(width int) string {
 	tbl.SetWidth(width)
 
 	muted := lipgloss.NewStyle().Foreground(d.theme.TextMuted).Background(d.theme.Bg)
+	accent := lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg)
 
-	for _, le := range d.logEvents {
+	for i, le := range d.logEvents {
 		name := le.Name
-		if le.PendingPolicyCount > 0 {
+		if i == d.cursor {
+			name = accent.Render("▶ " + name)
+		} else if le.PendingPolicyCount > 0 {
 			warn := lipgloss.NewStyle().Foreground(d.theme.Warning).Background(d.theme.Bg)
 			name = warn.Render("●") + " " + name
 		} else {

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/styles"
@@ -17,6 +19,7 @@ type detail struct {
 	theme    styles.Theme
 	category domain.PolicyCategoryStatus
 	policies []domain.WastePolicy
+	cursor   int
 }
 
 // newDetail creates a detail view for the given category and pre-fetched policies.
@@ -26,6 +29,19 @@ func newDetail(theme styles.Theme, category domain.PolicyCategoryStatus, policie
 		category: category,
 		policies: policies,
 	}
+}
+
+// Prompt returns a tea.Cmd that emits a DrawerPrompt for the selected policy.
+func (d *detail) Prompt() tea.Cmd {
+	if len(d.policies) == 0 {
+		return nil
+	}
+	p := d.policies[d.cursor]
+	text := fmt.Sprintf(
+		"Pull up the %q policy for the %q log event in the %s service.",
+		d.category.DisplayName(), p.LogEventName, p.ServiceName,
+	)
+	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
 }
 
 // View renders the detail: a header with category summary, then a policy table.
@@ -81,9 +97,17 @@ func (d *detail) renderTable(width int) string {
 	}
 	tbl.SetWidth(width)
 
+	accent := lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg)
 	dot := lipgloss.NewStyle().Foreground(d.theme.Warning).Background(d.theme.Bg).Render("●")
 
-	for _, p := range d.policies {
+	for i, p := range d.policies {
+		name := p.LogEventName
+		if i == d.cursor {
+			name = accent.Render("▶ " + name)
+		} else {
+			name = dot + " " + name
+		}
+
 		bytes := "—"
 		if p.BytesPerHour != nil {
 			bytes = format.Bytes(*p.BytesPerHour) + "/hr"
@@ -95,9 +119,9 @@ func (d *detail) renderTable(width int) string {
 			if p.VolumePerHour != nil {
 				vol = format.Volume(*p.VolumePerHour) + " evt/hr"
 			}
-			tbl.Row(dot+" "+p.LogEventName, p.ServiceName, vol, bytes, savings)
+			tbl.Row(name, p.ServiceName, vol, bytes, savings)
 		} else {
-			tbl.Row(dot+" "+p.LogEventName, p.ServiceName, bytes, savings)
+			tbl.Row(name, p.ServiceName, bytes, savings)
 		}
 	}
 
