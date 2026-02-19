@@ -36,6 +36,11 @@ type ServiceStatus struct {
 
 	// Service-level throughput (ground truth from service_log_volumes). Nil when unmeasured.
 	ServiceVolumePerHour        *float64
+	ServiceDebugVolumePerHour   *float64
+	ServiceInfoVolumePerHour    *float64
+	ServiceWarnVolumePerHour    *float64
+	ServiceErrorVolumePerHour   *float64
+	ServiceOtherVolumePerHour   *float64
 	ServiceCostPerHourVolumeUSD *float64
 
 	// Log event throughput (discovered events subset). Nil when unmeasured.

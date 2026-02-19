@@ -60,6 +60,7 @@ func (l *logEventPoliciesImpl) ListWasteCategoryStatuses(ctx context.Context) ([
 			ObservedCostAfterVolume:    row.ObservedCostAfterVolume,
 			EventsWithVolumes:          row.EventsWithVolumes,
 			TotalEvents:                row.TotalEvents,
+			ImpactType:                 row.ImpactType,
 		}
 	}
 	return result, nil

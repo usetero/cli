@@ -24,6 +24,11 @@ SELECT
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
   ssc.service_volume_per_hour,
+  ssc.service_debug_volume_per_hour,
+  ssc.service_info_volume_per_hour,
+  ssc.service_warn_volume_per_hour,
+  ssc.service_error_volume_per_hour,
+  ssc.service_other_volume_per_hour,
   ssc.service_cost_per_hour_volume_usd,
   ssc.log_event_volume_per_hour,
   ssc.log_event_bytes_per_hour,
@@ -73,6 +78,11 @@ type ListAllServiceStatusesRow struct {
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
 	ServiceVolumePerHour                   *float64
+	ServiceDebugVolumePerHour              *float64
+	ServiceInfoVolumePerHour               *float64
+	ServiceWarnVolumePerHour               *float64
+	ServiceErrorVolumePerHour              *float64
+	ServiceOtherVolumePerHour              *float64
 	ServiceCostPerHourVolumeUsd            *float64
 	LogEventVolumePerHour                  *float64
 	LogEventBytesPerHour                   *float64
@@ -119,6 +129,11 @@ func (q *Queries) ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceS
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,
 			&i.ServiceVolumePerHour,
+			&i.ServiceDebugVolumePerHour,
+			&i.ServiceInfoVolumePerHour,
+			&i.ServiceWarnVolumePerHour,
+			&i.ServiceErrorVolumePerHour,
+			&i.ServiceOtherVolumePerHour,
 			&i.ServiceCostPerHourVolumeUsd,
 			&i.LogEventVolumePerHour,
 			&i.LogEventBytesPerHour,
@@ -169,6 +184,11 @@ SELECT
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
   ssc.service_volume_per_hour,
+  ssc.service_debug_volume_per_hour,
+  ssc.service_info_volume_per_hour,
+  ssc.service_warn_volume_per_hour,
+  ssc.service_error_volume_per_hour,
+  ssc.service_other_volume_per_hour,
   ssc.service_cost_per_hour_volume_usd,
   ssc.log_event_volume_per_hour,
   ssc.log_event_bytes_per_hour,
@@ -218,6 +238,11 @@ type ListEnabledServiceStatusesRow struct {
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
 	ServiceVolumePerHour                   *float64
+	ServiceDebugVolumePerHour              *float64
+	ServiceInfoVolumePerHour               *float64
+	ServiceWarnVolumePerHour               *float64
+	ServiceErrorVolumePerHour              *float64
+	ServiceOtherVolumePerHour              *float64
 	ServiceCostPerHourVolumeUsd            *float64
 	LogEventVolumePerHour                  *float64
 	LogEventBytesPerHour                   *float64
@@ -264,6 +289,11 @@ func (q *Queries) ListEnabledServiceStatuses(ctx context.Context, rowLimit int64
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,
 			&i.ServiceVolumePerHour,
+			&i.ServiceDebugVolumePerHour,
+			&i.ServiceInfoVolumePerHour,
+			&i.ServiceWarnVolumePerHour,
+			&i.ServiceErrorVolumePerHour,
+			&i.ServiceOtherVolumePerHour,
 			&i.ServiceCostPerHourVolumeUsd,
 			&i.LogEventVolumePerHour,
 			&i.LogEventBytesPerHour,

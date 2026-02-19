@@ -75,9 +75,9 @@ func (d *detail) renderTable(width int) string {
 
 	showVolume := d.category.ReducesVolume()
 	if showVolume {
-		tbl.Headers("Log Event", "Service", "Volume", "Bytes", "Est. Savings")
+		tbl.Headers("Log Event", "Service", "Volume", "Bytes", "Est. Impact")
 	} else {
-		tbl.Headers("Log Event", "Service", "Bytes", "Est. Savings")
+		tbl.Headers("Log Event", "Service", "Bytes", "Est. Impact")
 	}
 	tbl.SetWidth(width)
 

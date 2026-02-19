@@ -40,6 +40,9 @@ type PolicyCategoryStatus struct {
 	// Volume discovery coverage.
 	EventsWithVolumes int64 // Log events in this category that have volume data
 	TotalEvents       int64 // Total log events in this category
+
+	// How policies in this category reduce cost.
+	ImpactType string // "volume" (drops events) or "attribute" (strips fields)
 }
 
 // DisplayName returns a human-readable name for the category.
@@ -51,4 +54,16 @@ func (c PolicyCategoryStatus) DisplayName() string {
 // ReducesVolume reports whether this category's policies drop entire events.
 func (c PolicyCategoryStatus) ReducesVolume() bool {
 	return c.EstimatedVolumePerHour != nil && *c.EstimatedVolumePerHour > 0
+}
+
+// ImpactLabel returns a human-readable description of how this category reduces cost.
+func (c PolicyCategoryStatus) ImpactLabel() string {
+	switch c.ImpactType {
+	case "volume":
+		return "drops events"
+	case "attribute":
+		return "strips fields"
+	default:
+		return ""
+	}
 }

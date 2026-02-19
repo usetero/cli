@@ -219,12 +219,12 @@ func (d *database) ReadRaw() *sql.DB {
 
 // ReadQueries returns a Queries instance backed by the read pool.
 func (d *database) ReadQueries() *gen.Queries {
-	return gen.New(d.readDB)
+	return gen.New(&timeoutDB{db: d.readDB})
 }
 
 // WriteQueries returns a Queries instance backed by the write pool.
 func (d *database) WriteQueries() *gen.Queries {
-	return gen.New(d.db)
+	return gen.New(&timeoutDB{db: d.db})
 }
 
 // ---------------------------------------------------------------------------
@@ -278,17 +278,27 @@ func (d *database) CompliancePolicies() CompliancePolicies {
 // ---------------------------------------------------------------------------
 
 // Query executes a read query via the read pool.
+// Note: withTimeout is not applied here because the caller iterates the
+// returned *sql.Rows after this method returns — canceling the context
+// before iteration causes "context canceled". The sqlc layer (via timeoutDB)
+// handles timeouts correctly since iteration happens inside generated methods.
 func (d *database) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return d.readDB.QueryContext(ctx, query, args...)
 }
 
 // QueryRow executes a query that returns at most one row via the read pool.
+// Note: withTimeout is not applied here because the caller calls Scan() on
+// the returned *sql.Row after this method returns — canceling the context
+// before Scan causes "context canceled". The sqlc layer (via timeoutDB)
+// handles timeouts correctly since Scan happens inside the generated method.
 func (d *database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 	return d.readDB.QueryRowContext(ctx, query, args...)
 }
 
 // Exec executes a statement via the write pool.
 func (d *database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
 	return d.db.ExecContext(ctx, query, args...)
 }
 
@@ -303,6 +313,8 @@ func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error
 
 // Count returns the number of rows in the given table via the read pool.
 func (d *database) Count(ctx context.Context, table string) (int64, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
 	var count int64
 	// Use quote identifier to prevent SQL injection
 	err := d.readDB.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", table)).Scan(&count)
@@ -314,6 +326,8 @@ func (d *database) Count(ctx context.Context, table string) (int64, error) {
 
 // PendingUploadCounts returns pending upload counts grouped by entity table via the read pool.
 func (d *database) PendingUploadCounts(ctx context.Context) (map[Table]int64, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
 	rows, err := d.readDB.QueryContext(ctx,
 		"SELECT json_extract(data, '$.type') AS entity, COUNT(*) AS cnt FROM ps_crud GROUP BY 1")
 	if err != nil {

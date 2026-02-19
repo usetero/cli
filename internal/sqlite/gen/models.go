@@ -113,7 +113,6 @@ type DiscoveryStatus struct {
 type LogEvent struct {
 	ID          *string
 	AccountID   *string
-	AnalyzedAt  *string
 	CreatedAt   *string
 	Description *string
 	Examples    *string
@@ -269,8 +268,13 @@ type ServiceStatusesCache struct {
 	PolicyPendingCount                     *int64
 	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
+	ServiceDebugVolumePerHour              *float64
+	ServiceErrorVolumePerHour              *float64
 	ServiceID                              *string
+	ServiceInfoVolumePerHour               *float64
+	ServiceOtherVolumePerHour              *float64
 	ServiceVolumePerHour                   *float64
+	ServiceWarnVolumePerHour               *float64
 	Warning                                *string
 	WarningAt                              *string
 }

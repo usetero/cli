@@ -254,7 +254,6 @@ CREATE TABLE log_event_statuses_cache (
 CREATE TABLE log_events (
     id TEXT, -- Unique identifier of the log event
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from service.account_id.
-    analyzed_at TEXT, -- When AI last analyzed this log event for quality issues
     created_at TEXT, -- When the log event was created
     description TEXT, -- What this event pattern represents
     -- Sample log records captured during discovery, used for AI analysis and pattern validation
@@ -352,8 +351,13 @@ CREATE TABLE service_statuses_cache (
     policy_pending_count INTEGER, -- Policies awaiting user action
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour based on total service volume
+    service_debug_volume_per_hour REAL, -- Debug-level events/hour from rolling 7-day window
+    service_error_volume_per_hour REAL, -- Error-level events/hour from rolling 7-day window
     service_id TEXT, -- The service this status belongs to
+    service_info_volume_per_hour REAL, -- Info-level events/hour from rolling 7-day window
+    service_other_volume_per_hour REAL, -- Other-level events/hour (trace, fatal, critical, unknown) from rolling 7-day window
     service_volume_per_hour REAL, -- Ground-truth service throughput in events/hour from service_log_volumes rolling 7-day window
+    service_warn_volume_per_hour REAL, -- Warn-level events/hour from rolling 7-day window
     warning TEXT, -- Most recent warning (rate limits, etc.)
     warning_at TEXT -- When the warning occurred
 );

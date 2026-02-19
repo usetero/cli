@@ -15,6 +15,7 @@ import (
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
@@ -26,9 +27,24 @@ const pollInterval = 2 * time.Second
 // pollMsg triggers a policy status check.
 type pollMsg struct{}
 
+// dataMsg carries the result of an async data fetch.
+type dataMsg struct {
+	summary    domain.AccountSummary
+	categories []domain.PolicyCategoryStatus
+	err        error
+}
+
+// detailMsg carries the result of an async detail fetch.
+type detailMsg struct {
+	cat      domain.PolicyCategoryStatus
+	policies []domain.WastePolicy
+	err      error
+}
+
 // Model renders the policy status: pending count, estimated savings, observed savings.
 type Model struct {
 	theme styles.Theme
+	scope log.Scope
 	db    sqlite.DB
 
 	summary    domain.AccountSummary
@@ -42,9 +58,10 @@ type Model struct {
 }
 
 // New creates a new policy status model.
-func New(theme styles.Theme) *Model {
+func New(theme styles.Theme, scope log.Scope) *Model {
 	return &Model{
 		theme: theme,
+		scope: scope.Child("waste"),
 	}
 }
 
@@ -70,30 +87,22 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case pollMsg:
 		if m.db == nil {
 			return nil
 		}
+		return tea.Batch(m.fetchData(), m.poll())
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-		if err != nil {
-			return m.poll()
+	case dataMsg:
+		if msg.err != nil {
+			return nil
 		}
-
-		categories, err := m.db.LogEventPolicies().ListWasteCategoryStatuses(ctx)
-		if err != nil {
-			categories = nil
-		}
-
-		key := m.stateKey(summary, categories)
+		key := m.stateKey(msg.summary, msg.categories)
 		if key != m.lastState {
-			m.summary = summary
-			m.categories = categories
-			m.hasData = summary.PendingPolicyCount+summary.ApprovedPolicyCount+summary.DismissedPolicyCount > 0
+			m.summary = msg.summary
+			m.categories = msg.categories
+			m.hasData = msg.summary.PendingPolicyCount+msg.summary.ApprovedPolicyCount+msg.summary.DismissedPolicyCount > 0
 			m.lastState = key
 
 			// Clamp cursor if categories shrank.
@@ -102,10 +111,52 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 
-		return m.poll()
+	case detailMsg:
+		if msg.err == nil {
+			m.detail = newDetail(m.theme, msg.cat, msg.policies)
+		}
+
+	default:
+		_ = msg
 	}
 
 	return nil
+}
+
+// fetchData returns a Cmd that queries waste data off the event loop.
+func (m *Model) fetchData() tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		ctx := context.Background()
+		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+		if err != nil {
+			scope.Error("get summary", "err", err)
+			return dataMsg{err: err}
+		}
+
+		categories, err := db.LogEventPolicies().ListWasteCategoryStatuses(ctx)
+		if err != nil {
+			scope.Error("list waste category statuses", "err", err)
+			categories = nil
+		}
+
+		return dataMsg{summary: summary, categories: categories}
+	}
+}
+
+// fetchDetail returns a Cmd that queries category detail off the event loop.
+func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		policies, err := db.LogEventPolicies().ListTopPendingPoliciesByCategory(context.Background(), cat.Category, 25)
+		if err != nil {
+			scope.Error("list top pending policies", "category", cat.Category, "err", err)
+			return detailMsg{err: err}
+		}
+		return detailMsg{cat: cat, policies: policies}
+	}
 }
 
 // stateKey builds a string key for change detection.
@@ -167,13 +218,7 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		if cat.PendingCount == 0 {
 			return nil
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		policies, err := m.db.LogEventPolicies().ListTopPendingPoliciesByCategory(ctx, cat.Category, 25)
-		if err != nil {
-			return nil
-		}
-		m.detail = newDetail(m.theme, cat, policies)
+		return m.fetchDetail(cat)
 	}
 	return nil
 }
@@ -323,7 +368,7 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Est. Savings", "Approved", "Saved")
+	tbl.Headers("Category", "Pending", "Impact", "Approved", "Saved")
 	tbl.SetWidth(width)
 
 	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
@@ -395,20 +440,30 @@ func (m *Model) discoveryBar() progress.Model {
 }
 
 // formatCategoryCost returns estimated yearly cost for a category, with its
-// share of total estimated waste when available.
+// share of total estimated waste. Shows dollar amount + percentage for
+// categories ≥1% of total waste, just "<1%" for tiny categories.
 func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64, success, muted lipgloss.Style) string {
-	if c.EstimatedCostPerHour != nil && *c.EstimatedCostPerHour > 0 {
-		yearly := *c.EstimatedCostPerHour * 8760
-		if yearly >= 1 {
-			cost := success.Render("~" + format.Cost(yearly) + "/yr")
-			if totalCostPerHour > 0 {
-				pct := int(math.Round(*c.EstimatedCostPerHour / totalCostPerHour * 100))
-				if pct > 0 && pct < 100 {
-					cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
-				}
-			}
-			return cost
+	if c.EstimatedCostPerHour == nil || *c.EstimatedCostPerHour <= 0 {
+		return "—"
+	}
+
+	if totalCostPerHour > 0 {
+		pct := int(math.Round(*c.EstimatedCostPerHour / totalCostPerHour * 100))
+		if pct <= 1 {
+			return muted.Render("≤1%")
 		}
+		yearly := *c.EstimatedCostPerHour * 8760
+		cost := success.Render("~" + format.Cost(yearly) + "/yr")
+		if pct < 100 {
+			cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
+		}
+		return cost
+	}
+
+	// No total available — fall back to dollar amount only.
+	yearly := *c.EstimatedCostPerHour * 8760
+	if yearly >= 1 {
+		return success.Render("~" + format.Cost(yearly) + "/yr")
 	}
 	return "—"
 }

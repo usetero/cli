@@ -14,6 +14,7 @@ import (
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
@@ -25,9 +26,26 @@ const pollInterval = 2 * time.Second
 // pollMsg triggers a compliance policy check.
 type pollMsg struct{}
 
+// dataMsg carries the result of an async data fetch.
+type dataMsg struct {
+	summary      domain.AccountSummary
+	categories   []domain.ComplianceCategorySummary
+	totalPending int64
+	totalFixed   int64
+	err          error
+}
+
+// detailMsg carries the result of an async detail fetch.
+type detailMsg struct {
+	cat      domain.ComplianceCategorySummary
+	policies []domain.CompliancePolicy
+	err      error
+}
+
 // Model renders compliance status: 4 categories (PII, Secrets, PHI, Payment Data).
 type Model struct {
 	theme styles.Theme
+	scope log.Scope
 	db    sqlite.DB
 
 	summary      domain.AccountSummary
@@ -43,9 +61,10 @@ type Model struct {
 }
 
 // New creates a new compliance status model.
-func New(theme styles.Theme) *Model {
+func New(theme styles.Theme, scope log.Scope) *Model {
 	return &Model{
 		theme: theme,
+		scope: scope.Child("compliance"),
 	}
 }
 
@@ -71,42 +90,24 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case pollMsg:
 		if m.db == nil {
 			return nil
 		}
+		return tea.Batch(m.fetchData(), m.poll())
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-		if err != nil {
-			return m.poll()
+	case dataMsg:
+		if msg.err != nil {
+			return nil
 		}
-
-		categories, err := m.db.CompliancePolicies().ListCategorySummaries(ctx)
-		if err != nil {
-			categories = nil
-		}
-
-		totalPending, err := m.db.CompliancePolicies().CountTotal(ctx)
-		if err != nil {
-			totalPending = 0
-		}
-
-		totalFixed, err := m.db.CompliancePolicies().CountFixed(ctx)
-		if err != nil {
-			totalFixed = 0
-		}
-
-		key := m.stateKey(summary, categories, totalPending, totalFixed)
+		key := m.stateKey(msg.summary, msg.categories, msg.totalPending, msg.totalFixed)
 		if key != m.lastState {
-			m.summary = summary
-			m.categories = categories
-			m.totalPending = totalPending
-			m.totalFixed = totalFixed
-			m.hasData = totalPending > 0 || totalFixed > 0
+			m.summary = msg.summary
+			m.categories = msg.categories
+			m.totalPending = msg.totalPending
+			m.totalFixed = msg.totalFixed
+			m.hasData = msg.totalPending > 0 || msg.totalFixed > 0
 			m.lastState = key
 
 			// Clamp cursor if categories shrank.
@@ -115,10 +116,66 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 
-		return m.poll()
+	case detailMsg:
+		if msg.err == nil {
+			m.detail = newDetail(m.theme, msg.cat, msg.policies)
+		}
 	}
 
 	return nil
+}
+
+// fetchData returns a Cmd that queries compliance data off the event loop.
+func (m *Model) fetchData() tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		ctx := context.Background()
+		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+		if err != nil {
+			scope.Error("get summary", "err", err)
+			return dataMsg{err: err}
+		}
+
+		categories, err := db.CompliancePolicies().ListCategorySummaries(ctx)
+		if err != nil {
+			scope.Error("list category summaries", "err", err)
+			categories = nil
+		}
+
+		totalPending, err := db.CompliancePolicies().CountTotal(ctx)
+		if err != nil {
+			scope.Error("count total", "err", err)
+			totalPending = 0
+		}
+
+		totalFixed, err := db.CompliancePolicies().CountFixed(ctx)
+		if err != nil {
+			scope.Error("count fixed", "err", err)
+			totalFixed = 0
+		}
+
+		return dataMsg{
+			summary:      summary,
+			categories:   categories,
+			totalPending: totalPending,
+			totalFixed:   totalFixed,
+		}
+	}
+}
+
+// fetchDetail returns a Cmd that queries category detail off the event loop.
+func (m *Model) fetchDetail(cat domain.ComplianceCategorySummary) tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		policies, err := db.CompliancePolicies().ListPendingPoliciesByCategory(context.Background(), cat.Category, 25)
+		if err != nil {
+			scope.Error("list pending policies by category", "category", cat.Category, "err", err)
+			return detailMsg{err: err}
+		}
+		return detailMsg{cat: cat, policies: policies}
+	}
 }
 
 // stateKey builds a string key for change detection.
@@ -170,13 +227,7 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		if cat.LeakingCount+cat.AtRiskCount == 0 {
 			return nil
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		policies, err := m.db.CompliancePolicies().ListPendingPoliciesByCategory(ctx, cat.Category, 25)
-		if err != nil {
-			return nil
-		}
-		m.detail = newDetail(m.theme, cat, policies)
+		return m.fetchDetail(cat)
 	}
 	return nil
 }

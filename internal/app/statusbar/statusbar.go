@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image/color"
 	"strings"
-	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -17,6 +16,7 @@ import (
 	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/app/statusbar/waste"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -40,6 +40,7 @@ var tabLabels = [tabCount]string{"Compliance", "Waste", "Services", "Sync"}
 // Model renders the app status bar.
 type Model struct {
 	theme            styles.Theme
+	scope            log.Scope
 	env              string
 	syncStatus       *syncstatus.Model
 	servicesStatus   *services.Model
@@ -64,24 +65,25 @@ type Model struct {
 }
 
 // New creates a new statusbar.
-func New(theme styles.Theme, syncer powersync.Syncer, host string, env string) *Model {
+func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host string, env string) *Model {
+	scope = scope.Child("statusbar")
 	return &Model{
 		theme:            theme,
+		scope:            scope,
 		env:              env,
-		syncStatus:       syncstatus.New(theme, syncer, host),
-		servicesStatus:   services.New(theme),
-		wasteStatus:      waste.New(theme),
-		complianceStatus: compliance.New(theme),
+		syncStatus:       syncstatus.New(theme, scope, syncer, host),
+		servicesStatus:   services.New(theme, scope),
+		wasteStatus:      waste.New(theme, scope),
+		complianceStatus: compliance.New(theme, scope),
 	}
 }
 
 // SetDB sets the database for status polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	row := db.QueryRow(ctx, "SELECT COUNT(*) FROM workspaces")
-	_ = row.Scan(&m.workspaceCount)
+	row := db.QueryRow(context.Background(), "SELECT COUNT(*) FROM workspaces")
+	if err := row.Scan(&m.workspaceCount); err != nil {
+		m.scope.Error("scan workspace count", "err", err)
+	}
 
 	return tea.Batch(
 		m.syncStatus.SetDB(db),
@@ -142,7 +144,7 @@ func (m *Model) ToggleDrawer() {
 		m.drawerOpen = false
 		return
 	}
-	if m.complianceStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() {
+	if m.complianceStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() || m.syncStatus.HasData() {
 		m.drawerOpen = true
 	}
 }
@@ -363,7 +365,7 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	// Hide hint until data is loaded and the drawer can open.
-	if !m.drawerOpen && !m.complianceStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() {
+	if !m.drawerOpen && !m.complianceStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() && !m.syncStatus.HasData() {
 		return ""
 	}
 

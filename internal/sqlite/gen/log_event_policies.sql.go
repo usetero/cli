@@ -180,7 +180,8 @@ SELECT
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_bytes_usd ELSE 0 END) AS observed_cost_after_bytes,
   SUM(CASE WHEN leps.status = 'APPROVED' THEN les.observed_cost_per_hour_after_volume_usd ELSE 0 END) AS observed_cost_after_volume,
   CAST(COALESCE(SUM(CASE WHEN les.has_volumes = 1 THEN 1 ELSE 0 END), 0) AS INTEGER) AS events_with_volumes,
-  CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events
+  CAST(COUNT(DISTINCT leps.log_event_id) AS INTEGER) AS total_events,
+  CAST(COALESCE(MAX(leps.impact_type), '') AS TEXT) AS impact_type
 FROM log_event_policy_statuses_cache leps
 LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category IS NOT NULL AND leps.category != ''
@@ -212,6 +213,7 @@ type ListWasteCategoryStatusesRow struct {
 	ObservedCostAfterVolume    *float64
 	EventsWithVolumes          int64
 	TotalEvents                int64
+	ImpactType                 string
 }
 
 // Categories where category_type is waste (waste tab).
@@ -246,6 +248,7 @@ func (q *Queries) ListWasteCategoryStatuses(ctx context.Context) ([]ListWasteCat
 			&i.ObservedCostAfterVolume,
 			&i.EventsWithVolumes,
 			&i.TotalEvents,
+			&i.ImpactType,
 		); err != nil {
 			return nil, err
 		}

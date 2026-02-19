@@ -199,7 +199,6 @@ CREATE TABLE log_event_statuses_cache (
 CREATE TABLE log_events (
     id TEXT,
     account_id TEXT,
-    analyzed_at TEXT,
     created_at TEXT,
     description TEXT,
     examples TEXT,
@@ -255,8 +254,13 @@ CREATE TABLE service_statuses_cache (
     policy_pending_count INTEGER,
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL,
+    service_debug_volume_per_hour REAL,
+    service_error_volume_per_hour REAL,
     service_id TEXT,
+    service_info_volume_per_hour REAL,
+    service_other_volume_per_hour REAL,
     service_volume_per_hour REAL,
+    service_warn_volume_per_hour REAL,
     warning TEXT,
     warning_at TEXT
 );

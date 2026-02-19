@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"math"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/status"
@@ -28,14 +30,26 @@ const (
 	// which we consider discovery complete. Volume ratios are never exactly
 	// 100% due to throughput fluctuations.
 	discoveryDoneThreshold = 95
+
+	// levelDisplayThreshold is the minimum fraction of total volume a
+	// non-info level must reach to be shown (1%).
+	levelDisplayThreshold = 0.01
 )
 
 // pollMsg triggers a catalog status check.
 type pollMsg struct{}
 
+// dataMsg carries the result of an async data fetch.
+type dataMsg struct {
+	summary  domain.AccountSummary
+	services []domain.ServiceStatus
+	err      error
+}
+
 // Model renders the catalog health: dot color + service count + cost.
 type Model struct {
 	theme styles.Theme
+	scope log.Scope
 	db    sqlite.DB
 
 	summary   domain.AccountSummary
@@ -45,9 +59,10 @@ type Model struct {
 }
 
 // New creates a new catalog status model.
-func New(theme styles.Theme) *Model {
+func New(theme styles.Theme, scope log.Scope) *Model {
 	return &Model{
 		theme: theme,
+		scope: scope.Child("services"),
 	}
 }
 
@@ -73,37 +88,49 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case pollMsg:
 		if m.db == nil {
 			return nil
 		}
+		return tea.Batch(m.fetchData(), m.poll())
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-		if err != nil {
-			return m.poll()
+	case dataMsg:
+		if msg.err != nil {
+			return nil
 		}
-
-		services, err := m.db.ServiceStatuses().ListEnabledServiceStatuses(ctx, maxServices)
-		if err != nil {
-			services = nil
-		}
-
-		key := m.stateKey(summary, services)
+		key := m.stateKey(msg.summary, msg.services)
 		if key != m.lastState {
-			m.summary = summary
-			m.services = services
-			m.hasData = summary.ActiveServices > 0
+			m.summary = msg.summary
+			m.services = msg.services
+			m.hasData = msg.summary.ActiveServices > 0
 			m.lastState = key
 		}
-
-		return m.poll()
 	}
 
 	return nil
+}
+
+// fetchData returns a Cmd that queries service data off the event loop.
+func (m *Model) fetchData() tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		ctx := context.Background()
+		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+		if err != nil {
+			scope.Error("get summary", "err", err)
+			return dataMsg{err: err}
+		}
+
+		services, err := db.ServiceStatuses().ListEnabledServiceStatuses(ctx, maxServices)
+		if err != nil {
+			scope.Error("list service statuses", "err", err)
+			services = nil
+		}
+
+		return dataMsg{summary: summary, services: services}
+	}
 }
 
 // stateKey builds a string key for change detection.
@@ -117,9 +144,11 @@ func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatu
 		len(services))
 
 	for _, svc := range services {
-		key += fmt.Sprintf("|%s:%s:%s:%d:%d:%v:%v:%v",
+		key += fmt.Sprintf("|%s:%s:%s:%d:%d:%v:%v:%v:%v:%v:%v:%v",
 			svc.Name, svc.Health, svc.Warning, svc.LogEventCount, svc.LogEventAnalyzedCount,
-			svc.ServiceVolumePerHour, svc.LogEventVolumePerHour, svc.ServiceCostPerHourVolumeUSD)
+			svc.ServiceVolumePerHour, svc.LogEventVolumePerHour, svc.ServiceCostPerHourVolumeUSD,
+			svc.ServiceDebugVolumePerHour, svc.ServiceInfoVolumePerHour,
+			svc.ServiceWarnVolumePerHour, svc.ServiceErrorVolumePerHour)
 	}
 
 	return key
@@ -241,16 +270,12 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 		clipped = len(m.services) - len(visible)
 	}
 
-	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
+	tbl := table.New(m.theme, table.WithMaxValueWidth(35))
 	tbl.Headers("Service", "Log Events", "Volume", "Cost")
 	tbl.SetWidth(width)
 
 	bar := m.discoveryBar()
 	for _, svc := range visible {
-		vol := "—"
-		if svc.ServiceVolumePerHour != nil {
-			vol = format.Volume(*svc.ServiceVolumePerHour) + "/hr"
-		}
 		cost := "—"
 		if svc.ServiceCostPerHourVolumeUSD != nil {
 			cost = format.YearlyCost(*svc.ServiceCostPerHourVolumeUSD)
@@ -258,7 +283,7 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 		tbl.Row(
 			m.renderServiceName(svc),
 			m.renderLogEvents(svc, bar),
-			vol,
+			m.renderVolume(svc),
 			cost,
 		)
 	}
@@ -290,6 +315,49 @@ func (m *Model) renderServiceName(svc domain.ServiceStatus) string {
 	}
 
 	return dot + " " + name
+}
+
+// renderVolume renders the service volume with colored level-composition tags.
+// Non-info levels >= 1% are shown as compact colored tags (e.g. "e31% w5% d4%").
+// Info is omitted since it's the expected baseline — only interesting levels appear.
+func (m *Model) renderVolume(svc domain.ServiceStatus) string {
+	if svc.ServiceVolumePerHour == nil {
+		return "—"
+	}
+	total := *svc.ServiceVolumePerHour
+	vol := fmt.Sprintf("%-9s", format.Volume(total)+"/hr")
+	if total <= 0 {
+		return vol
+	}
+
+	type levelTag struct {
+		letter string
+		value  *float64
+		color  color.Color
+	}
+	levels := []levelTag{
+		{"e", svc.ServiceErrorVolumePerHour, m.theme.Error},
+		{"w", svc.ServiceWarnVolumePerHour, m.theme.Warning},
+		{"d", svc.ServiceDebugVolumePerHour, m.theme.TextMuted},
+	}
+
+	var tags []string
+	for _, l := range levels {
+		if l.value == nil {
+			continue
+		}
+		rate := *l.value / total
+		if rate < levelDisplayThreshold {
+			continue
+		}
+		style := lipgloss.NewStyle().Foreground(l.color).Background(m.theme.Bg)
+		tags = append(tags, style.Render(fmt.Sprintf("%s%d%%", l.letter, int(math.Round(rate*100)))))
+	}
+
+	if len(tags) > 0 {
+		vol += " " + strings.Join(tags, " ")
+	}
+	return vol
 }
 
 // discoveryBar creates a small progress bar for inline use in table cells.

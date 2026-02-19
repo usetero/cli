@@ -2102,9 +2102,6 @@ type LogEvent implements Node {
   """
   examples: [LogRecord!]!
 
-  """When AI last analyzed this log event for quality issues"""
-  analyzedAt: Time
-
   """
   Current trailing 7-day average events/hour. Refreshed on volume ingestion.
   """
@@ -2286,7 +2283,6 @@ input LogEventOrder {
 """Properties by which LogEvent connections can be ordered."""
 enum LogEventOrderField {
   NAME
-  ANALYZED_AT
   CREATED_AT
   UPDATED_AT
 }
@@ -3354,18 +3350,6 @@ input LogEventWhereInput {
   descriptionHasSuffix: String
   descriptionEqualFold: String
   descriptionContainsFold: String
-
-  """analyzed_at field predicates"""
-  analyzedAt: Time
-  analyzedAtNEQ: Time
-  analyzedAtIn: [Time!]
-  analyzedAtNotIn: [Time!]
-  analyzedAtGT: Time
-  analyzedAtGTE: Time
-  analyzedAtLT: Time
-  analyzedAtLTE: Time
-  analyzedAtIsNil: Boolean
-  analyzedAtNotNil: Boolean
 
   """baseline_volume_per_hour field predicates"""
   baselineVolumePerHour: Float
@@ -4513,6 +4497,11 @@ type ServiceStatusCache implements Node {
   policyApprovedCount: Int!
   policyDismissedCount: Int!
   serviceVolumePerHour: Float
+  serviceDebugVolumePerHour: Float
+  serviceInfoVolumePerHour: Float
+  serviceWarnVolumePerHour: Float
+  serviceErrorVolumePerHour: Float
+  serviceOtherVolumePerHour: Float
   serviceCostPerHourVolumeUsd: Float
   logEventVolumePerHour: Float
   logEventBytesPerHour: Float
@@ -4667,6 +4656,66 @@ input ServiceStatusCacheWhereInput {
   serviceVolumePerHourLTE: Float
   serviceVolumePerHourIsNil: Boolean
   serviceVolumePerHourNotNil: Boolean
+
+  """service_debug_volume_per_hour field predicates"""
+  serviceDebugVolumePerHour: Float
+  serviceDebugVolumePerHourNEQ: Float
+  serviceDebugVolumePerHourIn: [Float!]
+  serviceDebugVolumePerHourNotIn: [Float!]
+  serviceDebugVolumePerHourGT: Float
+  serviceDebugVolumePerHourGTE: Float
+  serviceDebugVolumePerHourLT: Float
+  serviceDebugVolumePerHourLTE: Float
+  serviceDebugVolumePerHourIsNil: Boolean
+  serviceDebugVolumePerHourNotNil: Boolean
+
+  """service_info_volume_per_hour field predicates"""
+  serviceInfoVolumePerHour: Float
+  serviceInfoVolumePerHourNEQ: Float
+  serviceInfoVolumePerHourIn: [Float!]
+  serviceInfoVolumePerHourNotIn: [Float!]
+  serviceInfoVolumePerHourGT: Float
+  serviceInfoVolumePerHourGTE: Float
+  serviceInfoVolumePerHourLT: Float
+  serviceInfoVolumePerHourLTE: Float
+  serviceInfoVolumePerHourIsNil: Boolean
+  serviceInfoVolumePerHourNotNil: Boolean
+
+  """service_warn_volume_per_hour field predicates"""
+  serviceWarnVolumePerHour: Float
+  serviceWarnVolumePerHourNEQ: Float
+  serviceWarnVolumePerHourIn: [Float!]
+  serviceWarnVolumePerHourNotIn: [Float!]
+  serviceWarnVolumePerHourGT: Float
+  serviceWarnVolumePerHourGTE: Float
+  serviceWarnVolumePerHourLT: Float
+  serviceWarnVolumePerHourLTE: Float
+  serviceWarnVolumePerHourIsNil: Boolean
+  serviceWarnVolumePerHourNotNil: Boolean
+
+  """service_error_volume_per_hour field predicates"""
+  serviceErrorVolumePerHour: Float
+  serviceErrorVolumePerHourNEQ: Float
+  serviceErrorVolumePerHourIn: [Float!]
+  serviceErrorVolumePerHourNotIn: [Float!]
+  serviceErrorVolumePerHourGT: Float
+  serviceErrorVolumePerHourGTE: Float
+  serviceErrorVolumePerHourLT: Float
+  serviceErrorVolumePerHourLTE: Float
+  serviceErrorVolumePerHourIsNil: Boolean
+  serviceErrorVolumePerHourNotNil: Boolean
+
+  """service_other_volume_per_hour field predicates"""
+  serviceOtherVolumePerHour: Float
+  serviceOtherVolumePerHourNEQ: Float
+  serviceOtherVolumePerHourIn: [Float!]
+  serviceOtherVolumePerHourNotIn: [Float!]
+  serviceOtherVolumePerHourGT: Float
+  serviceOtherVolumePerHourGTE: Float
+  serviceOtherVolumePerHourLT: Float
+  serviceOtherVolumePerHourLTE: Float
+  serviceOtherVolumePerHourIsNil: Boolean
+  serviceOtherVolumePerHourNotNil: Boolean
 
   """service_cost_per_hour_volume_usd field predicates"""
   serviceCostPerHourVolumeUsd: Float

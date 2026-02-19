@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -23,9 +24,15 @@ const pollInterval = 500 * time.Millisecond
 // pollMsg triggers a sync status check.
 type pollMsg struct{}
 
+// pendingMsg carries the result of an async pending-upload count.
+type pendingMsg struct {
+	total int64
+}
+
 // Model renders sync connection status.
 type Model struct {
 	theme  styles.Theme
+	scope  log.Scope
 	syncer powersync.Syncer
 	db     sqlite.DB
 	host   string
@@ -36,7 +43,7 @@ type Model struct {
 }
 
 // New creates a new sync status model.
-func New(theme styles.Theme, syncer powersync.Syncer, endpoint string) *Model {
+func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, endpoint string) *Model {
 	host := endpoint
 	if u, err := url.Parse(endpoint); err == nil && u.Host != "" {
 		host = u.Host
@@ -44,6 +51,7 @@ func New(theme styles.Theme, syncer powersync.Syncer, endpoint string) *Model {
 
 	return &Model{
 		theme:  theme,
+		scope:  scope.Child("syncstatus"),
 		syncer: syncer,
 		host:   host,
 	}
@@ -71,21 +79,20 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case pollMsg:
 		if m.syncer == nil {
 			return nil
 		}
 
+		// syncer.State() is an atomic load — safe to call inline.
 		currentState := m.syncer.State()
 		stateChanged := m.stateChanged(currentState)
 		if stateChanged {
 			m.lastState = currentState
 		}
 
-		m.pollPendingUploads()
-
-		cmds := []tea.Cmd{m.poll()}
+		cmds := []tea.Cmd{m.poll(), m.fetchPending()}
 		if stateChanged {
 			cmds = append(cmds, func() tea.Msg { return msgs.SyncStateChanged{State: currentState} })
 
@@ -95,27 +102,34 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 		return tea.Batch(cmds...)
+
+	case pendingMsg:
+		m.totalPending = msg.total
 	}
 
 	return nil
 }
 
-// pollPendingUploads checks for pending uploads in the crud queue.
-func (m *Model) pollPendingUploads() {
+// fetchPending returns a Cmd that queries pending upload counts off the event loop.
+func (m *Model) fetchPending() tea.Cmd {
 	if m.db == nil {
-		return
+		return nil
 	}
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		pending, err := db.PendingUploadCounts(context.Background())
+		if err != nil {
+			scope.Error("pending upload counts", "err", err)
+			return pendingMsg{}
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	pending, _ := m.db.PendingUploadCounts(ctx)
-
-	var total int64
-	for _, count := range pending {
-		total += count
+		var total int64
+		for _, count := range pending {
+			total += count
+		}
+		return pendingMsg{total: total}
 	}
-	m.totalPending = total
 }
 
 // stateChanged returns true if the sync state has meaningfully changed.
@@ -150,6 +164,11 @@ func (m *Model) stateChanged(current powersync.State) bool {
 	return true
 }
 
+// HasData returns true when the syncer has reported at least one state update.
+func (m *Model) HasData() bool {
+	return m.lastState != nil
+}
+
 // CompactView renders the sync status for the statusbar: "● api.usetero.com" or "● syncing 45%"
 func (m *Model) CompactView() string {
 	if m.lastState == nil {
@@ -166,7 +185,6 @@ func (m *Model) CompactView() string {
 		return dot(colors.Warning, colors.Bg)
 
 	case *powersync.Syncing:
-		_ = state
 		return dot(colors.Warning, colors.Bg)
 
 	case *powersync.Ready:
