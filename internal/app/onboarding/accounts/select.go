@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	accountsProvisioningMaxWait  = 60 * time.Second
+	accountsProvisioningMaxWait = 60 * time.Second
 	accountsProvisioningMaxTries = 6
 )
 
@@ -43,7 +43,7 @@ type SelectModel struct {
 
 	// Retry state: handles short backend provisioning delays after org creation.
 	accountsLoadStartedAt time.Time
-	accountsLoadAttempts  int
+	accountsLoadAttempts int
 }
 
 // NewSelect creates a new account select step.
