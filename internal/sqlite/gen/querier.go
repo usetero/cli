@@ -35,6 +35,7 @@ type Querier interface {
 	ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error)
 	ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error)
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
+	ListLogEventStatusesByService(ctx context.Context, arg ListLogEventStatusesByServiceParams) ([]ListLogEventStatusesByServiceRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)
 	// Returns pending compliance policies for a specific category, sorted by observed then volume.

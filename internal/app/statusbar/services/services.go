@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -20,6 +21,7 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/status"
 	"github.com/usetero/cli/internal/tea/components/table"
+	"github.com/usetero/cli/internal/tea/keymap"
 )
 
 const (
@@ -46,6 +48,13 @@ type dataMsg struct {
 	err      error
 }
 
+// detailMsg carries the result of an async detail fetch.
+type detailMsg struct {
+	service   domain.ServiceStatus
+	logEvents []domain.LogEventStatus
+	err       error
+}
+
 // Model renders the catalog health: dot color + service count + cost.
 type Model struct {
 	theme styles.Theme
@@ -56,6 +65,10 @@ type Model struct {
 	services  []domain.ServiceStatus
 	hasData   bool
 	lastState string
+
+	// Drawer navigation
+	cursor int     // selected row in service list
+	detail *detail // non-nil when viewing a single service's log events
 }
 
 // New creates a new catalog status model.
@@ -105,6 +118,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.services = msg.services
 			m.hasData = msg.summary.ActiveServices > 0
 			m.lastState = key
+
+			// Clamp cursor if services shrank.
+			if m.cursor >= len(m.services) && len(m.services) > 0 {
+				m.cursor = len(m.services) - 1
+			}
+		}
+
+	case detailMsg:
+		if msg.err == nil {
+			m.detail = newDetail(m.theme, msg.service, msg.logEvents)
 		}
 	}
 
@@ -131,6 +154,60 @@ func (m *Model) fetchData() tea.Cmd {
 
 		return dataMsg{summary: summary, services: services}
 	}
+}
+
+// fetchDetail returns a Cmd that queries log event detail off the event loop.
+func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
+	db := m.db
+	scope := m.scope
+	return func() tea.Msg {
+		logEvents, err := db.LogEventStatuses().ListByService(context.Background(), svc.Name, 25)
+		if err != nil {
+			scope.Error("list log event statuses", "service", svc.Name, "err", err)
+			return detailMsg{err: err}
+		}
+		return detailMsg{service: svc, logEvents: logEvents}
+	}
+}
+
+// HandleKeyPress handles keyboard navigation in the expanded drawer view.
+func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+	if !m.hasData || len(m.services) == 0 {
+		return nil
+	}
+
+	// Detail mode: backspace returns to service list (esc handled by statusbar).
+	if m.detail != nil {
+		if key.Matches(msg, keymap.DrawerBack) {
+			m.detail = nil
+		}
+		return nil
+	}
+
+	// Service list mode.
+	switch {
+	case key.Matches(msg, keymap.DrawerUp):
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case key.Matches(msg, keymap.DrawerDown):
+		if m.cursor < len(m.services)-1 {
+			m.cursor++
+		}
+	case key.Matches(msg, keymap.DrawerSelect):
+		return m.fetchDetail(m.services[m.cursor])
+	}
+	return nil
+}
+
+// InDetail returns true when the detail sub-view is active.
+func (m *Model) InDetail() bool {
+	return m.detail != nil
+}
+
+// CloseDetail exits the detail sub-view, returning to the service list.
+func (m *Model) CloseDetail() {
+	m.detail = nil
 }
 
 // stateKey builds a string key for change detection.
@@ -182,6 +259,11 @@ func (m *Model) ExpandedView(width, height int) string {
 			return muted.Render("Waiting for sync to start...")
 		}
 		return muted.Render("No services discovered yet.")
+	}
+
+	// Detail sub-view for a single service.
+	if m.detail != nil {
+		return m.detail.View(width)
 	}
 
 	// Height budget: summary (1) + gap (1) + table header+border (2) = 4 lines overhead.
@@ -275,13 +357,13 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 	tbl.SetWidth(width)
 
 	bar := m.discoveryBar()
-	for _, svc := range visible {
+	for i, svc := range visible {
 		cost := "—"
 		if svc.ServiceCostPerHourVolumeUSD != nil {
 			cost = format.YearlyCost(*svc.ServiceCostPerHourVolumeUSD)
 		}
 		tbl.Row(
-			m.renderServiceName(svc),
+			m.renderServiceName(i, svc),
 			m.renderLogEvents(svc, bar),
 			m.renderVolume(svc),
 			cost,
@@ -296,14 +378,9 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 	return result
 }
 
-// renderServiceName renders the service name with a colored health dot.
+// renderServiceName renders the service name with a colored health dot or cursor arrow.
 // Warning overrides the dot color to orange.
-func (m *Model) renderServiceName(svc domain.ServiceStatus) string {
-	dot := status.ServiceDot(m.theme, svc.Health)
-	if svc.Warning != "" {
-		dot = lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render("●")
-	}
-
+func (m *Model) renderServiceName(index int, svc domain.ServiceStatus) string {
 	name := svc.Name
 	switch svc.Health {
 	case domain.ServiceHealthError:
@@ -314,6 +391,15 @@ func (m *Model) renderServiceName(svc domain.ServiceStatus) string {
 		// No suffix needed.
 	}
 
+	if index == m.cursor {
+		accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
+		return accent.Render("▶ " + name)
+	}
+
+	dot := status.ServiceDot(m.theme, svc.Health)
+	if svc.Warning != "" {
+		dot = lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render("●")
+	}
 	return dot + " " + name
 }
 

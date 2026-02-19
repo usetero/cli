@@ -171,6 +171,8 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		return m.complianceStatus.HandleKeyPress(msg)
 	case TabWaste:
 		return m.wasteStatus.HandleKeyPress(msg)
+	case TabServices:
+		return m.servicesStatus.HandleKeyPress(msg)
 	}
 	return nil
 }
@@ -186,6 +188,10 @@ func (m *Model) HandleEsc() bool {
 		m.wasteStatus.CloseDetail()
 		return true
 	}
+	if m.activeTab == TabServices && m.servicesStatus.InDetail() {
+		m.servicesStatus.CloseDetail()
+		return true
+	}
 	return false
 }
 
@@ -199,6 +205,12 @@ func (m *Model) ShortHelp() []key.Binding {
 	}
 	if m.activeTab == TabWaste && m.wasteStatus.HasData() {
 		if m.wasteStatus.InDetail() {
+			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
+		}
+		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
+	}
+	if m.activeTab == TabServices && m.servicesStatus.HasData() {
+		if m.servicesStatus.InDetail() {
 			return []key.Binding{keymap.DrawerBack, keymap.NextTab}
 		}
 		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}

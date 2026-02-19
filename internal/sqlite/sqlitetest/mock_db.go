@@ -28,6 +28,9 @@ type MockDB struct {
 	// LogEventsImpl is the mock log events implementation.
 	LogEventsImpl sqlite.LogEvents
 
+	// LogEventStatusesImpl is the mock log event statuses implementation.
+	LogEventStatusesImpl sqlite.LogEventStatuses
+
 	// LogEventPoliciesImpl is the mock log event policies implementation.
 	LogEventPoliciesImpl sqlite.LogEventPolicies
 
@@ -122,6 +125,11 @@ func (m *MockDB) Services() sqlite.Services {
 // LogEvents implements sqlite.DB.
 func (m *MockDB) LogEvents() sqlite.LogEvents {
 	return m.LogEventsImpl
+}
+
+// LogEventStatuses implements sqlite.DB.
+func (m *MockDB) LogEventStatuses() sqlite.LogEventStatuses {
+	return m.LogEventStatusesImpl
 }
 
 // LogEventPolicies implements sqlite.DB.

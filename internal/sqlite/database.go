@@ -41,6 +41,7 @@ type DB interface {
 
 	// Aggregated statuses
 	DatadogAccountStatuses() DatadogAccountStatuses
+	LogEventStatuses() LogEventStatuses
 	ServiceStatuses() ServiceStatuses
 
 	// Sync
@@ -246,6 +247,11 @@ func (d *database) Conversations() Conversations {
 // DatadogAccountStatuses returns type-safe Datadog account status operations.
 func (d *database) DatadogAccountStatuses() DatadogAccountStatuses {
 	return &datadogAccountStatusesImpl{queries: d.ReadQueries()}
+}
+
+// LogEventStatuses returns type-safe log event status operations.
+func (d *database) LogEventStatuses() LogEventStatuses {
+	return &logEventStatusesImpl{queries: d.ReadQueries()}
 }
 
 // ServiceStatuses returns type-safe service status operations.
