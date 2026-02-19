@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.16.0](https://github.com/usetero/cli/compare/v1.15.0...v1.16.0) (2026-02-19)
+
+
+### Features
+
+* add discovery progress indicators and PII observed/at-risk split ([5663eea](https://github.com/usetero/cli/commit/5663eeacc12e397157ebbc2446547ec3db596de8))
+* async statusbar polling, impact_type + per-severity volumes, Impact column ([dc64f87](https://github.com/usetero/cli/commit/dc64f8755d5733db4be061849deb2e4ba94ad0e8))
+* replace PII tab with comprehensive Compliance tab covering 4 categories ([8d2c568](https://github.com/usetero/cli/commit/8d2c56851d5ea9aba1773f5934ea7b7b94992471))
+* show cost percentage per waste category in Est. Savings column ([8f92b53](https://github.com/usetero/cli/commit/8f92b5319f69ba35864db4733697b74305a9389d))
+
+
+### Bug Fixes
+
+* color 'at risk' compliance status with warning color to match dot ([ba88810](https://github.com/usetero/cli/commit/ba888107480e232536ba17b20170639fbf366f2c))
+* **deps:** update module github.com/mattn/go-sqlite3 to v1.14.34 ([#42](https://github.com/usetero/cli/issues/42)) ([fe9ca4b](https://github.com/usetero/cli/commit/fe9ca4b57c170df94a1aa56fa354f4f8cc1171b7))
+* distinguish null from zero for all measurement fields ([804721d](https://github.com/usetero/cli/commit/804721dff04c4bb960cd67bb7832fce58749b18d))
+* force-refresh sync token on server auth rejection ([7ea6fe5](https://github.com/usetero/cli/commit/7ea6fe5f948b713f9e4bfeb4d68ee000acee6478))
+* remove redundant error toasts from query tool ([977a4d0](https://github.com/usetero/cli/commit/977a4d00c4a82f15724d253aec9ce4eda074ab81))
+* show actual error message on stream failures and fix statusbar overflow ([17ece74](https://github.com/usetero/cli/commit/17ece74a566b4b60b10a7d580ee214cdeb0c57ba))
+
 ## [1.15.0](https://github.com/usetero/cli/compare/v1.14.0...v1.15.0) (2026-02-13)
 
 
