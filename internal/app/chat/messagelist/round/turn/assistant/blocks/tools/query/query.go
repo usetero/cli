@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
@@ -206,7 +205,7 @@ func (m *Model) execute() tea.Cmd {
 		m.err = fmt.Errorf("no executor")
 		m.state = tools.StateComplete
 		m.scope.Error("query failed", "error", m.err)
-		return tea.Batch(m.fireCompleted(), appmsg.ErrorCmd("Query failed", m.err, false))
+		return m.fireCompleted()
 	}
 
 	result, err := m.executor.Execute(json.RawMessage(m.input))
@@ -215,7 +214,7 @@ func (m *Model) execute() tea.Cmd {
 		m.err = err
 		m.state = tools.StateComplete
 		m.scope.Error("query failed", "error", err)
-		return tea.Batch(m.fireCompleted(), appmsg.ErrorCmd("Query failed", err, false))
+		return m.fireCompleted()
 	}
 
 	m.rows = result.Rows
