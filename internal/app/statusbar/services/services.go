@@ -116,7 +116,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if key != m.lastState {
 			m.summary = msg.summary
 			m.services = msg.services
-			m.hasData = msg.summary.ActiveServices > 0
+			m.hasData = msg.summary.ServiceCount > 0
 			m.lastState = key
 
 			// Clamp cursor if services shrank.
@@ -255,8 +255,13 @@ func (m *Model) CompactView() string {
 
 	s := m.summary
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-	d := status.ServiceDot(m.theme, s.Health)
 
+	if s.ActiveServices == 0 {
+		dot := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg).Render("●")
+		return dot + " " + muted.Render(fmt.Sprintf("%d svcs (all disabled)", s.ServiceCount))
+	}
+
+	d := status.ServiceDot(m.theme, s.Health)
 	label := fmt.Sprintf("%d svcs", s.ActiveServices)
 
 	return d + " " + muted.Render(label)
@@ -275,6 +280,15 @@ func (m *Model) ExpandedView(width, height int) string {
 	// Detail sub-view for a single service.
 	if m.detail != nil {
 		return m.detail.View(width)
+	}
+
+	// All services disabled — show a clear message with guidance.
+	if m.summary.ActiveServices == 0 {
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		return muted.Render(fmt.Sprintf(
+			"%d services discovered, all disabled.\nAsk Tero to explore your services and pick which ones to enable.",
+			m.summary.ServiceCount,
+		))
 	}
 
 	// Height budget: summary (1) + gap (1) + table header+border (2) = 4 lines overhead.

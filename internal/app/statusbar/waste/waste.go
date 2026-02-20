@@ -305,6 +305,12 @@ func (m *Model) ExpandedView(width, height int) string {
 		if m.db == nil {
 			return muted.Render("Waiting for sync to start...")
 		}
+		if m.summary.ActiveServices == 0 && m.summary.ServiceCount > 0 {
+			return muted.Render(fmt.Sprintf(
+				"%d services discovered, all disabled.\nEnable services to start detecting waste.",
+				m.summary.ServiceCount,
+			))
+		}
 		if m.summary.ActiveServices == 0 {
 			return muted.Render("No services discovered yet.")
 		}
