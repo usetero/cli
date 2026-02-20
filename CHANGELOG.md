@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.17.0](https://github.com/usetero/cli/compare/v1.16.0...v1.17.0) (2026-02-20)
+
+
+### Features
+
+* add log event detail drill-down to Services tab ([0b9890c](https://github.com/usetero/cli/commit/0b9890ca825207743aae737027de44108c645774))
+* selectable log events in drawer detail views submit context-specific prompts ([145c239](https://github.com/usetero/cli/commit/145c23996b3ac9ec2295529df231e62142c8fe25))
+
+
+### Bug Fixes
+
+* replace sticky userScrolled flag with AtBottom() snapshot for smoother scrolling ([930703e](https://github.com/usetero/cli/commit/930703e9c16c0a48a0dc5e990edcb29268be5835))
+* show helpful guidance when all services are disabled in drawer tabs ([64fc372](https://github.com/usetero/cli/commit/64fc372fda7ed275c18eabccaf657eef9d6cb028))
+
 ## [1.16.0](https://github.com/usetero/cli/compare/v1.15.0...v1.16.0) (2026-02-19)
 
 
