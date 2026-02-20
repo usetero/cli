@@ -136,10 +136,30 @@ CREATE TABLE log_event_policies (
     workspace_id TEXT
 );
 
+CREATE TABLE log_event_policy_category_statuses_cache (
+    id TEXT,
+    account_id TEXT,
+    approved_count INTEGER,
+    category TEXT,
+    category_type TEXT,
+    dismissed_count INTEGER,
+    estimated_bytes_reduction_per_hour REAL,
+    estimated_cost_reduction_per_hour_bytes_usd REAL,
+    estimated_cost_reduction_per_hour_usd REAL,
+    estimated_cost_reduction_per_hour_volume_usd REAL,
+    estimated_volume_reduction_per_hour REAL,
+    events_with_volumes INTEGER,
+    impact_type TEXT,
+    pending_count INTEGER,
+    refreshed_at TEXT,
+    total_event_count INTEGER
+);
+
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT,
     approved_at TEXT,
+    bytes_per_hour REAL,
     category TEXT,
     category_type TEXT,
     created_at TEXT,
@@ -151,11 +171,15 @@ CREATE TABLE log_event_policy_statuses_cache (
     estimated_volume_reduction_per_hour REAL,
     impact_type TEXT,
     log_event_id TEXT,
+    log_event_name TEXT,
     policy_id TEXT,
     refreshed_at TEXT,
+    service_id TEXT,
+    service_name TEXT,
     status TEXT,
     subjective INTEGER,
     survival_rate REAL,
+    volume_per_hour REAL,
     workspace_id TEXT
 );
 
@@ -205,6 +229,7 @@ CREATE TABLE log_events (
     matchers TEXT,
     name TEXT,
     service_id TEXT,
+    severity TEXT,
     updated_at TEXT
 );
 

@@ -119,6 +119,7 @@ type LogEvent struct {
 	Matchers    *string
 	Name        *string
 	ServiceID   *string
+	Severity    *string
 	UpdatedAt   *string
 }
 
@@ -151,10 +152,30 @@ type LogEventPolicy struct {
 	WorkspaceID  *string
 }
 
+type LogEventPolicyCategoryStatusesCache struct {
+	ID                                     *string
+	AccountID                              *string
+	ApprovedCount                          *int64
+	Category                               *string
+	CategoryType                           *string
+	DismissedCount                         *int64
+	EstimatedBytesReductionPerHour         *float64
+	EstimatedCostReductionPerHourBytesUsd  *float64
+	EstimatedCostReductionPerHourUsd       *float64
+	EstimatedCostReductionPerHourVolumeUsd *float64
+	EstimatedVolumeReductionPerHour        *float64
+	EventsWithVolumes                      *int64
+	ImpactType                             *string
+	PendingCount                           *int64
+	RefreshedAt                            *string
+	TotalEventCount                        *int64
+}
+
 type LogEventPolicyStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
 	ApprovedAt                             *string
+	BytesPerHour                           *float64
 	Category                               *string
 	CategoryType                           *string
 	CreatedAt                              *string
@@ -166,11 +187,15 @@ type LogEventPolicyStatusesCache struct {
 	EstimatedVolumeReductionPerHour        *float64
 	ImpactType                             *string
 	LogEventID                             *string
+	LogEventName                           *string
 	PolicyID                               *string
 	RefreshedAt                            *string
+	ServiceID                              *string
+	ServiceName                            *string
 	Status                                 *string
 	Subjective                             *int64
 	SurvivalRate                           *float64
+	VolumePerHour                          *float64
 	WorkspaceID                            *string
 }
 

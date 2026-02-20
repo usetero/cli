@@ -150,7 +150,7 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		policies, err := db.LogEventPolicies().ListTopPendingPoliciesByCategory(context.Background(), cat.Category, 25)
+		policies, err := db.LogEventPolicyStatuses().ListTopPendingPoliciesByCategory(context.Background(), cat.Category, 25)
 		if err != nil {
 			scope.Error("list top pending policies", "category", cat.Category, "err", err)
 			return detailMsg{err: err}

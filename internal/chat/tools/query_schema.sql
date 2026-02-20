@@ -188,11 +188,32 @@ CREATE TABLE log_event_policies (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
+-- Cache table for per-category policy aggregations. Refreshed by cron service.
+CREATE TABLE log_event_policy_category_statuses_cache (
+    id TEXT,
+    account_id TEXT,
+    approved_count INTEGER,
+    category TEXT,
+    category_type TEXT, -- Values: compliance, waste.
+    dismissed_count INTEGER,
+    estimated_bytes_reduction_per_hour REAL,
+    estimated_cost_reduction_per_hour_bytes_usd REAL,
+    estimated_cost_reduction_per_hour_usd REAL,
+    estimated_cost_reduction_per_hour_volume_usd REAL,
+    estimated_volume_reduction_per_hour REAL,
+    events_with_volumes INTEGER,
+    impact_type TEXT,
+    pending_count INTEGER,
+    refreshed_at TEXT,
+    total_event_count INTEGER
+);
+
 -- Cache table for log_event_policy_statuses view. Refreshed by cron service.
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
     account_id TEXT,
     approved_at TEXT,
+    bytes_per_hour REAL,
     category TEXT,
     category_type TEXT, -- Values: compliance, waste.
     created_at TEXT,
@@ -204,11 +225,15 @@ CREATE TABLE log_event_policy_statuses_cache (
     estimated_volume_reduction_per_hour REAL, -- Events/hour saved if this policy applied alone. NULL if not estimable.
     impact_type TEXT, -- How policy achieves cost reduction: attribute (bytes only), volume (events), none (compliance only)
     log_event_id TEXT,
+    log_event_name TEXT,
     policy_id TEXT,
     refreshed_at TEXT,
+    service_id TEXT,
+    service_name TEXT,
     status TEXT, -- Values: PENDING, APPROVED, DISMISSED.
     subjective INTEGER,
     survival_rate REAL, -- Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
+    volume_per_hour REAL,
     workspace_id TEXT
 );
 
@@ -273,7 +298,7 @@ CREATE TABLE log_events (
     -- JSON rules that match incoming logs to this event. Each matcher specifies a field path, operator, and value.
     -- JSON array of objects. Each element:
     -- $[0].field_path[]              string[]   - Path to field as array of segments
-    -- $[0].match_type                string     - Match operator: exact, contains, starts_with, ends_with, regex, exists
+    -- $[0].match_type                string     - Match operator: exact, contains, starts_with, ends_with, regex, exists, missing
     -- $[0].match_value               string     - Value to match against
     -- $[0].case_insensitive          boolean    - Whether matching is case-insensitive (optional)
     -- $[0].negate                    boolean    - Whether to invert match result (optional)
@@ -282,6 +307,7 @@ CREATE TABLE log_events (
     matchers TEXT,
     name TEXT, -- Snake_case identifier unique per service, e.g. nginx_access_log
     service_id TEXT, -- Service that produces this event
+    severity TEXT, -- Predominant log severity level, derived from example records. Nullable when examples have no severity info. Values: debug, info, warn, error, other.
     updated_at TEXT -- When the log event was last updated
 );
 

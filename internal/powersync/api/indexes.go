@@ -22,11 +22,9 @@ var clientIndexes = map[string][]SchemaIndex{
 		{Name: "log_event_id", Columns: []SchemaIndexColumn{
 			{Name: "log_event_id", Ascending: true, Type: "text"},
 		}},
-		{Name: "status", Columns: []SchemaIndexColumn{
-			{Name: "status", Ascending: true, Type: "text"},
-		}},
-		{Name: "category", Columns: []SchemaIndexColumn{
+		{Name: "category_status", Columns: []SchemaIndexColumn{
 			{Name: "category", Ascending: true, Type: "text"},
+			{Name: "status", Ascending: true, Type: "text"},
 		}},
 	},
 

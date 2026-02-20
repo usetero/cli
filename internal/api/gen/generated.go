@@ -1053,6 +1053,7 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeLogEvent
 // GetServiceNodeLogEventField
 // GetServiceNodeLogEventPolicy
+// GetServiceNodeLogEventPolicyCategoryStatusCache
 // GetServiceNodeLogEventPolicyStatusCache
 // GetServiceNodeLogEventStatusCache
 // GetServiceNodeLogSample
@@ -1085,6 +1086,8 @@ func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode() 
 func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()                  {}
 func (v *GetServiceNodeLogEventField) implementsGraphQLInterfaceGetServiceNode()             {}
 func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()            {}
+func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) implementsGraphQLInterfaceGetServiceNode() {
+}
 func (v *GetServiceNodeLogEventPolicyStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
 func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode()       {}
 func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()                 {}
@@ -1143,6 +1146,9 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 		return json.Unmarshal(b, *v)
 	case "LogEventPolicy":
 		*v = new(GetServiceNodeLogEventPolicy)
+		return json.Unmarshal(b, *v)
+	case "LogEventPolicyCategoryStatusCache":
+		*v = new(GetServiceNodeLogEventPolicyCategoryStatusCache)
 		return json.Unmarshal(b, *v)
 	case "LogEventPolicyStatusCache":
 		*v = new(GetServiceNodeLogEventPolicyStatusCache)
@@ -1276,6 +1282,14 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 		result := struct {
 			TypeName string `json:"__typename"`
 			*GetServiceNodeLogEventPolicy
+		}{typename, v}
+		return json.Marshal(result)
+	case *GetServiceNodeLogEventPolicyCategoryStatusCache:
+		typename = "LogEventPolicyCategoryStatusCache"
+
+		result := struct {
+			TypeName string `json:"__typename"`
+			*GetServiceNodeLogEventPolicyCategoryStatusCache
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeLogEventPolicyStatusCache:
@@ -1461,6 +1475,14 @@ type GetServiceNodeLogEventPolicy struct {
 
 // GetTypename returns GetServiceNodeLogEventPolicy.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEventPolicy) GetTypename() *string { return v.Typename }
+
+// GetServiceNodeLogEventPolicyCategoryStatusCache includes the requested fields of the GraphQL type LogEventPolicyCategoryStatusCache.
+type GetServiceNodeLogEventPolicyCategoryStatusCache struct {
+	Typename *string `json:"__typename"`
+}
+
+// GetTypename returns GetServiceNodeLogEventPolicyCategoryStatusCache.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) GetTypename() *string { return v.Typename }
 
 // GetServiceNodeLogEventPolicyStatusCache includes the requested fields of the GraphQL type LogEventPolicyStatusCache.
 type GetServiceNodeLogEventPolicyStatusCache struct {

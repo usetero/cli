@@ -34,6 +34,7 @@ type DB interface {
 	// Domain entities
 	Conversations() Conversations
 	LogEventPolicies() LogEventPolicies
+	LogEventPolicyStatuses() LogEventPolicyStatuses
 	CompliancePolicies() CompliancePolicies
 	LogEvents() LogEvents
 	Messages() Messages
@@ -278,6 +279,11 @@ func (d *database) LogEvents() LogEvents {
 // LogEventPolicies returns type-safe log event policy operations.
 func (d *database) LogEventPolicies() LogEventPolicies {
 	return &logEventPoliciesImpl{queries: d.ReadQueries()}
+}
+
+// LogEventPolicyStatuses returns type-safe pre-computed policy status data.
+func (d *database) LogEventPolicyStatuses() LogEventPolicyStatuses {
+	return &logEventPolicyStatusesImpl{queries: d.ReadQueries()}
 }
 
 // CompliancePolicies returns type-safe compliance policy operations.
