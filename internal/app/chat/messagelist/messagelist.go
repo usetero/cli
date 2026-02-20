@@ -89,9 +89,6 @@ type Model struct {
 	mouseDragX     int // current X within block content
 	mouseDragY     int // current Y within block
 
-	// Auto-scroll
-	userScrolled bool
-
 	// Dependencies
 	db           sqlite.DB
 	chatClient   chatclient.Client
@@ -124,10 +121,14 @@ func New(
 
 // SetSize sets the dimensions.
 func (m *Model) SetSize(width, height int) {
+	atBottom := m.vp.AtBottom()
 	m.width = width
 	m.height = height
 	m.vp.SetHeight(height)
 	m.updateRoundWidths()
+	if atBottom {
+		m.vp.ScrollToBottom()
+	}
 }
 
 // SetOrigin sets the terminal-absolute position of this component's top-left corner.

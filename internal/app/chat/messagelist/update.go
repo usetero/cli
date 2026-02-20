@@ -18,21 +18,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			switch {
 			case key.Matches(msg, focusPrevKey):
 				m.vp.FocusPrev()
-				m.userScrolled = true
 			case key.Matches(msg, focusNextKey):
 				m.vp.FocusNext()
-				if m.vp.AtBottom() {
-					m.userScrolled = false
-				}
 			case key.Matches(msg, scrollUpKey):
 				m.vp.ScrollBy(-1)
-				m.userScrolled = true
 				m.vp.UpdateFocusFromScroll()
 			case key.Matches(msg, scrollDownKey):
 				m.vp.ScrollBy(1)
-				if m.vp.AtBottom() {
-					m.userScrolled = false
-				}
 				m.vp.UpdateFocusFromScroll()
 			}
 		}
@@ -87,24 +79,22 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.Button {
 		case tea.MouseWheelUp:
 			m.vp.ScrollBy(-5)
-			m.userScrolled = true
 			m.vp.UpdateFocusFromScroll()
 		case tea.MouseWheelDown:
 			m.vp.ScrollBy(5)
-			if m.vp.AtBottom() {
-				m.userScrolled = false
-			}
 			m.vp.UpdateFocusFromScroll()
 		}
 
 	case msgs.TurnStarted:
-		m.userScrolled = false
 		m.clearSelection()
 		m.rebuildBlocks()
 		m.vp.ScrollToBottom()
 		m.vp.SetFocusIdx(len(m.blocks) - 1)
 
 	case msgs.AssistantContentUpdated, msgs.StreamCompleted, msgs.StreamFailed:
+		// Snapshot scroll position before content changes.
+		wasAtBottom := m.vp.AtBottom()
+
 		// Forward to rounds first so streaming state is updated
 		// before rebuildBlocks reads Blocks().
 		for _, r := range m.rounds {
@@ -113,7 +103,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 		m.rebuildBlocks()
-		if !m.userScrolled {
+		if wasAtBottom {
 			m.vp.ScrollToBottom()
 			m.vp.SetFocusIdx(len(m.blocks) - 1)
 		}
