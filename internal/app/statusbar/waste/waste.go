@@ -384,7 +384,7 @@ func (m *Model) renderCategoryTable(width int) string {
 		return ""
 	}
 
-	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
+	tbl := table.New(m.theme, table.WithMaxValueWidth(35))
 	tbl.Headers("Category", "Pending", "Impact", "Approved", "Saved")
 	tbl.SetWidth(width)
 
@@ -397,6 +397,14 @@ func (m *Model) renderCategoryTable(width int) string {
 	var totalCost float64
 	if m.summary.EstimatedCostPerHour != nil {
 		totalCost = *m.summary.EstimatedCostPerHour
+	}
+
+	// Find widest pending count for alignment.
+	maxPendingW := 1
+	for _, c := range m.categories {
+		if w := len(format.Count(c.PendingCount)); w > maxPendingW {
+			maxPendingW = w
+		}
 	}
 
 	for i, c := range m.categories {
@@ -412,18 +420,19 @@ func (m *Model) renderCategoryTable(width int) string {
 			name = dot + " " + name
 		}
 
-		savings := fmt.Sprintf("%-12s", formatCategoryCost(c, totalCost, ok, muted))
+		// Pending count with optional discovery progress bar.
+		pending := fmt.Sprintf("%-*s", maxPendingW, format.Count(c.PendingCount))
 		if c.TotalEvents > 0 {
 			pct := int(c.EventsWithVolumes * 100 / c.TotalEvents)
-			if pct < 95 {
-				savings += bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%d%%", pct))
+			if pct < 80 {
+				pending += "  " + bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%d%%", pct))
 			}
 		}
 
 		tbl.Row(
 			name,
-			format.Count(c.PendingCount),
-			savings,
+			pending,
+			formatCategoryCost(c, totalCost, ok, muted),
 			format.Count(c.ApprovedCount),
 			formatObservedCost(c),
 		)

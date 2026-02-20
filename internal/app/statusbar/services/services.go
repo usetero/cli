@@ -29,9 +29,9 @@ const (
 	maxServices  = 50
 
 	// discoveryDoneThreshold is the classification coverage percentage above
-	// which we consider discovery complete. Volume ratios are never exactly
-	// 100% due to throughput fluctuations.
-	discoveryDoneThreshold = 95
+	// which we consider discovery complete. Aligned with the 80% analysis
+	// threshold used for waste/compliance readiness.
+	discoveryDoneThreshold = 80
 
 	// levelDisplayThreshold is the minimum fraction of total volume a
 	// non-info level must reach to be shown (1%).

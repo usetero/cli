@@ -44,13 +44,13 @@ func (t *timeoutDB) QueryContext(ctx context.Context, query string, args ...inte
 	// Not canceled here — the caller iterates the returned *sql.Rows after
 	// this method returns. The timeout still fires after defaultQueryTimeout
 	// if the query is stuck; it just isn't eagerly cleaned up.
-	ctx, _ = withTimeout(ctx) //nolint:lostcancel
+	ctx, _ = withTimeout(ctx) //nolint:lostcancel // caller iterates rows after return; timeout still fires
 	return t.db.QueryContext(ctx, query, args...)
 }
 
 func (t *timeoutDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	// Not canceled here — the caller calls Scan() on the returned *sql.Row
 	// after this method returns, and Scan checks ctx.Err(). Same as QueryContext.
-	ctx, _ = withTimeout(ctx) //nolint:lostcancel
+	ctx, _ = withTimeout(ctx) //nolint:lostcancel // caller calls Scan after return; timeout still fires
 	return t.db.QueryRowContext(ctx, query, args...)
 }
