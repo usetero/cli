@@ -41,6 +41,7 @@ type DB interface {
 
 	// Aggregated statuses
 	DatadogAccountStatuses() DatadogAccountStatuses
+	LogEventPolicyCategoryStatuses() LogEventPolicyCategoryStatuses
 	LogEventStatuses() LogEventStatuses
 	ServiceStatuses() ServiceStatuses
 
@@ -247,6 +248,11 @@ func (d *database) Conversations() Conversations {
 // DatadogAccountStatuses returns type-safe Datadog account status operations.
 func (d *database) DatadogAccountStatuses() DatadogAccountStatuses {
 	return &datadogAccountStatusesImpl{queries: d.ReadQueries()}
+}
+
+// LogEventPolicyCategoryStatuses returns type-safe pre-computed policy category rollups.
+func (d *database) LogEventPolicyCategoryStatuses() LogEventPolicyCategoryStatuses {
+	return &logEventPolicyCategoryStatusesImpl{queries: d.ReadQueries()}
 }
 
 // LogEventStatuses returns type-safe log event status operations.

@@ -34,6 +34,9 @@ type MockDB struct {
 	// LogEventPoliciesImpl is the mock log event policies implementation.
 	LogEventPoliciesImpl sqlite.LogEventPolicies
 
+	// LogEventPolicyCategoryStatusesImpl is the mock policy category statuses implementation.
+	LogEventPolicyCategoryStatusesImpl sqlite.LogEventPolicyCategoryStatuses
+
 	// CompliancePoliciesImpl is the mock compliance policies implementation.
 	CompliancePoliciesImpl sqlite.CompliancePolicies
 
@@ -135,6 +138,11 @@ func (m *MockDB) LogEventStatuses() sqlite.LogEventStatuses {
 // LogEventPolicies implements sqlite.DB.
 func (m *MockDB) LogEventPolicies() sqlite.LogEventPolicies {
 	return m.LogEventPoliciesImpl
+}
+
+// LogEventPolicyCategoryStatuses implements sqlite.DB.
+func (m *MockDB) LogEventPolicyCategoryStatuses() sqlite.LogEventPolicyCategoryStatuses {
+	return m.LogEventPolicyCategoryStatusesImpl
 }
 
 // CompliancePolicies implements sqlite.DB.

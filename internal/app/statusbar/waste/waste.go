@@ -135,7 +135,7 @@ func (m *Model) fetchData() tea.Cmd {
 			return dataMsg{err: err}
 		}
 
-		categories, err := db.LogEventPolicies().ListWasteCategoryStatuses(ctx)
+		categories, err := db.LogEventPolicyCategoryStatuses().ListWasteCategoryStatuses(ctx)
 		if err != nil {
 			scope.Error("list waste category statuses", "err", err)
 			categories = nil
@@ -172,12 +172,9 @@ func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategorySt
 		s.TotalBytesPerHour, len(cats))
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%v:%v:%v:%v:%v:%v:%v:%v:%d:%d",
+		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%v:%v:%d:%d",
 			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
 			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
-			c.ObservedVolumeBefore, c.ObservedVolumeAfter,
-			c.ObservedBytesBefore, c.ObservedBytesAfter,
-			c.ObservedCostBefore, c.ObservedCostAfter,
 			c.EventsWithVolumes, c.TotalEvents)
 	}
 
@@ -385,7 +382,7 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(35))
-	tbl.Headers("Category", "Pending", "Impact", "Approved", "Saved")
+	tbl.Headers("Category", "Pending", "Impact", "Approved")
 	tbl.SetWidth(width)
 
 	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
@@ -434,7 +431,6 @@ func (m *Model) renderCategoryTable(width int) string {
 			pending,
 			formatCategoryCost(c, totalCost, ok, muted),
 			format.Count(c.ApprovedCount),
-			formatObservedCost(c),
 		)
 	}
 
@@ -490,20 +486,6 @@ func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64,
 	yearly := *c.EstimatedCostPerHour * 8760
 	if yearly >= 1 {
 		return success.Render("~" + format.Cost(yearly) + "/yr")
-	}
-	return "—"
-}
-
-// formatObservedCost returns the observed cost reduction for a category.
-func formatObservedCost(c domain.PolicyCategoryStatus) string {
-	if c.ObservedCostBefore != nil && c.ObservedCostAfter != nil {
-		diff := *c.ObservedCostBefore - *c.ObservedCostAfter
-		if diff > 0 {
-			yearly := diff * 8760
-			if yearly >= 1 {
-				return "-" + format.Cost(yearly) + "/yr"
-			}
-		}
 	}
 	return "—"
 }

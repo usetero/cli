@@ -44,8 +44,9 @@ type Querier interface {
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error)
-	// Categories where category_type is waste (waste tab).
-	ListWasteCategoryStatuses(ctx context.Context) ([]ListWasteCategoryStatusesRow, error)
+	// Pre-computed per-category rollup for the waste tab.
+	// Replaces the old GROUP BY over log_event_policy_statuses_cache.
+	ListWastePolicyCategoryStatuses(ctx context.Context) ([]ListWastePolicyCategoryStatusesRow, error)
 	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error
