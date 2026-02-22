@@ -299,7 +299,25 @@ func (m *Model) CancelActiveRound() bool {
 	if !m.messageList.HasActiveRound() {
 		return false
 	}
+
+	last := m.messageList.LastRound()
 	m.messageList.CancelActiveRound()
+
+	// Clean up orphaned messages from DB — same as StreamFailed handler.
+	if last != nil {
+		ids := last.LastTurnMessageIDs()
+		for _, id := range ids {
+			if err := m.db.Messages().Delete(context.Background(), id); err != nil {
+				m.scope.Error("failed to delete orphaned message", "id", id, "error", err)
+			}
+		}
+
+		// Turn 1: remove round entirely (no assistant content to show).
+		if !last.HasAssistantContent() {
+			m.messageList.RemoveLastRound()
+		}
+	}
+
 	return true
 }
 
