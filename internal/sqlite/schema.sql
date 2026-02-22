@@ -225,11 +225,13 @@ CREATE TABLE log_events (
     account_id TEXT,
     created_at TEXT,
     description TEXT,
+    event_nature TEXT,
     examples TEXT,
     matchers TEXT,
     name TEXT,
     service_id TEXT,
     severity TEXT,
+    signal_purpose TEXT,
     updated_at TEXT
 );
 

@@ -111,16 +111,18 @@ type DiscoveryStatus struct {
 }
 
 type LogEvent struct {
-	ID          *string
-	AccountID   *string
-	CreatedAt   *string
-	Description *string
-	Examples    *string
-	Matchers    *string
-	Name        *string
-	ServiceID   *string
-	Severity    *string
-	UpdatedAt   *string
+	ID            *string
+	AccountID     *string
+	CreatedAt     *string
+	Description   *string
+	EventNature   *string
+	Examples      *string
+	Matchers      *string
+	Name          *string
+	ServiceID     *string
+	Severity      *string
+	SignalPurpose *string
+	UpdatedAt     *string
 }
 
 type LogEventField struct {

@@ -926,6 +926,11 @@ type DatadogAccountStatusCache implements Node {
   id: ID!
   datadogAccountID: ID!
   accountID: UUID!
+
+  """
+  Overall health of the Datadog account. DISABLED (integration turned off),
+  INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
+  """
   health: DatadogAccountStatusCacheHealth!
   readyForUse: Boolean!
   logEventAnalyzedCount: Int!
@@ -2094,13 +2099,28 @@ type LogEvent implements Node {
   """Snake_case identifier unique per service, e.g. nginx_access_log"""
   name: String!
 
-  """What this event pattern represents"""
+  """
+  What the event is and what data instances carry. Helps engineers decide whether to look here.
+  """
   description: String!
 
   """
-  Predominant log severity level, derived from example records. Nullable when examples have no severity info.
+  Predominant log severity level, derived from example records. Nullable when
+  examples have no severity info. Values: debug, info, warn, error, other.
   """
   severity: LogEventSeverity
+
+  """
+  What role this event serves: diagnostic (investigate incidents), operational
+  (system behavior), lifecycle (state transitions), ephemeral (transient state).
+  """
+  signalPurpose: LogEventSignalPurpose!
+
+  """
+  What this event records: system (internal mechanics), traffic (request flow),
+  activity (actor+action+resource), control (access/permission decisions).
+  """
+  eventNature: LogEventEventNature!
 
   """
   Sample log records captured during discovery, used for AI analysis and pattern validation
@@ -2162,6 +2182,14 @@ type LogEventEdge {
 
   """A cursor for use in pagination."""
   cursor: Cursor!
+}
+
+"""LogEventEventNature is enum for the field event_nature"""
+enum LogEventEventNature {
+  system
+  traffic
+  activity
+  control
 }
 
 type LogEventField implements Node {
@@ -2289,6 +2317,8 @@ input LogEventOrder {
 enum LogEventOrderField {
   NAME
   SEVERITY
+  SIGNAL_PURPOSE
+  EVENT_NATURE
   CREATED_AT
   UPDATED_AT
 }
@@ -2308,7 +2338,17 @@ type LogEventPolicy implements Node {
   """The workspace that owns this policy"""
   workspaceID: ID!
 
-  """Quality issue category this policy addresses"""
+  """
+  Quality issue category this policy addresses. pii_leakage (personally
+  identifiable information), secrets_leakage (API keys/tokens/passwords),
+  phi_leakage (protected health information), payment_data_leakage (card data),
+  health_checks (probe traffic), bot_traffic (crawler/bot user-agents),
+  low_value (not worth the cost), accidental_debug_statements (debug garbage in
+  production), malformed_data (corrupted/unparseable), noise (repetitive at
+  current volume), duplicate_fields (same value in multiple places),
+  instrumentation_bloat (SDK metadata with no value), oversized_fields (large
+  relative to diagnostic value).
+  """
   category: LogEventPolicyCategory!
 
   """
@@ -2382,19 +2422,59 @@ enum LogEventPolicyCategory {
 
 type LogEventPolicyCategoryStatusCache implements Node {
   id: ID!
+
+  """Account ID for tenant isolation"""
   accountID: UUID!
+
+  """Quality issue category (e.g., pii_leakage, noise, health_checks)"""
   category: String!
+
+  """
+  Type of problem. compliance (legal/security risk requiring action), waste (cost reduction opportunity).
+  """
   categoryType: LogEventPolicyCategoryStatusCacheCategoryType!
+
+  """
+  How this category reduces cost: attribute (modifies fields, bytes savings), volume (drops events), none (compliance only)
+  """
   impactType: String
+
+  """Policies awaiting user review in this category"""
   pendingCount: Int!
+
+  """Policies approved by user in this category"""
   approvedCount: Int!
+
+  """Policies dismissed by user in this category"""
   dismissedCount: Int!
+
+  """Total log events that have a policy in this category"""
   totalEventCount: Int!
+
+  """
+  Log events in this category that have volume data (subset of total_event_count)
+  """
   eventsWithVolumes: Int!
+
+  """Events/hour saved by all pending policies in this category combined"""
   estimatedVolumeReductionPerHour: Float
+
+  """Bytes/hour saved by all pending policies in this category combined"""
   estimatedBytesReductionPerHour: Float
+
+  """
+  Estimated ingestion savings in USD/hour from pending policies in this category
+  """
   estimatedCostReductionPerHourBytesUsd: Float
+
+  """
+  Estimated indexing savings in USD/hour from pending policies in this category
+  """
   estimatedCostReductionPerHourVolumeUsd: Float
+
+  """
+  Estimated total savings in USD/hour from pending policies in this category
+  """
   estimatedCostReductionPerHourUsd: Float
   refreshedAt: Time!
 }
@@ -2652,28 +2732,87 @@ enum LogEventPolicyOrderField {
 
 type LogEventPolicyStatusCache implements Node {
   id: ID!
+
+  """Account ID for tenant isolation"""
   accountID: UUID!
+
+  """The policy this status row represents"""
   policyID: ID!
+
+  """The log event this policy targets"""
   logEventID: UUID!
+
+  """The workspace that owns this policy"""
   workspaceID: UUID!
+
+  """
+  Quality issue category this policy addresses (e.g., pii_leakage, noise, health_checks)
+  """
   category: String!
+
+  """
+  User decision on this policy. PENDING (awaiting review), APPROVED (accepted
+  for enforcement), DISMISSED (rejected by user).
+  """
   status: LogEventPolicyStatusCacheStatus!
+
+  """
+  Whether this category requires AI judgment (true) vs mechanically verifiable (false)
+  """
   subjective: Boolean!
+
+  """
+  Type of problem. compliance (legal/security risk requiring action), waste (cost reduction opportunity).
+  """
   categoryType: LogEventPolicyStatusCacheCategoryType!
+
+  """When this policy was approved by a user"""
   approvedAt: Time
+
+  """When this policy was dismissed by a user"""
   dismissedAt: Time
+
+  """When this policy was created"""
   createdAt: Time!
+
+  """
+  How this policy reduces cost: attribute (modifies fields, bytes savings), volume (drops events), none (compliance only)
+  """
   impactType: String
+
+  """
+  Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
+  """
   survivalRate: Float
+
+  """Events/hour saved if this policy applied alone. NULL if not estimable."""
   estimatedVolumeReductionPerHour: Float
+
+  """Bytes/hour saved if this policy applied alone. NULL if not estimable."""
   estimatedBytesReductionPerHour: Float
+
+  """Estimated ingestion savings in USD/hour from bytes reduction"""
   estimatedCostReductionPerHourBytesUsd: Float
+
+  """Estimated indexing savings in USD/hour from volume reduction"""
   estimatedCostReductionPerHourVolumeUsd: Float
+
+  """Estimated total savings in USD/hour (bytes + volume)"""
   estimatedCostReductionPerHourUsd: Float
+
+  """Service that produces the targeted log event (denormalized)"""
   serviceID: UUID
+
+  """Name of the service (denormalized for display)"""
   serviceName: String
+
+  """Name of the targeted log event (denormalized for display)"""
   logEventName: String
+
+  """Current throughput of the targeted log event in events/hour"""
   volumePerHour: Float
+
+  """Current throughput of the targeted log event in bytes/hour"""
   bytesPerHour: Float
   refreshedAt: Time!
 }
@@ -3185,6 +3324,14 @@ enum LogEventSeverity {
   other
 }
 
+"""LogEventSignalPurpose is enum for the field signal_purpose"""
+enum LogEventSignalPurpose {
+  diagnostic
+  operational
+  lifecycle
+  ephemeral
+}
+
 type LogEventStatusCache implements Node {
   id: ID!
   accountID: UUID!
@@ -3663,6 +3810,18 @@ input LogEventWhereInput {
   severityNotIn: [LogEventSeverity!]
   severityIsNil: Boolean
   severityNotNil: Boolean
+
+  """signal_purpose field predicates"""
+  signalPurpose: LogEventSignalPurpose
+  signalPurposeNEQ: LogEventSignalPurpose
+  signalPurposeIn: [LogEventSignalPurpose!]
+  signalPurposeNotIn: [LogEventSignalPurpose!]
+
+  """event_nature field predicates"""
+  eventNature: LogEventEventNature
+  eventNatureNEQ: LogEventEventNature
+  eventNatureIn: [LogEventEventNature!]
+  eventNatureNotIn: [LogEventEventNature!]
 
   """baseline_volume_per_hour field predicates"""
   baselineVolumePerHour: Float
@@ -4802,6 +4961,11 @@ type ServiceStatusCache implements Node {
   serviceID: ID!
   accountID: UUID!
   datadogAccountID: ID!
+
+  """
+  Overall health of the service. DISABLED (integration turned off), INACTIVE (no
+  data received), ERROR (ingestion failures), OK (healthy).
+  """
   health: ServiceStatusCacheHealth!
   logEventCount: Int!
   logEventAnalyzedCount: Int!
