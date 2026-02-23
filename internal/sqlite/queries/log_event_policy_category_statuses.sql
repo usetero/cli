@@ -1,10 +1,11 @@
--- name: ListWastePolicyCategoryStatuses :many
--- Pre-computed per-category rollup for the waste tab.
--- Replaces the old GROUP BY over log_event_policy_statuses_cache.
+-- name: ListCategoryStatusesByCostAndType :many
+-- Pre-computed per-category rollup filtered by category_type (waste or compliance).
 SELECT
   COALESCE(category, '') AS category,
   COALESCE(category_type, '') AS category_type,
-  COALESCE(impact_type, '') AS impact_type,
+  COALESCE("action", '') AS policy_action,
+  COALESCE(display_name, '') AS display_name,
+  COALESCE(principle, '') AS principle,
   CAST(COALESCE(pending_count, 0) AS INTEGER) AS pending_count,
   CAST(COALESCE(approved_count, 0) AS INTEGER) AS approved_count,
   CAST(COALESCE(dismissed_count, 0) AS INTEGER) AS dismissed_count,
@@ -17,5 +18,5 @@ SELECT
   CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count
 FROM log_event_policy_category_statuses_cache
 WHERE category IS NOT NULL AND category != ''
-  AND category_type = 'waste'
-ORDER BY pending_count DESC;
+  AND category_type = ?1
+ORDER BY estimated_cost_reduction_per_hour_usd DESC NULLS LAST, pending_count DESC;

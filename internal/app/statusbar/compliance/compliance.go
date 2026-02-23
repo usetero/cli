@@ -308,6 +308,9 @@ func (m *Model) ExpandedView(width, height int) string {
 				m.summary.ServiceCount,
 			))
 		}
+		if m.summary.ActiveServices == 0 {
+			return muted.Render("No services discovered yet.")
+		}
 		dot := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg).Render("●")
 		return dot + " " + muted.Render("No compliance issues detected.")
 	}
@@ -323,6 +326,12 @@ func (m *Model) ExpandedView(width, height int) string {
 
 	if tbl := m.renderCategoryTable(width); tbl != "" {
 		lines = append(lines, tbl)
+	}
+
+	if desc := m.cursorPrinciple(); desc != "" {
+		lines = append(lines, "")
+		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
+		lines = append(lines, muted.Render(desc))
 	}
 
 	return strings.Join(lines, "\n")
@@ -397,7 +406,7 @@ func (m *Model) renderCategoryTable(width int) string {
 	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
 	for i, c := range m.categories {
-		name := displayCategoryName(c.Category)
+		name := c.Name()
 		if i == m.cursor {
 			name = accent.Render("▶ " + name)
 		} else {
@@ -449,6 +458,14 @@ func (m *Model) analysisBar() progress.Model {
 	return bar
 }
 
+// cursorPrinciple returns the principle text for the currently selected category.
+func (m *Model) cursorPrinciple() string {
+	if m.cursor < len(m.categories) {
+		return m.categories[m.cursor].Principle
+	}
+	return ""
+}
+
 // formatCategoryDot returns a colored dot for a category row.
 func formatCategoryDot(colors styles.Theme, c domain.ComplianceCategorySummary) string {
 	if c.LeakingCount > 0 {
@@ -476,20 +493,4 @@ func formatCategoryStatus(colors styles.Theme, c domain.ComplianceCategorySummar
 		return "—"
 	}
 	return strings.Join(parts, sep)
-}
-
-// displayCategoryName returns a human-readable name for a compliance category.
-func displayCategoryName(category string) string {
-	switch category {
-	case domain.CategoryPIILeakage:
-		return "PII"
-	case domain.CategorySecretsLeakage:
-		return "Secrets"
-	case domain.CategoryPHILeakage:
-		return "PHI"
-	case domain.CategoryPaymentDataLeakage:
-		return "Payment Data"
-	default:
-		return format.TitleCase(category)
-	}
 }

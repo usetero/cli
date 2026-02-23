@@ -48,7 +48,7 @@ CREATE TABLE datadog_account_statuses_cache (
     estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated total USD/hour savings
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Account-wide estimated volume-based USD/hour savings
     estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
-    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > OK
+    health TEXT, -- Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
     inactive_services INTEGER, -- Services with INACTIVE health
     log_active_services INTEGER, -- Services not DISABLED or INACTIVE
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
@@ -141,6 +141,7 @@ CREATE TABLE log_event_fields (
 CREATE TABLE log_event_policies (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
+    action TEXT, -- What this policy does when enforced: 'drop' (remove all events), 'sample' (keep at reduced rate), 'filter' (drop subset by field value), 'trim' (remove/truncate fields), 'none' (informational only). Auto-set via trigger.
     -- Category-specific analysis from AI. JSON object with one field populated matching the category, containing the analysis and recommended actions.
     -- JSON object. Fields:
     -- $.pii_leakage                  - PII leakage analysis (optional)
@@ -158,11 +159,14 @@ CREATE TABLE log_event_policies (
     -- $.bot_traffic                  - Bot traffic analysis (optional)
     -- $.bot_traffic.user_agent_field[] string[]   - Path to user-agent field as array of segments
     -- $.bot_traffic.bot_proportion   number     - Fraction of traffic identified as bot/crawler (optional)
-    -- $.low_value                    - Low value analysis (optional)
-    -- $.accidental_debug_statements  - Accidental debug statements analysis (optional)
-    -- $.malformed_data               - Malformed data analysis (optional)
-    -- $.noise                        - Noise analysis (optional)
-    -- $.noise.min_interval_seconds   number     - Suggested minimum interval between kept events in seconds
+    -- $.debug_artifacts              - Debug artifacts analysis (optional)
+    -- $.malformed                    - Malformed data analysis (optional)
+    -- $.broken_records               - Broken records analysis (optional)
+    -- $.broken_records.min_interval_seconds number     - Suggested minimum interval between kept events in seconds
+    -- $.commodity_traffic            - Commodity traffic analysis (optional)
+    -- $.commodity_traffic.min_interval_seconds number     - Suggested minimum interval between kept events in seconds
+    -- $.redundant_events             - Redundant events analysis (optional)
+    -- $.dead_weight                  - Dead weight analysis (optional)
     -- $.duplicate_fields             - Duplicate fields analysis (optional)
     -- $.duplicate_fields.pairs[]     - List of duplicate field pairs
     -- $.duplicate_fields.pairs[].remove[] string[][] - List of duplicate field paths to remove
@@ -176,13 +180,13 @@ CREATE TABLE log_event_policies (
     analysis TEXT,
     approved_at TEXT, -- When this policy was approved by a user
     approved_by TEXT, -- User ID who approved this policy
-    category TEXT, -- Quality issue category this policy addresses Values: health_checks, bot_traffic, low_value, accidental_debug_statements, malformed_data, noise, pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage, duplicate_fields, instrumentation_bloat, oversized_fields.
-    category_type TEXT, -- Type of problem: compliance (legal/security risk) or waste (cost reduction). Auto-set via trigger from CategoryMeta.
+    category TEXT, -- Quality issue category this policy addresses. Compliance: pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage. Waste: health_checks, bot_traffic, debug_artifacts, malformed, broken_records, commodity_traffic, redundant_events, dead_weight. Quality: duplicate_fields, instrumentation_bloat, oversized_fields.
+    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), or quality (field-level improvements). Auto-set via trigger from CategoryMeta.
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
     dismissed_by TEXT, -- User ID who dismissed this policy
-    impact_type TEXT, -- How this policy reduces cost: 'attribute' (modifies fields), 'volume' (drops events), 'none' (compliance only). Auto-set via trigger.
     log_event_id TEXT, -- The log event this policy applies to
+    severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Auto-set via trigger. Values: low, medium, high, critical.
     subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false). Auto-set via trigger from CategoryMeta.
     updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
@@ -191,50 +195,55 @@ CREATE TABLE log_event_policies (
 -- Cache table for per-category policy aggregations. Refreshed by cron service.
 CREATE TABLE log_event_policy_category_statuses_cache (
     id TEXT,
-    account_id TEXT,
-    approved_count INTEGER,
-    category TEXT,
-    category_type TEXT, -- Values: compliance, waste.
-    dismissed_count INTEGER,
-    estimated_bytes_reduction_per_hour REAL,
-    estimated_cost_reduction_per_hour_bytes_usd REAL,
-    estimated_cost_reduction_per_hour_usd REAL,
-    estimated_cost_reduction_per_hour_volume_usd REAL,
-    estimated_volume_reduction_per_hour REAL,
-    events_with_volumes INTEGER,
-    impact_type TEXT,
-    pending_count INTEGER,
+    account_id TEXT, -- Account ID for tenant isolation
+    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
+    approved_count INTEGER, -- Policies approved by user in this category
+    boundary TEXT, -- Where this category stops applying — what NOT to flag
+    category TEXT, -- Quality issue category (e.g., pii_leakage, noise, health_checks)
+    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
+    dismissed_count INTEGER, -- Policies dismissed by user in this category
+    display_name TEXT, -- Human-readable category name (e.g., 'PII Leakage')
+    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all pending policies in this category combined
+    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour from pending policies in this category
+    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour from pending policies in this category
+    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour from pending policies in this category
+    estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all pending policies in this category combined
+    events_with_volumes INTEGER, -- Log events in this category that have volume data (subset of total_event_count)
+    pending_count INTEGER, -- Policies awaiting user review in this category
+    principle TEXT, -- What this category detects — the fundamental test for membership
     refreshed_at TEXT,
-    total_event_count INTEGER
+    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
+    total_event_count INTEGER -- Total log events that have a policy in this category
 );
 
 -- Cache table for log_event_policy_statuses view. Refreshed by cron service.
 CREATE TABLE log_event_policy_statuses_cache (
     id TEXT,
-    account_id TEXT,
-    approved_at TEXT,
-    bytes_per_hour REAL,
-    category TEXT,
-    category_type TEXT, -- Values: compliance, waste.
-    created_at TEXT,
-    dismissed_at TEXT,
+    account_id TEXT, -- Account ID for tenant isolation
+    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
+    approved_at TEXT, -- When this policy was approved by a user
+    bytes_per_hour REAL, -- Current throughput of the targeted log event in bytes/hour
+    category TEXT, -- Quality issue category this policy addresses (e.g., pii_leakage, noise, health_checks)
+    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
+    created_at TEXT, -- When this policy was created
+    dismissed_at TEXT, -- When this policy was dismissed by a user
     estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved if this policy applied alone. NULL if not estimable.
-    estimated_cost_reduction_per_hour_bytes_usd REAL,
-    estimated_cost_reduction_per_hour_usd REAL,
-    estimated_cost_reduction_per_hour_volume_usd REAL,
+    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour from bytes reduction
+    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour (bytes + volume)
+    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour from volume reduction
     estimated_volume_reduction_per_hour REAL, -- Events/hour saved if this policy applied alone. NULL if not estimable.
-    impact_type TEXT, -- How policy achieves cost reduction: attribute (bytes only), volume (events), none (compliance only)
-    log_event_id TEXT,
-    log_event_name TEXT,
-    policy_id TEXT,
+    log_event_id TEXT, -- The log event this policy targets
+    log_event_name TEXT, -- Name of the targeted log event (denormalized for display)
+    policy_id TEXT, -- The policy this status row represents
     refreshed_at TEXT,
-    service_id TEXT,
-    service_name TEXT,
-    status TEXT, -- Values: PENDING, APPROVED, DISMISSED.
-    subjective INTEGER,
+    service_id TEXT, -- Service that produces the targeted log event (denormalized)
+    service_name TEXT, -- Name of the service (denormalized for display)
+    severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Values: low, medium, high, critical.
+    status TEXT, -- User decision on this policy. PENDING (awaiting review), APPROVED (accepted for enforcement), DISMISSED (rejected by user).
+    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
     survival_rate REAL, -- Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
-    volume_per_hour REAL,
-    workspace_id TEXT
+    volume_per_hour REAL, -- Current throughput of the targeted log event in events/hour
+    workspace_id TEXT -- The workspace that owns this policy
 );
 
 -- Cache table for log_event_statuses view. Refreshed by cron service.
@@ -280,7 +289,8 @@ CREATE TABLE log_events (
     id TEXT, -- Unique identifier of the log event
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from service.account_id.
     created_at TEXT, -- When the log event was created
-    description TEXT, -- What this event pattern represents
+    description TEXT, -- What the event is and what data instances carry. Helps engineers decide whether to look here.
+    event_nature TEXT, -- What this event records: system (internal mechanics), traffic (request flow), activity (actor+action+resource), control (access/permission decisions).
     -- Sample log records captured during discovery, used for AI analysis and pattern validation
     -- JSON array of objects. Each element:
     -- $[0].timestamp                 - When the log event occurred (RFC3339)
@@ -308,6 +318,7 @@ CREATE TABLE log_events (
     name TEXT, -- Snake_case identifier unique per service, e.g. nginx_access_log
     service_id TEXT, -- Service that produces this event
     severity TEXT, -- Predominant log severity level, derived from example records. Nullable when examples have no severity info. Values: debug, info, warn, error, other.
+    signal_purpose TEXT, -- What role this event serves: diagnostic (investigate incidents), operational (system behavior), lifecycle (state transitions), ephemeral (transient state).
     updated_at TEXT -- When the log event was last updated
 );
 
@@ -353,7 +364,7 @@ CREATE TABLE service_statuses_cache (
     estimated_cost_reduction_per_hour_usd REAL, -- Estimated total USD/hour savings from active policies
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated volume-based USD/hour savings from active policies
     estimated_volume_reduction_per_hour REAL, -- Estimated volume reduction from active policies
-    health TEXT, -- Health: DISABLED > INACTIVE > ERROR > OK
+    health TEXT, -- Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
     log_event_bytes_per_hour REAL, -- Discovered log event throughput in bytes/hour from rolling 7-day window
     log_event_cost_per_hour_bytes_usd REAL, -- Discovered log event ingestion cost in USD/hour

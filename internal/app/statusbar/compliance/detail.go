@@ -39,7 +39,7 @@ func (d *detail) Prompt() tea.Cmd {
 	p := d.policies[d.cursor]
 	text := fmt.Sprintf(
 		"Tell me about the %s compliance issue for the %q log event in the %s service.",
-		displayCategoryName(d.category.Category), p.LogEventName, p.ServiceName,
+		d.category.Name(), p.LogEventName, p.ServiceName,
 	)
 	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
 }
@@ -48,6 +48,11 @@ func (d *detail) Prompt() tea.Cmd {
 func (d *detail) View(width int) string {
 	var lines []string
 	lines = append(lines, d.renderHeader())
+	if d.category.Principle != "" {
+		lines = append(lines, "")
+		muted := lipgloss.NewStyle().Foreground(d.theme.TextMuted).Background(d.theme.Bg)
+		lines = append(lines, muted.Render(d.category.Principle))
+	}
 	lines = append(lines, "")
 
 	if len(d.policies) == 0 {
@@ -68,7 +73,7 @@ func (d *detail) renderHeader() string {
 	sep := muted.Render(" · ")
 
 	back := muted.Render("esc ◀")
-	name := text.Bold(true).Render(displayCategoryName(d.category.Category))
+	name := text.Bold(true).Render(d.category.Name())
 
 	var parts []string
 	parts = append(parts, back+" "+name)

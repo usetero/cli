@@ -1,4 +1,4 @@
-package waste
+package quality
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/usetero/cli/internal/tea/components/table"
 )
 
-// detail renders the top pending policies for a single waste category.
+// detail renders the top pending policies for a single quality category.
 type detail struct {
 	theme    styles.Theme
 	category domain.PolicyCategoryStatus
@@ -38,7 +38,7 @@ func (d *detail) Prompt() tea.Cmd {
 	}
 	p := d.policies[d.cursor]
 	text := fmt.Sprintf(
-		"Pull up the %q policy for the %q log event in the %s service.",
+		"Pull up the %q quality policy for the %q log event in the %s service.",
 		d.category.Name(), p.LogEventName, p.ServiceName,
 	)
 	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
@@ -91,15 +91,10 @@ func (d *detail) renderHeader() string {
 }
 
 // renderTable renders the per-policy table.
+// Quality policies trim fields, so we show bytes (not volume).
 func (d *detail) renderTable(width int) string {
 	tbl := table.New(d.theme, table.WithMaxValueWidth(30))
-
-	showVolume := d.category.ReducesVolume()
-	if showVolume {
-		tbl.Headers("Log Event", "Service", "Volume", "Bytes", "Est. Impact")
-	} else {
-		tbl.Headers("Log Event", "Service", "Bytes", "Est. Impact")
-	}
+	tbl.Headers("Log Event", "Service", "Bytes", "Est. Impact")
 	tbl.SetWidth(width)
 
 	accent := lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg)
@@ -117,17 +112,8 @@ func (d *detail) renderTable(width int) string {
 		if p.BytesPerHour != nil {
 			bytes = format.Bytes(*p.BytesPerHour) + "/hr"
 		}
-		savings := formatPolicyCost(p)
 
-		if showVolume {
-			vol := "—"
-			if p.VolumePerHour != nil {
-				vol = format.Volume(*p.VolumePerHour) + " evt/hr"
-			}
-			tbl.Row(name, p.ServiceName, vol, bytes, savings)
-		} else {
-			tbl.Row(name, p.ServiceName, bytes, savings)
-		}
+		tbl.Row(name, p.ServiceName, bytes, formatPolicyCost(p))
 	}
 
 	return tbl.View()

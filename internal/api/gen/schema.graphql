@@ -2339,15 +2339,11 @@ type LogEventPolicy implements Node {
   workspaceID: ID!
 
   """
-  Quality issue category this policy addresses. pii_leakage (personally
-  identifiable information), secrets_leakage (API keys/tokens/passwords),
-  phi_leakage (protected health information), payment_data_leakage (card data),
-  health_checks (probe traffic), bot_traffic (crawler/bot user-agents),
-  low_value (not worth the cost), accidental_debug_statements (debug garbage in
-  production), malformed_data (corrupted/unparseable), noise (repetitive at
-  current volume), duplicate_fields (same value in multiple places),
-  instrumentation_bloat (SDK metadata with no value), oversized_fields (large
-  relative to diagnostic value).
+  Quality issue category this policy addresses. Compliance: pii_leakage,
+  secrets_leakage, phi_leakage, payment_data_leakage. Waste: health_checks,
+  bot_traffic, debug_artifacts, malformed, broken_records, commodity_traffic,
+  redundant_events, dead_weight. Quality: duplicate_fields,
+  instrumentation_bloat, oversized_fields.
   """
   category: LogEventPolicyCategory!
 
@@ -2355,18 +2351,25 @@ type LogEventPolicy implements Node {
   Whether this category requires AI judgment (true) vs mechanically verifiable
   (false). Auto-set via trigger from CategoryMeta.
   """
-  subjective: Boolean
+  subjective: Boolean!
 
   """
-  Type of problem: compliance (legal/security risk) or waste (cost reduction). Auto-set via trigger from CategoryMeta.
+  Type of problem: compliance (legal/security risk), waste (event-level cuts),
+  or quality (field-level improvements). Auto-set via trigger from CategoryMeta.
   """
-  categoryType: LogEventPolicyCategoryType
+  categoryType: LogEventPolicyCategoryType!
 
   """
-  How this policy reduces cost: 'attribute' (modifies fields), 'volume' (drops
-  events), 'none' (compliance only). Auto-set via trigger.
+  Max compliance severity across sensitivity types. NULL for non-compliance categories. Auto-set via trigger.
   """
-  impactType: LogEventPolicyImpactType!
+  severity: LogEventPolicySeverity
+
+  """
+  What this policy does when enforced: 'drop' (remove all events), 'sample'
+  (keep at reduced rate), 'filter' (drop subset by field value), 'trim'
+  (remove/truncate fields), 'none' (informational only). Auto-set via trigger.
+  """
+  action: LogEventPolicyAction!
 
   """When this policy was approved by a user"""
   approvedAt: Time
@@ -2403,6 +2406,15 @@ type LogEventPolicy implements Node {
   workspace: Workspace!
 }
 
+"""LogEventPolicyAction is enum for the field action"""
+enum LogEventPolicyAction {
+  drop
+  sample
+  filter
+  trim
+  none
+}
+
 """LogEventPolicyCategory is enum for the field category"""
 enum LogEventPolicyCategory {
   pii_leakage
@@ -2411,10 +2423,12 @@ enum LogEventPolicyCategory {
   payment_data_leakage
   health_checks
   bot_traffic
-  low_value
-  accidental_debug_statements
-  malformed_data
-  noise
+  debug_artifacts
+  malformed
+  broken_records
+  commodity_traffic
+  redundant_events
+  dead_weight
   duplicate_fields
   instrumentation_bloat
   oversized_fields
@@ -2430,14 +2444,29 @@ type LogEventPolicyCategoryStatusCache implements Node {
   category: String!
 
   """
-  Type of problem. compliance (legal/security risk requiring action), waste (cost reduction opportunity).
+  Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
   """
   categoryType: LogEventPolicyCategoryStatusCacheCategoryType!
 
+  """Human-readable category name (e.g., 'PII Leakage')"""
+  displayName: String!
+
   """
-  How this category reduces cost: attribute (modifies fields, bytes savings), volume (drops events), none (compliance only)
+  Whether this category requires AI judgment (true) vs mechanically verifiable (false)
   """
-  impactType: String
+  subjective: Boolean!
+
+  """What this category detects — the fundamental test for membership"""
+  principle: String!
+
+  """Where this category stops applying — what NOT to flag"""
+  boundary: String!
+
+  """
+  What the policy does: drop (remove events), sample (reduce rate), filter (drop
+  subset), trim (modify fields), none (informational)
+  """
+  action: String
 
   """Policies awaiting user review in this category"""
   pendingCount: Int!
@@ -2485,6 +2514,7 @@ LogEventPolicyCategoryStatusCacheCategoryType is enum for the field category_typ
 enum LogEventPolicyCategoryStatusCacheCategoryType {
   compliance
   waste
+  quality
 }
 
 """
@@ -2537,22 +2567,71 @@ input LogEventPolicyCategoryStatusCacheWhereInput {
   categoryTypeIn: [LogEventPolicyCategoryStatusCacheCategoryType!]
   categoryTypeNotIn: [LogEventPolicyCategoryStatusCacheCategoryType!]
 
-  """impact_type field predicates"""
-  impactType: String
-  impactTypeNEQ: String
-  impactTypeIn: [String!]
-  impactTypeNotIn: [String!]
-  impactTypeGT: String
-  impactTypeGTE: String
-  impactTypeLT: String
-  impactTypeLTE: String
-  impactTypeContains: String
-  impactTypeHasPrefix: String
-  impactTypeHasSuffix: String
-  impactTypeIsNil: Boolean
-  impactTypeNotNil: Boolean
-  impactTypeEqualFold: String
-  impactTypeContainsFold: String
+  """display_name field predicates"""
+  displayName: String
+  displayNameNEQ: String
+  displayNameIn: [String!]
+  displayNameNotIn: [String!]
+  displayNameGT: String
+  displayNameGTE: String
+  displayNameLT: String
+  displayNameLTE: String
+  displayNameContains: String
+  displayNameHasPrefix: String
+  displayNameHasSuffix: String
+  displayNameEqualFold: String
+  displayNameContainsFold: String
+
+  """subjective field predicates"""
+  subjective: Boolean
+  subjectiveNEQ: Boolean
+
+  """principle field predicates"""
+  principle: String
+  principleNEQ: String
+  principleIn: [String!]
+  principleNotIn: [String!]
+  principleGT: String
+  principleGTE: String
+  principleLT: String
+  principleLTE: String
+  principleContains: String
+  principleHasPrefix: String
+  principleHasSuffix: String
+  principleEqualFold: String
+  principleContainsFold: String
+
+  """boundary field predicates"""
+  boundary: String
+  boundaryNEQ: String
+  boundaryIn: [String!]
+  boundaryNotIn: [String!]
+  boundaryGT: String
+  boundaryGTE: String
+  boundaryLT: String
+  boundaryLTE: String
+  boundaryContains: String
+  boundaryHasPrefix: String
+  boundaryHasSuffix: String
+  boundaryEqualFold: String
+  boundaryContainsFold: String
+
+  """action field predicates"""
+  action: String
+  actionNEQ: String
+  actionIn: [String!]
+  actionNotIn: [String!]
+  actionGT: String
+  actionGTE: String
+  actionLT: String
+  actionLTE: String
+  actionContains: String
+  actionHasPrefix: String
+  actionHasSuffix: String
+  actionIsNil: Boolean
+  actionNotNil: Boolean
+  actionEqualFold: String
+  actionContainsFold: String
 
   """pending_count field predicates"""
   pendingCount: Int
@@ -2679,6 +2758,7 @@ input LogEventPolicyCategoryStatusCacheWhereInput {
 enum LogEventPolicyCategoryType {
   compliance
   waste
+  quality
 }
 
 """A connection to a list of items."""
@@ -2702,13 +2782,6 @@ type LogEventPolicyEdge {
   cursor: Cursor!
 }
 
-"""LogEventPolicyImpactType is enum for the field impact_type"""
-enum LogEventPolicyImpactType {
-  attribute
-  volume
-  none
-}
-
 """Ordering options for LogEventPolicy connections"""
 input LogEventPolicyOrder {
   """The ordering direction."""
@@ -2723,11 +2796,20 @@ enum LogEventPolicyOrderField {
   CATEGORY
   SUBJECTIVE
   CATEGORY_TYPE
-  IMPACT_TYPE
+  SEVERITY
+  ACTION
   APPROVED_AT
   DISMISSED_AT
   CREATED_AT
   UPDATED_AT
+}
+
+"""LogEventPolicySeverity is enum for the field severity"""
+enum LogEventPolicySeverity {
+  low
+  medium
+  high
+  critical
 }
 
 type LogEventPolicyStatusCache implements Node {
@@ -2762,9 +2844,14 @@ type LogEventPolicyStatusCache implements Node {
   subjective: Boolean!
 
   """
-  Type of problem. compliance (legal/security risk requiring action), waste (cost reduction opportunity).
+  Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
   """
   categoryType: LogEventPolicyStatusCacheCategoryType!
+
+  """
+  Max compliance severity across sensitivity types. NULL for non-compliance categories.
+  """
+  severity: LogEventPolicyStatusCacheSeverity
 
   """When this policy was approved by a user"""
   approvedAt: Time
@@ -2776,9 +2863,10 @@ type LogEventPolicyStatusCache implements Node {
   createdAt: Time!
 
   """
-  How this policy reduces cost: attribute (modifies fields, bytes savings), volume (drops events), none (compliance only)
+  What the policy does: drop (remove events), sample (reduce rate), filter (drop
+  subset), trim (modify fields), none (informational)
   """
-  impactType: String
+  action: String
 
   """
   Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
@@ -2823,6 +2911,15 @@ LogEventPolicyStatusCacheCategoryType is enum for the field category_type
 enum LogEventPolicyStatusCacheCategoryType {
   compliance
   waste
+  quality
+}
+
+"""LogEventPolicyStatusCacheSeverity is enum for the field severity"""
+enum LogEventPolicyStatusCacheSeverity {
+  low
+  medium
+  high
+  critical
 }
 
 """LogEventPolicyStatusCacheStatus is enum for the field status"""
@@ -2918,6 +3015,14 @@ input LogEventPolicyStatusCacheWhereInput {
   categoryTypeIn: [LogEventPolicyStatusCacheCategoryType!]
   categoryTypeNotIn: [LogEventPolicyStatusCacheCategoryType!]
 
+  """severity field predicates"""
+  severity: LogEventPolicyStatusCacheSeverity
+  severityNEQ: LogEventPolicyStatusCacheSeverity
+  severityIn: [LogEventPolicyStatusCacheSeverity!]
+  severityNotIn: [LogEventPolicyStatusCacheSeverity!]
+  severityIsNil: Boolean
+  severityNotNil: Boolean
+
   """approved_at field predicates"""
   approvedAt: Time
   approvedAtNEQ: Time
@@ -2952,22 +3057,22 @@ input LogEventPolicyStatusCacheWhereInput {
   createdAtLT: Time
   createdAtLTE: Time
 
-  """impact_type field predicates"""
-  impactType: String
-  impactTypeNEQ: String
-  impactTypeIn: [String!]
-  impactTypeNotIn: [String!]
-  impactTypeGT: String
-  impactTypeGTE: String
-  impactTypeLT: String
-  impactTypeLTE: String
-  impactTypeContains: String
-  impactTypeHasPrefix: String
-  impactTypeHasSuffix: String
-  impactTypeIsNil: Boolean
-  impactTypeNotNil: Boolean
-  impactTypeEqualFold: String
-  impactTypeContainsFold: String
+  """action field predicates"""
+  action: String
+  actionNEQ: String
+  actionIn: [String!]
+  actionNotIn: [String!]
+  actionGT: String
+  actionGTE: String
+  actionLT: String
+  actionLTE: String
+  actionContains: String
+  actionHasPrefix: String
+  actionHasSuffix: String
+  actionIsNil: Boolean
+  actionNotNil: Boolean
+  actionEqualFold: String
+  actionContainsFold: String
 
   """survival_rate field predicates"""
   survivalRate: Float
@@ -3172,22 +3277,26 @@ input LogEventPolicyWhereInput {
   """subjective field predicates"""
   subjective: Boolean
   subjectiveNEQ: Boolean
-  subjectiveIsNil: Boolean
-  subjectiveNotNil: Boolean
 
   """category_type field predicates"""
   categoryType: LogEventPolicyCategoryType
   categoryTypeNEQ: LogEventPolicyCategoryType
   categoryTypeIn: [LogEventPolicyCategoryType!]
   categoryTypeNotIn: [LogEventPolicyCategoryType!]
-  categoryTypeIsNil: Boolean
-  categoryTypeNotNil: Boolean
 
-  """impact_type field predicates"""
-  impactType: LogEventPolicyImpactType
-  impactTypeNEQ: LogEventPolicyImpactType
-  impactTypeIn: [LogEventPolicyImpactType!]
-  impactTypeNotIn: [LogEventPolicyImpactType!]
+  """severity field predicates"""
+  severity: LogEventPolicySeverity
+  severityNEQ: LogEventPolicySeverity
+  severityIn: [LogEventPolicySeverity!]
+  severityNotIn: [LogEventPolicySeverity!]
+  severityIsNil: Boolean
+  severityNotNil: Boolean
+
+  """action field predicates"""
+  action: LogEventPolicyAction
+  actionNEQ: LogEventPolicyAction
+  actionIn: [LogEventPolicyAction!]
+  actionNotIn: [LogEventPolicyAction!]
 
   """approved_at field predicates"""
   approvedAt: Time

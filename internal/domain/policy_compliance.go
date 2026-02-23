@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/usetero/cli/internal/format"
+
 // Compliance category constants matching control plane schema.
 const (
 	CategoryPIILeakage         = "pii_leakage"
@@ -126,10 +128,32 @@ type CompliancePolicy struct {
 // ComplianceCategorySummary provides counts and stats for a single compliance category.
 type ComplianceCategorySummary struct {
 	Category       string  // One of the 4 compliance categories
+	DisplayName    string  // Human-readable name from control plane
+	Principle      string  // One-liner explaining what this category catches
 	LeakingCount   int64   // Policies with observed sensitive data
 	AtRiskCount    int64   // Policies without observed data (but flagged)
 	FixedCount     int64   // Approved policies
 	VolumePerHour  float64 // Total volume across all policies in this category
 	ServiceCount   int     // Number of unique services affected
 	UniqueServices []string
+}
+
+// Name returns the human-readable name for the compliance category.
+// Uses the display name from the control plane, falling back to short labels.
+func (c ComplianceCategorySummary) Name() string {
+	if c.DisplayName != "" {
+		return c.DisplayName
+	}
+	switch c.Category {
+	case CategoryPIILeakage:
+		return "PII"
+	case CategorySecretsLeakage:
+		return "Secrets"
+	case CategoryPHILeakage:
+		return "PHI"
+	case CategoryPaymentDataLeakage:
+		return "Payment Data"
+	default:
+		return format.TitleCase(c.Category)
+	}
 }

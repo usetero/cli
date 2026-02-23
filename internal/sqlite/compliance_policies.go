@@ -50,6 +50,8 @@ func (c *compliancePoliciesImpl) ListCategorySummaries(ctx context.Context) ([]d
 
 		result[i] = domain.ComplianceCategorySummary{
 			Category:       category,
+			DisplayName:    row.DisplayName,
+			Principle:      row.Principle,
 			LeakingCount:   row.LeakingCount,
 			AtRiskCount:    row.AtRiskCount,
 			FixedCount:     row.FixedCount,

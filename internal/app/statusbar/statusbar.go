@@ -13,6 +13,7 @@ import (
 
 	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/app/statusbar/compliance"
+	"github.com/usetero/cli/internal/app/statusbar/quality"
 	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/app/statusbar/waste"
@@ -27,15 +28,16 @@ const diag = "╱"
 
 // Tab indices for the drawer.
 const (
-	TabCompliance = 0
-	TabWaste      = 1
-	TabServices   = 2
-	TabSync       = 3
-	tabCount      = 4
+	TabWaste      = 0
+	TabQuality    = 1
+	TabCompliance = 2
+	TabServices   = 3
+	TabSync       = 4
+	tabCount      = 5
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Compliance", "Waste", "Services", "Sync"}
+var tabLabels = [tabCount]string{"Waste", "Quality", "Compliance", "Services", "Sync"}
 
 // Model renders the app status bar.
 type Model struct {
@@ -45,6 +47,7 @@ type Model struct {
 	syncStatus       *syncstatus.Model
 	servicesStatus   *services.Model
 	wasteStatus      *waste.Model
+	qualityStatus    *quality.Model
 	complianceStatus *compliance.Model
 	width            int
 
@@ -74,6 +77,7 @@ func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host stri
 		syncStatus:       syncstatus.New(theme, scope, syncer, host),
 		servicesStatus:   services.New(theme, scope),
 		wasteStatus:      waste.New(theme, scope),
+		qualityStatus:    quality.New(theme, scope),
 		complianceStatus: compliance.New(theme, scope),
 	}
 }
@@ -89,6 +93,7 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 		m.syncStatus.SetDB(db),
 		m.servicesStatus.SetDB(db),
 		m.wasteStatus.SetDB(db),
+		m.qualityStatus.SetDB(db),
 		m.complianceStatus.SetDB(db),
 	)
 }
@@ -99,6 +104,7 @@ func (m *Model) Init() tea.Cmd {
 		m.syncStatus.Init(),
 		m.servicesStatus.Init(),
 		m.wasteStatus.Init(),
+		m.qualityStatus.Init(),
 		m.complianceStatus.Init(),
 	)
 }
@@ -118,6 +124,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.syncStatus.Update(msg),
 		m.servicesStatus.Update(msg),
 		m.wasteStatus.Update(msg),
+		m.qualityStatus.Update(msg),
 		m.complianceStatus.Update(msg),
 	)
 }
@@ -144,7 +151,7 @@ func (m *Model) ToggleDrawer() {
 		m.drawerOpen = false
 		return
 	}
-	if m.complianceStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() || m.syncStatus.HasData() {
+	if m.complianceStatus.HasData() || m.servicesStatus.HasData() || m.wasteStatus.HasData() || m.qualityStatus.HasData() || m.syncStatus.HasData() {
 		m.drawerOpen = true
 	}
 }
@@ -171,6 +178,8 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		return m.complianceStatus.HandleKeyPress(msg)
 	case TabWaste:
 		return m.wasteStatus.HandleKeyPress(msg)
+	case TabQuality:
+		return m.qualityStatus.HandleKeyPress(msg)
 	case TabServices:
 		return m.servicesStatus.HandleKeyPress(msg)
 	}
@@ -186,6 +195,10 @@ func (m *Model) HandleEsc() bool {
 	}
 	if m.activeTab == TabWaste && m.wasteStatus.InDetail() {
 		m.wasteStatus.CloseDetail()
+		return true
+	}
+	if m.activeTab == TabQuality && m.qualityStatus.InDetail() {
+		m.qualityStatus.CloseDetail()
 		return true
 	}
 	if m.activeTab == TabServices && m.servicesStatus.InDetail() {
@@ -205,6 +218,12 @@ func (m *Model) ShortHelp() []key.Binding {
 	}
 	if m.activeTab == TabWaste && m.wasteStatus.HasData() {
 		if m.wasteStatus.InDetail() {
+			return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.DrawerBack, keymap.NextTab}
+		}
+		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
+	}
+	if m.activeTab == TabQuality && m.qualityStatus.HasData() {
+		if m.qualityStatus.InDetail() {
 			return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.DrawerBack, keymap.NextTab}
 		}
 		return []key.Binding{keymap.DrawerUp, keymap.DrawerDown, keymap.DrawerSelect, keymap.NextTab, keymap.CloseDrawer}
@@ -252,7 +271,13 @@ func (m *Model) View() string {
 		segments = append(segments, wasteView)
 	}
 
-	// 4. Compliance status (leaking/at-risk counts across PII, Secrets, PHI, Payment Data)
+	// 4. Quality status (field-level improvements)
+	qualityView := m.qualityStatus.CompactView()
+	if qualityView != "" {
+		segments = append(segments, qualityView)
+	}
+
+	// 5. Compliance status (leaking/at-risk counts across PII, Secrets, PHI, Payment Data)
 	complianceView := m.complianceStatus.CompactView()
 	if complianceView != "" {
 		segments = append(segments, complianceView)
@@ -273,7 +298,7 @@ func (m *Model) View() string {
 	baseContent := strings.Join(segments, sep)
 	baseWidth := lipgloss.Width(baseContent)
 
-	// 5. Title (if fits)
+	// 6. Title (if fits)
 	if m.title != "" {
 		maxTitle := m.width - baseWidth - sepWidth - reserved
 		titleSeg := m.renderTitle(maxTitle)
@@ -282,7 +307,7 @@ func (m *Model) View() string {
 		}
 	}
 
-	// 6. Context window usage (only shown when high)
+	// 7. Context window usage (only shown when high)
 	if m.contextPercent >= 75 {
 		pctSeg := m.renderContextPercent()
 		testWidth := lipgloss.Width(strings.Join(segments, sep)) + sepWidth + lipgloss.Width(pctSeg)
@@ -331,12 +356,14 @@ func (m *Model) DrawerView(width, height int) string {
 	switch m.activeTab {
 	case TabCompliance:
 		content = m.complianceStatus.ExpandedView(contentWidth, contentHeight)
-	case TabSync:
-		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
-	case TabServices:
-		content = m.servicesStatus.ExpandedView(contentWidth, contentHeight)
 	case TabWaste:
 		content = m.wasteStatus.ExpandedView(contentWidth, contentHeight)
+	case TabQuality:
+		content = m.qualityStatus.ExpandedView(contentWidth, contentHeight)
+	case TabServices:
+		content = m.servicesStatus.ExpandedView(contentWidth, contentHeight)
+	case TabSync:
+		content = m.syncStatus.ExpandedView(contentWidth, contentHeight)
 	}
 
 	if content == "" {
@@ -377,7 +404,7 @@ func (m *Model) renderTabBar(width int) string {
 // renderDrawerHint renders the "ctrl+d open/close" hint.
 func (m *Model) renderDrawerHint() string {
 	// Hide hint until data is loaded and the drawer can open.
-	if !m.drawerOpen && !m.complianceStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() && !m.syncStatus.HasData() {
+	if !m.drawerOpen && !m.complianceStatus.HasData() && !m.servicesStatus.HasData() && !m.wasteStatus.HasData() && !m.qualityStatus.HasData() && !m.syncStatus.HasData() {
 		return ""
 	}
 

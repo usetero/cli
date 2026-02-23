@@ -9,11 +9,13 @@ import (
 	"context"
 )
 
-const listWastePolicyCategoryStatuses = `-- name: ListWastePolicyCategoryStatuses :many
+const listCategoryStatusesByCostAndType = `-- name: ListCategoryStatusesByCostAndType :many
 SELECT
   COALESCE(category, '') AS category,
   COALESCE(category_type, '') AS category_type,
-  COALESCE(impact_type, '') AS impact_type,
+  COALESCE("action", '') AS policy_action,
+  COALESCE(display_name, '') AS display_name,
+  COALESCE(principle, '') AS principle,
   CAST(COALESCE(pending_count, 0) AS INTEGER) AS pending_count,
   CAST(COALESCE(approved_count, 0) AS INTEGER) AS approved_count,
   CAST(COALESCE(dismissed_count, 0) AS INTEGER) AS dismissed_count,
@@ -26,14 +28,16 @@ SELECT
   CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count
 FROM log_event_policy_category_statuses_cache
 WHERE category IS NOT NULL AND category != ''
-  AND category_type = 'waste'
-ORDER BY pending_count DESC
+  AND category_type = ?1
+ORDER BY estimated_cost_reduction_per_hour_usd DESC NULLS LAST, pending_count DESC
 `
 
-type ListWastePolicyCategoryStatusesRow struct {
+type ListCategoryStatusesByCostAndTypeRow struct {
 	Category                               string
 	CategoryType                           string
-	ImpactType                             string
+	PolicyAction                           string
+	DisplayName                            string
+	Principle                              string
 	PendingCount                           int64
 	ApprovedCount                          int64
 	DismissedCount                         int64
@@ -46,21 +50,22 @@ type ListWastePolicyCategoryStatusesRow struct {
 	TotalEventCount                        int64
 }
 
-// Pre-computed per-category rollup for the waste tab.
-// Replaces the old GROUP BY over log_event_policy_statuses_cache.
-func (q *Queries) ListWastePolicyCategoryStatuses(ctx context.Context) ([]ListWastePolicyCategoryStatusesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listWastePolicyCategoryStatuses)
+// Pre-computed per-category rollup filtered by category_type (waste or compliance).
+func (q *Queries) ListCategoryStatusesByCostAndType(ctx context.Context, categoryType *string) ([]ListCategoryStatusesByCostAndTypeRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCategoryStatusesByCostAndType, categoryType)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListWastePolicyCategoryStatusesRow
+	var items []ListCategoryStatusesByCostAndTypeRow
 	for rows.Next() {
-		var i ListWastePolicyCategoryStatusesRow
+		var i ListCategoryStatusesByCostAndTypeRow
 		if err := rows.Scan(
 			&i.Category,
 			&i.CategoryType,
-			&i.ImpactType,
+			&i.PolicyAction,
+			&i.DisplayName,
+			&i.Principle,
 			&i.PendingCount,
 			&i.ApprovedCount,
 			&i.DismissedCount,

@@ -30,6 +30,8 @@ type Querier interface {
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
 	ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceStatusesRow, error)
+	// Pre-computed per-category rollup filtered by category_type (waste or compliance).
+	ListCategoryStatusesByCostAndType(ctx context.Context, categoryType *string) ([]ListCategoryStatusesByCostAndTypeRow, error)
 	// Compliance policy queries for PII, Secrets, PHI, and Payment Data leakage.
 	// Returns summary stats for each of the 4 compliance categories.
 	ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error)
@@ -44,9 +46,6 @@ type Querier interface {
 	ListServices(ctx context.Context) ([]Service, error)
 	ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error)
 	ListTopPendingPoliciesByCategory(ctx context.Context, arg ListTopPendingPoliciesByCategoryParams) ([]ListTopPendingPoliciesByCategoryRow, error)
-	// Pre-computed per-category rollup for the waste tab.
-	// Replaces the old GROUP BY over log_event_policy_statuses_cache.
-	ListWastePolicyCategoryStatuses(ctx context.Context) ([]ListWastePolicyCategoryStatusesRow, error)
 	SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error
 	UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error
 	UpdateMessageContent(ctx context.Context, arg UpdateMessageContentParams) error

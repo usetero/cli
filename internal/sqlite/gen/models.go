@@ -139,6 +139,7 @@ type LogEventField struct {
 type LogEventPolicy struct {
 	ID           *string
 	AccountID    *string
+	Action       *string
 	Analysis     *string
 	ApprovedAt   *string
 	ApprovedBy   *string
@@ -147,8 +148,8 @@ type LogEventPolicy struct {
 	CreatedAt    *string
 	DismissedAt  *string
 	DismissedBy  *string
-	ImpactType   *string
 	LogEventID   *string
+	Severity     *string
 	Subjective   *int64
 	UpdatedAt    *string
 	WorkspaceID  *string
@@ -157,25 +158,30 @@ type LogEventPolicy struct {
 type LogEventPolicyCategoryStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
+	Action                                 *string
 	ApprovedCount                          *int64
+	Boundary                               *string
 	Category                               *string
 	CategoryType                           *string
 	DismissedCount                         *int64
+	DisplayName                            *string
 	EstimatedBytesReductionPerHour         *float64
 	EstimatedCostReductionPerHourBytesUsd  *float64
 	EstimatedCostReductionPerHourUsd       *float64
 	EstimatedCostReductionPerHourVolumeUsd *float64
 	EstimatedVolumeReductionPerHour        *float64
 	EventsWithVolumes                      *int64
-	ImpactType                             *string
 	PendingCount                           *int64
+	Principle                              *string
 	RefreshedAt                            *string
+	Subjective                             *int64
 	TotalEventCount                        *int64
 }
 
 type LogEventPolicyStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
+	Action                                 *string
 	ApprovedAt                             *string
 	BytesPerHour                           *float64
 	Category                               *string
@@ -187,13 +193,13 @@ type LogEventPolicyStatusesCache struct {
 	EstimatedCostReductionPerHourUsd       *float64
 	EstimatedCostReductionPerHourVolumeUsd *float64
 	EstimatedVolumeReductionPerHour        *float64
-	ImpactType                             *string
 	LogEventID                             *string
 	LogEventName                           *string
 	PolicyID                               *string
 	RefreshedAt                            *string
 	ServiceID                              *string
 	ServiceName                            *string
+	Severity                               *string
 	Status                                 *string
 	Subjective                             *int64
 	SurvivalRate                           *float64

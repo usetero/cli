@@ -3,47 +3,61 @@
 -- name: ListComplianceCategorySummaries :many
 -- Returns summary stats for each of the 4 compliance categories.
 SELECT
-  category,
-  CAST(SUM(CASE WHEN any_observed = 1 THEN 1 ELSE 0 END) AS INTEGER) AS leaking_count,
-  CAST(SUM(CASE WHEN any_observed = 0 THEN 1 ELSE 0 END) AS INTEGER) AS at_risk_count,
-  CAST(SUM(approved_count) AS INTEGER) AS fixed_count,
-  COALESCE(SUM(volume_per_hour), 0.0) AS volume_per_hour,
-  COUNT(DISTINCT service_name) AS service_count,
-  GROUP_CONCAT(DISTINCT service_name) AS unique_services
+  c.category,
+  c.leaking_count,
+  c.at_risk_count,
+  c.fixed_count,
+  c.volume_per_hour,
+  c.service_count,
+  c.unique_services,
+  COALESCE(cache.display_name, '') AS display_name,
+  COALESCE(cache.principle, '') AS principle
 FROM (
   SELECT
-    leps.category,
-    s.name AS service_name,
-    les.volume_per_hour,
-    CAST(COALESCE((
-      SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
-      FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
-    ), 0) AS INTEGER) AS any_observed,
-    0 AS approved_count
-  FROM log_event_policy_statuses_cache leps
-  JOIN log_events le ON le.id = leps.log_event_id
-  JOIN services s ON s.id = le.service_id
-  LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
-  LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
-  WHERE leps.category_type = 'compliance'
-    AND leps.status = 'PENDING'
+    category,
+    CAST(SUM(CASE WHEN any_observed = 1 THEN 1 ELSE 0 END) AS INTEGER) AS leaking_count,
+    CAST(SUM(CASE WHEN any_observed = 0 THEN 1 ELSE 0 END) AS INTEGER) AS at_risk_count,
+    CAST(SUM(approved_count) AS INTEGER) AS fixed_count,
+    COALESCE(SUM(volume_per_hour), 0.0) AS volume_per_hour,
+    COUNT(DISTINCT service_name) AS service_count,
+    GROUP_CONCAT(DISTINCT service_name) AS unique_services
+  FROM (
+    SELECT
+      leps.category,
+      s.name AS service_name,
+      les.volume_per_hour,
+      CAST(COALESCE((
+        SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
+        FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
+      ), 0) AS INTEGER) AS any_observed,
+      0 AS approved_count
+    FROM log_event_policy_statuses_cache leps
+    JOIN log_events le ON le.id = leps.log_event_id
+    JOIN services s ON s.id = le.service_id
+    LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+    LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
+    WHERE leps.category_type = 'compliance'
+      AND leps.status = 'PENDING'
 
-  UNION ALL
+    UNION ALL
 
-  SELECT
-    leps.category,
-    s.name AS service_name,
-    0.0 AS volume_per_hour,
-    0 AS any_observed,
-    1 AS approved_count
-  FROM log_event_policy_statuses_cache leps
-  JOIN log_events le ON le.id = leps.log_event_id
-  JOIN services s ON s.id = le.service_id
-  WHERE leps.category_type = 'compliance'
-    AND leps.status = 'APPROVED'
-)
-GROUP BY category
-ORDER BY leaking_count DESC, at_risk_count DESC;
+    SELECT
+      leps.category,
+      s.name AS service_name,
+      0.0 AS volume_per_hour,
+      0 AS any_observed,
+      1 AS approved_count
+    FROM log_event_policy_statuses_cache leps
+    JOIN log_events le ON le.id = leps.log_event_id
+    JOIN services s ON s.id = le.service_id
+    WHERE leps.category_type = 'compliance'
+      AND leps.status = 'APPROVED'
+  )
+  GROUP BY category
+) c
+LEFT JOIN log_event_policy_category_statuses_cache cache
+  ON cache.category = c.category AND cache.category_type = 'compliance'
+ORDER BY c.leaking_count DESC, c.at_risk_count DESC;
 
 -- name: ListPendingCompliancePoliciesByCategory :many
 -- Returns pending compliance policies for a specific category, sorted by observed then volume.

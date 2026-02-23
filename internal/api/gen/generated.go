@@ -701,6 +701,8 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache includes the requested fields of the GraphQL type DatadogAccountStatusCache.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache struct {
+	// Overall health of the Datadog account. DISABLED (integration turned off),
+	// INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
 	Health                                 DatadogAccountStatusCacheHealth `json:"health"`
 	ReadyForUse                            bool                            `json:"readyForUse"`
 	LogEventCount                          int                             `json:"logEventCount"`
@@ -1594,7 +1596,7 @@ type GetServiceNodeServiceLogEventsLogEvent struct {
 	Id string `json:"id"`
 	// Snake_case identifier unique per service, e.g. nginx_access_log
 	Name string `json:"name"`
-	// What this event pattern represents
+	// What the event is and what data instances carry. Helps engineers decide whether to look here.
 	Description string `json:"description"`
 	// When the log event was created
 	CreatedAt time.Time `json:"createdAt"`
