@@ -77,10 +77,8 @@ func (d *detail) renderHeader() string {
 		parts = append(parts, muted.Render(fmt.Sprintf("%d log events", d.service.LogEventCount)))
 	}
 
-	if d.service.ServiceCostPerHourVolumeUSD != nil {
-		if cost := format.YearlyCost(*d.service.ServiceCostPerHourVolumeUSD); cost != "$0/yr" {
-			parts = append(parts, muted.Render(cost))
-		}
+	if d.service.ServiceCostPerHourVolumeUSD != nil && *d.service.ServiceCostPerHourVolumeUSD > 0 {
+		parts = append(parts, muted.Render(format.YearlyCost(*d.service.ServiceCostPerHourVolumeUSD)))
 	}
 
 	return strings.Join(parts, sep)

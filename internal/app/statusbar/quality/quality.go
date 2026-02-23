@@ -305,9 +305,8 @@ func (m *Model) renderHeadline() string {
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", pending)))
 
 		if cost := totalEstimatedCost(m.categories); cost > 0 {
-			yearly := cost * 8760
 			ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-			parts = append(parts, ok.Render("~"+format.Cost(yearly)+"/yr savings"))
+			parts = append(parts, ok.Render("~"+format.YearlyCost(cost)+" savings"))
 		}
 	}
 
@@ -445,7 +444,7 @@ func (m *Model) cursorPrinciple() string {
 // share of total estimated savings.
 func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64, success, muted lipgloss.Style) string {
 	if c.EstimatedCostPerHour == nil || *c.EstimatedCostPerHour <= 0 {
-		return "—"
+		return format.YearlyCostPtr(c.EstimatedCostPerHour)
 	}
 
 	if totalCostPerHour > 0 {
@@ -453,17 +452,12 @@ func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64,
 		if pct <= 1 {
 			return muted.Render("≤1%")
 		}
-		yearly := *c.EstimatedCostPerHour * 8760
-		cost := success.Render("~" + format.Cost(yearly) + "/yr")
+		cost := success.Render(format.YearlyCostPtr(c.EstimatedCostPerHour))
 		if pct < 100 {
 			cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
 		}
 		return cost
 	}
 
-	yearly := *c.EstimatedCostPerHour * 8760
-	if yearly >= 1 {
-		return success.Render("~" + format.Cost(yearly) + "/yr")
-	}
-	return "—"
+	return success.Render(format.YearlyCostPtr(c.EstimatedCostPerHour))
 }

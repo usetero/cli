@@ -84,7 +84,7 @@ func (d *detail) renderHeader() string {
 	}
 
 	if d.category.EstimatedCostPerHour != nil && *d.category.EstimatedCostPerHour > 0 {
-		parts = append(parts, muted.Render("~"+format.YearlyCost(*d.category.EstimatedCostPerHour)))
+		parts = append(parts, muted.Render(format.YearlyCostPtr(d.category.EstimatedCostPerHour)))
 	}
 
 	return strings.Join(parts, sep)
@@ -117,7 +117,7 @@ func (d *detail) renderTable(width int) string {
 		if p.BytesPerHour != nil {
 			bytes = format.Bytes(*p.BytesPerHour) + "/hr"
 		}
-		savings := formatPolicyCost(p)
+		savings := format.YearlyCostPtr(p.EstimatedCostPerHour)
 
 		if showVolume {
 			vol := "—"
@@ -131,15 +131,4 @@ func (d *detail) renderTable(width int) string {
 	}
 
 	return tbl.View()
-}
-
-// formatPolicyCost returns the estimated yearly cost for a single policy.
-func formatPolicyCost(p domain.WastePolicy) string {
-	if p.EstimatedCostPerHour != nil && *p.EstimatedCostPerHour > 0 {
-		yearly := *p.EstimatedCostPerHour * 8760
-		if yearly >= 1 {
-			return "~" + format.Cost(yearly) + "/yr"
-		}
-	}
-	return "—"
 }

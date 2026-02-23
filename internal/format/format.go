@@ -30,6 +30,19 @@ func YearlyCost(costPerHour float64) string {
 	return Cost(yearly) + "/yr"
 }
 
+// YearlyCostPtr formats a nullable hourly rate: nil → "—", 0 → "$0/yr",
+// positive → "~$1.7k/yr". Use this at display boundaries where the value
+// may not yet be estimated (nil) vs estimated at zero.
+func YearlyCostPtr(costPerHour *float64) string {
+	if costPerHour == nil {
+		return "—"
+	}
+	if *costPerHour <= 0 {
+		return "$0/yr"
+	}
+	return "~" + YearlyCost(*costPerHour)
+}
+
 // Volume formats events/hr: 892, 45.3k, 2.1M.
 func Volume(eventsPerHour float64) string {
 	abs := math.Abs(eventsPerHour)

@@ -478,7 +478,7 @@ func (m *Model) discoveryBar() progress.Model {
 // categories ≥1% of total waste, just "<1%" for tiny categories.
 func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64, success, muted lipgloss.Style) string {
 	if c.EstimatedCostPerHour == nil || *c.EstimatedCostPerHour <= 0 {
-		return "—"
+		return format.YearlyCostPtr(c.EstimatedCostPerHour)
 	}
 
 	if totalCostPerHour > 0 {
@@ -486,20 +486,14 @@ func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64,
 		if pct <= 1 {
 			return muted.Render("≤1%")
 		}
-		yearly := *c.EstimatedCostPerHour * 8760
-		cost := success.Render("~" + format.Cost(yearly) + "/yr")
+		cost := success.Render(format.YearlyCostPtr(c.EstimatedCostPerHour))
 		if pct < 100 {
 			cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
 		}
 		return cost
 	}
 
-	// No total available — fall back to dollar amount only.
-	yearly := *c.EstimatedCostPerHour * 8760
-	if yearly >= 1 {
-		return success.Render("~" + format.Cost(yearly) + "/yr")
-	}
-	return "—"
+	return success.Render(format.YearlyCostPtr(c.EstimatedCostPerHour))
 }
 
 // cursorPrinciple returns the principle text for the currently selected category.
@@ -513,9 +507,9 @@ func (m *Model) cursorPrinciple() string {
 // formatObservedSaving returns the observed savings from approved policies.
 func formatObservedSaving(s domain.AccountSummary) string {
 	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
-		diff := (*s.ObservedCostBefore - *s.ObservedCostAfter) * 8760
-		if diff >= 1 {
-			return format.Cost(diff) + "/yr"
+		diff := *s.ObservedCostBefore - *s.ObservedCostAfter
+		if diff > 0 {
+			return format.YearlyCost(diff)
 		}
 		return ""
 	}
