@@ -17,13 +17,13 @@ import (
 // detail renders the pending policies for a single compliance category.
 type detail struct {
 	theme    styles.Theme
-	category domain.ComplianceCategorySummary
+	category domain.PolicyCategoryStatus
 	policies []domain.CompliancePolicy
 	cursor   int
 }
 
 // newDetail creates a detail view for the given category and pre-fetched policies.
-func newDetail(theme styles.Theme, category domain.ComplianceCategorySummary, policies []domain.CompliancePolicy) *detail {
+func newDetail(theme styles.Theme, category domain.PolicyCategoryStatus, policies []domain.CompliancePolicy) *detail {
 	return &detail{
 		theme:    theme,
 		category: category,
@@ -78,17 +78,14 @@ func (d *detail) renderHeader() string {
 	var parts []string
 	parts = append(parts, back+" "+name)
 
-	if d.category.LeakingCount > 0 {
-		err := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg)
-		parts = append(parts, err.Render("●")+" "+err.Render(fmt.Sprintf("%d leaking", d.category.LeakingCount)))
-	}
-	if d.category.AtRiskCount > 0 {
+	if d.category.PendingCount > 0 {
 		warn := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
-		parts = append(parts, warn.Render("●")+" "+muted.Render(fmt.Sprintf("%d at risk", d.category.AtRiskCount)))
+		parts = append(parts, warn.Render("●")+" "+warn.Render(fmt.Sprintf("%d pending", d.category.PendingCount)))
 	}
 
-	if d.category.ServiceCount > 0 {
-		parts = append(parts, muted.Render(fmt.Sprintf("%d services", d.category.ServiceCount)))
+	if d.category.ApprovedCount > 0 {
+		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
+		parts = append(parts, ok.Render(fmt.Sprintf("%d fixed", d.category.ApprovedCount)))
 	}
 
 	return strings.Join(parts, sep)

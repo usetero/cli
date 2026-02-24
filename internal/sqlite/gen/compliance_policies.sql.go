@@ -9,142 +9,8 @@ import (
 	"context"
 )
 
-const countFixedCompliancePolicies = `-- name: CountFixedCompliancePolicies :one
-SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
-WHERE category_type = 'compliance'
-  AND status = 'APPROVED'
-`
-
-// Returns the total number of approved compliance policies across all 4 categories.
-func (q *Queries) CountFixedCompliancePolicies(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countFixedCompliancePolicies)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countTotalCompliancePolicies = `-- name: CountTotalCompliancePolicies :one
-SELECT CAST(COUNT(*) AS INTEGER) FROM log_event_policy_statuses_cache
-WHERE category_type = 'compliance'
-  AND status = 'PENDING'
-`
-
-// Returns the total number of pending compliance policies across all 4 categories.
-func (q *Queries) CountTotalCompliancePolicies(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countTotalCompliancePolicies)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const listComplianceCategorySummaries = `-- name: ListComplianceCategorySummaries :many
-
-SELECT
-  c.category,
-  c.leaking_count,
-  c.at_risk_count,
-  c.fixed_count,
-  c.volume_per_hour,
-  c.service_count,
-  c.unique_services,
-  COALESCE(cache.display_name, '') AS display_name,
-  COALESCE(cache.principle, '') AS principle
-FROM (
-  SELECT
-    category,
-    CAST(SUM(CASE WHEN any_observed = 1 THEN 1 ELSE 0 END) AS INTEGER) AS leaking_count,
-    CAST(SUM(CASE WHEN any_observed = 0 THEN 1 ELSE 0 END) AS INTEGER) AS at_risk_count,
-    CAST(SUM(approved_count) AS INTEGER) AS fixed_count,
-    COALESCE(SUM(volume_per_hour), 0.0) AS volume_per_hour,
-    COUNT(DISTINCT service_name) AS service_count,
-    GROUP_CONCAT(DISTINCT service_name) AS unique_services
-  FROM (
-    SELECT
-      leps.category,
-      s.name AS service_name,
-      les.volume_per_hour,
-      CAST(COALESCE((
-        SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
-        FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
-      ), 0) AS INTEGER) AS any_observed,
-      0 AS approved_count
-    FROM log_event_policy_statuses_cache leps
-    JOIN log_events le ON le.id = leps.log_event_id
-    JOIN services s ON s.id = le.service_id
-    LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
-    LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
-    WHERE leps.category_type = 'compliance'
-      AND leps.status = 'PENDING'
-
-    UNION ALL
-
-    SELECT
-      leps.category,
-      s.name AS service_name,
-      0.0 AS volume_per_hour,
-      0 AS any_observed,
-      1 AS approved_count
-    FROM log_event_policy_statuses_cache leps
-    JOIN log_events le ON le.id = leps.log_event_id
-    JOIN services s ON s.id = le.service_id
-    WHERE leps.category_type = 'compliance'
-      AND leps.status = 'APPROVED'
-  )
-  GROUP BY category
-) c
-LEFT JOIN log_event_policy_category_statuses_cache cache
-  ON cache.category = c.category AND cache.category_type = 'compliance'
-ORDER BY c.leaking_count DESC, c.at_risk_count DESC
-`
-
-type ListComplianceCategorySummariesRow struct {
-	Category       *string
-	LeakingCount   int64
-	AtRiskCount    int64
-	FixedCount     int64
-	VolumePerHour  interface{}
-	ServiceCount   int64
-	UniqueServices string
-	DisplayName    string
-	Principle      string
-}
-
-// Compliance policy queries for PII, Secrets, PHI, and Payment Data leakage.
-// Returns summary stats for each of the 4 compliance categories.
-func (q *Queries) ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listComplianceCategorySummaries)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListComplianceCategorySummariesRow
-	for rows.Next() {
-		var i ListComplianceCategorySummariesRow
-		if err := rows.Scan(
-			&i.Category,
-			&i.LeakingCount,
-			&i.AtRiskCount,
-			&i.FixedCount,
-			&i.VolumePerHour,
-			&i.ServiceCount,
-			&i.UniqueServices,
-			&i.DisplayName,
-			&i.Principle,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listPendingCompliancePoliciesByCategory = `-- name: ListPendingCompliancePoliciesByCategory :many
+
 SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
@@ -177,6 +43,7 @@ type ListPendingCompliancePoliciesByCategoryRow struct {
 	AnyObserved   int64
 }
 
+// Compliance policy queries for PII, Secrets, PHI, and Payment Data leakage.
 // Returns pending compliance policies for a specific category, sorted by observed then volume.
 func (q *Queries) ListPendingCompliancePoliciesByCategory(ctx context.Context, arg ListPendingCompliancePoliciesByCategoryParams) ([]ListPendingCompliancePoliciesByCategoryRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPendingCompliancePoliciesByCategory, arg.Category, arg.Limit)

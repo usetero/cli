@@ -11,6 +11,7 @@ import (
 type LogEventPolicyCategoryStatuses interface {
 	ListWasteCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListQualityCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
+	ListComplianceCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 }
 
 // logEventPolicyCategoryStatusesImpl implements LogEventPolicyCategoryStatuses.
@@ -26,6 +27,11 @@ func (l *logEventPolicyCategoryStatusesImpl) ListWasteCategoryStatuses(ctx conte
 // ListQualityCategoryStatuses returns pre-computed category rollups for the quality tab.
 func (l *logEventPolicyCategoryStatusesImpl) ListQualityCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error) {
 	return l.listByType(ctx, domain.CategoryTypeQuality)
+}
+
+// ListComplianceCategoryStatuses returns pre-computed category rollups for the compliance tab.
+func (l *logEventPolicyCategoryStatusesImpl) ListComplianceCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error) {
+	return l.listByType(ctx, domain.CategoryTypeCompliance)
 }
 
 func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, categoryType domain.CategoryType) ([]domain.PolicyCategoryStatus, error) {

@@ -28,16 +28,14 @@ type pollMsg struct{}
 
 // dataMsg carries the result of an async data fetch.
 type dataMsg struct {
-	summary      domain.AccountSummary
-	categories   []domain.ComplianceCategorySummary
-	totalPending int64
-	totalFixed   int64
-	err          error
+	summary    domain.AccountSummary
+	categories []domain.PolicyCategoryStatus
+	err        error
 }
 
 // detailMsg carries the result of an async detail fetch.
 type detailMsg struct {
-	cat      domain.ComplianceCategorySummary
+	cat      domain.PolicyCategoryStatus
 	policies []domain.CompliancePolicy
 	err      error
 }
@@ -48,12 +46,10 @@ type Model struct {
 	scope log.Scope
 	db    sqlite.DB
 
-	summary      domain.AccountSummary
-	categories   []domain.ComplianceCategorySummary
-	totalPending int64
-	totalFixed   int64
-	hasData      bool
-	lastState    string
+	summary    domain.AccountSummary
+	categories []domain.PolicyCategoryStatus
+	hasData    bool
+	lastState  string
 
 	// Drawer navigation
 	cursor int     // selected row in category list
@@ -101,13 +97,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			return nil
 		}
-		key := m.stateKey(msg.summary, msg.categories, msg.totalPending, msg.totalFixed)
+		key := m.stateKey(msg.summary, msg.categories)
 		if key != m.lastState {
 			m.summary = msg.summary
 			m.categories = msg.categories
-			m.totalPending = msg.totalPending
-			m.totalFixed = msg.totalFixed
-			m.hasData = msg.totalPending > 0 || msg.totalFixed > 0
+			m.hasData = len(msg.categories) > 0
 			m.lastState = key
 
 			// Clamp cursor if categories shrank.
@@ -137,35 +131,18 @@ func (m *Model) fetchData() tea.Cmd {
 			return dataMsg{err: err}
 		}
 
-		categories, err := db.CompliancePolicies().ListCategorySummaries(ctx)
+		categories, err := db.LogEventPolicyCategoryStatuses().ListComplianceCategoryStatuses(ctx)
 		if err != nil {
-			scope.Error("list category summaries", "err", err)
+			scope.Error("list compliance category statuses", "err", err)
 			categories = nil
 		}
 
-		totalPending, err := db.CompliancePolicies().CountTotal(ctx)
-		if err != nil {
-			scope.Error("count total", "err", err)
-			totalPending = 0
-		}
-
-		totalFixed, err := db.CompliancePolicies().CountFixed(ctx)
-		if err != nil {
-			scope.Error("count fixed", "err", err)
-			totalFixed = 0
-		}
-
-		return dataMsg{
-			summary:      summary,
-			categories:   categories,
-			totalPending: totalPending,
-			totalFixed:   totalFixed,
-		}
+		return dataMsg{summary: summary, categories: categories}
 	}
 }
 
 // fetchDetail returns a Cmd that queries category detail off the event loop.
-func (m *Model) fetchDetail(cat domain.ComplianceCategorySummary) tea.Cmd {
+func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
@@ -179,15 +156,12 @@ func (m *Model) fetchDetail(cat domain.ComplianceCategorySummary) tea.Cmd {
 }
 
 // stateKey builds a string key for change detection.
-func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.ComplianceCategorySummary, pending, fixed int64) string {
-	key := fmt.Sprintf("%d:%d:%d:%d",
-		summary.EventCount, summary.AnalyzedCount,
-		pending, fixed)
+func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
+	key := fmt.Sprintf("%d:%d", summary.EventCount, summary.AnalyzedCount)
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%d",
-			c.Category, c.LeakingCount, c.AtRiskCount, c.FixedCount,
-			c.VolumePerHour, c.ServiceCount)
+		key += fmt.Sprintf("|%s:%d:%d:%d",
+			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount)
 	}
 
 	return key
@@ -235,7 +209,7 @@ func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		}
 	case key.Matches(msg, keymap.DrawerSelect):
 		cat := m.categories[m.cursor]
-		if cat.LeakingCount+cat.AtRiskCount == 0 {
+		if cat.PendingCount == 0 {
 			return nil
 		}
 		return m.fetchDetail(cat)
@@ -265,26 +239,17 @@ func (m *Model) CompactView() string {
 
 	var segments []string
 
-	// Compliance counts are accurate immediately — either sensitive data
-	// was observed or it wasn't. No need to gate on analysis threshold.
-	var leaking, atRisk int64
-	for _, c := range m.categories {
-		leaking += c.LeakingCount
-		atRisk += c.AtRiskCount
-	}
+	pending := totalPending(m.categories)
+	approved := totalApproved(m.categories)
 
-	if leaking > 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
-		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d leaking", leaking)))
-	} else if atRisk > 0 {
+	if pending > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d at risk", atRisk)))
+		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d compliance", pending)))
 	}
 
-	// Fixed count.
-	if m.totalFixed > 0 {
+	if approved > 0 {
 		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-		segments = append(segments, ok.Render(fmt.Sprintf("%d fixed", m.totalFixed)))
+		segments = append(segments, ok.Render(fmt.Sprintf("%d fixed", approved)))
 	}
 
 	if len(segments) == 0 {
@@ -337,8 +302,7 @@ func (m *Model) ExpandedView(width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderHeadline renders the compliance summary: leaking/at-risk counts and analysis progress.
-// Dots always shown as a legend for row colors. Progress appended when analysis is incomplete.
+// renderHeadline renders the compliance summary: pending/approved counts and analysis progress.
 func (m *Model) renderHeadline() string {
 	s := m.summary
 	colors := m.theme
@@ -348,26 +312,17 @@ func (m *Model) renderHeadline() string {
 
 	var parts []string
 
-	// Count leaking vs at-risk across all categories.
-	var leaking, atRisk int64
-	for _, c := range m.categories {
-		leaking += c.LeakingCount
-		atRisk += c.AtRiskCount
-	}
+	pending := totalPending(m.categories)
+	approved := totalApproved(m.categories)
 
-	if leaking > 0 {
-		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d leaking", leaking)))
-	}
-	if atRisk > 0 {
+	if pending > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-		parts = append(parts, dot+" "+muted.Render(fmt.Sprintf("%d at risk", atRisk)))
+		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", pending)))
 	}
 
-	// Service count across all categories.
-	serviceCount := m.uniqueServiceCount()
-	if serviceCount > 0 {
-		parts = append(parts, muted.Render(fmt.Sprintf("across %d services", serviceCount)))
+	if approved > 0 {
+		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
+		parts = append(parts, ok.Render(fmt.Sprintf("%d fixed", approved)))
 	}
 
 	// Analysis progress when not yet ready.
@@ -375,11 +330,6 @@ func (m *Model) renderHeadline() string {
 		pct := float64(s.AnalyzedCount) / float64(s.EventCount)
 		bar := m.analysisBar()
 		parts = append(parts, bar.ViewAs(pct)+" "+muted.Render(fmt.Sprintf("%d/%d analyzed", s.AnalyzedCount, s.EventCount)))
-	}
-
-	if m.totalFixed > 0 {
-		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-		parts = append(parts, ok.Render(fmt.Sprintf("%d fixed", m.totalFixed)))
 	}
 
 	if len(parts) == 0 {
@@ -397,53 +347,40 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Status", "Services", "Volume", "Fixed")
+	tbl.Headers("Category", "Pending", "Approved")
 	tbl.SetWidth(width)
 
-	err := lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg)
+	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
-	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
 
 	for i, c := range m.categories {
+		dot := ok.Render("●")
+		if c.PendingCount > 0 {
+			dot = warn.Render("●")
+		}
+
 		name := c.Name()
 		if i == m.cursor {
 			name = accent.Render("▶ " + name)
 		} else {
-			name = formatCategoryDot(m.theme, c) + " " + name
+			name = dot + " " + name
 		}
 
-		vol := "—"
-		if c.VolumePerHour > 0 {
-			vol = format.Volume(c.VolumePerHour) + "/hr"
-		}
-
-		fixedStr := "—"
-		if c.FixedCount > 0 {
-			fixedStr = ok.Render(format.Count(c.FixedCount))
+		// Clean categories: single checkmark row.
+		if c.PendingCount == 0 && c.ApprovedCount == 0 {
+			tbl.Row(name, ok.Render("✓"), "—")
+			continue
 		}
 
 		tbl.Row(
 			name,
-			formatCategoryStatus(m.theme, c, err, muted),
-			format.Count(int64(c.ServiceCount)),
-			vol,
-			fixedStr,
+			format.Count(c.PendingCount),
+			format.Count(c.ApprovedCount),
 		)
 	}
 
 	return tbl.View()
-}
-
-// uniqueServiceCount returns the total number of unique services across all categories.
-func (m *Model) uniqueServiceCount() int {
-	seen := make(map[string]struct{})
-	for _, c := range m.categories {
-		for _, s := range c.UniqueServices {
-			seen[s] = struct{}{}
-		}
-	}
-	return len(seen)
 }
 
 // analysisBar creates a small progress bar for inline use in the headline.
@@ -466,31 +403,18 @@ func (m *Model) cursorPrinciple() string {
 	return ""
 }
 
-// formatCategoryDot returns a colored dot for a category row.
-func formatCategoryDot(colors styles.Theme, c domain.ComplianceCategorySummary) string {
-	if c.LeakingCount > 0 {
-		return lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
+func totalPending(cats []domain.PolicyCategoryStatus) int64 {
+	var n int64
+	for _, c := range cats {
+		n += c.PendingCount
 	}
-	if c.AtRiskCount > 0 {
-		return lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-	}
-	return lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg).Render("●")
+	return n
 }
 
-// formatCategoryStatus renders a combined status string like "4 leaking", "3 at risk",
-// or "2 leaking · 1 at risk" when both exist.
-func formatCategoryStatus(colors styles.Theme, c domain.ComplianceCategorySummary, errStyle, mutedStyle lipgloss.Style) string {
-	sep := mutedStyle.Render(" · ")
-	var parts []string
-	if c.LeakingCount > 0 {
-		parts = append(parts, errStyle.Render(fmt.Sprintf("%s leaking", format.Count(c.LeakingCount))))
+func totalApproved(cats []domain.PolicyCategoryStatus) int64 {
+	var n int64
+	for _, c := range cats {
+		n += c.ApprovedCount
 	}
-	if c.AtRiskCount > 0 {
-		warnStyle := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
-		parts = append(parts, warnStyle.Render(fmt.Sprintf("%s at risk", format.Count(c.AtRiskCount))))
-	}
-	if len(parts) == 0 {
-		return "—"
-	}
-	return strings.Join(parts, sep)
+	return n
 }
