@@ -26,6 +26,10 @@ Supporting docs:
 | [TESTING.md](docs/TESTING.md) | Writing tests. |
 | [LOGGING.md](docs/LOGGING.md) | Writing logs. |
 
+## Agent Rules
+
+- **No sub-agents.** Never use the Task tool to spawn sub-agents. Do all work directly in the main context — read files, search, edit, run commands yourself. Background bash commands are fine.
+
 ## Rules
 
 1. **CLI is presentation only.** Intelligence lives in the control plane.

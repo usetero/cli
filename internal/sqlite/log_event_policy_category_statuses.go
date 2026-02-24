@@ -38,7 +38,7 @@ func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, cat
 	result := make([]domain.PolicyCategoryStatus, len(rows))
 	for i, row := range rows {
 		result[i] = domain.PolicyCategoryStatus{
-			Category:               row.Category,
+			Category:               domain.PolicyCategory(row.Category),
 			DisplayName:            row.DisplayName,
 			Principle:              row.Principle,
 			PendingCount:           row.PendingCount,

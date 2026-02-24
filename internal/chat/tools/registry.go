@@ -18,13 +18,15 @@ type ActionTool struct {
 // Registry holds tool instances and provides definitions.
 type Registry struct {
 	Query   *QueryTool // kept for direct access from query UI model
+	Show    *ShowTool  // kept for direct access from show UI model
 	actions map[string]ActionTool
 }
 
-// NewRegistry creates a registry with the query tool and a map of action tools.
-func NewRegistry(query *QueryTool, actions map[string]ActionTool) *Registry {
+// NewRegistry creates a registry with the query tool, show tool, and a map of action tools.
+func NewRegistry(query *QueryTool, show *ShowTool, actions map[string]ActionTool) *Registry {
 	return &Registry{
 		Query:   query,
+		Show:    show,
 		actions: actions,
 	}
 }
@@ -34,6 +36,9 @@ func (r *Registry) Definitions() []chat.Tool {
 	var defs []chat.Tool
 	if r.Query != nil {
 		defs = append(defs, r.Query.Definition())
+	}
+	if r.Show != nil {
+		defs = append(defs, r.Show.Definition())
 	}
 	for _, a := range r.actions {
 		defs = append(defs, a.Def)

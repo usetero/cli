@@ -1,15 +1,15 @@
 package domain
 
-// PolicyLogStatus is the lifecycle status for a policy.
-type PolicyLogStatus string
+// PolicyStatus is the lifecycle status for a policy.
+type PolicyStatus string
 
 const (
-	PolicyLogStatusPending   PolicyLogStatus = "PENDING"
-	PolicyLogStatusApproved  PolicyLogStatus = "APPROVED"
-	PolicyLogStatusDismissed PolicyLogStatus = "DISMISSED"
+	PolicyStatusPending   PolicyStatus = "PENDING"
+	PolicyStatusApproved  PolicyStatus = "APPROVED"
+	PolicyStatusDismissed PolicyStatus = "DISMISSED"
 )
 
-func (s PolicyLogStatus) String() string { return string(s) }
+func (s PolicyStatus) String() string { return string(s) }
 
 // analysisThreshold is the fraction of discovered events that must be
 // analyzed before waste and compliance numbers are meaningful.

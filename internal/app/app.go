@@ -308,6 +308,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Create tool registry with executors
 		m.toolRegistry = chattools.NewRegistry(
 			chattools.NewQueryTool(m.db),
+			chattools.NewShowTool(m.db),
 			map[string]chattools.ActionTool{
 				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
 			},

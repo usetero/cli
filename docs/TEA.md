@@ -63,11 +63,28 @@ func (m *Model) generateLayout(w, h int) layout {
 | Concern | Owner |
 |---------|-------|
 | External margins between siblings | Parent |
-| Internal padding within borders | Child |
+| Internal padding within borders | Child (only if it owns a visual box like a border) |
 | Width and height | Parent tells child via SetSize |
 | Content truncation | Child (using MaxHeight) |
 
+**Children render at column 0.** A child component fills its full width — it never adds leading indentation or margins to position itself within the parent. The parent handles all positioning (via `Padding`, `Place`, or layout calculations). This makes every component embeddable in any context without surprises.
+
 ```go
+// CORRECT: Child renders flush — parent positions it
+func (m *Child) View() string {
+    return lipgloss.NewStyle().
+        Width(m.width).
+        Background(m.theme.Bg).
+        Render(m.content)
+}
+
+// WRONG: Child adds indentation — assumes parent context
+func (m *Child) View() string {
+    return lipgloss.NewStyle().
+        PaddingLeft(2).   // NO - this is the parent's job
+        Render(m.content)
+}
+
 // CORRECT: Parent controls spacing between children
 func (m *Parent) View() string {
     return lipgloss.JoinVertical(lipgloss.Top,
@@ -82,15 +99,6 @@ func (m *Parent) View() string {
 func (m *Child) View() string {
     return lipgloss.NewStyle().
         MarginBottom(1).  // NO - this affects siblings
-        Render(m.content)
-}
-
-// CORRECT: Child has internal padding (inside its box)
-func (m *Child) View() string {
-    return lipgloss.NewStyle().
-        Width(m.width).
-        Height(m.height).
-        Padding(1, 2).    // OK - internal to this component
         Render(m.content)
 }
 ```
@@ -419,11 +427,14 @@ func New(theme *styles.Theme, db sqlite.DB) *Model {
 
 ## Theming and Backgrounds
 
-Every styled text must explicitly set `Background(theme.Bg)`. Terminals have no layers — a parent's background does not propagate to child-rendered ANSI sequences. Every character cell needs its own background escape sequence, or the terminal default punches through.
+Terminals have no transparency. Every character cell has an explicit background color. There are no layers, no inheritance, no CSS-like cascading. If a cell doesn't have a background escape sequence, the terminal default punches through.
 
-### The Rule
+Two rules:
 
-When you have a theme, set the background. Always.
+1. **Every styled text sets `Background(theme.Bg)`.** Always. No exceptions.
+2. **The parent decides the background.** Children just use `theme.Bg`.
+
+### Rule 1: Always Set Background
 
 ```go
 // WRONG - terminal default bg punches through
@@ -433,79 +444,51 @@ lipgloss.NewStyle().Foreground(theme.Text).Render("hello")
 lipgloss.NewStyle().Foreground(theme.Text).Background(theme.Bg).Render("hello")
 ```
 
-This applies everywhere: components, inline styles, pre-built theme styles, markdown renderers. If it renders visible text, it sets a background.
+This applies everywhere: components, inline styles, pre-built theme styles, markdown renderers, gradients. If it renders visible text, it sets `Background(theme.Bg)`.
 
-### Pre-Built Styles
-
-The theme's pre-built styles (`theme.Styles.Body`, `theme.Styles.Title`, etc.) already include `Background(theme.Bg)`. Use them directly:
+The theme's pre-built styles (`theme.Styles.Body`, `theme.Styles.Title`, etc.) already include the background. Use them directly:
 
 ```go
 theme.Styles.Body.Render("some text")    // bg is already set
 theme.Styles.Title.Render("heading")     // bg is already set
 ```
 
-### Surface Boundaries with WithBg
+### Rule 2: Parent Decides Background
 
-Some areas render on an elevated surface (e.g., assistant message blocks sit on a lighter background). Use `theme.WithBg()` to create a theme copy with a different background:
+**Children never decide their own background.** They just use `theme.Bg`. The parent decides what color that is by passing the right theme.
+
+To change a child's background: `theme.WithBg(color)`. One line. That's it.
+
+`WithBg()` returns a new theme copy with `Bg` set to the given color and all `Styles` rebuilt. The child doesn't know or care what surface it's on.
 
 ```go
-// In assistant.go — a surface boundary
-func New(theme styles.Theme, ...) *Model {
-    return &Model{
-        theme:      theme,
-        blockTheme: theme.WithBg(theme.BgElevated),  // elevated surface
-    }
-}
-
-// Pass blockTheme to child blocks
+// Parent decides which children get which background
 func (m *Model) ensureBlocks() {
-    m.textBlock = text.New(m.blockTheme, m.width)
-    m.toolBlock = tool.New(m.blockTheme, m.width)
+    // Text blocks: normal page background
+    m.textBlock = text.New(m.theme, m.width)
+
+    // Tools: elevated surface
+    elevated := m.theme.WithBg(m.theme.BgElevated)
+    m.toolBlock = tool.New(elevated, m.width)
 }
-```
 
-`WithBg()` returns a new theme with `Bg` set to the given color and all `Styles` rebuilt. Child components just use `theme.Bg` as usual — they don't know which surface they're on:
-
-```go
-// In a child block — just uses theme.Bg, unaware it's elevated
-func (m *TextBlock) View() string {
+// Child just uses theme.Bg — doesn't know what color it is
+func (m *ToolBlock) View() string {
     return lipgloss.NewStyle().
-        Background(m.theme.Bg).   // resolves to BgElevated
+        Background(m.theme.Bg).   // page bg? elevated? doesn't matter
         Foreground(m.theme.Text).
         Width(m.width).
         Render(m.content)
 }
 ```
 
-### Components
+This is the **only** way to change a child's background. Never:
+- Remove backgrounds to make something "transparent"
+- Hard-code colors in children
+- Hack renderers (glamour, gradients) to change backgrounds
+- Modify theme tokens to fix one component's color
 
-Components that accept a theme must use `theme.Bg` in their rendered styles. See `internal/tea/components/` — every component (input, list, loader, progress, status, table, thinking) sets bg on all styled output.
-
-```go
-// Component with theme
-func (m *Model) View() string {
-    label := lipgloss.NewStyle().
-        Foreground(m.theme.TextMuted).
-        Background(m.theme.Bg).       // always set bg
-        Render(m.label)
-    
-    value := lipgloss.NewStyle().
-        Foreground(m.theme.Text).
-        Background(m.theme.Bg).       // always set bg
-        Render(m.value)
-    
-    return lipgloss.JoinHorizontal(lipgloss.Top, label, value)
-}
-```
-
-### Why This Matters
-
-Without explicit backgrounds, you get visual glitches:
-- Terminal default bg bleeds through styled areas
-- Elevated surfaces (panels, assistant blocks) show gaps of the wrong color
-- `WithBg()` has no effect because children ignore `theme.Bg`
-
-With explicit backgrounds, `WithBg()` becomes powerful — a parent can change the surface color and all children automatically pick it up through `theme.Bg`.
+Just pass the right theme.
 
 ## Messages
 

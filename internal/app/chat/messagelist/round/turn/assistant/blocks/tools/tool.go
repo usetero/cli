@@ -57,6 +57,12 @@ type Child interface {
 	Err() error
 }
 
+// AutoExpander is an optional interface for tools that should show their body
+// immediately on completion instead of starting collapsed.
+type AutoExpander interface {
+	AutoExpand() bool
+}
+
 // Model is the chrome wrapper for tool blocks.
 // It handles icon rendering, name display, animation, and content indentation.
 // The actual tool logic lives in the embedded child.
@@ -68,10 +74,11 @@ type Model struct {
 	width  int
 	status Status
 
-	child    Child
-	thinking *thinking.Model
-	focused  bool
-	expanded bool // whether the body content is visible (only applies to completed tools)
+	child        Child
+	thinking     *thinking.Model
+	focused      bool
+	expanded     bool // whether the body content is visible (only applies to completed tools)
+	autoExpanded bool // true once auto-expand has fired, prevents re-expanding on every tick
 }
 
 // New creates a new tool model wrapping the given child.
@@ -143,6 +150,12 @@ func (m *Model) updateStatus() {
 			m.status = StatusError
 		} else {
 			m.status = StatusSuccess
+			if !m.autoExpanded {
+				if ae, ok := m.child.(AutoExpander); ok && ae.AutoExpand() {
+					m.expanded = true
+					m.autoExpanded = true
+				}
+			}
 		}
 	}
 }
@@ -243,7 +256,7 @@ func (m *Model) Height() int {
 // bodyStyle returns the style for the tool's content area.
 func (m *Model) bodyStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Padding(1, bodyPaddingRight, 1, bodyPaddingLeft).
+		Padding(0, bodyPaddingRight, 0, bodyPaddingLeft).
 		Background(m.theme.Bg)
 }
 

@@ -109,7 +109,7 @@ func buildTokens(p Palette, isDark bool) Tokens {
 		Bg:         MustHex(p.Neutral[S50]),
 		BgElevated: MustHex(p.Neutral[S100]),
 
-		Text:       MustHex(p.Neutral[S900]),
+		Text:       MustHex(p.Neutral[S800]),
 		TextMuted:  MustHex(p.Neutral[S600]),
 		TextSubtle: MustHex(p.Neutral[S500]),
 

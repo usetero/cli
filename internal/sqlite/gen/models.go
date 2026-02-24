@@ -111,23 +111,26 @@ type DiscoveryStatus struct {
 }
 
 type LogEvent struct {
-	ID            *string
-	AccountID     *string
-	CreatedAt     *string
-	Description   *string
-	EventNature   *string
-	Examples      *string
-	Matchers      *string
-	Name          *string
-	ServiceID     *string
-	Severity      *string
-	SignalPurpose *string
-	UpdatedAt     *string
+	ID                    *string
+	AccountID             *string
+	BaselineAvgBytes      *float64
+	BaselineVolumePerHour *float64
+	CreatedAt             *string
+	Description           *string
+	EventNature           *string
+	Examples              *string
+	Matchers              *string
+	Name                  *string
+	ServiceID             *string
+	Severity              *string
+	SignalPurpose         *string
+	UpdatedAt             *string
 }
 
 type LogEventField struct {
 	ID                     *string
 	AccountID              *string
+	BaselineAvgBytes       *float64
 	CreatedAt              *string
 	DistributionObservedAt *string
 	FieldPath              *string
@@ -137,22 +140,24 @@ type LogEventField struct {
 }
 
 type LogEventPolicy struct {
-	ID           *string
-	AccountID    *string
-	Action       *string
-	Analysis     *string
-	ApprovedAt   *string
-	ApprovedBy   *string
-	Category     *string
-	CategoryType *string
-	CreatedAt    *string
-	DismissedAt  *string
-	DismissedBy  *string
-	LogEventID   *string
-	Severity     *string
-	Subjective   *int64
-	UpdatedAt    *string
-	WorkspaceID  *string
+	ID                            *string
+	AccountID                     *string
+	Action                        *string
+	Analysis                      *string
+	ApprovedAt                    *string
+	ApprovedBaselineAvgBytes      *float64
+	ApprovedBaselineVolumePerHour *float64
+	ApprovedBy                    *string
+	Category                      *string
+	CategoryType                  *string
+	CreatedAt                     *string
+	DismissedAt                   *string
+	DismissedBy                   *string
+	LogEventID                    *string
+	Severity                      *string
+	Subjective                    *int64
+	UpdatedAt                     *string
+	WorkspaceID                   *string
 }
 
 type LogEventPolicyCategoryStatusesCache struct {

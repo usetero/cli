@@ -110,6 +110,7 @@ CREATE TABLE discovery_statuses (
 CREATE TABLE log_event_fields (
     id TEXT,
     account_id TEXT,
+    baseline_avg_bytes REAL,
     created_at TEXT,
     distribution_observed_at TEXT,
     field_path TEXT,
@@ -124,6 +125,8 @@ CREATE TABLE log_event_policies (
     action TEXT,
     analysis TEXT,
     approved_at TEXT,
+    approved_baseline_avg_bytes REAL,
+    approved_baseline_volume_per_hour REAL,
     approved_by TEXT,
     category TEXT,
     category_type TEXT,
@@ -229,6 +232,8 @@ CREATE TABLE log_event_statuses_cache (
 CREATE TABLE log_events (
     id TEXT,
     account_id TEXT,
+    baseline_avg_bytes REAL,
+    baseline_volume_per_hour REAL,
     created_at TEXT,
     description TEXT,
     event_nature TEXT,

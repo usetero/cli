@@ -26,6 +26,10 @@ type Querier interface {
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)
 	GetLatestMessageByConversation(ctx context.Context, conversationID *string) (Message, error)
 	GetMessage(ctx context.Context, id *string) (Message, error)
+	// Fetches a single policy with all context needed for rich card rendering.
+	// Main table: log_event_policy_statuses_cache (denormalized policy + metrics).
+	// JOINs enrich with: category display name, AI analysis, log examples, baselines.
+	GetPolicyCard(ctx context.Context, policyID *string) (GetPolicyCardRow, error)
 	GetService(ctx context.Context, id *string) (Service, error)
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
@@ -37,6 +41,9 @@ type Querier interface {
 	ListComplianceCategorySummaries(ctx context.Context) ([]ListComplianceCategorySummariesRow, error)
 	ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error)
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
+	// Returns per-field metadata for a log event, used to show per-field byte impact
+	// in quality policies (instrumentation_bloat, oversized_fields, duplicate_fields).
+	ListFieldsByLogEvent(ctx context.Context, logEventID *string) ([]ListFieldsByLogEventRow, error)
 	ListLogEventStatusesByService(ctx context.Context, arg ListLogEventStatusesByServiceParams) ([]ListLogEventStatusesByServiceRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)

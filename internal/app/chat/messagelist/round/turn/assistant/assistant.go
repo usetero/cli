@@ -7,6 +7,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/show"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -119,7 +120,7 @@ func (m *Model) ensureBlocks(content []domain.Block) tea.Cmd {
 		switch b.Type {
 		case domain.BlockTypeText:
 			if b.Text != nil {
-				m.blocks = append(m.blocks, blocks.NewTextBlock(m.blockTheme, b.Index, b.Text.Content, contentWidth))
+				m.blocks = append(m.blocks, blocks.NewTextBlock(m.theme, b.Index, b.Text.Content, contentWidth))
 			}
 		case domain.BlockTypeThinking:
 			if b.Thinking != nil {
@@ -154,6 +155,8 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
 		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
+	case m.toolRegistry.Show != nil && toolUse.Name == m.toolRegistry.Show.Name():
+		child = show.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Show, m.scope)
 	default:
 		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
 		if !ok {

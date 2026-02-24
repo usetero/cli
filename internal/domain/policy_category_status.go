@@ -15,6 +15,11 @@ const (
 	CategoryTypeQuality    CategoryType = "quality"    // Field-level improvements
 )
 
+// PolicyCategory is a policy category slug from the control plane.
+type PolicyCategory string
+
+func (c PolicyCategory) String() string { return string(c) }
+
 // PolicyAction describes what a policy does to log events.
 type PolicyAction string
 
@@ -29,7 +34,7 @@ const (
 // PolicyCategoryStatus is the per-category policy breakdown.
 // Float pointers are nil when no data exists (e.g. no pending/approved policies contribute).
 type PolicyCategoryStatus struct {
-	Category    string
+	Category    PolicyCategory
 	DisplayName string // Human-readable name from control plane (e.g. "Bot Traffic")
 	Principle   string // One-liner explaining what this category catches
 
@@ -75,7 +80,7 @@ func (c PolicyCategoryStatus) Name() string {
 	if c.DisplayName != "" {
 		return c.DisplayName
 	}
-	return format.TitleCase(c.Category)
+	return format.TitleCase(string(c.Category))
 }
 
 // ReducesVolume reports whether this category's policies drop entire events.

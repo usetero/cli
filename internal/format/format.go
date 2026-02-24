@@ -71,12 +71,42 @@ func Bytes(b float64) string {
 	}
 }
 
+// Percent formats a fraction as a percentage: 0.68 → "68%", 0.004 → "<1%".
+func Percent(fraction float64) string {
+	pct := fraction * 100
+	if pct < 1 && pct > 0 {
+		return "<1%"
+	}
+	return fmt.Sprintf("%.0f%%", pct)
+}
+
 // Count renders an integer, showing "—" for zero.
 func Count(n int64) string {
 	if n == 0 {
 		return "—"
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+// FirstSentence returns the first sentence of text (up to ". " or "; "),
+// or the first 120 characters with a word-boundary cutoff if no sentence break is found.
+func FirstSentence(text string) string {
+	if text == "" {
+		return ""
+	}
+	for i, r := range text {
+		if (r == '.' || r == ';') && i+1 < len(text) && text[i+1] == ' ' {
+			return text[:i+1]
+		}
+	}
+	if len(text) <= 120 {
+		return text
+	}
+	cut := strings.LastIndex(text[:120], " ")
+	if cut > 0 {
+		return text[:cut] + "..."
+	}
+	return text[:120] + "..."
 }
 
 // TitleCase converts a snake_case slug to Title Case.

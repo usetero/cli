@@ -11,7 +11,7 @@ import (
 // CompliancePolicies provides type-safe access to compliance policies (PII, Secrets, PHI, Payment Data).
 type CompliancePolicies interface {
 	ListCategorySummaries(ctx context.Context) ([]domain.ComplianceCategorySummary, error)
-	ListPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.CompliancePolicy, error)
+	ListPendingPoliciesByCategory(ctx context.Context, category domain.PolicyCategory, limit int64) ([]domain.CompliancePolicy, error)
 	CountTotal(ctx context.Context) (int64, error)
 	CountFixed(ctx context.Context) (int64, error)
 }
@@ -49,7 +49,7 @@ func (c *compliancePoliciesImpl) ListCategorySummaries(ctx context.Context) ([]d
 		}
 
 		result[i] = domain.ComplianceCategorySummary{
-			Category:       category,
+			Category:       domain.PolicyCategory(category),
 			DisplayName:    row.DisplayName,
 			Principle:      row.Principle,
 			LeakingCount:   row.LeakingCount,
@@ -64,9 +64,10 @@ func (c *compliancePoliciesImpl) ListCategorySummaries(ctx context.Context) ([]d
 }
 
 // ListPendingPoliciesByCategory returns pending compliance policies for a specific category.
-func (c *compliancePoliciesImpl) ListPendingPoliciesByCategory(ctx context.Context, category string, limit int64) ([]domain.CompliancePolicy, error) {
+func (c *compliancePoliciesImpl) ListPendingPoliciesByCategory(ctx context.Context, category domain.PolicyCategory, limit int64) ([]domain.CompliancePolicy, error) {
+	catStr := string(category)
 	rows, err := c.queries.ListPendingCompliancePoliciesByCategory(ctx, gen.ListPendingCompliancePoliciesByCategoryParams{
-		Category: &category,
+		Category: &catStr,
 		Limit:    limit,
 	})
 	if err != nil {
@@ -113,7 +114,7 @@ func (c *compliancePoliciesImpl) CountFixed(ctx context.Context) (int64, error) 
 }
 
 // extractSensitiveFields parses the analysis JSON and extracts the fields array for the given category.
-func extractSensitiveFields(analysisJSON, category string) []domain.SensitiveField {
+func extractSensitiveFields(analysisJSON string, category domain.PolicyCategory) []domain.SensitiveField {
 	var envelope domain.ComplianceAnalysisEnvelope
 	if err := json.Unmarshal([]byte(analysisJSON), &envelope); err != nil {
 		return nil
@@ -136,6 +137,8 @@ func extractSensitiveFields(analysisJSON, category string) []domain.SensitiveFie
 		if envelope.PaymentDataLeakage != nil {
 			return envelope.PaymentDataLeakage.Fields
 		}
+	default:
+		return nil
 	}
 
 	return nil

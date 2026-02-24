@@ -177,7 +177,7 @@ func (d *detail) formatSensitiveTypes(fields []domain.SensitiveField, maxShow in
 }
 
 // displaySensitiveType returns a human-readable label for a sensitive type value.
-func displaySensitiveType(category, t string) string {
+func displaySensitiveType(category domain.PolicyCategory, t string) string {
 	// Category-specific type labels
 	switch category {
 	case domain.CategoryPIILeakage:
@@ -188,8 +188,9 @@ func displaySensitiveType(category, t string) string {
 		return displayPHIType(t)
 	case domain.CategoryPaymentDataLeakage:
 		return displayPaymentType(t)
+	default:
+		return t
 	}
-	return t
 }
 
 // displayPIIType returns a human-readable label for a PII type.

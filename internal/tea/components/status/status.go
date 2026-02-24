@@ -76,22 +76,22 @@ func WasteShort(theme styles.Theme, pct int) string {
 // --- Policy statuses: PENDING > APPROVED > DISMISSED ---
 
 // Policy renders a colored status badge for a policy status.
-func Policy(theme styles.Theme, s domain.PolicyLogStatus, showLabel bool) string {
+func Policy(theme styles.Theme, s domain.PolicyStatus, showLabel bool) string {
 	return badge(policyColor(theme, s), theme.Bg, s.String(), showLabel)
 }
 
 // PolicyDot renders just the colored dot for a policy status.
-func PolicyDot(theme styles.Theme, s domain.PolicyLogStatus) string {
+func PolicyDot(theme styles.Theme, s domain.PolicyStatus) string {
 	return badge(policyColor(theme, s), theme.Bg, "", false)
 }
 
-func policyColor(theme styles.Theme, s domain.PolicyLogStatus) color.Color {
+func policyColor(theme styles.Theme, s domain.PolicyStatus) color.Color {
 	switch s {
-	case domain.PolicyLogStatusApproved:
+	case domain.PolicyStatusApproved:
 		return theme.Success
-	case domain.PolicyLogStatusPending:
+	case domain.PolicyStatusPending:
 		return theme.Warning
-	case domain.PolicyLogStatusDismissed:
+	case domain.PolicyStatusDismissed:
 		return theme.TextMuted
 	default:
 		return theme.TextMuted

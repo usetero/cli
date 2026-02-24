@@ -1,21 +1,54 @@
 package domain
 
-import "github.com/usetero/cli/internal/format"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/usetero/cli/internal/format"
+)
 
 // Compliance category constants matching control plane schema.
 const (
-	CategoryPIILeakage         = "pii_leakage"
-	CategorySecretsLeakage     = "secrets_leakage"
-	CategoryPHILeakage         = "phi_leakage"
-	CategoryPaymentDataLeakage = "payment_data_leakage"
+	CategoryPIILeakage         PolicyCategory = "pii_leakage"
+	CategorySecretsLeakage     PolicyCategory = "secrets_leakage"
+	CategoryPHILeakage         PolicyCategory = "phi_leakage"
+	CategoryPaymentDataLeakage PolicyCategory = "payment_data_leakage"
 )
 
 // SensitiveField identifies a field that may contain sensitive data.
 // Matches control plane's SensitiveField struct used across all compliance categories.
 type SensitiveField struct {
-	Path     []string `json:"path"`     // Attribute path, e.g. ["attributes", "user", "email"]
-	Types    []string `json:"types"`    // Types of sensitive data this field could contain
-	Observed bool     `json:"observed"` // True if actual sensitive data was seen in log values
+	Path     FieldPath `json:"path"`     // Attribute path, e.g. ["attributes", "user", "email"]
+	Types    []string  `json:"types"`    // Types of sensitive data this field could contain
+	Observed bool      `json:"observed"` // True if actual sensitive data was seen in log values
+}
+
+// complianceSubtitle builds the one-line description shared by all compliance categories.
+func complianceSubtitle(fields []SensitiveField) string {
+	if len(fields) == 0 {
+		return ""
+	}
+	f := fields[0]
+	typesStr := strings.Join(f.Types, ", ")
+	var s string
+	if f.Observed {
+		s = fmt.Sprintf("%s observed in %s", typesStr, f.Path.Key())
+	} else {
+		s = fmt.Sprintf("Potential %s in %s", typesStr, f.Path.Key())
+	}
+	if len(fields) > 1 {
+		s += fmt.Sprintf(" (+%d more)", len(fields)-1)
+	}
+	return s
+}
+
+// complianceRelevantKeys builds the relevant attribute keys for all compliance categories.
+func complianceRelevantKeys(fields []SensitiveField) []FieldPath {
+	keys := make([]FieldPath, len(fields))
+	for i, f := range fields {
+		keys[i] = f.Path
+	}
+	return keys
 }
 
 // === PII Leakage ===
@@ -35,9 +68,13 @@ const (
 
 // PIILeakageAnalysis is the category-specific analysis for PII leakage policies.
 type PIILeakageAnalysis struct {
-	Rationale string           `json:"rationale"`
-	Fields    []SensitiveField `json:"fields"`
+	baseAnalysis
+	Fields []SensitiveField `json:"fields"`
 }
+
+func (a PIILeakageAnalysis) Category() PolicyCategory  { return CategoryPIILeakage }
+func (a PIILeakageAnalysis) Subtitle() string          { return complianceSubtitle(a.Fields) }
+func (a PIILeakageAnalysis) RelevantKeys() []FieldPath { return complianceRelevantKeys(a.Fields) }
 
 // === Secrets Leakage ===
 
@@ -60,8 +97,14 @@ const (
 
 // SecretsLeakageAnalysis is the category-specific analysis for secrets leakage policies.
 type SecretsLeakageAnalysis struct {
-	Rationale string           `json:"rationale"`
-	Fields    []SensitiveField `json:"fields"`
+	baseAnalysis
+	Fields []SensitiveField `json:"fields"`
+}
+
+func (a SecretsLeakageAnalysis) Category() PolicyCategory { return CategorySecretsLeakage }
+func (a SecretsLeakageAnalysis) Subtitle() string         { return complianceSubtitle(a.Fields) }
+func (a SecretsLeakageAnalysis) RelevantKeys() []FieldPath {
+	return complianceRelevantKeys(a.Fields)
 }
 
 // === PHI Leakage ===
@@ -81,9 +124,13 @@ const (
 
 // PHILeakageAnalysis is the category-specific analysis for PHI leakage policies.
 type PHILeakageAnalysis struct {
-	Rationale string           `json:"rationale"`
-	Fields    []SensitiveField `json:"fields"`
+	baseAnalysis
+	Fields []SensitiveField `json:"fields"`
 }
+
+func (a PHILeakageAnalysis) Category() PolicyCategory  { return CategoryPHILeakage }
+func (a PHILeakageAnalysis) Subtitle() string          { return complianceSubtitle(a.Fields) }
+func (a PHILeakageAnalysis) RelevantKeys() []FieldPath { return complianceRelevantKeys(a.Fields) }
 
 // === Payment Data Leakage ===
 
@@ -100,8 +147,14 @@ const (
 
 // PaymentDataLeakageAnalysis is the category-specific analysis for payment data leakage policies.
 type PaymentDataLeakageAnalysis struct {
-	Rationale string           `json:"rationale"`
-	Fields    []SensitiveField `json:"fields"`
+	baseAnalysis
+	Fields []SensitiveField `json:"fields"`
+}
+
+func (a PaymentDataLeakageAnalysis) Category() PolicyCategory { return CategoryPaymentDataLeakage }
+func (a PaymentDataLeakageAnalysis) Subtitle() string         { return complianceSubtitle(a.Fields) }
+func (a PaymentDataLeakageAnalysis) RelevantKeys() []FieldPath {
+	return complianceRelevantKeys(a.Fields)
 }
 
 // === Unified Compliance Policy ===
@@ -117,7 +170,7 @@ type ComplianceAnalysisEnvelope struct {
 
 // CompliancePolicy represents a single compliance finding (any category) with context from joined tables.
 type CompliancePolicy struct {
-	Category      string           // One of: pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage
+	Category      PolicyCategory   // One of: pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage
 	LogEventName  string           // Log event name
 	ServiceName   string           // Service name
 	Fields        []SensitiveField // Parsed from analysis JSON
@@ -127,14 +180,14 @@ type CompliancePolicy struct {
 
 // ComplianceCategorySummary provides counts and stats for a single compliance category.
 type ComplianceCategorySummary struct {
-	Category       string  // One of the 4 compliance categories
-	DisplayName    string  // Human-readable name from control plane
-	Principle      string  // One-liner explaining what this category catches
-	LeakingCount   int64   // Policies with observed sensitive data
-	AtRiskCount    int64   // Policies without observed data (but flagged)
-	FixedCount     int64   // Approved policies
-	VolumePerHour  float64 // Total volume across all policies in this category
-	ServiceCount   int     // Number of unique services affected
+	Category       PolicyCategory // One of the 4 compliance categories
+	DisplayName    string         // Human-readable name from control plane
+	Principle      string         // One-liner explaining what this category catches
+	LeakingCount   int64          // Policies with observed sensitive data
+	AtRiskCount    int64          // Policies without observed data (but flagged)
+	FixedCount     int64          // Approved policies
+	VolumePerHour  float64        // Total volume across all policies in this category
+	ServiceCount   int            // Number of unique services affected
 	UniqueServices []string
 }
 
@@ -154,6 +207,6 @@ func (c ComplianceCategorySummary) Name() string {
 	case CategoryPaymentDataLeakage:
 		return "Payment Data"
 	default:
-		return format.TitleCase(c.Category)
+		return format.TitleCase(string(c.Category))
 	}
 }

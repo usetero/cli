@@ -2343,7 +2343,7 @@ type LogEventPolicy implements Node {
   secrets_leakage, phi_leakage, payment_data_leakage. Waste: health_checks,
   bot_traffic, debug_artifacts, malformed, broken_records, commodity_traffic,
   redundant_events, dead_weight. Quality: duplicate_fields,
-  instrumentation_bloat, oversized_fields.
+  instrumentation_bloat, oversized_fields, wrong_level.
   """
   category: LogEventPolicyCategory!
 
@@ -2432,6 +2432,7 @@ enum LogEventPolicyCategory {
   duplicate_fields
   instrumentation_bloat
   oversized_fields
+  wrong_level
 }
 
 type LogEventPolicyCategoryStatusCache implements Node {
