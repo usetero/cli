@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.18.0](https://github.com/usetero/cli/compare/v1.17.0...v1.18.0) (2026-02-24)
+
+
+### Features
+
+* add policy card component and show tool ([568723f](https://github.com/usetero/cli/commit/568723ffc9dea51336b60068e00cc2ae7370f5d6))
+* add Quality tab and enrich all analysis tabs with category descriptions ([4def4cd](https://github.com/usetero/cli/commit/4def4cdb2651fef9e725db3704eb2cd4d52dab75))
+
+
+### Bug Fixes
+
+* add spacer line between chat messages and input bar ([e05b723](https://github.com/usetero/cli/commit/e05b72386813231152dc7da271405bf4a574fe21))
+* clean up orphaned messages from DB on cancel ([47205b1](https://github.com/usetero/cli/commit/47205b1f965c28513c2998ebe67eed43bd46bb54))
+* clean up waste table Impact column and lower discovery thresholds ([2534d9a](https://github.com/usetero/cli/commit/2534d9a6f5239c3d91a83b2874bafe636e7596f9))
+* display "$0/yr" instead of "—" for zero-value impact in waste category table ([e6b6557](https://github.com/usetero/cli/commit/e6b655769303f036c17ecbd227cb56d79c7e3e41))
+* eliminate JOINs in waste category detail query using denormalized columns ([42dedd9](https://github.com/usetero/cli/commit/42dedd9c2d9a2b3ef1198d61e8781368a87d5874))
+* only toggle tool/thinking blocks when clicking the header line ([936cefc](https://github.com/usetero/cli/commit/936cefc596fdd74526bbd5084d48a7dfff502f3d))
+* restore category subtitle in policy header and use orange focus border ([550409c](https://github.com/usetero/cli/commit/550409cb83ef1cc61973f552622fa861b314b61d))
+* tighten policy card layout — remove subtitle, rationale divider, cap examples ([de8d2fe](https://github.com/usetero/cli/commit/de8d2fe4c7b438fd3913cac3c899a5fcf8bca869))
+* use pre-computed cache table for waste category statuses ([c5e453b](https://github.com/usetero/cli/commit/c5e453bd645c31cf3eba22c4487f47e84fcf18df))
+
 ## [1.17.0](https://github.com/usetero/cli/compare/v1.16.0...v1.17.0) (2026-02-20)
 
 
