@@ -13,9 +13,7 @@ import (
 // viewHeader renders the card identity block:
 //
 //	payment-gateway / transaction.attempt.logged           ● PENDING
-//	Broken Records · Sample to 1 event per 10s
-//
-//	  45.2k evt/hr · 12.4 MB/hr                           ~$8.7k/yr
+//	45.2k evt/hr · 12.4 MB/hr                             ~$8.7k/yr
 func (m *Model) viewHeader() string {
 	p := m.policy
 	text := lipgloss.NewStyle().Foreground(m.theme.Text).Background(m.theme.Bg)
@@ -31,20 +29,7 @@ func (m *Model) viewHeader() string {
 	badge := status.Policy(m.theme, p.Status, true)
 	lines = append(lines, alignLeftRight(text.Bold(true).Render(name), badge, m.width, m.theme))
 
-	// Line 2: category display name · subtitle.
-	categoryName := p.CategoryDisplayName
-	if categoryName == "" {
-		categoryName = format.TitleCase(string(p.Category))
-	}
-	line2 := categoryName
-	if p.Analysis != nil {
-		if subtitle := p.Analysis.Subtitle(); subtitle != "" {
-			line2 += " · " + subtitle
-		}
-	}
-	lines = append(lines, muted.Italic(true).Render(line2))
-
-	// Line 3: volume · bytes left, cost right.
+	// Line 2: volume · bytes left, cost right.
 	var volumeParts []string
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
 	if p.VolumePerHour != nil {

@@ -2,14 +2,10 @@ package policycard
 
 import (
 	"charm.land/lipgloss/v2"
-	"github.com/usetero/cli/internal/domain"
 )
 
-// viewRationale renders the AI rationale section:
-//
-//	── Rationale ──────────────────────────────────────────────────
-//
-//	  This event logs every payment attempt with identical structure...
+// viewRationale renders the AI rationale as flowing body text after the header.
+// No divider — this is the natural continuation of "why you're looking at this".
 func (m *Model) viewRationale() string {
 	if m.policy.Analysis == nil {
 		return ""
@@ -20,16 +16,7 @@ func (m *Model) viewRationale() string {
 		return ""
 	}
 
-	// "Rationale" for waste/quality, "Findings" for compliance.
-	label := "Rationale"
-	if m.policy.CategoryType == domain.CategoryTypeCompliance {
-		label = "Findings"
-	}
-
 	text := lipgloss.NewStyle().Foreground(m.theme.Text).Background(m.theme.Bg)
 
-	wrapped := wordWrap(rationale, m.width)
-	body := text.Render(wrapped)
-
-	return renderDivider(m.theme, m.width, label) + "\n\n" + body
+	return text.Render(wordWrap(rationale, m.width))
 }

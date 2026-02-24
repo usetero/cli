@@ -8,7 +8,7 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-const maxConstantFields = 8
+const maxConstantFields = 5
 
 // viewConstantVaries renders the constant-vs-varies field breakdown:
 //
