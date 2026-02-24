@@ -128,7 +128,11 @@ func (m *ThinkingBlock) SetExpanded(expanded bool) {
 }
 
 // Toggle toggles the expanded state.
-func (m *ThinkingBlock) Toggle() {
+// Only toggles when clicking the header line (y == 0, no top padding).
+func (m *ThinkingBlock) Toggle(y int) {
+	if m.expanded && y != 0 {
+		return
+	}
 	m.expanded = !m.expanded
 }
 

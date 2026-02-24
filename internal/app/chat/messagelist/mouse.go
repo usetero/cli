@@ -14,12 +14,12 @@ import (
 // handleBlockClick handles a click on a specific block.
 // If the block implements Toggleable, it toggles and we rebuild
 // the viewport items (heights may have changed).
-func (m *Model) handleBlockClick(idx int) {
+func (m *Model) handleBlockClick(idx, y int) {
 	if idx < 0 || idx >= len(m.blocks) {
 		return
 	}
 	if t, ok := m.blocks[idx].block.(block.Toggleable); ok {
-		t.Toggle()
+		t.Toggle(y)
 		m.syncViewportItems()
 	}
 }

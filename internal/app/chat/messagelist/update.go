@@ -99,10 +99,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 					})
 				} else {
 					m.scope.Debug("release: empty highlight, treating as click")
-					m.handleBlockClick(m.mouseDownBlock)
+					m.handleBlockClick(m.mouseDownBlock, m.mouseDownY)
 				}
 			} else {
-				m.handleBlockClick(m.mouseDownBlock)
+				m.handleBlockClick(m.mouseDownBlock, m.mouseDownY)
 			}
 		}
 

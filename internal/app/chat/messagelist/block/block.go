@@ -53,6 +53,8 @@ type Block interface {
 
 // Toggleable is an optional interface for blocks that can be toggled
 // (e.g. expand/collapse thinking blocks, show/hide tool body).
+// y is the click position relative to the block's top edge.
+// Blocks should only toggle when the click is on the header line.
 type Toggleable interface {
-	Toggle()
+	Toggle(y int)
 }

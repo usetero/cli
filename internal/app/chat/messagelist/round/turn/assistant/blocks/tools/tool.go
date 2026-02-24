@@ -324,6 +324,10 @@ func (m *Model) Focused() bool {
 }
 
 // Toggle implements block.Toggleable — expands/collapses the tool body.
-func (m *Model) Toggle() {
+// Only toggles when clicking the header line (y == PaddingY).
+func (m *Model) Toggle(y int) {
+	if m.expanded && y != block.PaddingY {
+		return
+	}
 	m.expanded = !m.expanded
 }

@@ -35,7 +35,7 @@ func TestThinkingCollapsedByDefault(t *testing.T) {
 func TestThinkingExpanded(t *testing.T) {
 	t.Parallel()
 	m := newTestThinking(t, "some internal reasoning")
-	m.Toggle()
+	m.Toggle(0)
 	view := m.View()
 	plain := ansi.Strip(view)
 
@@ -55,7 +55,7 @@ func TestThinkingToggle(t *testing.T) {
 	m := newTestThinking(t, "reasoning text here")
 
 	collapsedView := m.View()
-	m.Toggle()
+	m.Toggle(0)
 	expandedView := m.View()
 
 	collapsedLines := lipgloss.Height(collapsedView)
@@ -65,7 +65,7 @@ func TestThinkingToggle(t *testing.T) {
 	}
 
 	// Toggle back to collapsed
-	m.Toggle()
+	m.Toggle(0)
 	plain := ansi.Strip(m.View())
 	if strings.Contains(plain, "reasoning") {
 		t.Error("expected content hidden after toggling back")
@@ -75,7 +75,7 @@ func TestThinkingToggle(t *testing.T) {
 func TestThinkingEmptyText(t *testing.T) {
 	t.Parallel()
 	m := newTestThinking(t, "")
-	m.Toggle()
+	m.Toggle(0)
 	plain := ansi.Strip(m.View())
 
 	// Should still render header even with empty text

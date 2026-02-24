@@ -122,7 +122,7 @@ func TestStatusRendering(t *testing.T) {
 		}
 		m := newTestTool(t, child)
 		m.updateStatus()
-		m.Toggle()
+		m.Toggle(block.PaddingY)
 		view := m.View()
 
 		if !strings.Contains(view, "ERROR") {
@@ -193,7 +193,7 @@ func TestToggle(t *testing.T) {
 	}
 
 	// Toggle to expand
-	m.Toggle()
+	m.Toggle(block.PaddingY)
 	expandedView := m.View()
 	if !strings.Contains(expandedView, "detailed output here") {
 		t.Error("expected body content when expanded")
