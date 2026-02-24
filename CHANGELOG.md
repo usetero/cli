@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.19.0](https://github.com/usetero/cli/compare/v1.18.0...v1.19.0) (2026-02-24)
+
+
+### Features
+
+* show estimated savings in waste tab headline ([357ce17](https://github.com/usetero/cli/commit/357ce175b0820c5765414c60b7ab4d0476d82189))
+
+
+### Bug Fixes
+
+* compliance tab timeout — switch to pre-aggregated cache table ([c3197ab](https://github.com/usetero/cli/commit/c3197ab3e5c981e096f5f9c086aadf6d146ee651))
+
 ## [1.18.0](https://github.com/usetero/cli/compare/v1.17.0...v1.18.0) (2026-02-24)
 
 
