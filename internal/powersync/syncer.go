@@ -17,7 +17,6 @@ import (
 const (
 	initialRetryDelay = 1 * time.Second
 	maxRetryDelay     = 10 * time.Second
-	maxAuthRetries    = 2
 	errorStateAfter   = 3 // show error state after this many consecutive failures
 )
 
@@ -173,7 +172,6 @@ func (s *syncer) run(ctx context.Context) {
 	defer close(s.done)
 
 	retryDelay := initialRetryDelay
-	authRetries := 0
 	retries := 0
 
 	for {
@@ -184,7 +182,6 @@ func (s *syncer) run(ctx context.Context) {
 		err := s.syncOnce(ctx)
 		if err == nil {
 			retryDelay = initialRetryDelay
-			authRetries = 0
 			retries = 0
 			continue
 		}
@@ -195,16 +192,16 @@ func (s *syncer) run(ctx context.Context) {
 		var clientErr *api.Error
 		if errors.As(err, &clientErr) {
 			if clientErr.IsAuth() {
-				authRetries++
-				if authRetries > maxAuthRetries {
-					s.setError(fmt.Errorf("auth failed after %d retries: %w", maxAuthRetries, err))
-					return
-				}
-				s.scope.Debug("auth error, force-refreshing token", log.Int("attempt", authRetries))
+				s.scope.Debug("auth error, force-refreshing token")
 				s.setState(NewReconnecting(false))
 				if err := s.forceRefreshToken(ctx); err != nil {
-					s.setError(fmt.Errorf("token refresh: %w", err))
-					return
+					// Refresh failed — backoff and try again later.
+					// Don't give up. The server may be down, we'll recover when it's back.
+					retries++
+					s.scope.Debug("token refresh failed, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
+					s.setState(NewReconnecting(retries >= errorStateAfter))
+					s.wait(ctx, retryDelay)
+					retryDelay = min(retryDelay*2, maxRetryDelay)
 				}
 				continue
 			}
@@ -228,6 +225,18 @@ func (s *syncer) run(ctx context.Context) {
 
 // syncOnce runs one sync session: start controller, connect stream, process lines.
 func (s *syncer) syncOnce(ctx context.Context) error {
+	// Proactively refresh the token before connecting. This avoids a
+	// needless 401 round-trip when the stream dropped after hours and the
+	// token expired while we were connected. GetAccessToken checks the JWT
+	// exp claim and only hits the network if the token is actually expired.
+	// We only update the HTTP client here — no controller notification,
+	// since the controller hasn't started its iteration yet.
+	if token, err := s.tokenRefresher.GetAccessToken(ctx); err != nil {
+		return err
+	} else {
+		s.client.SetToken(token)
+	}
+
 	instructions, err := s.controller.Start(ctx, extension.StartRequest{
 		IncludeDefaults: true,
 		Parameters:      map[string]any{"account_id": s.accountID},

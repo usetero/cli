@@ -3,6 +3,7 @@ package powersync_test
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -255,22 +256,27 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		db := dbtest.OpenTestDB(t)
 
-		connectCalls := 0
+		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
 		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
-			connectCalls++
-			if connectCalls == 1 {
+			n := connectCalls.Add(1)
+			if n == 1 {
 				return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
 			}
 			<-ctx.Done()
 			return ctx.Err()
 		}
 
+		var forceRefreshed atomic.Bool
 		refresher := &powersynctest.MockTokenRefresher{
 			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				if forceRefreshed.Load() {
+					return "new-token", nil
+				}
 				return "stale-token", nil
 			},
 			ForceRefreshAccessTokenFunc: func(ctx context.Context) (string, error) {
+				forceRefreshed.Store(true)
 				return "new-token", nil
 			},
 		}
@@ -292,12 +298,116 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 		syncer.Stop()
 
-		if refresher.ForceRefreshCalls == 0 {
+		if !forceRefreshed.Load() {
 			t.Error("expected ForceRefreshAccessToken to be called on 401")
 		}
 		if mock.Token != "new-token" {
 			t.Errorf("Token = %q, want %q", mock.Token, "new-token")
 		}
+	})
+
+	t.Run("auth errors are never fatal", func(t *testing.T) {
+		t.Parallel()
+
+		db := dbtest.OpenTestDB(t)
+
+		var connectCalls atomic.Int32
+		mock := apitest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+			n := connectCalls.Add(1)
+			if n <= 5 {
+				return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
+			}
+			<-ctx.Done()
+			return ctx.Err()
+		}
+
+		refresher := &powersynctest.MockTokenRefresher{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+			ForceRefreshAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "new-token", nil
+			},
+		}
+
+		syncer := powersynctest.NewSyncerWithMockClient(
+			"https://example.com",
+			refresher,
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := syncer.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+
+		time.Sleep(500 * time.Millisecond)
+
+		// Should NOT be in error state — auth errors are never fatal
+		if _, ok := syncer.State().(*powersync.Error); ok {
+			t.Error("auth errors should never be fatal")
+		}
+		if connectCalls.Load() <= 5 {
+			t.Errorf("expected more than 5 connect calls, got %d", connectCalls.Load())
+		}
+
+		syncer.Stop()
+	})
+
+	t.Run("retries when token refresh fails", func(t *testing.T) {
+		t.Parallel()
+
+		db := dbtest.OpenTestDB(t)
+
+		mock := apitest.NewMockClient()
+		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+			return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
+		}
+
+		var refreshCalls atomic.Int32
+		refresher := &powersynctest.MockTokenRefresher{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+			ForceRefreshAccessTokenFunc: func(ctx context.Context) (string, error) {
+				n := refreshCalls.Add(1)
+				if n <= 2 {
+					return "", fmt.Errorf("network error")
+				}
+				return "new-token", nil
+			},
+		}
+
+		syncer := powersynctest.NewSyncerWithMockClient(
+			"https://example.com",
+			refresher,
+			mock,
+		)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err := syncer.Start(ctx, db, "account-123", nil)
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+
+		// Wait for retries (backoff: 1s + 2s)
+		time.Sleep(4 * time.Second)
+
+		// Should NOT be in error state — refresh failures are retried
+		if _, ok := syncer.State().(*powersync.Error); ok {
+			t.Error("refresh failures should not be fatal")
+		}
+		if refreshCalls.Load() < 3 {
+			t.Errorf("expected at least 3 refresh calls, got %d", refreshCalls.Load())
+		}
+
+		syncer.Stop()
 	})
 
 	t.Run("transitions to error state on permanent error", func(t *testing.T) {
@@ -337,11 +447,11 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		db := dbtest.OpenTestDB(t)
 
-		connectCalls := 0
+		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
 		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
-			connectCalls++
-			if connectCalls == 1 {
+			n := connectCalls.Add(1)
+			if n == 1 {
 				// Simulate an extension error (not an api.Error)
 				return fmt.Errorf("powersync_control: invalid state: No iteration is active")
 			}
@@ -367,8 +477,8 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		syncer.Stop()
 
-		if connectCalls < 2 {
-			t.Errorf("expected at least 2 connect calls, got %d", connectCalls)
+		if connectCalls.Load() < 2 {
+			t.Errorf("expected at least 2 connect calls, got %d", connectCalls.Load())
 		}
 
 		// Should NOT be in error state — should have recovered
@@ -423,11 +533,11 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		db := dbtest.OpenTestDB(t)
 
-		connectCalls := 0
+		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
 		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
-			connectCalls++
-			if connectCalls == 1 {
+			n := connectCalls.Add(1)
+			if n == 1 {
 				return &api.Error{Kind: api.ErrorKindTransient, StatusCode: 503}
 			}
 			<-ctx.Done()
@@ -452,8 +562,8 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		syncer.Stop()
 
-		if connectCalls < 2 {
-			t.Errorf("expected at least 2 connect calls, got %d", connectCalls)
+		if connectCalls.Load() < 2 {
+			t.Errorf("expected at least 2 connect calls, got %d", connectCalls.Load())
 		}
 	})
 }
