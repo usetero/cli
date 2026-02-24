@@ -13,6 +13,7 @@ import (
 // viewHeader renders the card identity block:
 //
 //	payment-gateway / transaction.attempt.logged           ● PENDING
+//	INFO → DEBUG
 //	45.2k evt/hr · 12.4 MB/hr                             ~$8.7k/yr
 func (m *Model) viewHeader() string {
 	p := m.policy
@@ -29,7 +30,14 @@ func (m *Model) viewHeader() string {
 	badge := status.Policy(m.theme, p.Status, true)
 	lines = append(lines, alignLeftRight(text.Bold(true).Render(name), badge, m.width, m.theme))
 
-	// Line 2: volume · bytes left, cost right.
+	// Line 2 (optional): category-specific subtitle when it carries unique info.
+	if p.Analysis != nil {
+		if subtitle := p.Analysis.Subtitle(); subtitle != "" {
+			lines = append(lines, muted.Italic(true).Render(subtitle))
+		}
+	}
+
+	// Volume · bytes left, cost right.
 	var volumeParts []string
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
 	if p.VolumePerHour != nil {

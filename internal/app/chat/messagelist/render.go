@@ -128,12 +128,12 @@ func (m *Model) renderBlock(entry blockEntry) string {
 		// User messages: accent border, thicker when focused.
 		borderColor = m.theme.Accent
 		if b.Focused() {
-			borderColor = m.theme.AccentAlt
+			borderColor = m.theme.Warning
 			borderStyle = lipgloss.ThickBorder()
 		}
 	} else if b.Focused() {
-		// Assistant blocks: invisible border, thick accent when focused.
-		borderColor = m.theme.AccentAlt
+		// Assistant blocks: invisible border, thick orange when focused.
+		borderColor = m.theme.Warning
 		borderStyle = lipgloss.ThickBorder()
 	}
 
