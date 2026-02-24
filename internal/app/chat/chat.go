@@ -268,8 +268,12 @@ func (m *Model) updateLayout() {
 	m.inputBar.SetWidth(m.width)
 	inputBarHeight := m.inputBar.Height()
 
-	// MessageList is flexible - gets remaining space
-	messageListHeight := m.height - inputBarHeight
+	// MessageList is flexible - gets remaining space (minus 1 for spacer between list and input bar)
+	spacer := 0
+	if m.hasMessages() {
+		spacer = 1
+	}
+	messageListHeight := m.height - inputBarHeight - spacer
 	if messageListHeight < 0 {
 		messageListHeight = 0
 	}
@@ -458,8 +462,9 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, emptyView, m.inputBar.View())
 	}
 
-	// Normal state: message list + input bar
-	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), m.inputBar.View())
+	// Normal state: message list + spacer + input bar
+	spacer := lipgloss.NewStyle().Width(m.width).Background(m.theme.Bg).Render("")
+	return lipgloss.JoinVertical(lipgloss.Left, m.messageList.View(), spacer, m.inputBar.View())
 }
 
 // emptyStateContent renders the context-aware empty state.
