@@ -367,6 +367,12 @@ func (m *Model) renderWasteHeadline() string {
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
 	}
 
+	// Estimated savings from pending waste policies.
+	if cost := totalEstimatedCost(m.categories); cost > 0 {
+		ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
+		parts = append(parts, ok.Render("~"+format.YearlyCost(cost)+" savings"))
+	}
+
 	// Analysis progress when not yet ready.
 	if s.EventCount > 0 && !s.AnalysisReady() {
 		pct := float64(s.AnalyzedCount) / float64(s.EventCount)
@@ -502,6 +508,16 @@ func (m *Model) cursorPrinciple() string {
 		return m.categories[m.cursor].Principle
 	}
 	return ""
+}
+
+func totalEstimatedCost(cats []domain.PolicyCategoryStatus) float64 {
+	var total float64
+	for _, c := range cats {
+		if c.EstimatedCostPerHour != nil {
+			total += *c.EstimatedCostPerHour
+		}
+	}
+	return total
 }
 
 // formatObservedSaving returns the observed savings from approved policies.
