@@ -19,6 +19,7 @@ type APIServices struct {
 	Conversations   Conversations
 	Messages        Messages
 	Services        Services
+	Policies        Policies
 }
 
 // NewServices creates APIServices with an internally-managed client.
@@ -45,6 +46,7 @@ func newAPIServices(client Client, scope log.Scope) APIServices {
 		Conversations:   NewConversationService(client, scope),
 		Messages:        NewMessageService(client, scope),
 		Services:        NewServiceService(client, scope),
+		Policies:        NewPolicyService(client, scope),
 	}
 }
 

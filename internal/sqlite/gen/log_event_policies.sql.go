@@ -9,6 +9,23 @@ import (
 	"context"
 )
 
+const approveLogEventPolicy = `-- name: ApproveLogEventPolicy :exec
+UPDATE log_event_policies
+SET approved_at = ?, approved_by = ?
+WHERE id = ?
+`
+
+type ApproveLogEventPolicyParams struct {
+	ApprovedAt *string
+	ApprovedBy *string
+	ID         *string
+}
+
+func (q *Queries) ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEventPolicyParams) error {
+	_, err := q.db.ExecContext(ctx, approveLogEventPolicy, arg.ApprovedAt, arg.ApprovedBy, arg.ID)
+	return err
+}
+
 const countLogEventPolicies = `-- name: CountLogEventPolicies :one
 SELECT COUNT(*) FROM log_event_policies
 `
@@ -18,4 +35,21 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const dismissLogEventPolicy = `-- name: DismissLogEventPolicy :exec
+UPDATE log_event_policies
+SET dismissed_at = ?, dismissed_by = ?
+WHERE id = ?
+`
+
+type DismissLogEventPolicyParams struct {
+	DismissedAt *string
+	DismissedBy *string
+	ID          *string
+}
+
+func (q *Queries) DismissLogEventPolicy(ctx context.Context, arg DismissLogEventPolicyParams) error {
+	_, err := q.db.ExecContext(ctx, dismissLogEventPolicy, arg.DismissedAt, arg.DismissedBy, arg.ID)
+	return err
 }

@@ -458,4 +458,3 @@ func (m *Model) renderVolume(svc domain.ServiceStatus) string {
 	}
 	return vol
 }
-

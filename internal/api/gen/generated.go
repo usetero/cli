@@ -11,6 +11,49 @@ import (
 	"github.com/Khan/genqlient/graphql"
 )
 
+// ApproveLogEventPolicyApproveLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
+type ApproveLogEventPolicyApproveLogEventPolicy struct {
+	// Unique identifier
+	Id string `json:"id"`
+	// When this policy was approved by a user
+	ApprovedAt *time.Time `json:"approvedAt"`
+	// User ID who approved this policy
+	ApprovedBy *string `json:"approvedBy"`
+	// When this policy was dismissed by a user
+	DismissedAt *time.Time `json:"dismissedAt"`
+	// User ID who dismissed this policy
+	DismissedBy *string `json:"dismissedBy"`
+}
+
+// GetId returns ApproveLogEventPolicyApproveLogEventPolicy.Id, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetId() string { return v.Id }
+
+// GetApprovedAt returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
+
+// GetApprovedBy returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
+
+// GetDismissedAt returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedAt() *time.Time {
+	return v.DismissedAt
+}
+
+// GetDismissedBy returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
+
+// ApproveLogEventPolicyResponse is returned by ApproveLogEventPolicy on success.
+type ApproveLogEventPolicyResponse struct {
+	// Approve a log event policy, enabling it for enforcement.
+	// Clears any previous dismissal.
+	ApproveLogEventPolicy ApproveLogEventPolicyApproveLogEventPolicy `json:"approveLogEventPolicy"`
+}
+
+// GetApproveLogEventPolicy returns ApproveLogEventPolicyResponse.ApproveLogEventPolicy, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyResponse) GetApproveLogEventPolicy() ApproveLogEventPolicyApproveLogEventPolicy {
+	return v.ApproveLogEventPolicy
+}
+
 // A content block in a message. Exactly one of the typed fields should be set.
 type ContentBlockInput struct {
 	Type       ContentBlockType    `json:"type"`
@@ -543,6 +586,49 @@ func (v *DisableServiceUpdateService) GetName() string { return v.Name }
 
 // GetEnabled returns DisableServiceUpdateService.Enabled, and is useful for accessing the field via an interface.
 func (v *DisableServiceUpdateService) GetEnabled() bool { return v.Enabled }
+
+// DismissLogEventPolicyDismissLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
+type DismissLogEventPolicyDismissLogEventPolicy struct {
+	// Unique identifier
+	Id string `json:"id"`
+	// When this policy was dismissed by a user
+	DismissedAt *time.Time `json:"dismissedAt"`
+	// User ID who dismissed this policy
+	DismissedBy *string `json:"dismissedBy"`
+	// When this policy was approved by a user
+	ApprovedAt *time.Time `json:"approvedAt"`
+	// User ID who approved this policy
+	ApprovedBy *string `json:"approvedBy"`
+}
+
+// GetId returns DismissLogEventPolicyDismissLogEventPolicy.Id, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventPolicy) GetId() string { return v.Id }
+
+// GetDismissedAt returns DismissLogEventPolicyDismissLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedAt() *time.Time {
+	return v.DismissedAt
+}
+
+// GetDismissedBy returns DismissLogEventPolicyDismissLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
+
+// GetApprovedAt returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
+
+// GetApprovedBy returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
+
+// DismissLogEventPolicyResponse is returned by DismissLogEventPolicy on success.
+type DismissLogEventPolicyResponse struct {
+	// Dismiss a log event policy, hiding it from pending review.
+	// Clears any previous approval.
+	DismissLogEventPolicy DismissLogEventPolicyDismissLogEventPolicy `json:"dismissLogEventPolicy"`
+}
+
+// GetDismissLogEventPolicy returns DismissLogEventPolicyResponse.DismissLogEventPolicy, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyResponse) GetDismissLogEventPolicy() DismissLogEventPolicyDismissLogEventPolicy {
+	return v.DismissLogEventPolicy
+}
 
 // EnableServiceResponse is returned by EnableService on success.
 type EnableServiceResponse struct {
@@ -2228,6 +2314,14 @@ var AllWorkspacePurpose = []WorkspacePurpose{
 	WorkspacePurposeCompliance,
 }
 
+// __ApproveLogEventPolicyInput is used internally by genqlient
+type __ApproveLogEventPolicyInput struct {
+	Id string `json:"id"`
+}
+
+// GetId returns __ApproveLogEventPolicyInput.Id, and is useful for accessing the field via an interface.
+func (v *__ApproveLogEventPolicyInput) GetId() string { return v.Id }
+
 // __CreateAccountInput is used internally by genqlient
 type __CreateAccountInput struct {
 	Input CreateAccountInput `json:"input"`
@@ -2285,6 +2379,14 @@ type __DisableServiceInput struct {
 
 // GetServiceId returns __DisableServiceInput.ServiceId, and is useful for accessing the field via an interface.
 func (v *__DisableServiceInput) GetServiceId() string { return v.ServiceId }
+
+// __DismissLogEventPolicyInput is used internally by genqlient
+type __DismissLogEventPolicyInput struct {
+	Id string `json:"id"`
+}
+
+// GetId returns __DismissLogEventPolicyInput.Id, and is useful for accessing the field via an interface.
+func (v *__DismissLogEventPolicyInput) GetId() string { return v.Id }
 
 // __EnableServiceInput is used internally by genqlient
 type __EnableServiceInput struct {
@@ -2361,6 +2463,45 @@ type __ValidateDatadogApiKeyInput struct {
 
 // GetInput returns __ValidateDatadogApiKeyInput.Input, and is useful for accessing the field via an interface.
 func (v *__ValidateDatadogApiKeyInput) GetInput() ValidateDatadogApiKeyInput { return v.Input }
+
+// The mutation executed by ApproveLogEventPolicy.
+const ApproveLogEventPolicy_Operation = `
+mutation ApproveLogEventPolicy ($id: ID!) {
+	approveLogEventPolicy(id: $id) {
+		id
+		approvedAt
+		approvedBy
+		dismissedAt
+		dismissedBy
+	}
+}
+`
+
+// Mutation to approve a log event policy for enforcement
+func ApproveLogEventPolicy(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+) (data_ *ApproveLogEventPolicyResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ApproveLogEventPolicy",
+		Query:  ApproveLogEventPolicy_Operation,
+		Variables: &__ApproveLogEventPolicyInput{
+			Id: id,
+		},
+	}
+
+	data_ = &ApproveLogEventPolicyResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
 
 // The mutation executed by CreateAccount.
 const CreateAccount_Operation = `
@@ -2616,6 +2757,45 @@ func DisableService(
 	}
 
 	data_ = &DisableServiceResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by DismissLogEventPolicy.
+const DismissLogEventPolicy_Operation = `
+mutation DismissLogEventPolicy ($id: ID!) {
+	dismissLogEventPolicy(id: $id) {
+		id
+		dismissedAt
+		dismissedBy
+		approvedAt
+		approvedBy
+	}
+}
+`
+
+// Mutation to dismiss a log event policy from pending review
+func DismissLogEventPolicy(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+) (data_ *DismissLogEventPolicyResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "DismissLogEventPolicy",
+		Query:  DismissLogEventPolicy_Operation,
+		Variables: &__DismissLogEventPolicyInput{
+			Id: id,
+		},
+	}
+
+	data_ = &DismissLogEventPolicyResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(
