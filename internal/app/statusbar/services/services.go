@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -27,11 +26,6 @@ import (
 const (
 	pollInterval = 2 * time.Second
 	maxServices  = 50
-
-	// discoveryDoneThreshold is the classification coverage percentage above
-	// which we consider discovery complete. Aligned with the 80% analysis
-	// threshold used for waste/compliance readiness.
-	discoveryDoneThreshold = 80
 
 	// levelDisplayThreshold is the minimum fraction of total volume a
 	// non-info level must reach to be shown (1%).
@@ -332,14 +326,9 @@ func (m *Model) renderSummary() string {
 		parts = append(parts, muted.Render(fmt.Sprintf("+%s", strings.Join(hiddenParts, ", "))))
 	}
 
-	// Log event count with discovery progress.
+	// Log event count.
 	if s.EventCount > 0 {
-		evtLabel := muted.Render(fmt.Sprintf("%d log events", s.EventCount))
-		if pct := summaryDiscoveryPercent(s); pct < discoveryDoneThreshold {
-			bar := m.discoveryBar()
-			evtLabel += " " + bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%d%%", pct))
-		}
-		parts = append(parts, evtLabel)
+		parts = append(parts, muted.Render(fmt.Sprintf("%d log events", s.EventCount)))
 	}
 
 	// Total volume.
@@ -381,7 +370,6 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 	tbl.Headers("Service", "Log Events", "Volume", "Cost")
 	tbl.SetWidth(width)
 
-	bar := m.discoveryBar()
 	for i, svc := range visible {
 		cost := "—"
 		if svc.ServiceCostPerHourVolumeUSD != nil {
@@ -389,7 +377,7 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 		}
 		tbl.Row(
 			m.renderServiceName(i, svc),
-			m.renderLogEvents(svc, bar),
+			fmt.Sprintf("%-5d", svc.LogEventCount),
 			m.renderVolume(svc),
 			cost,
 		)
@@ -471,60 +459,3 @@ func (m *Model) renderVolume(svc domain.ServiceStatus) string {
 	return vol
 }
 
-// discoveryBar creates a small progress bar for inline use in table cells.
-func (m *Model) discoveryBar() progress.Model {
-	bar := progress.New(
-		progress.WithColors(m.theme.GradientStart, m.theme.GradientEnd),
-		progress.WithWidth(10),
-		progress.WithFillCharacters('█', '░'),
-	)
-	bar.ShowPercentage = false
-	bar.EmptyColor = m.theme.TextMuted
-	return bar
-}
-
-// renderLogEvents renders the log event count with a mini discovery progress bar.
-// The bar is hidden when classification coverage is >= 95% (volume ratios are
-// never exactly 100% due to throughput fluctuations).
-func (m *Model) renderLogEvents(svc domain.ServiceStatus, bar progress.Model) string {
-	count := fmt.Sprintf("%-5d", svc.LogEventCount)
-	if svc.ServiceVolumePerHour == nil || *svc.ServiceVolumePerHour <= 0 {
-		return count
-	}
-	pct := discoveryPercent(svc)
-	if pct >= discoveryDoneThreshold {
-		return count
-	}
-	muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-	return count + " " + bar.ViewAs(float64(pct)/100) + " " + muted.Render(fmt.Sprintf("%3d%%", pct))
-}
-
-// summaryDiscoveryPercent computes account-level classification coverage.
-func summaryDiscoveryPercent(s domain.AccountSummary) int {
-	if s.TotalServiceVolumePerHour == nil || *s.TotalServiceVolumePerHour <= 0 {
-		return 100
-	}
-	if s.TotalVolumePerHour == nil {
-		return 0
-	}
-	pct := int(math.Round(*s.TotalVolumePerHour / *s.TotalServiceVolumePerHour * 100))
-	if pct > 100 {
-		pct = 100
-	}
-	return pct
-}
-
-// discoveryPercent computes how much of a service's volume has been classified.
-func discoveryPercent(svc domain.ServiceStatus) int {
-	if svc.ServiceVolumePerHour == nil || *svc.ServiceVolumePerHour <= 0 {
-		return 100
-	}
-	if svc.LogEventVolumePerHour == nil {
-		return 0
-	}
-	pct := int(math.Round(*svc.LogEventVolumePerHour / *svc.ServiceVolumePerHour * 100))
-	if pct > 100 {
-		pct = 100
-	}
-	return pct
-}
