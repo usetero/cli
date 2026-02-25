@@ -12,6 +12,7 @@ type LogEventPolicyCategoryStatuses interface {
 	ListWasteCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListQualityCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
 	ListComplianceCategoryStatuses(ctx context.Context) ([]domain.PolicyCategoryStatus, error)
+	CountObservedByComplianceCategory(ctx context.Context) (map[domain.PolicyCategory]int64, error)
 }
 
 // logEventPolicyCategoryStatusesImpl implements LogEventPolicyCategoryStatuses.
@@ -34,6 +35,22 @@ func (l *logEventPolicyCategoryStatusesImpl) ListComplianceCategoryStatuses(ctx 
 	return l.listByType(ctx, domain.CategoryTypeCompliance)
 }
 
+// CountObservedByComplianceCategory returns the number of leaking (observed) pending policies per compliance category.
+func (l *logEventPolicyCategoryStatusesImpl) CountObservedByComplianceCategory(ctx context.Context) (map[domain.PolicyCategory]int64, error) {
+	rows, err := l.queries.CountObservedPoliciesByComplianceCategory(ctx)
+	if err != nil {
+		return nil, WrapSQLiteError(err, "count observed policies by compliance category")
+	}
+
+	result := make(map[domain.PolicyCategory]int64, len(rows))
+	for _, row := range rows {
+		if row.Category != nil {
+			result[domain.PolicyCategory(*row.Category)] = row.ObservedCount
+		}
+	}
+	return result, nil
+}
+
 func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, categoryType domain.CategoryType) ([]domain.PolicyCategoryStatus, error) {
 	ct := string(categoryType)
 	rows, err := l.queries.ListCategoryStatusesByCostAndType(ctx, &ct)
@@ -50,6 +67,10 @@ func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, cat
 			PendingCount:           row.PendingCount,
 			ApprovedCount:          row.ApprovedCount,
 			DismissedCount:         row.DismissedCount,
+			PolicyPendingCriticalCount: row.PolicyPendingCriticalCount,
+			PolicyPendingHighCount:     row.PolicyPendingHighCount,
+			PolicyPendingMediumCount:   row.PolicyPendingMediumCount,
+			PolicyPendingLowCount:      row.PolicyPendingLowCount,
 			EstimatedVolumePerHour: row.EstimatedVolumeReductionPerHour,
 			EstimatedBytesPerHour:  row.EstimatedBytesReductionPerHour,
 			EstimatedCostPerHour:   row.EstimatedCostReductionPerHourUsd,

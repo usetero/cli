@@ -9,6 +9,48 @@ import (
 	"context"
 )
 
+const countObservedPoliciesByComplianceCategory = `-- name: CountObservedPoliciesByComplianceCategory :many
+SELECT
+  leps.category,
+  CAST(SUM(CASE WHEN COALESCE((
+    SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
+    FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
+  ), 0) = 1 THEN 1 ELSE 0 END) AS INTEGER) AS observed_count
+FROM log_event_policy_statuses_cache leps
+LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+WHERE leps.category_type = 'compliance' AND leps.status = 'PENDING'
+GROUP BY leps.category
+`
+
+type CountObservedPoliciesByComplianceCategoryRow struct {
+	Category      *string
+	ObservedCount int64
+}
+
+// Returns, per compliance category, how many pending policies have observed (leaking) data.
+func (q *Queries) CountObservedPoliciesByComplianceCategory(ctx context.Context) ([]CountObservedPoliciesByComplianceCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, countObservedPoliciesByComplianceCategory)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountObservedPoliciesByComplianceCategoryRow
+	for rows.Next() {
+		var i CountObservedPoliciesByComplianceCategoryRow
+		if err := rows.Scan(&i.Category, &i.ObservedCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingCompliancePoliciesByCategory = `-- name: ListPendingCompliancePoliciesByCategory :many
 
 SELECT

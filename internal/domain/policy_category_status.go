@@ -41,6 +41,13 @@ type PolicyCategoryStatus struct {
 	PendingCount   int64
 	ApprovedCount  int64
 	DismissedCount int64
+	ObservedCount  int64 // Compliance only: pending policies where sensitive data was observed (leaking)
+
+	// Severity breakdown of pending policies.
+	PolicyPendingCriticalCount int64
+	PolicyPendingHighCount     int64
+	PolicyPendingMediumCount   int64
+	PolicyPendingLowCount      int64
 
 	// Estimated impact from pending policies.
 	EstimatedVolumePerHour *float64
@@ -86,6 +93,16 @@ func (c PolicyCategoryStatus) Name() string {
 // ReducesVolume reports whether this category's policies drop entire events.
 func (c PolicyCategoryStatus) ReducesVolume() bool {
 	return c.EstimatedVolumePerHour != nil && *c.EstimatedVolumePerHour > 0
+}
+
+// HasHighSeverity returns true when the category has critical or high severity pending policies.
+func (c PolicyCategoryStatus) HasHighSeverity() bool {
+	return c.PolicyPendingCriticalCount > 0 || c.PolicyPendingHighCount > 0
+}
+
+// IsLeaking returns true when this compliance category has policies where sensitive data was observed.
+func (c PolicyCategoryStatus) IsLeaking() bool {
+	return c.ObservedCount > 0
 }
 
 // ActionLabel returns a human-readable description of what this category's policies do.

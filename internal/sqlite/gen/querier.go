@@ -16,6 +16,8 @@ type Querier interface {
 	CountLogEvents(ctx context.Context) (int64, error)
 	CountMessages(ctx context.Context) (int64, error)
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
+	// Returns, per compliance category, how many pending policies have observed (leaking) data.
+	CountObservedPoliciesByComplianceCategory(ctx context.Context) ([]CountObservedPoliciesByComplianceCategoryRow, error)
 	CountServices(ctx context.Context) (int64, error)
 	DeleteMessage(ctx context.Context, id *string) error
 	DismissLogEventPolicy(ctx context.Context, arg DismissLogEventPolicyParams) error

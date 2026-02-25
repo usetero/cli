@@ -137,6 +137,16 @@ func (m *Model) fetchData() tea.Cmd {
 			categories = nil
 		}
 
+		// Merge observed (leaking) counts into category statuses.
+		observed, err := db.LogEventPolicyCategoryStatuses().CountObservedByComplianceCategory(ctx)
+		if err != nil {
+			scope.Error("count observed by compliance category", "err", err)
+		} else {
+			for i := range categories {
+				categories[i].ObservedCount = observed[categories[i].Category]
+			}
+		}
+
 		return dataMsg{summary: summary, categories: categories}
 	}
 }
@@ -160,8 +170,8 @@ func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCate
 	key := fmt.Sprintf("%d:%d", summary.EventCount, summary.AnalyzedCount)
 
 	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d",
-			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount)
+		key += fmt.Sprintf("|%s:%d:%d:%d:%d",
+			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount, c.ObservedCount)
 	}
 
 	return key
@@ -239,12 +249,19 @@ func (m *Model) CompactView() string {
 
 	var segments []string
 
+	leaking := totalObserved(m.categories)
 	pending := totalPending(m.categories)
+	atRisk := pending - leaking
 	approved := totalApproved(m.categories)
 
-	if pending > 0 {
+	if leaking > 0 {
+		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
+		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d leaking", leaking)))
+	}
+
+	if atRisk > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d compliance", pending)))
+		segments = append(segments, dot+" "+muted.Render(fmt.Sprintf("%d at risk", atRisk)))
 	}
 
 	if approved > 0 {
@@ -312,12 +329,19 @@ func (m *Model) renderHeadline() string {
 
 	var parts []string
 
+	leaking := totalObserved(m.categories)
 	pending := totalPending(m.categories)
+	atRisk := pending - leaking
 	approved := totalApproved(m.categories)
 
-	if pending > 0 {
+	if leaking > 0 {
+		dot := lipgloss.NewStyle().Foreground(colors.Error).Background(colors.Bg).Render("●")
+		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d leaking", leaking)))
+	}
+
+	if atRisk > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", pending)))
+		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d at risk", atRisk)))
 	}
 
 	if approved > 0 {
@@ -347,9 +371,10 @@ func (m *Model) renderCategoryTable(width int) string {
 	}
 
 	tbl := table.New(m.theme, table.WithMaxValueWidth(30))
-	tbl.Headers("Category", "Pending", "Approved")
+	tbl.Headers("Category", "Leaking", "At Risk", "Approved")
 	tbl.SetWidth(width)
 
+	errStyle := lipgloss.NewStyle().Foreground(m.theme.Error).Background(m.theme.Bg)
 	warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
 	ok := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg)
 	accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
@@ -357,7 +382,11 @@ func (m *Model) renderCategoryTable(width int) string {
 	for i, c := range m.categories {
 		dot := ok.Render("●")
 		if c.PendingCount > 0 {
-			dot = warn.Render("●")
+			if c.IsLeaking() {
+				dot = errStyle.Render("●")
+			} else {
+				dot = warn.Render("●")
+			}
 		}
 
 		name := c.Name()
@@ -369,13 +398,26 @@ func (m *Model) renderCategoryTable(width int) string {
 
 		// Clean categories: single checkmark row.
 		if c.PendingCount == 0 && c.ApprovedCount == 0 {
-			tbl.Row(name, ok.Render("✓"), "—")
+			tbl.Row(name, ok.Render("✓"), "—", "—")
 			continue
+		}
+
+		atRisk := c.PendingCount - c.ObservedCount
+
+		leaking := "—"
+		if c.ObservedCount > 0 {
+			leaking = errStyle.Render(format.Count(c.ObservedCount))
+		}
+
+		risk := "—"
+		if atRisk > 0 {
+			risk = warn.Render(format.Count(atRisk))
 		}
 
 		tbl.Row(
 			name,
-			format.Count(c.PendingCount),
+			leaking,
+			risk,
 			format.Count(c.ApprovedCount),
 		)
 	}
@@ -401,6 +443,14 @@ func (m *Model) cursorPrinciple() string {
 		return m.categories[m.cursor].Principle
 	}
 	return ""
+}
+
+func totalObserved(cats []domain.PolicyCategoryStatus) int64 {
+	var n int64
+	for _, c := range cats {
+		n += c.ObservedCount
+	}
+	return n
 }
 
 func totalPending(cats []domain.PolicyCategoryStatus) int64 {

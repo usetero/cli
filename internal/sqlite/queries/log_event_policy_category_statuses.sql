@@ -15,7 +15,11 @@ SELECT
   estimated_cost_reduction_per_hour_bytes_usd,
   estimated_cost_reduction_per_hour_volume_usd,
   CAST(COALESCE(events_with_volumes, 0) AS INTEGER) AS events_with_volumes,
-  CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count
+  CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count,
+  CAST(COALESCE(policy_pending_critical_count, 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(policy_pending_high_count, 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(policy_pending_medium_count, 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(policy_pending_low_count, 0) AS INTEGER) AS policy_pending_low_count
 FROM log_event_policy_category_statuses_cache
 WHERE category IS NOT NULL AND category != ''
   AND category_type = ?1

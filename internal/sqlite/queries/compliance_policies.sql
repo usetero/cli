@@ -19,3 +19,16 @@ LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category = ?1 AND leps.status = 'PENDING'
 ORDER BY any_observed DESC, les.volume_per_hour DESC
 LIMIT ?2;
+
+-- name: CountObservedPoliciesByComplianceCategory :many
+-- Returns, per compliance category, how many pending policies have observed (leaking) data.
+SELECT
+  leps.category,
+  CAST(SUM(CASE WHEN COALESCE((
+    SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
+    FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
+  ), 0) = 1 THEN 1 ELSE 0 END) AS INTEGER) AS observed_count
+FROM log_event_policy_statuses_cache leps
+LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+WHERE leps.category_type = 'compliance' AND leps.status = 'PENDING'
+GROUP BY leps.category;

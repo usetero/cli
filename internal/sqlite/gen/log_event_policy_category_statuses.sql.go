@@ -25,7 +25,11 @@ SELECT
   estimated_cost_reduction_per_hour_bytes_usd,
   estimated_cost_reduction_per_hour_volume_usd,
   CAST(COALESCE(events_with_volumes, 0) AS INTEGER) AS events_with_volumes,
-  CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count
+  CAST(COALESCE(total_event_count, 0) AS INTEGER) AS total_event_count,
+  CAST(COALESCE(policy_pending_critical_count, 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(policy_pending_high_count, 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(policy_pending_medium_count, 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(policy_pending_low_count, 0) AS INTEGER) AS policy_pending_low_count
 FROM log_event_policy_category_statuses_cache
 WHERE category IS NOT NULL AND category != ''
   AND category_type = ?1
@@ -48,6 +52,10 @@ type ListCategoryStatusesByCostAndTypeRow struct {
 	EstimatedCostReductionPerHourVolumeUsd *float64
 	EventsWithVolumes                      int64
 	TotalEventCount                        int64
+	PolicyPendingCriticalCount             int64
+	PolicyPendingHighCount                 int64
+	PolicyPendingMediumCount               int64
+	PolicyPendingLowCount                  int64
 }
 
 // Pre-computed per-category rollup filtered by category_type (waste or compliance).
@@ -76,6 +84,10 @@ func (q *Queries) ListCategoryStatusesByCostAndType(ctx context.Context, categor
 			&i.EstimatedCostReductionPerHourVolumeUsd,
 			&i.EventsWithVolumes,
 			&i.TotalEventCount,
+			&i.PolicyPendingCriticalCount,
+			&i.PolicyPendingHighCount,
+			&i.PolicyPendingMediumCount,
+			&i.PolicyPendingLowCount,
 		); err != nil {
 			return nil, err
 		}

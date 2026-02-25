@@ -79,8 +79,12 @@ func (d *detail) renderHeader() string {
 	parts = append(parts, back+" "+name)
 
 	if d.category.PendingCount > 0 {
-		warn := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg)
-		parts = append(parts, warn.Render("●")+" "+warn.Render(fmt.Sprintf("%d pending", d.category.PendingCount)))
+		dotColor := colors.Warning
+		if d.category.IsLeaking() {
+			dotColor = colors.Error
+		}
+		sev := lipgloss.NewStyle().Foreground(dotColor).Background(colors.Bg)
+		parts = append(parts, sev.Render("●")+" "+sev.Render(fmt.Sprintf("%d pending", d.category.PendingCount)))
 	}
 
 	if d.category.ApprovedCount > 0 {
@@ -126,12 +130,12 @@ func (d *detail) renderTable(width int) string {
 }
 
 // observedDot returns a colored dot based on whether sensitive data was observed.
-// Red for observed (leaking), muted for at-risk.
+// Red for observed (leaking), orange for at-risk.
 func (d *detail) observedDot(observed bool) string {
 	if observed {
 		return lipgloss.NewStyle().Foreground(d.theme.Error).Background(d.theme.Bg).Render("●")
 	}
-	return lipgloss.NewStyle().Foreground(d.theme.TextMuted).Background(d.theme.Bg).Render("●")
+	return lipgloss.NewStyle().Foreground(d.theme.Warning).Background(d.theme.Bg).Render("●")
 }
 
 // formatSensitiveTypes returns deduplicated type labels from all fields,
