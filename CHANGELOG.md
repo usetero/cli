@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.0](https://github.com/usetero/cli/compare/v1.20.0...v1.21.0) (2026-02-25)
+
+
+### Features
+
+* **policies:** enable a policy approval workflow via chat ([#52](https://github.com/usetero/cli/issues/52)) ([84e5b9a](https://github.com/usetero/cli/commit/84e5b9a6e065dae258bd6cc46703a6f0d0e71eee))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/workos/workos-go/v4 to v6 ([#45](https://github.com/usetero/cli/issues/45)) ([99156f1](https://github.com/usetero/cli/commit/99156f1f9bbf58a16182becc594103812fb6f59d))
+
 ## [1.20.0](https://github.com/usetero/cli/compare/v1.19.0...v1.20.0) (2026-02-25)
 
 
