@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.20.0](https://github.com/usetero/cli/compare/v1.19.0...v1.20.0) (2026-02-25)
+
+
+### Features
+
+* show volume/bytes/cost percentages in service detail view ([785ebdb](https://github.com/usetero/cli/commit/785ebdb8412ef95dcb5f2e6a997cfd5b6b189f86))
+
+
+### Bug Fixes
+
+* remove misleading discovery progress bars from services tab ([b47324c](https://github.com/usetero/cli/commit/b47324cf075c3a81863eda6dcc22ccb92b7fd0f6))
+* sync auth errors no longer kill the syncer permanently ([bd3fae4](https://github.com/usetero/cli/commit/bd3fae42663cbd085419224a81ff88a77f3ed125))
+
 ## [1.19.0](https://github.com/usetero/cli/compare/v1.18.0...v1.19.0) (2026-02-24)
 
 
