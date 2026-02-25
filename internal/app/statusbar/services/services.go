@@ -217,17 +217,17 @@ func (m *Model) CloseDetail() {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s:%v:%v:%d",
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%s:%v:%v:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.OkServices,
-		s.ErrorServices, s.QuarantinedCount,
-		s.Health, s.Error, s.Warning,
+		s.QuarantinedCount,
+		s.Health,
 		s.TotalServiceVolumePerHour, s.TotalVolumePerHour,
 		len(services))
 
 	for _, svc := range services {
-		key += fmt.Sprintf("|%s:%s:%s:%d:%d:%v:%v:%v:%v:%v:%v:%v",
-			svc.Name, svc.Health, svc.Warning, svc.LogEventCount, svc.LogEventAnalyzedCount,
+		key += fmt.Sprintf("|%s:%s:%d:%d:%v:%v:%v:%v:%v:%v:%v",
+			svc.Name, svc.Health, svc.LogEventCount, svc.LogEventAnalyzedCount,
 			svc.ServiceVolumePerHour, svc.LogEventVolumePerHour, svc.ServiceCostPerHourVolumeUSD,
 			svc.ServiceDebugVolumePerHour, svc.ServiceInfoVolumePerHour,
 			svc.ServiceWarnVolumePerHour, svc.ServiceErrorVolumePerHour)
@@ -310,10 +310,6 @@ func (m *Model) renderSummary() string {
 	if s.OkServices > 0 {
 		parts = append(parts, okDot+" "+muted.Render(fmt.Sprintf("%d ok", s.OkServices)))
 	}
-	if s.ErrorServices > 0 {
-		errDot := status.ServiceDot(m.theme, domain.ServiceHealthError)
-		parts = append(parts, errDot+" "+muted.Render(fmt.Sprintf("%d errors", s.ErrorServices)))
-	}
 	// Hidden services (not in the table).
 	var hiddenParts []string
 	if s.DisabledServices > 0 {
@@ -344,12 +340,7 @@ func (m *Model) renderSummary() string {
 	}
 
 	sep := muted.Render(" · ")
-	result := strings.Join(parts, sep)
-	if s.Warning != "" {
-		warn := lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg)
-		result += " " + warn.Render("⚠")
-	}
-	return result
+	return strings.Join(parts, sep)
 }
 
 // renderServiceTable renders enabled services (query already excludes DISABLED/INACTIVE).
@@ -392,17 +383,8 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 }
 
 // renderServiceName renders the service name with a colored health dot or cursor arrow.
-// Warning overrides the dot color to orange.
 func (m *Model) renderServiceName(index int, svc domain.ServiceStatus) string {
 	name := svc.Name
-	switch svc.Health {
-	case domain.ServiceHealthError:
-		if svc.Error != "" {
-			name += " — " + svc.Error
-		}
-	case domain.ServiceHealthDisabled, domain.ServiceHealthInactive, domain.ServiceHealthOK:
-		// No suffix needed.
-	}
 
 	if index == m.cursor {
 		accent := lipgloss.NewStyle().Foreground(m.theme.Accent).Background(m.theme.Bg)
@@ -410,9 +392,6 @@ func (m *Model) renderServiceName(index int, svc domain.ServiceStatus) string {
 	}
 
 	dot := status.ServiceDot(m.theme, svc.Health)
-	if svc.Warning != "" {
-		dot = lipgloss.NewStyle().Foreground(m.theme.Warning).Background(m.theme.Bg).Render("●")
-	}
 	return dot + " " + name
 }
 
@@ -458,4 +437,3 @@ func (m *Model) renderVolume(svc domain.ServiceStatus) string {
 	}
 	return vol
 }
-

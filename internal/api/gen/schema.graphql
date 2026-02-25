@@ -928,8 +928,7 @@ type DatadogAccountStatusCache implements Node {
   accountID: UUID!
 
   """
-  Overall health of the Datadog account. DISABLED (integration turned off),
-  INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
+  Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
   """
   health: DatadogAccountStatusCacheHealth!
   readyForUse: Boolean!
@@ -938,7 +937,6 @@ type DatadogAccountStatusCache implements Node {
   logActiveServices: Int!
   disabledServices: Int!
   inactiveServices: Int!
-  errorServices: Int!
   okServices: Int!
   logEventCount: Int!
   logEventQuarantinedCount: Int!
@@ -967,10 +965,6 @@ type DatadogAccountStatusCache implements Node {
   observedCostPerHourAfterBytesUsd: Float
   observedCostPerHourAfterVolumeUsd: Float
   observedCostPerHourAfterUsd: Float
-  error: String
-  errorAt: Time
-  warning: String
-  warningAt: Time
   refreshedAt: Time!
 }
 
@@ -1076,16 +1070,6 @@ input DatadogAccountStatusCacheWhereInput {
   inactiveServicesGTE: Int
   inactiveServicesLT: Int
   inactiveServicesLTE: Int
-
-  """error_services field predicates"""
-  errorServices: Int
-  errorServicesNEQ: Int
-  errorServicesIn: [Int!]
-  errorServicesNotIn: [Int!]
-  errorServicesGT: Int
-  errorServicesGTE: Int
-  errorServicesLT: Int
-  errorServicesLTE: Int
 
   """ok_services field predicates"""
   okServices: Int
@@ -1410,64 +1394,6 @@ input DatadogAccountStatusCacheWhereInput {
   observedCostPerHourAfterUsdLTE: Float
   observedCostPerHourAfterUsdIsNil: Boolean
   observedCostPerHourAfterUsdNotNil: Boolean
-
-  """error field predicates"""
-  error: String
-  errorNEQ: String
-  errorIn: [String!]
-  errorNotIn: [String!]
-  errorGT: String
-  errorGTE: String
-  errorLT: String
-  errorLTE: String
-  errorContains: String
-  errorHasPrefix: String
-  errorHasSuffix: String
-  errorIsNil: Boolean
-  errorNotNil: Boolean
-  errorEqualFold: String
-  errorContainsFold: String
-
-  """error_at field predicates"""
-  errorAt: Time
-  errorAtNEQ: Time
-  errorAtIn: [Time!]
-  errorAtNotIn: [Time!]
-  errorAtGT: Time
-  errorAtGTE: Time
-  errorAtLT: Time
-  errorAtLTE: Time
-  errorAtIsNil: Boolean
-  errorAtNotNil: Boolean
-
-  """warning field predicates"""
-  warning: String
-  warningNEQ: String
-  warningIn: [String!]
-  warningNotIn: [String!]
-  warningGT: String
-  warningGTE: String
-  warningLT: String
-  warningLTE: String
-  warningContains: String
-  warningHasPrefix: String
-  warningHasSuffix: String
-  warningIsNil: Boolean
-  warningNotNil: Boolean
-  warningEqualFold: String
-  warningContainsFold: String
-
-  """warning_at field predicates"""
-  warningAt: Time
-  warningAtNEQ: Time
-  warningAtIn: [Time!]
-  warningAtNotIn: [Time!]
-  warningAtGT: Time
-  warningAtGTE: Time
-  warningAtLT: Time
-  warningAtLTE: Time
-  warningAtIsNil: Boolean
-  warningAtNotNil: Boolean
 
   """refreshed_at field predicates"""
   refreshedAt: Time
@@ -2121,6 +2047,11 @@ type LogEvent implements Node {
   activity (actor+action+resource), control (access/permission decisions).
   """
   eventNature: LogEventEventNature!
+
+  """
+  True when this event represents a multi-line fragment rather than a complete log entry. Set by the classifier.
+  """
+  isFragment: Boolean!
 
   """
   Sample log records captured during discovery, used for AI analysis and pattern validation
@@ -3450,8 +3381,6 @@ type LogEventStatusCache implements Node {
   hasVolumes: Boolean!
   hasBeenAnalyzed: Boolean!
   isQuarantined: Boolean!
-  isBroken: Boolean!
-  error: String
   policyCount: Int!
   pendingPolicyCount: Int!
   approvedPolicyCount: Int!
@@ -3535,27 +3464,6 @@ input LogEventStatusCacheWhereInput {
   """is_quarantined field predicates"""
   isQuarantined: Boolean
   isQuarantinedNEQ: Boolean
-
-  """is_broken field predicates"""
-  isBroken: Boolean
-  isBrokenNEQ: Boolean
-
-  """error field predicates"""
-  error: String
-  errorNEQ: String
-  errorIn: [String!]
-  errorNotIn: [String!]
-  errorGT: String
-  errorGTE: String
-  errorLT: String
-  errorLTE: String
-  errorContains: String
-  errorHasPrefix: String
-  errorHasSuffix: String
-  errorIsNil: Boolean
-  errorNotNil: Boolean
-  errorEqualFold: String
-  errorContainsFold: String
 
   """policy_count field predicates"""
   policyCount: Int
@@ -3932,6 +3840,10 @@ input LogEventWhereInput {
   eventNatureNEQ: LogEventEventNature
   eventNatureIn: [LogEventEventNature!]
   eventNatureNotIn: [LogEventEventNature!]
+
+  """is_fragment field predicates"""
+  isFragment: Boolean
+  isFragmentNEQ: Boolean
 
   """baseline_volume_per_hour field predicates"""
   baselineVolumePerHour: Float
@@ -5073,8 +4985,7 @@ type ServiceStatusCache implements Node {
   datadogAccountID: ID!
 
   """
-  Overall health of the service. DISABLED (integration turned off), INACTIVE (no
-  data received), ERROR (ingestion failures), OK (healthy).
+  Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
   """
   health: ServiceStatusCacheHealth!
   logEventCount: Int!
@@ -5110,10 +5021,6 @@ type ServiceStatusCache implements Node {
   observedCostPerHourAfterBytesUsd: Float
   observedCostPerHourAfterVolumeUsd: Float
   observedCostPerHourAfterUsd: Float
-  error: String
-  errorAt: Time
-  warning: String
-  warningAt: Time
   refreshedAt: Time!
 }
 
@@ -5555,64 +5462,6 @@ input ServiceStatusCacheWhereInput {
   observedCostPerHourAfterUsdLTE: Float
   observedCostPerHourAfterUsdIsNil: Boolean
   observedCostPerHourAfterUsdNotNil: Boolean
-
-  """error field predicates"""
-  error: String
-  errorNEQ: String
-  errorIn: [String!]
-  errorNotIn: [String!]
-  errorGT: String
-  errorGTE: String
-  errorLT: String
-  errorLTE: String
-  errorContains: String
-  errorHasPrefix: String
-  errorHasSuffix: String
-  errorIsNil: Boolean
-  errorNotNil: Boolean
-  errorEqualFold: String
-  errorContainsFold: String
-
-  """error_at field predicates"""
-  errorAt: Time
-  errorAtNEQ: Time
-  errorAtIn: [Time!]
-  errorAtNotIn: [Time!]
-  errorAtGT: Time
-  errorAtGTE: Time
-  errorAtLT: Time
-  errorAtLTE: Time
-  errorAtIsNil: Boolean
-  errorAtNotNil: Boolean
-
-  """warning field predicates"""
-  warning: String
-  warningNEQ: String
-  warningIn: [String!]
-  warningNotIn: [String!]
-  warningGT: String
-  warningGTE: String
-  warningLT: String
-  warningLTE: String
-  warningContains: String
-  warningHasPrefix: String
-  warningHasSuffix: String
-  warningIsNil: Boolean
-  warningNotNil: Boolean
-  warningEqualFold: String
-  warningContainsFold: String
-
-  """warning_at field predicates"""
-  warningAt: Time
-  warningAtNEQ: Time
-  warningAtIn: [Time!]
-  warningAtNotIn: [Time!]
-  warningAtGT: Time
-  warningAtGTE: Time
-  warningAtLT: Time
-  warningAtLTE: Time
-  warningAtIsNil: Boolean
-  warningAtNotNil: Boolean
 
   """refreshed_at field predicates"""
   refreshedAt: Time

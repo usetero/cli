@@ -40,15 +40,12 @@ CREATE TABLE datadog_account_statuses_cache (
     account_id TEXT, -- Account ID (denormalized from Datadog account)
     datadog_account_id TEXT, -- The Datadog account this status belongs to
     disabled_services INTEGER, -- Services with DISABLED health
-    error TEXT, -- Most recent error message from any service with ERROR health or account-level discovery
-    error_at TEXT, -- When the most recent error occurred
-    error_services INTEGER, -- Services with ERROR health
     estimated_bytes_reduction_per_hour REAL, -- Account-wide estimated bytes reduction
     estimated_cost_reduction_per_hour_bytes_usd REAL, -- Account-wide estimated bytes-based USD/hour savings
     estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated total USD/hour savings
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Account-wide estimated volume-based USD/hour savings
     estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
-    health TEXT, -- Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
+    health TEXT, -- Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
     inactive_services INTEGER, -- Services with INACTIVE health
     log_active_services INTEGER, -- Services not DISABLED or INACTIVE
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
@@ -77,9 +74,7 @@ CREATE TABLE datadog_account_statuses_cache (
     ready_for_use INTEGER, -- True when at least 1 log event has been analyzed
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour across all services
-    service_volume_per_hour REAL, -- Ground-truth throughput in events/hour from service_log_volumes across all services
-    warning TEXT, -- Most recent warning message
-    warning_at TEXT -- When the most recent warning occurred
+    service_volume_per_hour REAL -- Ground-truth throughput in events/hour from service_log_volumes across all services
 );
 
 -- Datadog integration configuration for an account, one per account
@@ -104,29 +99,11 @@ CREATE TABLE datadog_log_indexes (
     name TEXT -- Index name from Datadog (e.g., 'main', 'security', 'compliance') - this is the stable identifier
 );
 
--- Tracks health and progress of discovery operations from integration sources
-CREATE TABLE discovery_statuses (
-    id TEXT, -- Unique identifier of the discovery status record
-    account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from datadog_account.account_id.
-    completed_at TEXT, -- When the most recent iteration completed (successfully or with error)
-    consecutive_errors INTEGER, -- Number of consecutive errors (reset on success)
-    consecutive_warnings INTEGER, -- Number of consecutive warnings (reset on success)
-    created_at TEXT, -- When status tracking began
-    datadog_account_id TEXT, -- Datadog account performing the discovery (FK arc with other integrations)
-    discovery_type TEXT, -- Type of discovery operation. service: discovers services in integration, log_events: discovers event patterns for a service, log_volume: calculates per-event volume, service_log_volume: calculates per-service volume over time.
-    last_error TEXT, -- Last error message if discovery failed
-    last_error_at TEXT, -- When the last error occurred
-    last_warning TEXT, -- Last warning message (transient issues like rate limits)
-    last_warning_at TEXT, -- When the last warning occurred
-    service_id TEXT, -- Service being discovered (null for account-level service discovery)
-    started_at TEXT, -- When the most recent iteration started
-    updated_at TEXT -- When the status was last updated
-);
-
 -- Ground truth record for a field in a log event. Accumulates metadata as more production data is observed.
 CREATE TABLE log_event_fields (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
+    baseline_avg_bytes REAL, -- Current trailing 7-day volume-weighted average bytes for this attribute. Refreshed on volume ingestion.
     created_at TEXT, -- When this field was first discovered
     distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
     field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
@@ -175,12 +152,17 @@ CREATE TABLE log_event_policies (
     -- $.instrumentation_bloat.fields[] string[][] - List of field paths that are instrumentation bloat
     -- $.oversized_fields             - Oversized fields analysis (optional)
     -- $.oversized_fields.fields[]    string[][] - List of field paths that are oversized
+    -- $.wrong_level                  - Wrong level analysis (optional)
+    -- $.wrong_level.current_level    string     - Current normalized severity level
+    -- $.wrong_level.suggested_level  string     - Suggested normalized severity level
     -- 
     -- Example: json_extract(analysis, '$.field_name')
     analysis TEXT,
     approved_at TEXT, -- When this policy was approved by a user
+    approved_baseline_avg_bytes REAL, -- Baseline avg bytes frozen at approval time. Snapshot of log_event.baseline_avg_bytes.
+    approved_baseline_volume_per_hour REAL, -- Baseline volume/hour frozen at approval time. Snapshot of log_event.baseline_volume_per_hour.
     approved_by TEXT, -- User ID who approved this policy
-    category TEXT, -- Quality issue category this policy addresses. Compliance: pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage. Waste: health_checks, bot_traffic, debug_artifacts, malformed, broken_records, commodity_traffic, redundant_events, dead_weight. Quality: duplicate_fields, instrumentation_bloat, oversized_fields.
+    category TEXT, -- Quality issue category this policy addresses. Compliance: pii_leakage, secrets_leakage, phi_leakage, payment_data_leakage. Waste: health_checks, bot_traffic, debug_artifacts, malformed, broken_records, commodity_traffic, redundant_events, dead_weight. Quality: duplicate_fields, instrumentation_bloat, oversized_fields, wrong_level.
     category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), or quality (field-level improvements). Auto-set via trigger from CategoryMeta.
     created_at TEXT, -- When this policy was created
     dismissed_at TEXT, -- When this policy was dismissed by a user
@@ -256,7 +238,6 @@ CREATE TABLE log_event_statuses_cache (
     cost_per_hour_usd REAL, -- Current total cost in USD/hour (bytes + volume)
     cost_per_hour_volume_usd REAL, -- Current indexing cost in USD/hour
     dismissed_policy_count INTEGER, -- Policies dismissed by user
-    error TEXT, -- Error message when is_broken = true
     estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all policies combined
     estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour
     estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour (bytes + volume)
@@ -264,7 +245,6 @@ CREATE TABLE log_event_statuses_cache (
     estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all policies combined
     has_been_analyzed INTEGER, -- Whether AI has analyzed this log event
     has_volumes INTEGER, -- Whether volume data exists for this log event
-    is_broken INTEGER, -- Whether discovery has consecutive errors for this service
     is_quarantined INTEGER, -- Whether this log event is excluded from analysis due to repeated failures
     log_event_id TEXT, -- The log event this status belongs to
     observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval (current)
@@ -288,6 +268,8 @@ CREATE TABLE log_event_statuses_cache (
 CREATE TABLE log_events (
     id TEXT, -- Unique identifier of the log event
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from service.account_id.
+    baseline_avg_bytes REAL, -- Current trailing 7-day volume-weighted average bytes/event. Refreshed on volume ingestion.
+    baseline_volume_per_hour REAL, -- Current trailing 7-day average events/hour. Refreshed on volume ingestion.
     created_at TEXT, -- When the log event was created
     description TEXT, -- What the event is and what data instances carry. Helps engineers decide whether to look here.
     event_nature TEXT, -- What this event records: system (internal mechanics), traffic (request flow), activity (actor+action+resource), control (access/permission decisions).
@@ -357,14 +339,12 @@ CREATE TABLE service_statuses_cache (
     id TEXT,
     account_id TEXT, -- Account ID (denormalized from service)
     datadog_account_id TEXT, -- The Datadog account performing discovery
-    error TEXT, -- Most recent error from discovery (when health = ERROR)
-    error_at TEXT, -- When the error occurred
     estimated_bytes_reduction_per_hour REAL, -- Estimated bytes reduction from active policies
     estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated bytes-based USD/hour savings from active policies
     estimated_cost_reduction_per_hour_usd REAL, -- Estimated total USD/hour savings from active policies
     estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated volume-based USD/hour savings from active policies
     estimated_volume_reduction_per_hour REAL, -- Estimated volume reduction from active policies
-    health TEXT, -- Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
+    health TEXT, -- Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
     log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
     log_event_bytes_per_hour REAL, -- Discovered log event throughput in bytes/hour from rolling 7-day window
     log_event_cost_per_hour_bytes_usd REAL, -- Discovered log event ingestion cost in USD/hour
@@ -394,9 +374,7 @@ CREATE TABLE service_statuses_cache (
     service_info_volume_per_hour REAL, -- Info-level events/hour from rolling 7-day window
     service_other_volume_per_hour REAL, -- Other-level events/hour (trace, fatal, critical, unknown) from rolling 7-day window
     service_volume_per_hour REAL, -- Ground-truth service throughput in events/hour from service_log_volumes rolling 7-day window
-    service_warn_volume_per_hour REAL, -- Warn-level events/hour from rolling 7-day window
-    warning TEXT, -- Most recent warning (rate limits, etc.)
-    warning_at TEXT -- When the warning occurred
+    service_warn_volume_per_hour REAL -- Warn-level events/hour from rolling 7-day window
 );
 
 -- Application or microservice that produces logs. Central entity in the data catalog.

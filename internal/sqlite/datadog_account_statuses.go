@@ -29,17 +29,12 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		ReadyForUse: row.ReadyForUse != 0,
 
 		// Health
-		Health:    domain.ServiceHealth(fmt.Sprint(row.Health)),
-		Error:     fmt.Sprint(row.Error),
-		ErrorAt:   fmt.Sprint(row.ErrorAt),
-		Warning:   fmt.Sprint(row.Warning),
-		WarningAt: fmt.Sprint(row.WarningAt),
+		Health: domain.ServiceHealth(fmt.Sprint(row.Health)),
 
 		// Services
 		ServiceCount:     row.ServiceCount,
 		ActiveServices:   row.ActiveServices,
 		OkServices:       row.OkServices,
-		ErrorServices:    row.ErrorServices,
 		DisabledServices: row.DisabledServices,
 		InactiveServices: row.InactiveServices,
 

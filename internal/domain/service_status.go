@@ -6,7 +6,6 @@ type ServiceHealth string
 const (
 	ServiceHealthDisabled ServiceHealth = "DISABLED"
 	ServiceHealthInactive ServiceHealth = "INACTIVE"
-	ServiceHealthError    ServiceHealth = "ERROR"
 	ServiceHealthOK       ServiceHealth = "OK"
 )
 
@@ -17,12 +16,6 @@ func (s ServiceHealth) String() string { return string(s) }
 type ServiceStatus struct {
 	Name   string
 	Health ServiceHealth
-
-	// Error / warning state.
-	Error     string
-	ErrorAt   string
-	Warning   string
-	WarningAt string
 
 	// Event counts.
 	LogEventCount            int64

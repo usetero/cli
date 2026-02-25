@@ -27,7 +27,7 @@ func (s *serviceStatusesImpl) ListAllServiceStatuses(ctx context.Context) ([]dom
 	result := make([]domain.ServiceStatus, len(rows))
 	for i, row := range rows {
 		result[i] = mapServiceStatus(
-			row.ServiceName, row.Health, row.Error, row.ErrorAt, row.Warning, row.WarningAt,
+			row.ServiceName, row.Health,
 			row.LogEventCount, row.LogEventAnalyzedCount, row.LogEventQuarantinedCount,
 			row.PolicyPendingCount, row.PolicyApprovedCount, row.PolicyDismissedCount,
 			row.ServiceVolumePerHour,
@@ -58,7 +58,7 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 	result := make([]domain.ServiceStatus, len(rows))
 	for i, row := range rows {
 		result[i] = mapServiceStatus(
-			row.ServiceName, row.Health, row.Error, row.ErrorAt, row.Warning, row.WarningAt,
+			row.ServiceName, row.Health,
 			row.LogEventCount, row.LogEventAnalyzedCount, row.LogEventQuarantinedCount,
 			row.PolicyPendingCount, row.PolicyApprovedCount, row.PolicyDismissedCount,
 			row.ServiceVolumePerHour,
@@ -81,7 +81,7 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 //nolint:unparam // positional args mirror generated row fields
 func mapServiceStatus(
 	serviceName *string,
-	health, errStr, errorAt, warning, warningAt string,
+	health string,
 	eventCount, analyzedCount, quarantinedCount int64,
 	policyPending, policyApproved, policyDismissed int64,
 	svcVolume *float64,
@@ -98,12 +98,8 @@ func mapServiceStatus(
 		name = *serviceName
 	}
 	return domain.ServiceStatus{
-		Name:      name,
-		Health:    domain.ServiceHealth(health),
-		Error:     errStr,
-		ErrorAt:   errorAt,
-		Warning:   warning,
-		WarningAt: warningAt,
+		Name:   name,
+		Health: domain.ServiceHealth(health),
 
 		LogEventCount:            eventCount,
 		LogEventAnalyzedCount:    analyzedCount,

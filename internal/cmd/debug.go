@@ -95,7 +95,6 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			fmt.Println(kv(s, "Total", fmt.Sprintf("%d", ddStatus.ServiceCount)))
 			fmt.Println(kv(s, "Active", fmt.Sprintf("%d", ddStatus.ActiveServices)))
 			fmt.Println(kvStyled(s, "OK", s.Success.Render(fmt.Sprintf("%d", ddStatus.OkServices))))
-			fmt.Println(kvStyled(s, "Error", s.Error.Render(fmt.Sprintf("%d", ddStatus.ErrorServices))))
 			fmt.Println(kvStyled(s, "Inactive", s.Help.Render(fmt.Sprintf("%d", ddStatus.InactiveServices))))
 			fmt.Println(kvStyled(s, "Disabled", s.Help.Render(fmt.Sprintf("%d", ddStatus.DisabledServices))))
 

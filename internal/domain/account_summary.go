@@ -21,17 +21,12 @@ type AccountSummary struct {
 	ReadyForUse bool
 
 	// Health.
-	Health    ServiceHealth
-	Error     string
-	ErrorAt   string
-	Warning   string
-	WarningAt string
+	Health ServiceHealth
 
 	// Service counts.
 	ServiceCount     int64
 	ActiveServices   int64
 	OkServices       int64
-	ErrorServices    int64
 	DisabledServices int64
 	InactiveServices int64
 

@@ -5,16 +5,11 @@ SELECT
 
   -- health
   COALESCE(MAX(health), '') AS health,
-  COALESCE(MAX(error), '') AS error,
-  COALESCE(MAX(error_at), '') AS error_at,
-  COALESCE(MAX(warning), '') AS warning,
-  COALESCE(MAX(warning_at), '') AS warning_at,
 
   -- services
   CAST(COALESCE(SUM(log_service_count), 0) AS INTEGER) AS service_count,
   CAST(COALESCE(SUM(log_active_services), 0) AS INTEGER) AS active_services,
   CAST(COALESCE(SUM(ok_services), 0) AS INTEGER) AS ok_services,
-  CAST(COALESCE(SUM(error_services), 0) AS INTEGER) AS error_services,
   CAST(COALESCE(SUM(disabled_services), 0) AS INTEGER) AS disabled_services,
   CAST(COALESCE(SUM(inactive_services), 0) AS INTEGER) AS inactive_services,
 

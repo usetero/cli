@@ -47,7 +47,6 @@ query GetDatadogAccountStatus($id: ID!) {
                     logActiveServices
                     disabledServices
                     inactiveServices
-                    errorServices
                     okServices
                     policyPendingCount
                     policyApprovedCount
@@ -74,10 +73,6 @@ query GetDatadogAccountStatus($id: ID!) {
                     observedCostPerHourAfterBytesUsd
                     observedCostPerHourAfterVolumeUsd
                     observedCostPerHourAfterUsd
-                    error
-                    errorAt
-                    warning
-                    warningAt
                 }
             }
         }

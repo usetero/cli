@@ -2,10 +2,6 @@
 SELECT
   s.name AS service_name,
   COALESCE(ssc.health, '') AS health,
-  COALESCE(ssc.error, '') AS error,
-  COALESCE(ssc.error_at, '') AS error_at,
-  COALESCE(ssc.warning, '') AS warning,
-  COALESCE(ssc.warning_at, '') AS warning_at,
   CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
   CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
   CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
@@ -43,11 +39,10 @@ FROM service_statuses_cache ssc
 JOIN services s ON ssc.service_id = s.id
 ORDER BY
   CASE ssc.health
-    WHEN 'ERROR' THEN 1
-    WHEN 'OK' THEN 2
-    WHEN 'DISABLED' THEN 3
-    WHEN 'INACTIVE' THEN 4
-    ELSE 5
+    WHEN 'OK' THEN 1
+    WHEN 'DISABLED' THEN 2
+    WHEN 'INACTIVE' THEN 3
+    ELSE 4
   END,
   ssc.log_event_cost_per_hour_usd DESC,
   s.name;
@@ -56,10 +51,6 @@ ORDER BY
 SELECT
   s.name AS service_name,
   COALESCE(ssc.health, '') AS health,
-  COALESCE(ssc.error, '') AS error,
-  COALESCE(ssc.error_at, '') AS error_at,
-  COALESCE(ssc.warning, '') AS warning,
-  COALESCE(ssc.warning_at, '') AS warning_at,
   CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
   CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
   CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
@@ -98,9 +89,8 @@ JOIN services s ON ssc.service_id = s.id
 WHERE ssc.health NOT IN ('DISABLED', 'INACTIVE')
 ORDER BY
   CASE ssc.health
-    WHEN 'ERROR' THEN 1
-    WHEN 'OK' THEN 2
-    ELSE 3
+    WHEN 'OK' THEN 1
+    ELSE 2
   END,
   ssc.log_event_cost_per_hour_usd DESC,
   s.name

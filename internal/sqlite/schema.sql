@@ -27,9 +27,6 @@ CREATE TABLE datadog_account_statuses_cache (
     account_id TEXT,
     datadog_account_id TEXT,
     disabled_services INTEGER,
-    error TEXT,
-    error_at TEXT,
-    error_services INTEGER,
     estimated_bytes_reduction_per_hour REAL,
     estimated_cost_reduction_per_hour_bytes_usd REAL,
     estimated_cost_reduction_per_hour_usd REAL,
@@ -64,9 +61,7 @@ CREATE TABLE datadog_account_statuses_cache (
     ready_for_use INTEGER,
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL,
-    service_volume_per_hour REAL,
-    warning TEXT,
-    warning_at TEXT
+    service_volume_per_hour REAL
 );
 
 CREATE TABLE datadog_accounts (
@@ -87,24 +82,6 @@ CREATE TABLE datadog_log_indexes (
     datadog_account_id TEXT,
     last_seen_at TEXT,
     name TEXT
-);
-
-CREATE TABLE discovery_statuses (
-    id TEXT,
-    account_id TEXT,
-    completed_at TEXT,
-    consecutive_errors INTEGER,
-    consecutive_warnings INTEGER,
-    created_at TEXT,
-    datadog_account_id TEXT,
-    discovery_type TEXT,
-    last_error TEXT,
-    last_error_at TEXT,
-    last_warning TEXT,
-    last_warning_at TEXT,
-    service_id TEXT,
-    started_at TEXT,
-    updated_at TEXT
 );
 
 CREATE TABLE log_event_fields (
@@ -201,7 +178,6 @@ CREATE TABLE log_event_statuses_cache (
     cost_per_hour_usd REAL,
     cost_per_hour_volume_usd REAL,
     dismissed_policy_count INTEGER,
-    error TEXT,
     estimated_bytes_reduction_per_hour REAL,
     estimated_cost_reduction_per_hour_bytes_usd REAL,
     estimated_cost_reduction_per_hour_usd REAL,
@@ -209,7 +185,6 @@ CREATE TABLE log_event_statuses_cache (
     estimated_volume_reduction_per_hour REAL,
     has_been_analyzed INTEGER,
     has_volumes INTEGER,
-    is_broken INTEGER,
     is_quarantined INTEGER,
     log_event_id TEXT,
     observed_bytes_per_hour_after REAL,
@@ -261,8 +236,6 @@ CREATE TABLE service_statuses_cache (
     id TEXT,
     account_id TEXT,
     datadog_account_id TEXT,
-    error TEXT,
-    error_at TEXT,
     estimated_bytes_reduction_per_hour REAL,
     estimated_cost_reduction_per_hour_bytes_usd REAL,
     estimated_cost_reduction_per_hour_usd REAL,
@@ -298,9 +271,7 @@ CREATE TABLE service_statuses_cache (
     service_info_volume_per_hour REAL,
     service_other_volume_per_hour REAL,
     service_volume_per_hour REAL,
-    service_warn_volume_per_hour REAL,
-    warning TEXT,
-    warning_at TEXT
+    service_warn_volume_per_hour REAL
 );
 
 CREATE TABLE services (

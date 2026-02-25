@@ -184,8 +184,6 @@ func (m *DiscoveryModel) statusText() string {
 	switch m.status.Health {
 	case api.DatadogAccountHealthOK:
 		return "Services healthy, analyzing log patterns..."
-	case api.DatadogAccountHealthError:
-		return "Error encountered during discovery"
 	default:
 		return "Processing..."
 	}

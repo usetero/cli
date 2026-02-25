@@ -40,9 +40,6 @@ type DatadogAccountStatusesCache struct {
 	AccountID                              *string
 	DatadogAccountID                       *string
 	DisabledServices                       *int64
-	Error                                  *string
-	ErrorAt                                *string
-	ErrorServices                          *int64
 	EstimatedBytesReductionPerHour         *float64
 	EstimatedCostReductionPerHourBytesUsd  *float64
 	EstimatedCostReductionPerHourUsd       *float64
@@ -78,8 +75,6 @@ type DatadogAccountStatusesCache struct {
 	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
 	ServiceVolumePerHour                   *float64
-	Warning                                *string
-	WarningAt                              *string
 }
 
 type DatadogLogIndex struct {
@@ -90,24 +85,6 @@ type DatadogLogIndex struct {
 	DatadogAccountID            *string
 	LastSeenAt                  *string
 	Name                        *string
-}
-
-type DiscoveryStatus struct {
-	ID                  *string
-	AccountID           *string
-	CompletedAt         *string
-	ConsecutiveErrors   *int64
-	ConsecutiveWarnings *int64
-	CreatedAt           *string
-	DatadogAccountID    *string
-	DiscoveryType       *string
-	LastError           *string
-	LastErrorAt         *string
-	LastWarning         *string
-	LastWarningAt       *string
-	ServiceID           *string
-	StartedAt           *string
-	UpdatedAt           *string
 }
 
 type LogEvent struct {
@@ -221,7 +198,6 @@ type LogEventStatusesCache struct {
 	CostPerHourUsd                         *float64
 	CostPerHourVolumeUsd                   *float64
 	DismissedPolicyCount                   *int64
-	Error                                  *string
 	EstimatedBytesReductionPerHour         *float64
 	EstimatedCostReductionPerHourBytesUsd  *float64
 	EstimatedCostReductionPerHourUsd       *float64
@@ -229,7 +205,6 @@ type LogEventStatusesCache struct {
 	EstimatedVolumeReductionPerHour        *float64
 	HasBeenAnalyzed                        *int64
 	HasVolumes                             *int64
-	IsBroken                               *int64
 	IsQuarantined                          *int64
 	LogEventID                             *string
 	ObservedBytesPerHourAfter              *float64
@@ -275,8 +250,6 @@ type ServiceStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
 	DatadogAccountID                       *string
-	Error                                  *string
-	ErrorAt                                *string
 	EstimatedBytesReductionPerHour         *float64
 	EstimatedCostReductionPerHourBytesUsd  *float64
 	EstimatedCostReductionPerHourUsd       *float64
@@ -313,8 +286,6 @@ type ServiceStatusesCache struct {
 	ServiceOtherVolumePerHour              *float64
 	ServiceVolumePerHour                   *float64
 	ServiceWarnVolumePerHour               *float64
-	Warning                                *string
-	WarningAt                              *string
 }
 
 type Team struct {

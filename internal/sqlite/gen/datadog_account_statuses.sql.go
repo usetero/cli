@@ -16,16 +16,11 @@ SELECT
 
   -- health
   COALESCE(MAX(health), '') AS health,
-  COALESCE(MAX(error), '') AS error,
-  COALESCE(MAX(error_at), '') AS error_at,
-  COALESCE(MAX(warning), '') AS warning,
-  COALESCE(MAX(warning_at), '') AS warning_at,
 
   -- services
   CAST(COALESCE(SUM(log_service_count), 0) AS INTEGER) AS service_count,
   CAST(COALESCE(SUM(log_active_services), 0) AS INTEGER) AS active_services,
   CAST(COALESCE(SUM(ok_services), 0) AS INTEGER) AS ok_services,
-  CAST(COALESCE(SUM(error_services), 0) AS INTEGER) AS error_services,
   CAST(COALESCE(SUM(disabled_services), 0) AS INTEGER) AS disabled_services,
   CAST(COALESCE(SUM(inactive_services), 0) AS INTEGER) AS inactive_services,
 
@@ -74,14 +69,9 @@ FROM datadog_account_statuses_cache
 type GetAccountSummaryRow struct {
 	ReadyForUse                int64
 	Health                     interface{}
-	Error                      interface{}
-	ErrorAt                    interface{}
-	Warning                    interface{}
-	WarningAt                  interface{}
 	ServiceCount               int64
 	ActiveServices             int64
 	OkServices                 int64
-	ErrorServices              int64
 	DisabledServices           int64
 	InactiveServices           int64
 	EventCount                 int64
@@ -120,14 +110,9 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 	err := row.Scan(
 		&i.ReadyForUse,
 		&i.Health,
-		&i.Error,
-		&i.ErrorAt,
-		&i.Warning,
-		&i.WarningAt,
 		&i.ServiceCount,
 		&i.ActiveServices,
 		&i.OkServices,
-		&i.ErrorServices,
 		&i.DisabledServices,
 		&i.InactiveServices,
 		&i.EventCount,

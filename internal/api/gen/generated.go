@@ -701,8 +701,7 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache includes the requested fields of the GraphQL type DatadogAccountStatusCache.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache struct {
-	// Overall health of the Datadog account. DISABLED (integration turned off),
-	// INACTIVE (no data received), ERROR (ingestion failures), OK (healthy).
+	// Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
 	Health                                 DatadogAccountStatusCacheHealth `json:"health"`
 	ReadyForUse                            bool                            `json:"readyForUse"`
 	LogEventCount                          int                             `json:"logEventCount"`
@@ -712,7 +711,6 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	LogActiveServices                      int                             `json:"logActiveServices"`
 	DisabledServices                       int                             `json:"disabledServices"`
 	InactiveServices                       int                             `json:"inactiveServices"`
-	ErrorServices                          int                             `json:"errorServices"`
 	OkServices                             int                             `json:"okServices"`
 	PolicyPendingCount                     int                             `json:"policyPendingCount"`
 	PolicyApprovedCount                    int                             `json:"policyApprovedCount"`
@@ -739,10 +737,6 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	ObservedCostPerHourAfterBytesUsd       *float64                        `json:"observedCostPerHourAfterBytesUsd"`
 	ObservedCostPerHourAfterVolumeUsd      *float64                        `json:"observedCostPerHourAfterVolumeUsd"`
 	ObservedCostPerHourAfterUsd            *float64                        `json:"observedCostPerHourAfterUsd"`
-	Error                                  *string                         `json:"error"`
-	ErrorAt                                *time.Time                      `json:"errorAt"`
-	Warning                                *string                         `json:"warning"`
-	WarningAt                              *time.Time                      `json:"warningAt"`
 }
 
 // GetHealth returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.Health, and is useful for accessing the field via an interface.
@@ -788,11 +782,6 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetInactiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.InactiveServices, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetInactiveServices() int {
 	return v.InactiveServices
-}
-
-// GetErrorServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ErrorServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetErrorServices() int {
-	return v.ErrorServices
 }
 
 // GetOkServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.OkServices, and is useful for accessing the field via an interface.
@@ -923,26 +912,6 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetObservedCostPerHourAfterUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterUsd, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterUsd() *float64 {
 	return v.ObservedCostPerHourAfterUsd
-}
-
-// GetError returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.Error, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetError() *string {
-	return v.Error
-}
-
-// GetErrorAt returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ErrorAt, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetErrorAt() *time.Time {
-	return v.ErrorAt
-}
-
-// GetWarning returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.Warning, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetWarning() *string {
-	return v.Warning
-}
-
-// GetWarningAt returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.WarningAt, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetWarningAt() *time.Time {
-	return v.WarningAt
 }
 
 // GetDatadogAccountStatusResponse is returned by GetDatadogAccountStatus on success.
@@ -2724,7 +2693,6 @@ query GetDatadogAccountStatus ($id: ID!) {
 					logActiveServices
 					disabledServices
 					inactiveServices
-					errorServices
 					okServices
 					policyPendingCount
 					policyApprovedCount
@@ -2751,10 +2719,6 @@ query GetDatadogAccountStatus ($id: ID!) {
 					observedCostPerHourAfterBytesUsd
 					observedCostPerHourAfterVolumeUsd
 					observedCostPerHourAfterUsd
-					error
-					errorAt
-					warning
-					warningAt
 				}
 			}
 		}
