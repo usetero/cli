@@ -68,6 +68,38 @@ func fetchPolicyCard(ctx context.Context, statuses sqlite.LogEventPolicyStatuses
 		data["survival_rate"] = *policy.SurvivalRate
 	}
 
+	// Recommendation — same methods the card's viewRecommendation uses.
+	if h := policy.Headline(); h != "" {
+		data["headline"] = h
+	}
+	if m := policy.Mechanism(); m != "" {
+		data["mechanism"] = m
+	}
+
+	// Impact — same method the card's viewImpact uses.
+	if impact := policy.Impact(); impact != nil {
+		impactMap := map[string]string{}
+		if impact.VolumeFrom != "" {
+			impactMap["volume_from"] = impact.VolumeFrom
+			impactMap["volume_to"] = impact.VolumeTo
+			impactMap["volume_reduction"] = impact.VolumePct
+		}
+		if impact.StorageFrom != "" {
+			impactMap["storage_from"] = impact.StorageFrom
+			impactMap["storage_to"] = impact.StorageTo
+			impactMap["storage_reduction"] = impact.StoragePct
+		}
+		if impact.Savings != "" {
+			impactMap["savings"] = impact.Savings
+		}
+		data["impact"] = impactMap
+	}
+
+	// Evidence — same method the card's viewEvidence uses.
+	if ev := domain.BuildEvidence(policy); ev != nil {
+		data["evidence"] = summarizeEvidence(ev)
+	}
+
 	// Build card summary for AI context.
 	categoryName := policy.CategoryDisplayName
 	if categoryName == "" {
@@ -125,4 +157,52 @@ func buildCardSummary(idShort, categoryName string, p *domain.Policy) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// summarizeEvidence creates a flat map describing the evidence shown on the card.
+// Uses the same domain types that the policycard's viewEvidence dispatches on.
+func summarizeEvidence(ev domain.Evidence) map[string]any {
+	switch ev := ev.(type) {
+	case *domain.ConstantVariesEvidence:
+		constantKeys := make([]string, len(ev.Constant))
+		for i, f := range ev.Constant {
+			constantKeys[i] = f.Key + "=" + f.Value
+		}
+		varyingKeys := make([]string, len(ev.Varying))
+		for i, f := range ev.Varying {
+			varyingKeys[i] = f.Key
+		}
+		return map[string]any{
+			"type":           "constant_varies",
+			"example_count":  ev.ExampleCount,
+			"constant_count": len(ev.Constant),
+			"varying_count":  len(ev.Varying),
+			"total_fields":   len(ev.Constant) + len(ev.Varying),
+			"constant_fields": constantKeys,
+			"varying_fields":  varyingKeys,
+		}
+	case *domain.HighlightedExampleEvidence:
+		relevant := make([]string, len(ev.RelevantKeys))
+		for i, k := range ev.RelevantKeys {
+			relevant[i] = k.String()
+		}
+		return map[string]any{
+			"type":            "highlighted_example",
+			"total_fields":    len(ev.Attrs),
+			"relevant_fields": relevant,
+		}
+	case *domain.FieldListEvidence:
+		fields := make([]string, len(ev.Fields))
+		for i, f := range ev.Fields {
+			fields[i] = f.Key
+		}
+		return map[string]any{
+			"type":           "field_list",
+			"fields":         fields,
+			"total_bytes":    ev.TotalBytes,
+			"bytes_fraction": ev.BytesFraction,
+		}
+	default:
+		return nil
+	}
 }
