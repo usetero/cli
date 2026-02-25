@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/workos/workos-go/v4/pkg/usermanagement"
+	"github.com/workos/workos-go/v6/pkg/usermanagement"
 )
 
 // Client wraps the WorkOS management API, exposing only what we need.
