@@ -31,9 +31,8 @@ type AccountSummary struct {
 	InactiveServices int64
 
 	// Event counts.
-	EventCount       int64
-	AnalyzedCount    int64
-	QuarantinedCount int64
+	EventCount    int64
+	AnalyzedCount int64
 
 	// Policy counts.
 	PendingPolicyCount         int64

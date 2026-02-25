@@ -15,7 +15,6 @@ SELECT
   COALESCE(ssc.health, '') AS health,
   CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
   CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
-  CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
@@ -68,7 +67,6 @@ type ListAllServiceStatusesRow struct {
 	Health                                 string
 	LogEventCount                          int64
 	LogEventAnalyzedCount                  int64
-	LogEventQuarantinedCount               int64
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
@@ -119,7 +117,6 @@ func (q *Queries) ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceS
 			&i.Health,
 			&i.LogEventCount,
 			&i.LogEventAnalyzedCount,
-			&i.LogEventQuarantinedCount,
 			&i.PolicyPendingCount,
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,
@@ -174,7 +171,6 @@ SELECT
   COALESCE(ssc.health, '') AS health,
   CAST(COALESCE(ssc.log_event_count, 0) AS INTEGER) AS log_event_count,
   CAST(COALESCE(ssc.log_event_analyzed_count, 0) AS INTEGER) AS log_event_analyzed_count,
-  CAST(COALESCE(ssc.log_event_quarantined_count, 0) AS INTEGER) AS log_event_quarantined_count,
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
@@ -227,7 +223,6 @@ type ListEnabledServiceStatusesRow struct {
 	Health                                 string
 	LogEventCount                          int64
 	LogEventAnalyzedCount                  int64
-	LogEventQuarantinedCount               int64
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
@@ -278,7 +273,6 @@ func (q *Queries) ListEnabledServiceStatuses(ctx context.Context, rowLimit int64
 			&i.Health,
 			&i.LogEventCount,
 			&i.LogEventAnalyzedCount,
-			&i.LogEventQuarantinedCount,
 			&i.PolicyPendingCount,
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,

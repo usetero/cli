@@ -78,7 +78,6 @@ type DatadogAccountStatus struct {
 	InactiveServices     int
 	EventCount           int
 	AnalyzedCount        int
-	QuarantinedCount     int
 	PendingPolicyCount   int
 	ApprovedPolicyCount  int
 	DismissedPolicyCount int
@@ -227,7 +226,6 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		InactiveServices:     statusNode.InactiveServices,
 		EventCount:           statusNode.LogEventCount,
 		AnalyzedCount:        statusNode.LogEventAnalyzedCount,
-		QuarantinedCount:     statusNode.LogEventQuarantinedCount,
 		PendingPolicyCount:   statusNode.PolicyPendingCount,
 		ApprovedPolicyCount:  statusNode.PolicyApprovedCount,
 		DismissedPolicyCount: statusNode.PolicyDismissedCount,

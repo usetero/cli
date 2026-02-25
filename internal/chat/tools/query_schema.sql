@@ -54,7 +54,6 @@ CREATE TABLE datadog_account_statuses_cache (
     log_event_cost_per_hour_usd REAL, -- Discovered log event total cost in USD/hour across all services
     log_event_cost_per_hour_volume_usd REAL, -- Discovered log event indexing cost in USD/hour across all services
     log_event_count INTEGER, -- Total log events across all services
-    log_event_quarantined_count INTEGER, -- Log events quarantined due to repeated AI analysis failures
     log_event_volume_per_hour REAL, -- Discovered log event throughput in events/hour across all services
     log_service_count INTEGER, -- Total number of services
     observed_bytes_per_hour_after REAL, -- Account-wide observed current bytes
@@ -196,6 +195,10 @@ CREATE TABLE log_event_policy_category_statuses_cache (
     estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all pending policies in this category combined
     events_with_volumes INTEGER, -- Log events in this category that have volume data (subset of total_event_count)
     pending_count INTEGER, -- Policies awaiting user review in this category
+    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
+    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
+    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
+    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     principle TEXT, -- What this category detects — the fundamental test for membership
     refreshed_at TEXT,
     subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
@@ -249,7 +252,6 @@ CREATE TABLE log_event_statuses_cache (
     estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all policies combined
     has_been_analyzed INTEGER, -- Whether AI has analyzed this log event
     has_volumes INTEGER, -- Whether volume data exists for this log event
-    is_quarantined INTEGER, -- Whether this log event is excluded from analysis due to repeated failures
     log_event_id TEXT, -- The log event this status belongs to
     observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval (current)
     observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval
@@ -359,7 +361,6 @@ CREATE TABLE service_statuses_cache (
     log_event_cost_per_hour_usd REAL, -- Discovered log event total cost in USD/hour (bytes + volume)
     log_event_cost_per_hour_volume_usd REAL, -- Discovered log event indexing cost in USD/hour
     log_event_count INTEGER, -- Total number of log events discovered for this service
-    log_event_quarantined_count INTEGER, -- Log events quarantined due to repeated AI analysis failures
     log_event_volume_per_hour REAL, -- Discovered log event throughput in events/hour from rolling 7-day window
     observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval
     observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval

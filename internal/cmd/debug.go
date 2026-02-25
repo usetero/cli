@@ -101,7 +101,6 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			fmt.Println(section(s, "Events"))
 			fmt.Println(kv(s, "Total", fmt.Sprintf("%d", ddStatus.EventCount)))
 			fmt.Println(kv(s, "Analyzed", fmt.Sprintf("%d", ddStatus.AnalyzedCount)))
-			fmt.Println(kv(s, "Quarantined", fmt.Sprintf("%d", ddStatus.QuarantinedCount)))
 
 			fmt.Println(section(s, "Policies"))
 			fmt.Println(kv(s, "Pending", fmt.Sprintf("%d", ddStatus.PendingPolicyCount)))

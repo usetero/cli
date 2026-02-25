@@ -39,9 +39,8 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		InactiveServices: row.InactiveServices,
 
 		// Events
-		EventCount:       row.EventCount,
-		AnalyzedCount:    row.AnalyzedCount,
-		QuarantinedCount: row.QuarantinedCount,
+		EventCount:    row.EventCount,
+		AnalyzedCount: row.AnalyzedCount,
 
 		// Policies
 		PendingPolicyCount:         row.PendingPolicyCount,

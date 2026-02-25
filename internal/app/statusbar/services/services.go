@@ -217,10 +217,9 @@ func (m *Model) CloseDetail() {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%d:%s:%v:%v:%d",
+	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%s:%v:%v:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.OkServices,
-		s.QuarantinedCount,
 		s.Health,
 		s.TotalServiceVolumePerHour, s.TotalVolumePerHour,
 		len(services))

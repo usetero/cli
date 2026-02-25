@@ -28,7 +28,7 @@ func (s *serviceStatusesImpl) ListAllServiceStatuses(ctx context.Context) ([]dom
 	for i, row := range rows {
 		result[i] = mapServiceStatus(
 			row.ServiceName, row.Health,
-			row.LogEventCount, row.LogEventAnalyzedCount, row.LogEventQuarantinedCount,
+			row.LogEventCount, row.LogEventAnalyzedCount,
 			row.PolicyPendingCount, row.PolicyApprovedCount, row.PolicyDismissedCount,
 			row.PolicyPendingCriticalCount, row.PolicyPendingHighCount, row.PolicyPendingMediumCount, row.PolicyPendingLowCount,
 			row.ServiceVolumePerHour,
@@ -60,7 +60,7 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 	for i, row := range rows {
 		result[i] = mapServiceStatus(
 			row.ServiceName, row.Health,
-			row.LogEventCount, row.LogEventAnalyzedCount, row.LogEventQuarantinedCount,
+			row.LogEventCount, row.LogEventAnalyzedCount,
 			row.PolicyPendingCount, row.PolicyApprovedCount, row.PolicyDismissedCount,
 			row.PolicyPendingCriticalCount, row.PolicyPendingHighCount, row.PolicyPendingMediumCount, row.PolicyPendingLowCount,
 			row.ServiceVolumePerHour,
@@ -84,7 +84,7 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 func mapServiceStatus(
 	serviceName *string,
 	health string,
-	eventCount, analyzedCount, quarantinedCount int64,
+	eventCount, analyzedCount int64,
 	policyPending, policyApproved, policyDismissed int64,
 	pendingCritical, pendingHigh, pendingMedium, pendingLow int64,
 	svcVolume *float64,
@@ -104,9 +104,8 @@ func mapServiceStatus(
 		Name:   name,
 		Health: domain.ServiceHealth(health),
 
-		LogEventCount:            eventCount,
-		LogEventAnalyzedCount:    analyzedCount,
-		LogEventQuarantinedCount: quarantinedCount,
+		LogEventCount:         eventCount,
+		LogEventAnalyzedCount: analyzedCount,
 
 		PolicyPendingCount:         policyPending,
 		PolicyApprovedCount:        policyApproved,

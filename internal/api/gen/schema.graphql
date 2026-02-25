@@ -939,7 +939,6 @@ type DatadogAccountStatusCache implements Node {
   inactiveServices: Int!
   okServices: Int!
   logEventCount: Int!
-  logEventQuarantinedCount: Int!
   policyPendingCount: Int!
   policyApprovedCount: Int!
   policyDismissedCount: Int!
@@ -1094,16 +1093,6 @@ input DatadogAccountStatusCacheWhereInput {
   logEventCountGTE: Int
   logEventCountLT: Int
   logEventCountLTE: Int
-
-  """log_event_quarantined_count field predicates"""
-  logEventQuarantinedCount: Int
-  logEventQuarantinedCountNEQ: Int
-  logEventQuarantinedCountIn: [Int!]
-  logEventQuarantinedCountNotIn: [Int!]
-  logEventQuarantinedCountGT: Int
-  logEventQuarantinedCountGTE: Int
-  logEventQuarantinedCountLT: Int
-  logEventQuarantinedCountLTE: Int
 
   """policy_pending_count field predicates"""
   policyPendingCount: Int
@@ -2453,6 +2442,18 @@ type LogEventPolicyCategoryStatusCache implements Node {
   """Policies dismissed by user in this category"""
   dismissedCount: Int!
 
+  """Pending policies with low compliance severity"""
+  policyPendingLowCount: Int!
+
+  """Pending policies with medium compliance severity"""
+  policyPendingMediumCount: Int!
+
+  """Pending policies with high compliance severity"""
+  policyPendingHighCount: Int!
+
+  """Pending policies with critical compliance severity"""
+  policyPendingCriticalCount: Int!
+
   """Total log events that have a policy in this category"""
   totalEventCount: Int!
 
@@ -2638,6 +2639,46 @@ input LogEventPolicyCategoryStatusCacheWhereInput {
   dismissedCountGTE: Int
   dismissedCountLT: Int
   dismissedCountLTE: Int
+
+  """policy_pending_low_count field predicates"""
+  policyPendingLowCount: Int
+  policyPendingLowCountNEQ: Int
+  policyPendingLowCountIn: [Int!]
+  policyPendingLowCountNotIn: [Int!]
+  policyPendingLowCountGT: Int
+  policyPendingLowCountGTE: Int
+  policyPendingLowCountLT: Int
+  policyPendingLowCountLTE: Int
+
+  """policy_pending_medium_count field predicates"""
+  policyPendingMediumCount: Int
+  policyPendingMediumCountNEQ: Int
+  policyPendingMediumCountIn: [Int!]
+  policyPendingMediumCountNotIn: [Int!]
+  policyPendingMediumCountGT: Int
+  policyPendingMediumCountGTE: Int
+  policyPendingMediumCountLT: Int
+  policyPendingMediumCountLTE: Int
+
+  """policy_pending_high_count field predicates"""
+  policyPendingHighCount: Int
+  policyPendingHighCountNEQ: Int
+  policyPendingHighCountIn: [Int!]
+  policyPendingHighCountNotIn: [Int!]
+  policyPendingHighCountGT: Int
+  policyPendingHighCountGTE: Int
+  policyPendingHighCountLT: Int
+  policyPendingHighCountLTE: Int
+
+  """policy_pending_critical_count field predicates"""
+  policyPendingCriticalCount: Int
+  policyPendingCriticalCountNEQ: Int
+  policyPendingCriticalCountIn: [Int!]
+  policyPendingCriticalCountNotIn: [Int!]
+  policyPendingCriticalCountGT: Int
+  policyPendingCriticalCountGTE: Int
+  policyPendingCriticalCountLT: Int
+  policyPendingCriticalCountLTE: Int
 
   """total_event_count field predicates"""
   totalEventCount: Int
@@ -3424,7 +3465,6 @@ type LogEventStatusCache implements Node {
   serviceID: UUID!
   hasVolumes: Boolean!
   hasBeenAnalyzed: Boolean!
-  isQuarantined: Boolean!
   policyCount: Int!
   pendingPolicyCount: Int!
   approvedPolicyCount: Int!
@@ -3508,10 +3548,6 @@ input LogEventStatusCacheWhereInput {
   """has_been_analyzed field predicates"""
   hasBeenAnalyzed: Boolean
   hasBeenAnalyzedNEQ: Boolean
-
-  """is_quarantined field predicates"""
-  isQuarantined: Boolean
-  isQuarantinedNEQ: Boolean
 
   """policy_count field predicates"""
   policyCount: Int
@@ -5078,7 +5114,6 @@ type ServiceStatusCache implements Node {
   health: ServiceStatusCacheHealth!
   logEventCount: Int!
   logEventAnalyzedCount: Int!
-  logEventQuarantinedCount: Int!
   policyPendingCount: Int!
   policyApprovedCount: Int!
   policyDismissedCount: Int!
@@ -5190,16 +5225,6 @@ input ServiceStatusCacheWhereInput {
   logEventAnalyzedCountGTE: Int
   logEventAnalyzedCountLT: Int
   logEventAnalyzedCountLTE: Int
-
-  """log_event_quarantined_count field predicates"""
-  logEventQuarantinedCount: Int
-  logEventQuarantinedCountNEQ: Int
-  logEventQuarantinedCountIn: [Int!]
-  logEventQuarantinedCountNotIn: [Int!]
-  logEventQuarantinedCountGT: Int
-  logEventQuarantinedCountGTE: Int
-  logEventQuarantinedCountLT: Int
-  logEventQuarantinedCountLTE: Int
 
   """policy_pending_count field predicates"""
   policyPendingCount: Int

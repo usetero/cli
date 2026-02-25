@@ -16,7 +16,6 @@ SELECT
   -- events
   CAST(COALESCE(SUM(log_event_count), 0) AS INTEGER) AS event_count,
   CAST(COALESCE(SUM(log_event_analyzed_count), 0) AS INTEGER) AS analyzed_count,
-  CAST(COALESCE(SUM(log_event_quarantined_count), 0) AS INTEGER) AS quarantined_count,
 
   -- policies
   CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,

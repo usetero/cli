@@ -54,7 +54,6 @@ type DatadogAccountStatusesCache struct {
 	LogEventCostPerHourUsd                 *float64
 	LogEventCostPerHourVolumeUsd           *float64
 	LogEventCount                          *int64
-	LogEventQuarantinedCount               *int64
 	LogEventVolumePerHour                  *float64
 	LogServiceCount                        *int64
 	ObservedBytesPerHourAfter              *float64
@@ -158,6 +157,10 @@ type LogEventPolicyCategoryStatusesCache struct {
 	EstimatedVolumeReductionPerHour        *float64
 	EventsWithVolumes                      *int64
 	PendingCount                           *int64
+	PolicyPendingCriticalCount             *int64
+	PolicyPendingHighCount                 *int64
+	PolicyPendingLowCount                  *int64
+	PolicyPendingMediumCount               *int64
 	Principle                              *string
 	RefreshedAt                            *string
 	Subjective                             *int64
@@ -209,7 +212,6 @@ type LogEventStatusesCache struct {
 	EstimatedVolumeReductionPerHour        *float64
 	HasBeenAnalyzed                        *int64
 	HasVolumes                             *int64
-	IsQuarantined                          *int64
 	LogEventID                             *string
 	ObservedBytesPerHourAfter              *float64
 	ObservedBytesPerHourBefore             *float64
@@ -270,7 +272,6 @@ type ServiceStatusesCache struct {
 	LogEventCostPerHourUsd                 *float64
 	LogEventCostPerHourVolumeUsd           *float64
 	LogEventCount                          *int64
-	LogEventQuarantinedCount               *int64
 	LogEventVolumePerHour                  *float64
 	ObservedBytesPerHourAfter              *float64
 	ObservedBytesPerHourBefore             *float64

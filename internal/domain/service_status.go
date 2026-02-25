@@ -18,9 +18,8 @@ type ServiceStatus struct {
 	Health ServiceHealth
 
 	// Event counts.
-	LogEventCount            int64
-	LogEventAnalyzedCount    int64
-	LogEventQuarantinedCount int64
+	LogEventCount         int64
+	LogEventAnalyzedCount int64
 
 	// Policy counts.
 	PolicyPendingCount         int64

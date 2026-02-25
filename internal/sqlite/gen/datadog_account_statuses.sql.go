@@ -27,7 +27,6 @@ SELECT
   -- events
   CAST(COALESCE(SUM(log_event_count), 0) AS INTEGER) AS event_count,
   CAST(COALESCE(SUM(log_event_analyzed_count), 0) AS INTEGER) AS analyzed_count,
-  CAST(COALESCE(SUM(log_event_quarantined_count), 0) AS INTEGER) AS quarantined_count,
 
   -- policies
   CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,
@@ -80,7 +79,6 @@ type GetAccountSummaryRow struct {
 	InactiveServices           int64
 	EventCount                 int64
 	AnalyzedCount              int64
-	QuarantinedCount           int64
 	PendingPolicyCount         int64
 	ApprovedPolicyCount        int64
 	DismissedPolicyCount       int64
@@ -125,7 +123,6 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 		&i.InactiveServices,
 		&i.EventCount,
 		&i.AnalyzedCount,
-		&i.QuarantinedCount,
 		&i.PendingPolicyCount,
 		&i.ApprovedPolicyCount,
 		&i.DismissedPolicyCount,
