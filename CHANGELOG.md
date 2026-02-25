@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.22.0](https://github.com/usetero/cli/compare/v1.21.0...v1.22.0) (2026-02-25)
+
+
+### Features
+
+* **compliance:** show leaking vs at-risk breakdown in compliance tab ([b2e7d66](https://github.com/usetero/cli/commit/b2e7d660c1d74f6c8bfc82c396f58de0f759f5ac))
+
+
+### Bug Fixes
+
+* **deps:** complete workos-go v4 to v6 migration ([b0a477a](https://github.com/usetero/cli/commit/b0a477a65b7c4c633812e7abe1976a084a822f0c))
+* include recommendation, impact, and evidence in show tool result ([cf7d3e7](https://github.com/usetero/cli/commit/cf7d3e701681d759e3fd4e90dda9fafde65ec048))
+
 ## [1.21.0](https://github.com/usetero/cli/compare/v1.20.0...v1.21.0) (2026-02-25)
 
 
