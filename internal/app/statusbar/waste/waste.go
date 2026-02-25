@@ -352,19 +352,19 @@ func (m *Model) renderWasteHeadline() string {
 		parts = append(parts, savingStyle.Render("saving "+saving))
 	}
 
-	// Waste % + pending count. Always shown as legend for table row dots.
-	if wp := wastePercent(s); wp > 0 {
+	// Pending count + waste %. Count first for consistency with other tabs.
+	if s.PendingPolicyCount > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
 		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-		waste := dot + " " + text.Render(fmt.Sprintf("%d%% waste", wp))
-		if s.PendingPolicyCount > 0 {
-			waste += sep + text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount))
+		pending := dot + " " + text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount))
+		if wp := wastePercent(s); wp > 0 {
+			pending += sep + text.Render(fmt.Sprintf("%d%% waste", wp))
 		}
-		parts = append(parts, waste)
-	} else if s.PendingPolicyCount > 0 {
+		parts = append(parts, pending)
+	} else if wp := wastePercent(s); wp > 0 {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
 		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
-		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d policies", s.PendingPolicyCount)))
+		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d%% waste", wp)))
 	}
 
 	// Analysis progress when not yet ready.
