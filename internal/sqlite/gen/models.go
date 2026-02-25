@@ -71,6 +71,10 @@ type DatadogAccountStatusesCache struct {
 	PolicyApprovedCount                    *int64
 	PolicyDismissedCount                   *int64
 	PolicyPendingCount                     *int64
+	PolicyPendingCriticalCount             *int64
+	PolicyPendingHighCount                 *int64
+	PolicyPendingLowCount                  *int64
+	PolicyPendingMediumCount               *int64
 	ReadyForUse                            *int64
 	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
@@ -219,6 +223,10 @@ type LogEventStatusesCache struct {
 	ObservedVolumePerHourBefore            *float64
 	PendingPolicyCount                     *int64
 	PolicyCount                            *int64
+	PolicyPendingCriticalCount             *int64
+	PolicyPendingHighCount                 *int64
+	PolicyPendingLowCount                  *int64
+	PolicyPendingMediumCount               *int64
 	RefreshedAt                            *string
 	ServiceID                              *string
 	VolumePerHour                          *float64
@@ -277,6 +285,10 @@ type ServiceStatusesCache struct {
 	PolicyApprovedCount                    *int64
 	PolicyDismissedCount                   *int64
 	PolicyPendingCount                     *int64
+	PolicyPendingCriticalCount             *int64
+	PolicyPendingHighCount                 *int64
+	PolicyPendingLowCount                  *int64
+	PolicyPendingMediumCount               *int64
 	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
 	ServiceDebugVolumePerHour              *float64

@@ -33,8 +33,12 @@ func (l *logEventStatusesImpl) ListByService(ctx context.Context, serviceName st
 			VolumePerHour:       row.VolumePerHour,
 			BytesPerHour:        row.BytesPerHour,
 			CostPerHourUSD:      row.CostPerHourUsd,
-			PendingPolicyCount:  row.PendingPolicyCount,
-			ApprovedPolicyCount: row.ApprovedPolicyCount,
+			PendingPolicyCount:         row.PendingPolicyCount,
+			ApprovedPolicyCount:        row.ApprovedPolicyCount,
+			PolicyPendingCriticalCount: row.PolicyPendingCriticalCount,
+			PolicyPendingHighCount:     row.PolicyPendingHighCount,
+			PolicyPendingMediumCount:   row.PolicyPendingMediumCount,
+			PolicyPendingLowCount:      row.PolicyPendingLowCount,
 		}
 	}
 	return result, nil

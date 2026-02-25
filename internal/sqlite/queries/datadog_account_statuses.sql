@@ -22,6 +22,10 @@ SELECT
   CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,
   CAST(COALESCE(SUM(policy_approved_count), 0) AS INTEGER) AS approved_policy_count,
   CAST(COALESCE(SUM(policy_dismissed_count), 0) AS INTEGER) AS dismissed_policy_count,
+  CAST(COALESCE(SUM(policy_pending_critical_count), 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(SUM(policy_pending_high_count), 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(SUM(policy_pending_medium_count), 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(SUM(policy_pending_low_count), 0) AS INTEGER) AS policy_pending_low_count,
 
   -- estimated savings
   SUM(estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,

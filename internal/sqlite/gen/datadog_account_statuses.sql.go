@@ -33,6 +33,10 @@ SELECT
   CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,
   CAST(COALESCE(SUM(policy_approved_count), 0) AS INTEGER) AS approved_policy_count,
   CAST(COALESCE(SUM(policy_dismissed_count), 0) AS INTEGER) AS dismissed_policy_count,
+  CAST(COALESCE(SUM(policy_pending_critical_count), 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(SUM(policy_pending_high_count), 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(SUM(policy_pending_medium_count), 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(SUM(policy_pending_low_count), 0) AS INTEGER) AS policy_pending_low_count,
 
   -- estimated savings
   SUM(estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,
@@ -80,6 +84,10 @@ type GetAccountSummaryRow struct {
 	PendingPolicyCount         int64
 	ApprovedPolicyCount        int64
 	DismissedPolicyCount       int64
+	PolicyPendingCriticalCount int64
+	PolicyPendingHighCount     int64
+	PolicyPendingMediumCount   int64
+	PolicyPendingLowCount      int64
 	EstimatedCostPerHour       *float64
 	EstimatedCostPerHourBytes  *float64
 	EstimatedCostPerHourVolume *float64
@@ -121,6 +129,10 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 		&i.PendingPolicyCount,
 		&i.ApprovedPolicyCount,
 		&i.DismissedPolicyCount,
+		&i.PolicyPendingCriticalCount,
+		&i.PolicyPendingHighCount,
+		&i.PolicyPendingMediumCount,
+		&i.PolicyPendingLowCount,
 		&i.EstimatedCostPerHour,
 		&i.EstimatedCostPerHourBytes,
 		&i.EstimatedCostPerHourVolume,

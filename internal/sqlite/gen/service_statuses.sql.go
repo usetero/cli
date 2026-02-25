@@ -19,6 +19,10 @@ SELECT
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
+  CAST(COALESCE(ssc.policy_pending_critical_count, 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(ssc.policy_pending_high_count, 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(ssc.policy_pending_medium_count, 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(ssc.policy_pending_low_count, 0) AS INTEGER) AS policy_pending_low_count,
   ssc.service_volume_per_hour,
   ssc.service_debug_volume_per_hour,
   ssc.service_info_volume_per_hour,
@@ -68,6 +72,10 @@ type ListAllServiceStatusesRow struct {
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
+	PolicyPendingCriticalCount             int64
+	PolicyPendingHighCount                 int64
+	PolicyPendingMediumCount               int64
+	PolicyPendingLowCount                  int64
 	ServiceVolumePerHour                   *float64
 	ServiceDebugVolumePerHour              *float64
 	ServiceInfoVolumePerHour               *float64
@@ -115,6 +123,10 @@ func (q *Queries) ListAllServiceStatuses(ctx context.Context) ([]ListAllServiceS
 			&i.PolicyPendingCount,
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,
+			&i.PolicyPendingCriticalCount,
+			&i.PolicyPendingHighCount,
+			&i.PolicyPendingMediumCount,
+			&i.PolicyPendingLowCount,
 			&i.ServiceVolumePerHour,
 			&i.ServiceDebugVolumePerHour,
 			&i.ServiceInfoVolumePerHour,
@@ -166,6 +178,10 @@ SELECT
   CAST(COALESCE(ssc.policy_pending_count, 0) AS INTEGER) AS policy_pending_count,
   CAST(COALESCE(ssc.policy_approved_count, 0) AS INTEGER) AS policy_approved_count,
   CAST(COALESCE(ssc.policy_dismissed_count, 0) AS INTEGER) AS policy_dismissed_count,
+  CAST(COALESCE(ssc.policy_pending_critical_count, 0) AS INTEGER) AS policy_pending_critical_count,
+  CAST(COALESCE(ssc.policy_pending_high_count, 0) AS INTEGER) AS policy_pending_high_count,
+  CAST(COALESCE(ssc.policy_pending_medium_count, 0) AS INTEGER) AS policy_pending_medium_count,
+  CAST(COALESCE(ssc.policy_pending_low_count, 0) AS INTEGER) AS policy_pending_low_count,
   ssc.service_volume_per_hour,
   ssc.service_debug_volume_per_hour,
   ssc.service_info_volume_per_hour,
@@ -215,6 +231,10 @@ type ListEnabledServiceStatusesRow struct {
 	PolicyPendingCount                     int64
 	PolicyApprovedCount                    int64
 	PolicyDismissedCount                   int64
+	PolicyPendingCriticalCount             int64
+	PolicyPendingHighCount                 int64
+	PolicyPendingMediumCount               int64
+	PolicyPendingLowCount                  int64
 	ServiceVolumePerHour                   *float64
 	ServiceDebugVolumePerHour              *float64
 	ServiceInfoVolumePerHour               *float64
@@ -262,6 +282,10 @@ func (q *Queries) ListEnabledServiceStatuses(ctx context.Context, rowLimit int64
 			&i.PolicyPendingCount,
 			&i.PolicyApprovedCount,
 			&i.PolicyDismissedCount,
+			&i.PolicyPendingCriticalCount,
+			&i.PolicyPendingHighCount,
+			&i.PolicyPendingMediumCount,
+			&i.PolicyPendingLowCount,
 			&i.ServiceVolumePerHour,
 			&i.ServiceDebugVolumePerHour,
 			&i.ServiceInfoVolumePerHour,

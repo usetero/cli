@@ -943,6 +943,10 @@ type DatadogAccountStatusCache implements Node {
   policyPendingCount: Int!
   policyApprovedCount: Int!
   policyDismissedCount: Int!
+  policyPendingLowCount: Int!
+  policyPendingMediumCount: Int!
+  policyPendingHighCount: Int!
+  policyPendingCriticalCount: Int!
   serviceVolumePerHour: Float
   serviceCostPerHourVolumeUsd: Float
   logEventVolumePerHour: Float
@@ -1130,6 +1134,46 @@ input DatadogAccountStatusCacheWhereInput {
   policyDismissedCountGTE: Int
   policyDismissedCountLT: Int
   policyDismissedCountLTE: Int
+
+  """policy_pending_low_count field predicates"""
+  policyPendingLowCount: Int
+  policyPendingLowCountNEQ: Int
+  policyPendingLowCountIn: [Int!]
+  policyPendingLowCountNotIn: [Int!]
+  policyPendingLowCountGT: Int
+  policyPendingLowCountGTE: Int
+  policyPendingLowCountLT: Int
+  policyPendingLowCountLTE: Int
+
+  """policy_pending_medium_count field predicates"""
+  policyPendingMediumCount: Int
+  policyPendingMediumCountNEQ: Int
+  policyPendingMediumCountIn: [Int!]
+  policyPendingMediumCountNotIn: [Int!]
+  policyPendingMediumCountGT: Int
+  policyPendingMediumCountGTE: Int
+  policyPendingMediumCountLT: Int
+  policyPendingMediumCountLTE: Int
+
+  """policy_pending_high_count field predicates"""
+  policyPendingHighCount: Int
+  policyPendingHighCountNEQ: Int
+  policyPendingHighCountIn: [Int!]
+  policyPendingHighCountNotIn: [Int!]
+  policyPendingHighCountGT: Int
+  policyPendingHighCountGTE: Int
+  policyPendingHighCountLT: Int
+  policyPendingHighCountLTE: Int
+
+  """policy_pending_critical_count field predicates"""
+  policyPendingCriticalCount: Int
+  policyPendingCriticalCountNEQ: Int
+  policyPendingCriticalCountIn: [Int!]
+  policyPendingCriticalCountNotIn: [Int!]
+  policyPendingCriticalCountGT: Int
+  policyPendingCriticalCountGTE: Int
+  policyPendingCriticalCountLT: Int
+  policyPendingCriticalCountLTE: Int
 
   """service_volume_per_hour field predicates"""
   serviceVolumePerHour: Float
@@ -3385,6 +3429,10 @@ type LogEventStatusCache implements Node {
   pendingPolicyCount: Int!
   approvedPolicyCount: Int!
   dismissedPolicyCount: Int!
+  policyPendingLowCount: Int!
+  policyPendingMediumCount: Int!
+  policyPendingHighCount: Int!
+  policyPendingCriticalCount: Int!
   estimatedVolumeReductionPerHour: Float
   estimatedBytesReductionPerHour: Float
   volumePerHour: Float
@@ -3504,6 +3552,46 @@ input LogEventStatusCacheWhereInput {
   dismissedPolicyCountGTE: Int
   dismissedPolicyCountLT: Int
   dismissedPolicyCountLTE: Int
+
+  """policy_pending_low_count field predicates"""
+  policyPendingLowCount: Int
+  policyPendingLowCountNEQ: Int
+  policyPendingLowCountIn: [Int!]
+  policyPendingLowCountNotIn: [Int!]
+  policyPendingLowCountGT: Int
+  policyPendingLowCountGTE: Int
+  policyPendingLowCountLT: Int
+  policyPendingLowCountLTE: Int
+
+  """policy_pending_medium_count field predicates"""
+  policyPendingMediumCount: Int
+  policyPendingMediumCountNEQ: Int
+  policyPendingMediumCountIn: [Int!]
+  policyPendingMediumCountNotIn: [Int!]
+  policyPendingMediumCountGT: Int
+  policyPendingMediumCountGTE: Int
+  policyPendingMediumCountLT: Int
+  policyPendingMediumCountLTE: Int
+
+  """policy_pending_high_count field predicates"""
+  policyPendingHighCount: Int
+  policyPendingHighCountNEQ: Int
+  policyPendingHighCountIn: [Int!]
+  policyPendingHighCountNotIn: [Int!]
+  policyPendingHighCountGT: Int
+  policyPendingHighCountGTE: Int
+  policyPendingHighCountLT: Int
+  policyPendingHighCountLTE: Int
+
+  """policy_pending_critical_count field predicates"""
+  policyPendingCriticalCount: Int
+  policyPendingCriticalCountNEQ: Int
+  policyPendingCriticalCountIn: [Int!]
+  policyPendingCriticalCountNotIn: [Int!]
+  policyPendingCriticalCountGT: Int
+  policyPendingCriticalCountGTE: Int
+  policyPendingCriticalCountLT: Int
+  policyPendingCriticalCountLTE: Int
 
   """estimated_volume_reduction_per_hour field predicates"""
   estimatedVolumeReductionPerHour: Float
@@ -4994,6 +5082,10 @@ type ServiceStatusCache implements Node {
   policyPendingCount: Int!
   policyApprovedCount: Int!
   policyDismissedCount: Int!
+  policyPendingLowCount: Int!
+  policyPendingMediumCount: Int!
+  policyPendingHighCount: Int!
+  policyPendingCriticalCount: Int!
   serviceVolumePerHour: Float
   serviceDebugVolumePerHour: Float
   serviceInfoVolumePerHour: Float
@@ -5138,6 +5230,46 @@ input ServiceStatusCacheWhereInput {
   policyDismissedCountGTE: Int
   policyDismissedCountLT: Int
   policyDismissedCountLTE: Int
+
+  """policy_pending_low_count field predicates"""
+  policyPendingLowCount: Int
+  policyPendingLowCountNEQ: Int
+  policyPendingLowCountIn: [Int!]
+  policyPendingLowCountNotIn: [Int!]
+  policyPendingLowCountGT: Int
+  policyPendingLowCountGTE: Int
+  policyPendingLowCountLT: Int
+  policyPendingLowCountLTE: Int
+
+  """policy_pending_medium_count field predicates"""
+  policyPendingMediumCount: Int
+  policyPendingMediumCountNEQ: Int
+  policyPendingMediumCountIn: [Int!]
+  policyPendingMediumCountNotIn: [Int!]
+  policyPendingMediumCountGT: Int
+  policyPendingMediumCountGTE: Int
+  policyPendingMediumCountLT: Int
+  policyPendingMediumCountLTE: Int
+
+  """policy_pending_high_count field predicates"""
+  policyPendingHighCount: Int
+  policyPendingHighCountNEQ: Int
+  policyPendingHighCountIn: [Int!]
+  policyPendingHighCountNotIn: [Int!]
+  policyPendingHighCountGT: Int
+  policyPendingHighCountGTE: Int
+  policyPendingHighCountLT: Int
+  policyPendingHighCountLTE: Int
+
+  """policy_pending_critical_count field predicates"""
+  policyPendingCriticalCount: Int
+  policyPendingCriticalCountNEQ: Int
+  policyPendingCriticalCountIn: [Int!]
+  policyPendingCriticalCountNotIn: [Int!]
+  policyPendingCriticalCountGT: Int
+  policyPendingCriticalCountGTE: Int
+  policyPendingCriticalCountLT: Int
+  policyPendingCriticalCountLTE: Int
 
   """service_volume_per_hour field predicates"""
   serviceVolumePerHour: Float

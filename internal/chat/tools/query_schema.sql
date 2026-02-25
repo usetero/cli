@@ -71,6 +71,10 @@ CREATE TABLE datadog_account_statuses_cache (
     policy_approved_count INTEGER, -- Policies approved by user
     policy_dismissed_count INTEGER, -- Policies dismissed by user
     policy_pending_count INTEGER, -- Policies awaiting user action
+    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
+    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
+    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
+    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     ready_for_use INTEGER, -- True when at least 1 log event has been analyzed
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour across all services
@@ -259,6 +263,10 @@ CREATE TABLE log_event_statuses_cache (
     observed_volume_per_hour_before REAL, -- Measured events/hour before first policy approval
     pending_policy_count INTEGER, -- Policies awaiting user action
     policy_count INTEGER, -- Total non-dismissed policies
+    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
+    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
+    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
+    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     refreshed_at TEXT,
     service_id TEXT, -- Service ID (denormalized from log_event)
     volume_per_hour REAL -- Current throughput in events/hour (rolling 7-day)
@@ -366,6 +374,10 @@ CREATE TABLE service_statuses_cache (
     policy_approved_count INTEGER, -- Policies approved by user
     policy_dismissed_count INTEGER, -- Policies dismissed by user
     policy_pending_count INTEGER, -- Policies awaiting user action
+    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
+    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
+    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
+    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour based on total service volume
     service_debug_volume_per_hour REAL, -- Debug-level events/hour from rolling 7-day window

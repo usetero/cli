@@ -36,9 +36,13 @@ type AccountSummary struct {
 	QuarantinedCount int64
 
 	// Policy counts.
-	PendingPolicyCount   int64
-	ApprovedPolicyCount  int64
-	DismissedPolicyCount int64
+	PendingPolicyCount         int64
+	ApprovedPolicyCount        int64
+	DismissedPolicyCount       int64
+	PolicyPendingCriticalCount int64
+	PolicyPendingHighCount     int64
+	PolicyPendingMediumCount   int64
+	PolicyPendingLowCount      int64
 
 	// Service-level throughput (ground truth).
 	TotalServiceVolumePerHour *float64

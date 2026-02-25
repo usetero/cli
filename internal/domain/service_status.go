@@ -23,9 +23,13 @@ type ServiceStatus struct {
 	LogEventQuarantinedCount int64
 
 	// Policy counts.
-	PolicyPendingCount   int64
-	PolicyApprovedCount  int64
-	PolicyDismissedCount int64
+	PolicyPendingCount         int64
+	PolicyApprovedCount        int64
+	PolicyDismissedCount       int64
+	PolicyPendingCriticalCount int64
+	PolicyPendingHighCount     int64
+	PolicyPendingMediumCount   int64
+	PolicyPendingLowCount      int64
 
 	// Service-level throughput (ground truth from service_log_volumes). Nil when unmeasured.
 	ServiceVolumePerHour        *float64

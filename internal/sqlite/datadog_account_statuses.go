@@ -44,9 +44,13 @@ func (d *datadogAccountStatusesImpl) GetSummary(ctx context.Context) (domain.Acc
 		QuarantinedCount: row.QuarantinedCount,
 
 		// Policies
-		PendingPolicyCount:   row.PendingPolicyCount,
-		ApprovedPolicyCount:  row.ApprovedPolicyCount,
-		DismissedPolicyCount: row.DismissedPolicyCount,
+		PendingPolicyCount:         row.PendingPolicyCount,
+		ApprovedPolicyCount:        row.ApprovedPolicyCount,
+		DismissedPolicyCount:       row.DismissedPolicyCount,
+		PolicyPendingCriticalCount: row.PolicyPendingCriticalCount,
+		PolicyPendingHighCount:     row.PolicyPendingHighCount,
+		PolicyPendingMediumCount:   row.PolicyPendingMediumCount,
+		PolicyPendingLowCount:      row.PolicyPendingLowCount,
 
 		// Estimated savings
 		EstimatedCostPerHour:       row.EstimatedCostPerHour,
