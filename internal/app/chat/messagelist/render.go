@@ -31,11 +31,7 @@ func (m *Model) View() string {
 	}
 
 	output := strings.Join(lines, "\n")
-
-	return lipgloss.NewStyle().
-		PaddingLeft(outerBorderWidth).
-		PaddingRight(outerPaddingRight).
-		Render(output)
+	return output
 }
 
 // renderVisible renders only the blocks visible in the viewport.

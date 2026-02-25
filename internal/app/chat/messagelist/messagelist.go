@@ -24,9 +24,6 @@ const (
 	// outerBorderWidth is the left border on the entire message list (thick accent bar).
 	outerBorderWidth = 1
 
-	// outerPaddingRight is the right padding on the entire message list.
-	outerPaddingRight = 1
-
 	// blockGap is the number of blank lines between blocks within a round.
 	blockGap = 1
 
@@ -157,7 +154,7 @@ func (m *Model) Len() int {
 
 // contentWidth returns the width available for block content.
 func (m *Model) contentWidth() int {
-	return m.width - outerBorderWidth - outerPaddingRight
+	return m.width - outerBorderWidth
 }
 
 // blockHeight returns the line count of block at idx without rendering.

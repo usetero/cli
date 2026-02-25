@@ -22,13 +22,11 @@ import (
 const (
 	textareaHeight = 3 // visible input lines
 
-	// Layout: outerPadL(1) + border(1) + innerPadL(2) + text + innerPadR(2) + outerPadR(1)
-	outerPadLeft  = 1
-	outerPadRight = 1
+	// Layout: border(1) + innerPadL(2) + text + innerPadR(2)
 	borderWidth   = 1
 	innerPadX     = 2
 	innerPadY     = 1
-	chrome        = outerPadLeft + borderWidth + innerPadX*2 + outerPadRight
+	chrome        = borderWidth + innerPadX*2
 
 	inputBarHeight = textareaHeight + innerPadY*2 // textarea + top/bottom inner padding
 )
@@ -200,7 +198,7 @@ func (m *Model) View() string {
 	view = strings.Join(lines[:textareaHeight], "\n")
 
 	// Inner box: elevated bg, padding, matches user message block styling
-	contentWidth := m.width - outerPadLeft - outerPadRight - borderWidth
+	contentWidth := m.width - borderWidth
 	inner := lipgloss.NewStyle().
 		Background(m.theme.Bg).
 		Foreground(m.theme.Text).
@@ -216,11 +214,7 @@ func (m *Model) View() string {
 		BorderForeground(m.theme.Accent).
 		Render(inner)
 
-	// Outer padding: matches message list outer padding
-	return lipgloss.NewStyle().
-		PaddingLeft(outerPadLeft).
-		PaddingRight(outerPadRight).
-		Render(bordered)
+	return bordered
 }
 
 // SetWidth sets the width.
