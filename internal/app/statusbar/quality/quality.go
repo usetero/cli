@@ -303,11 +303,6 @@ func (m *Model) renderHeadline() string {
 		dot := lipgloss.NewStyle().Foreground(colors.Warning).Background(colors.Bg).Render("●")
 		text := lipgloss.NewStyle().Foreground(colors.Text).Background(colors.Bg)
 		parts = append(parts, dot+" "+text.Render(fmt.Sprintf("%d pending", pending)))
-
-		if cost := totalEstimatedCost(m.categories); cost > 0 {
-			ok := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-			parts = append(parts, ok.Render("~"+format.YearlyCost(cost)+" savings"))
-		}
 	}
 
 	if approved > 0 {
