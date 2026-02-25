@@ -372,8 +372,8 @@ func (m *Model) renderServiceTable(width, maxRows int) string {
 
 	for i, svc := range visible {
 		cost := "—"
-		if svc.ServiceCostPerHourVolumeUSD != nil {
-			cost = format.YearlyCost(*svc.ServiceCostPerHourVolumeUSD)
+		if svc.LogEventCostPerHourUSD != nil {
+			cost = format.YearlyCost(*svc.LogEventCostPerHourUSD)
 		}
 		tbl.Row(
 			m.renderServiceName(i, svc),

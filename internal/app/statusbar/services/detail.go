@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -77,8 +78,8 @@ func (d *detail) renderHeader() string {
 		parts = append(parts, muted.Render(fmt.Sprintf("%d log events", d.service.LogEventCount)))
 	}
 
-	if d.service.ServiceCostPerHourVolumeUSD != nil && *d.service.ServiceCostPerHourVolumeUSD > 0 {
-		parts = append(parts, muted.Render(format.YearlyCost(*d.service.ServiceCostPerHourVolumeUSD)))
+	if d.service.LogEventCostPerHourUSD != nil && *d.service.LogEventCostPerHourUSD > 0 {
+		parts = append(parts, muted.Render(format.YearlyCost(*d.service.LogEventCostPerHourUSD)))
 	}
 
 	return strings.Join(parts, sep)
@@ -92,6 +93,10 @@ func (d *detail) renderTable(width int) string {
 
 	muted := lipgloss.NewStyle().Foreground(d.theme.TextMuted).Background(d.theme.Bg)
 	accent := lipgloss.NewStyle().Foreground(d.theme.Accent).Background(d.theme.Bg)
+
+	// Compute totals for percentage display.
+	totalVol := d.totalVolume()
+	totalBytes := d.totalBytes()
 
 	for i, le := range d.logEvents {
 		name := le.Name
@@ -107,20 +112,65 @@ func (d *detail) renderTable(width int) string {
 		vol := "—"
 		if le.VolumePerHour != nil {
 			vol = format.Volume(*le.VolumePerHour) + "/hr"
+			if pct := pctOf(*le.VolumePerHour, totalVol); pct > 0 && pct < 100 {
+				vol += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
+			}
 		}
 
 		bytes := "—"
 		if le.BytesPerHour != nil {
 			bytes = format.Bytes(*le.BytesPerHour) + "/hr"
+			if pct := pctOf(*le.BytesPerHour, totalBytes); pct > 0 && pct < 100 {
+				bytes += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
+			}
 		}
 
 		cost := "—"
 		if le.CostPerHourUSD != nil {
 			cost = format.YearlyCost(*le.CostPerHourUSD)
+			if d.service.LogEventCostPerHourUSD != nil {
+				if pct := pctOf(*le.CostPerHourUSD, *d.service.LogEventCostPerHourUSD); pct > 0 && pct < 100 {
+					cost += " " + muted.Render(fmt.Sprintf("(%d%%)", pct))
+				}
+			}
 		}
 
 		tbl.Row(name, vol, bytes, cost)
 	}
 
 	return tbl.View()
+}
+
+// totalVolume returns the service-level volume total (ground truth) if
+// available, otherwise sums log event volumes as a fallback.
+func (d *detail) totalVolume() float64 {
+	if d.service.ServiceVolumePerHour != nil && *d.service.ServiceVolumePerHour > 0 {
+		return *d.service.ServiceVolumePerHour
+	}
+	var total float64
+	for _, le := range d.logEvents {
+		if le.VolumePerHour != nil {
+			total += *le.VolumePerHour
+		}
+	}
+	return total
+}
+
+// totalBytes sums log event bytes (no service-level ground truth exists).
+func (d *detail) totalBytes() float64 {
+	var total float64
+	for _, le := range d.logEvents {
+		if le.BytesPerHour != nil {
+			total += *le.BytesPerHour
+		}
+	}
+	return total
+}
+
+// pctOf returns the rounded percentage of value relative to total.
+func pctOf(value, total float64) int {
+	if total <= 0 {
+		return 0
+	}
+	return int(math.Round(value / total * 100))
 }
