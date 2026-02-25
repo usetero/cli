@@ -33,6 +33,7 @@ func TestUploader_Run(t *testing.T) {
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
 			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -57,6 +58,7 @@ func TestUploader_Run(t *testing.T) {
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
 			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -106,6 +108,7 @@ func TestUploader_Run(t *testing.T) {
 			conversations,
 			apitest.NewMockMessages(),
 			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -162,6 +165,7 @@ func TestUploader_Run(t *testing.T) {
 			apitest.NewMockConversations(),
 			apitest.NewMockMessages(),
 			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 
@@ -227,6 +231,7 @@ func TestUploader_Run(t *testing.T) {
 			conversations,
 			apitest.NewMockMessages(),
 			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
 			logtest.NewScope(t),
 		)
 

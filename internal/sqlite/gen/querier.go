@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEventPolicyParams) error
 	CountConversations(ctx context.Context) (int64, error)
 	CountFixedPIIPolicies(ctx context.Context) (int64, error)
 	CountLogEventPolicies(ctx context.Context) (int64, error)
@@ -17,6 +18,7 @@ type Querier interface {
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
 	CountServices(ctx context.Context) (int64, error)
 	DeleteMessage(ctx context.Context, id *string) error
+	DismissLogEventPolicy(ctx context.Context, arg DismissLogEventPolicyParams) error
 	GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, error)
 	GetConversation(ctx context.Context, id *string) (Conversation, error)
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)

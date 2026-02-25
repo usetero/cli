@@ -311,6 +311,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			chattools.NewShowTool(m.db),
 			map[string]chattools.ActionTool{
 				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
+				"approve_policy": chattools.NewApprovePolicyAction(m.db, func() string {
+					if m.user != nil {
+						return m.user.ID
+					}
+					return ""
+				}),
 			},
 		)
 
@@ -504,7 +510,7 @@ func (m *Model) startSync(accountID string) error {
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
 
 	// Create and start uploader
-	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.services.Services, m.scope)
+	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.services.Services, m.services.Policies, m.scope)
 	go func() {
 		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
 			m.scope.Error("uploader error", "error", err)
