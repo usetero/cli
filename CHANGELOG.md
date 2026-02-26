@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.22.1](https://github.com/usetero/cli/compare/v1.22.0...v1.22.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* add scoped-client concurrency coverage and query tool telemetry ([da0d1be](https://github.com/usetero/cli/commit/da0d1be4b94ecabec2fff55ab6d10ae0228b28eb))
+* align chat messages and input to global edge padding ([22c49bb](https://github.com/usetero/cli/commit/22c49bb93d83da9d55631a106c334716ce1975f5))
+* eliminate uploader shutdown race in app runtime ([83ea6f4](https://github.com/usetero/cli/commit/83ea6f46ddeb85a4f2704d57fafe17cdab2612e7))
+* enforce strict chat stream v2 contract and harden client state machine ([ae0238c](https://github.com/usetero/cli/commit/ae0238c6f5e0294fbf483c65b483476adb429eaf))
+* enforce strict chat stream v2 protocol and regenerate clients ([439021f](https://github.com/usetero/cli/commit/439021f66a0b60488ab4a7f663a5d7a89ba2565e))
+* harden app runtime lifecycle and db polling timeouts ([1a78fcd](https://github.com/usetero/cli/commit/1a78fcd075b03274a1cb69f169b3f6275c7ea89b))
+* harden chat stream state handling and tests ([c54a6b1](https://github.com/usetero/cli/commit/c54a6b17c4d7b4705bed1f1760970680f3c365a2))
+* harden chat/api clients and bound tool query execution ([326ac52](https://github.com/usetero/cli/commit/326ac52aa578de228ec0e40f6380689efb6200f7))
+* run chat tool execution asynchronously off the tea update loop ([49548c9](https://github.com/usetero/cli/commit/49548c91fa8c08f10c019a6fe4932e3a6b49635a))
+
 ## [1.22.0](https://github.com/usetero/cli/compare/v1.21.0...v1.22.0) (2026-02-25)
 
 
