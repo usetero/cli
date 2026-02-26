@@ -2,6 +2,23 @@
 
 How we build TUI components with Bubbletea and Lipgloss. Read this before writing any UI code.
 
+## Chat Structure (Current)
+
+For `internal/app/chat/messagelist`, keep this split:
+
+1. `update.go`: top-level message router only.
+2. `update_key.go`: keyboard handling.
+3. `update_mouse.go`: mouse event side effects.
+4. `update_lifecycle.go`: turn/stream lifecycle application.
+5. `*_reducer.go`: pure transition policy (no side effects).
+6. `projection.go`: pure viewport/layout projection used by both render and scroll math.
+
+Rule of thumb:
+
+1. Reducers decide what should happen.
+2. Handlers execute side effects (`tea.Cmd`, clipboard, DB calls via child models).
+3. Rendering must use the same projection model as viewport sizing to avoid drift.
+
 ## The Layout System
 
 This is the most important section. Most rendering bugs come from layout mistakes.

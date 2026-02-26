@@ -52,6 +52,14 @@ no duplicate fire of tool results, no next-turn duplication, no missing results.
 7. History validity:
 message order/role alternation remains valid after cancel/retry/failure.
 
+## Chat Test Layers
+
+Use three layers together:
+
+1. `internal/chat/*_test.go`: stream protocol/reducer correctness.
+2. `internal/app/chat/**/*_test.go`: turn/round orchestration and persistence policy.
+3. `internal/app/chat/messagelist/behavior_test.go`: UI behavior scenarios (cancel/retry, scroll stickiness, mouse selection policy, stale-event isolation).
+
 ## Recommended Test Matrix
 
 For any chat flow change, validate at least these scenarios:

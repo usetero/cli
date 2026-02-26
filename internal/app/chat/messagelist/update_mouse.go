@@ -2,7 +2,6 @@ package messagelist
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 )
@@ -20,8 +19,6 @@ func (m *Model) handleMouseClick(msg tea.MouseClickMsg) {
 		"blockIdx", target.blockIdx, "blockY", target.blockY,
 		"numBlocks", len(m.blocks),
 		"vpHeight", m.height)
-
-	m.logBlockHeightMismatches()
 
 	state, decision := reduceSelectionClick(
 		m.selectionState(),
@@ -86,21 +83,5 @@ func (m *Model) handleMouseWheel(msg tea.MouseWheelMsg) {
 	if delta := reduceMouseWheel(msg.Button); delta != 0 {
 		m.vp.ScrollBy(delta)
 		m.vp.UpdateFocusFromScroll()
-	}
-}
-
-func (m *Model) logBlockHeightMismatches() {
-	// Log block heights for debugging.
-	for i, b := range m.blocks {
-		rendered := m.renderBlock(b)
-		renderedH := lipgloss.Height(rendered)
-		reportedH := m.blockHeight(i)
-		if renderedH != reportedH {
-			m.scope.Warn("height mismatch",
-				"blockIdx", i,
-				"reported", reportedH,
-				"rendered", renderedH,
-				"kind", b.block.Kind())
-		}
 	}
 }
