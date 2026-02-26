@@ -16,6 +16,15 @@ func TestValidate(t *testing.T) {
 			ConversationID:      "00000000-0000-0000-0000-000000000001",
 			Messages: []Message{
 				{
+					Role: RoleUser,
+					Content: []Block{
+						{
+							Type: BlockTypeText,
+							Text: &Text{Content: "run query"},
+						},
+					},
+				},
+				{
 					Role: RoleAssistant,
 					Content: []Block{
 						{
@@ -133,7 +142,7 @@ func TestValidate(t *testing.T) {
 	t.Run("tool_result requires is_error", func(t *testing.T) {
 		t.Parallel()
 		req := newValidRequest()
-		req.Messages[1].Content[0].ToolResult.IsError = nil
+		req.Messages[2].Content[0].ToolResult.IsError = nil
 		err := Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `"is_error" is required`) {
 			t.Fatalf("error = %v", err)
@@ -144,14 +153,14 @@ func TestValidate(t *testing.T) {
 		t.Parallel()
 		req := newValidRequest()
 		yes := true
-		req.Messages[1].Content[0].ToolResult.IsError = &yes
-		req.Messages[1].Content[0].ToolResult.Content = json.RawMessage(`{"rows":[1]}`)
+		req.Messages[2].Content[0].ToolResult.IsError = &yes
+		req.Messages[2].Content[0].ToolResult.Content = json.RawMessage(`{"rows":[1]}`)
 		err := Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `"error" is required when is_error is true`) {
 			t.Fatalf("error = %v", err)
 		}
 
-		req.Messages[1].Content[0].ToolResult.Error = "boom"
+		req.Messages[2].Content[0].ToolResult.Error = "boom"
 		err = Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `"content" must be empty when is_error is true`) {
 			t.Fatalf("error = %v", err)
@@ -162,14 +171,14 @@ func TestValidate(t *testing.T) {
 		t.Parallel()
 		req := newValidRequest()
 		no := false
-		req.Messages[1].Content[0].ToolResult.IsError = &no
-		req.Messages[1].Content[0].ToolResult.Content = nil
+		req.Messages[2].Content[0].ToolResult.IsError = &no
+		req.Messages[2].Content[0].ToolResult.Content = nil
 		err := Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `"content" is required when is_error is false`) {
 			t.Fatalf("error = %v", err)
 		}
 
-		req.Messages[1].Content[0].ToolResult.Content = json.RawMessage(`{"tool_use_id":"toolu_1"}`)
+		req.Messages[2].Content[0].ToolResult.Content = json.RawMessage(`{"tool_use_id":"toolu_1"}`)
 		err = Validate(req)
 		if err == nil || !strings.Contains(err.Error(), "must not contain tool_use_id") {
 			t.Fatalf("error = %v", err)
@@ -199,7 +208,14 @@ func TestValidate(t *testing.T) {
 	t.Run("unknown tool_use_id fails", func(t *testing.T) {
 		t.Parallel()
 		req := newValidRequest()
-		req.Messages[1].Content[0].ToolResult.ToolUseID = "toolu_missing"
+		req.Messages[2].Content = append(req.Messages[2].Content, Block{
+			Type: BlockTypeToolResult,
+			ToolResult: &ToolResult{
+				ToolUseID: "toolu_missing",
+				IsError:   req.Messages[2].Content[0].ToolResult.IsError,
+				Content:   json.RawMessage(`{"rows":[2]}`),
+			},
+		})
 		err := Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `unknown tool_use_id "toolu_missing"`) {
 			t.Fatalf("error = %v", err)
@@ -219,9 +235,72 @@ func TestValidate(t *testing.T) {
 					Input: json.RawMessage(`{"sql":"select 2"}`),
 				},
 			}},
+		}, Message{
+			Role: RoleUser,
+			Content: []Block{{
+				Type: BlockTypeToolResult,
+				ToolResult: &ToolResult{
+					ToolUseID: "toolu_1",
+					IsError:   req.Messages[2].Content[0].ToolResult.IsError,
+					Content:   json.RawMessage(`{"rows":[9]}`),
+				},
+			}},
 		})
 		err := Validate(req)
 		if err == nil || !strings.Contains(err.Error(), `duplicate tool_use id "toolu_1"`) {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("tool_use must be followed by immediate user tool_result message", func(t *testing.T) {
+		t.Parallel()
+		req := newValidRequest()
+		req.Messages = []Message{
+			req.Messages[0],
+			req.Messages[1],
+		}
+		err := Validate(req)
+		if err == nil || !strings.Contains(err.Error(), "tool_use requires an immediate following user tool_result message") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("assistant turn between tool_use and tool_result fails ordering", func(t *testing.T) {
+		t.Parallel()
+		req := newValidRequest()
+		req.Messages = []Message{
+			req.Messages[0],
+			req.Messages[1],
+			{
+				Role: RoleAssistant,
+				Content: []Block{{
+					Type: BlockTypeText,
+					Text: &Text{Content: "intermediate"},
+				}},
+			},
+			req.Messages[2],
+		}
+		err := Validate(req)
+		if err == nil || !strings.Contains(err.Error(), `role "assistant" cannot repeat consecutively`) {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("consecutive roles fail", func(t *testing.T) {
+		t.Parallel()
+		req := newValidRequest()
+		req.Messages = []Message{
+			req.Messages[0],
+			{
+				Role: RoleUser,
+				Content: []Block{{
+					Type: BlockTypeText,
+					Text: &Text{Content: "again"},
+				}},
+			},
+		}
+		err := Validate(req)
+		if err == nil || !strings.Contains(err.Error(), `role "user" cannot repeat consecutively`) {
 			t.Fatalf("error = %v", err)
 		}
 	})

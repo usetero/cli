@@ -116,6 +116,9 @@ func Validate(req Request) error {
 			return fmt.Errorf("messages[%d]: %w", i, err)
 		}
 	}
+	if err := validateMessageRoleOrder(req.Messages); err != nil {
+		return err
+	}
 	for i, entity := range req.ContextEntities {
 		if err := validateContextEntity(entity); err != nil {
 			return fmt.Errorf("context_entities[%d]: %w", i, err)
@@ -230,6 +233,7 @@ func validateContextEntity(entity ContextEntity) error {
 
 func validateToolReferences(messages []Message) error {
 	seen := make(map[string]struct{})
+	resolved := make(map[string]struct{})
 	for i, msg := range messages {
 		for j, block := range msg.Content {
 			switch block.Type {
@@ -246,8 +250,76 @@ func validateToolReferences(messages []Message) error {
 				if _, exists := seen[id]; !exists {
 					return fmt.Errorf("messages[%d].content[%d]: unknown tool_use_id %q", i, j, id)
 				}
+				resolved[id] = struct{}{}
+			}
+		}
+	}
+	for id := range seen {
+		if _, ok := resolved[id]; !ok {
+			return fmt.Errorf("tool_use %q is missing a matching tool_result", id)
+		}
+	}
+	return nil
+}
+
+func validateMessageRoleOrder(messages []Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	if messages[0].Role != RoleUser {
+		return fmt.Errorf("messages[0]: first message must be role=%q", RoleUser)
+	}
+	for i := 1; i < len(messages); i++ {
+		if messages[i].Role == messages[i-1].Role {
+			return fmt.Errorf("messages[%d]: role %q cannot repeat consecutively", i, messages[i].Role)
+		}
+	}
+	for i, msg := range messages {
+		toolUseIDs := toolUseIDsInMessage(msg)
+		if len(toolUseIDs) == 0 {
+			continue
+		}
+		if msg.Role != RoleAssistant {
+			return fmt.Errorf("messages[%d]: tool_use blocks are only allowed in assistant messages", i)
+		}
+		if i+1 >= len(messages) {
+			return fmt.Errorf("messages[%d]: tool_use requires an immediate following user tool_result message", i)
+		}
+		next := messages[i+1]
+		if next.Role != RoleUser {
+			return fmt.Errorf("messages[%d]: tool_use must be followed by role=%q", i+1, RoleUser)
+		}
+		nextResultIDs := toolResultIDsInMessage(next)
+		if len(nextResultIDs) == 0 {
+			return fmt.Errorf("messages[%d]: missing tool_result blocks for prior tool_use", i+1)
+		}
+		for _, id := range toolUseIDs {
+			if _, ok := nextResultIDs[id]; !ok {
+				return fmt.Errorf("messages[%d]: missing tool_result for tool_use_id %q", i+1, id)
 			}
 		}
 	}
 	return nil
+}
+
+func toolUseIDsInMessage(msg Message) []string {
+	ids := make([]string, 0)
+	for _, block := range msg.Content {
+		if block.Type != BlockTypeToolUse || block.ToolUse == nil {
+			continue
+		}
+		ids = append(ids, block.ToolUse.ID)
+	}
+	return ids
+}
+
+func toolResultIDsInMessage(msg Message) map[string]struct{} {
+	ids := make(map[string]struct{})
+	for _, block := range msg.Content {
+		if block.Type != BlockTypeToolResult || block.ToolResult == nil {
+			continue
+		}
+		ids[block.ToolResult.ToolUseID] = struct{}{}
+	}
+	return ids
 }

@@ -121,6 +121,13 @@ func TestToWireRequest_SanitizesToolResultContent(t *testing.T) {
 		ConversationID: "00000000-0000-0000-0000-000000000001",
 		Messages: []domain.Message{
 			{
+				Role: domain.RoleUser,
+				Content: []domain.Block{{
+					Type: domain.BlockTypeText,
+					Text: &domain.TextBlock{Content: "run query"},
+				}},
+			},
+			{
 				Role: domain.RoleAssistant,
 				Content: []domain.Block{{
 					Type: domain.BlockTypeToolUse,
@@ -149,10 +156,10 @@ func TestToWireRequest_SanitizesToolResultContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("toWireRequest() error = %v", err)
 	}
-	if len(wireReq.Messages) != 2 || len(wireReq.Messages[1].Content) != 1 {
+	if len(wireReq.Messages) != 3 || len(wireReq.Messages[2].Content) != 1 {
 		t.Fatalf("unexpected wire request shape: %#v", wireReq)
 	}
-	content := wireReq.Messages[1].Content[0].ToolResult.Content
+	content := wireReq.Messages[2].Content[0].ToolResult.Content
 	var parsed map[string]any
 	if err := json.Unmarshal(content, &parsed); err != nil {
 		t.Fatalf("tool_result.content should be JSON object, got error: %v", err)
@@ -224,14 +231,34 @@ func TestToWireRequest_RejectsUnknownToolUseReference(t *testing.T) {
 				}},
 			},
 			{
-				Role: domain.RoleUser,
+				Role: domain.RoleAssistant,
 				Content: []domain.Block{{
-					Type: domain.BlockTypeToolResult,
-					ToolResult: &domain.ToolResult{
-						ToolUseID: "toolu_missing",
-						Content:   map[string]any{"rows": []any{}},
+					Type: domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:    "tool-1",
+						Name:  "query",
+						Input: json.RawMessage(`{"sql":"select 1"}`),
 					},
 				}},
+			},
+			{
+				Role: domain.RoleUser,
+				Content: []domain.Block{
+					{
+						Type: domain.BlockTypeToolResult,
+						ToolResult: &domain.ToolResult{
+							ToolUseID: "tool-1",
+							Content:   map[string]any{"rows": []any{}},
+						},
+					},
+					{
+						Type: domain.BlockTypeToolResult,
+						ToolResult: &domain.ToolResult{
+							ToolUseID: "toolu_missing",
+							Content:   map[string]any{"rows": []any{}},
+						},
+					},
+				},
 			},
 		},
 	})
