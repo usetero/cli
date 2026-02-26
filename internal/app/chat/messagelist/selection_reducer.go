@@ -29,6 +29,14 @@ type releaseDecision struct {
 	clickY     int
 }
 
+type releaseAction int
+
+const (
+	releaseActionNoop releaseAction = iota
+	releaseActionCopy
+	releaseActionClick
+)
+
 func reduceSelectionClick(state selectionState, button tea.MouseButton, point selectionPoint, hit bool) (selectionState, clickDecision) {
 	if button != tea.MouseLeft || !hit {
 		return state, clickDecision{}
@@ -68,4 +76,15 @@ func reduceSelectionRelease(state selectionState) (selectionState, releaseDecisi
 	}
 	state.mouseDown = false
 	return state, decision
+}
+
+func reduceReleaseAction(hasHighlight bool, highlightedText string) releaseAction {
+	if !hasHighlight {
+		return releaseActionClick
+	}
+	if highlightedText == "" {
+		// Treat empty extraction as a click so collapsible blocks still toggle.
+		return releaseActionClick
+	}
+	return releaseActionCopy
 }

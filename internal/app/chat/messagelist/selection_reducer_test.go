@@ -112,3 +112,31 @@ func TestReduceSelectionRelease(t *testing.T) {
 		}
 	})
 }
+
+func TestReduceReleaseAction(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no highlight becomes click", func(t *testing.T) {
+		t.Parallel()
+		got := reduceReleaseAction(false, "")
+		if got != releaseActionClick {
+			t.Fatalf("action=%v, want %v", got, releaseActionClick)
+		}
+	})
+
+	t.Run("empty extracted highlight becomes click", func(t *testing.T) {
+		t.Parallel()
+		got := reduceReleaseAction(true, "")
+		if got != releaseActionClick {
+			t.Fatalf("action=%v, want %v", got, releaseActionClick)
+		}
+	})
+
+	t.Run("non-empty highlight becomes copy", func(t *testing.T) {
+		t.Parallel()
+		got := reduceReleaseAction(true, "hello")
+		if got != releaseActionCopy {
+			t.Fatalf("action=%v, want %v", got, releaseActionCopy)
+		}
+	})
+}

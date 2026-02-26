@@ -81,25 +81,26 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.setSelectionState(state)
 		if decision.handle {
 			hl := m.hasHighlight()
+			text := ""
+			if hl {
+				text = m.extractHighlight()
+			}
+			action := reduceReleaseAction(hl, text)
 			m.scope.Debug("release",
 				"mouseDownBlock", m.mouseDownBlock,
 				"hasHighlight", hl,
+				"action", action,
 				"downX", m.mouseDownX, "downY", m.mouseDownY,
 				"dragBlock", m.mouseDragBlock,
 				"dragX", m.mouseDragX, "dragY", m.mouseDragY)
-			if hl {
-				text := m.extractHighlight()
-				if text != "" {
-					cmds = append(cmds, tea.SetClipboard(text))
-					cmds = append(cmds, func() tea.Msg {
-						_ = clipboard.WriteAll(text)
-						return appmsg.Success{Message: "Copied to clipboard"}
-					})
-				} else {
-					m.scope.Debug("release: empty highlight, treating as click")
-					m.handleBlockClick(decision.clickBlock, decision.clickY)
-				}
-			} else {
+			switch action {
+			case releaseActionCopy:
+				cmds = append(cmds, tea.SetClipboard(text))
+				cmds = append(cmds, func() tea.Msg {
+					_ = clipboard.WriteAll(text)
+					return appmsg.Success{Message: "Copied to clipboard"}
+				})
+			case releaseActionClick:
 				m.handleBlockClick(decision.clickBlock, decision.clickY)
 			}
 		}
