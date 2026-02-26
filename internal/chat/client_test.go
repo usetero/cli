@@ -3,6 +3,7 @@ package chat_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -349,6 +350,59 @@ data: [DONE]
 		if string(lastMessage.Content[0].ToolUse.Input) != expectedInput {
 			t.Errorf("ToolUse.Input = %q, want %q", string(lastMessage.Content[0].ToolUse.Input), expectedInput)
 		}
+	})
+
+	t.Run("WithAccountID remains stable during concurrent base account switches", func(t *testing.T) {
+		t.Parallel()
+
+		httpClient := &mockHTTPClient{
+			doFunc: func(req *http.Request) (*http.Response, error) {
+				if got := req.Header.Get("X-Account-ID"); got != "acc-scoped" {
+					return nil, fmt.Errorf("unexpected account header %q", got)
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+					Body:       io.NopCloser(strings.NewReader("data: [DONE]\n")),
+				}, nil
+			},
+		}
+
+		mockAuth := &authtest.MockAuth{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+		}
+
+		base := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+		base.SetAccountID("acc-base")
+		scoped := base.WithAccountID("acc-scoped")
+
+		stop := make(chan struct{})
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					base.SetAccountID("acc-a")
+					base.SetAccountID("acc-b")
+				}
+			}
+		}()
+
+		for i := 0; i < 100; i++ {
+			if _, err := scoped.Stream(context.Background(), chat.Request{}, nil); err != nil {
+				close(stop)
+				<-done
+				t.Fatalf("scoped Stream() error at iter %d: %v", i, err)
+			}
+		}
+
+		close(stop)
+		<-done
 	})
 }
 

@@ -14,6 +14,7 @@ Test behavior and invariants first. Coverage is a lagging indicator, not the goa
 2. Mock only expensive or external boundaries.
 3. Model async behavior with explicit messages and command draining.
 4. Add a regression test for every production bug fix.
+5. Add concurrency tests whenever scope/context is mutable or switchable at runtime.
 
 ## Chat Invariants (Must Stay Tested)
 
@@ -48,6 +49,11 @@ Test behavior and invariants first. Coverage is a lagging indicator, not the goa
 2. Execute and inspect returned commands explicitly.
 3. Keep `View` tests focused on rendering contracts.
 4. Keep transition logic in pure reducers where possible.
+
+## Client Scoping Tests
+
+1. Cover `WithAccountID` behavior under rapid account switching.
+2. Assert request headers use the intended account, not whichever account was set last.
 
 ## What Not To Test
 

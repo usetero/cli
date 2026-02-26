@@ -32,6 +32,12 @@ Characteristics:
 2. SQLite is a read-optimized replica/cache.
 3. Local projection bugs must never redefine business truth.
 
+## Runtime Policy
+
+1. Database operations should use `sqlite.WithTimeout(...)` unless a stricter deadline is already set.
+2. Account scoping should prefer immutable scoped clients (`WithAccountID`) over mutating shared clients.
+3. Chat query-tool results are intentionally capped (rows and bytes) to keep the TUI responsive.
+
 ## Chat Data Guarantees
 
 1. Message history persists in SQLite.

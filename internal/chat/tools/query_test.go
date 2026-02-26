@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
@@ -30,7 +31,7 @@ func TestCheckQueryPlan(t *testing.T) {
 		}
 	}
 
-	tool := NewQueryTool(db)
+	tool := NewQueryTool(db, logtest.NewScope(t))
 
 	t.Run("simple select passes", func(t *testing.T) {
 		t.Parallel()
@@ -91,7 +92,7 @@ func TestQueryToolExecute_CapsLargeResults(t *testing.T) {
 		}
 	}
 
-	tool := NewQueryTool(db)
+	tool := NewQueryTool(db, logtest.NewScope(t))
 	input, err := json.Marshal(map[string]any{
 		"sql":    "SELECT id, payload FROM test_rows ORDER BY id",
 		"status": "running",

@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain/tools"
+	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -17,12 +19,13 @@ var querySchema string
 
 // QueryTool executes read-only SQL queries against the local catalog.
 type QueryTool struct {
-	db sqlite.DB
+	db    sqlite.DB
+	scope log.Scope
 }
 
 // NewQueryTool creates a new query tool.
-func NewQueryTool(db sqlite.DB) *QueryTool {
-	return &QueryTool{db: db}
+func NewQueryTool(db sqlite.DB, scope log.Scope) *QueryTool {
+	return &QueryTool{db: db, scope: scope.Child("query_tool")}
 }
 
 // Name returns the tool name.
@@ -82,6 +85,7 @@ Pull each column you need as a separate subquery. This applies to all tables.`, 
 
 // Execute runs the query and returns a typed result.
 func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
+	start := time.Now()
 	var in tools.QueryInput
 	if err := json.Unmarshal(input, &in); err != nil {
 		return tools.QueryResult{}, err
@@ -148,7 +152,21 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 		return tools.QueryResult{}, err
 	}
 
-	return tools.QueryResult{Rows: results, RowsDropped: rowsDropped}, nil
+	result := tools.QueryResult{Rows: results, RowsDropped: rowsDropped}
+	duration := time.Since(start)
+	if rowsDropped > 0 {
+		t.scope.Info("query result capped",
+			"duration", duration,
+			"rows_returned", len(result.Rows),
+			"rows_dropped", rowsDropped,
+		)
+	} else {
+		t.scope.Debug("query executed",
+			"duration", duration,
+			"rows_returned", len(result.Rows),
+		)
+	}
+	return result, nil
 }
 
 const (
