@@ -27,6 +27,7 @@ type Config struct {
 type Model struct {
 	scope    log.Scope
 	index    int
+	turnID   string
 	toolID   string
 	state    tools.State
 	config   Config
@@ -39,10 +40,11 @@ type Model struct {
 }
 
 // New creates a new generic action tool model.
-func New(index int, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
+func New(index int, turnID, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
 	return &Model{
 		scope:    scope,
 		index:    index,
+		turnID:   turnID,
 		toolID:   toolID,
 		state:    tools.StateAccumulating,
 		config:   config,
@@ -100,6 +102,7 @@ func (m *Model) execute() tea.Cmd {
 func (m *Model) fireCompleted() tea.Cmd {
 	return func() tea.Msg {
 		return msgs.ToolCompleted{
+			TurnID:    m.turnID,
 			ToolUseID: m.toolID,
 			Result:    m.result,
 			Error:     m.err,

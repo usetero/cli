@@ -1,244 +1,118 @@
 # Testing
 
-Test behavior, not implementation. A good test breaks when something stops working, not when you refactor.
+Test behavior and invariants, not fields and implementation details.
 
-## Three Types of Tests
+For chat specifically, treat the system as a state machine with async events. The highest-value tests prove we never enter invalid states under cancellation, tool fan-out, and streaming order edge cases.
 
-**Unit tests** run fast with no external services. Use real local deps (SQLite, theme), mock remote ones (APIs).
+## Test Types
+
+**Unit tests**: fast, deterministic, no network.
 
 ```bash
 task test
 ```
 
-**Integration tests** hit real services. They require credentials and catch bugs that mocks hide.
+**Integration tests**: real services, credentials required.
 
 ```bash
 task test:integration
 ```
 
-**Correctness tests** verify external services behave as documented. They test assumptions, not our code.
+**Correctness tests**: verify external contracts and assumptions.
 
 ```bash
 task test:correctness
 ```
 
-## Writing Tests
+## Core Principles
 
-### Test Behavior
+1. Use real local dependencies (SQLite, theme, logger) whenever possible.
+2. Mock only external or expensive dependencies.
+3. Model async behavior with explicit messages, not sleeps.
+4. Prefer scenario-based subtests over one-off assertions.
+5. Every bug fix in chat flow adds a regression test.
 
-Bad: test that a field gets set.
-Good: test that `HasError()` returns true after an error.
+## Chat Invariants
 
-The first breaks when you rename the field. The second only breaks when behavior changes.
+These invariants should be encoded in tests across `internal/chat` and `internal/app/chat`.
 
-### Use Subtests
+1. Event ordering:
+`seq` is monotonic per turn; out-of-order events are rejected.
+2. Turn scoping:
+events and tool completions for one turn never mutate another turn.
+3. Terminal semantics:
+a stream ends in exactly one of `completed`, `tool_use`, `aborted`, or `failed`.
+4. Cancellation semantics:
+`user_cancelled` is not treated as an error.
+5. Persistence policy:
+user-cancelled partial assistant output is not persisted as a committed assistant turn.
+Non-user aborts may be persisted with `stop_reason=aborted`.
+6. Tool loop integrity:
+no duplicate fire of tool results, no next-turn duplication, no missing results.
+7. History validity:
+message order/role alternation remains valid after cancel/retry/failure.
 
-One test function per method. Use `t.Run()` for scenarios:
+## Recommended Test Matrix
 
-```go
-func TestSync_Connect(t *testing.T) {
-    t.Run("returns auth error on 401", func(t *testing.T) {
-        // ...
-    })
-    
-    t.Run("retries on 503", func(t *testing.T) {
-        // ...
-    })
-}
-```
+For any chat flow change, validate at least these scenarios:
 
-### Real vs Mock
+1. `end_turn` success.
+2. `tool_use` followed by all tool results.
+3. tool results arriving before stream completion.
+4. user cancel mid-stream.
+5. non-user abort (context/network boundary).
+6. stream failure before first assistant block.
+7. rapid resubmit after cancel.
+8. duplicate lifecycle message defense (`ToolResultsReady`, stream done).
 
-Use real things when they're cheap. Mock only what's expensive or external.
+## Bubble Tea Testing Strategy
 
-| Dependency | Strategy | Why |
-|------------|----------|-----|
-| SQLite | Real — `sqlitetest.OpenBareDB(t)` or `dbtest.OpenTestDB(t)` | Local, fast, tmpdir-based, auto-cleanup |
-| Theme | Real — `styles.NewTheme(true)` | Just a struct with colors |
-| Logger | Real — `logtest.NewScope(t)` | Writes to `testing.T`, shows on failure |
-| Chat API | Mock — `chattest.MockClient{}` | Hits remote server |
-| Tool registry | `nil` or partial — `&chattools.Registry{Query: ...}` | Only construct what you're testing |
+Bubble Tea is testable if you separate reducers/state updates from rendering.
 
-The rule: if you can construct it in a test without network, credentials, or slow setup, use the real thing. Mocks hide bugs.
+1. Drive state via message updates (`Update`) and drain commands explicitly.
+2. Assert state transitions and emitted messages.
+3. Keep `View()` tests focused on rendering contracts, not business logic.
 
-### Mock with Structs
+Use helpers:
 
-When you do need mocks, don't use mocking frameworks. Write simple structs:
-
-```go
-type mockClient struct {
-    doFunc func(req *http.Request) (*http.Response, error)
-}
-
-func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
-    return m.doFunc(req)
-}
-```
-
-### Choose Internal or External Package
-
-External package (`package foo_test`) tests the public API. Prefer this when it gives you confidence—it survives refactoring better.
-
-Internal package (`package foo`) can access unexported functions. Use this when you need to test internals that matter.
-
-Pick whichever gives you more confidence. It's not a hard rule.
-
-### Run Tests in Parallel
-
-```go
-func TestSync_Connect(t *testing.T) {
-    t.Parallel()
-    
-    t.Run("returns auth error on 401", func(t *testing.T) {
-        t.Parallel()
-        // ...
-    })
-}
-```
-
-Exception: tests using `t.Setenv()` can't run in parallel.
-
-### Use Test Helpers
-
-Use the `*test` packages for common test doubles:
-
-```go
-import (
-    "github.com/usetero/cli/internal/log/logtest"
-    "github.com/usetero/cli/internal/chat/chattest"
-    "github.com/usetero/cli/internal/sqlite/sqlitetest"
-)
-
-func TestFoo(t *testing.T) {
-    logger := logtest.New(t)  // logs appear on test failure
-    client := &chattest.MockClient{...}
-    db := sqlitetest.OpenBareDB(t)
-}
-```
-
-`logtest.New(t)` is preferred over discarding logs—you'll want them when debugging failures.
-
-## File Naming
-
-| Type | File | Build Tag | Function Prefix |
-|------|------|-----------|-----------------|
-| Unit | `foo_test.go` | none | `Test` |
-| Integration | `foo_integration_test.go` | `//go:build integration` | `TestIntegration_` |
-| Correctness | `foo_correctness_test.go` | `//go:build correctness` | `TestCorrectness_` |
+| Package | Purpose |
+|---------|---------|
+| `teatest` | Drain command loops; width and ANSI assertions |
+| `logtest` | Scoped logger tied to `testing.T` |
+| `dbtest` / `sqlitetest` | Real local DB fixtures |
+| `chattest` | Mock chat client |
 
 ## Testing `View()`
 
-`View()` is a public method that returns a string. Test it like any other method — given state and inputs, assert the output behaves correctly.
+Treat rendering as a contract:
 
-The one TUI-specific detail: output contains ANSI escape codes, so use `ansi.StringWidth` instead of `len()` to measure visible width. The `teatest` package provides assertion helpers for this.
+1. Width never exceeded.
+2. ANSI sequences remain valid.
+3. Construction-time and post-resize paths both render correctly.
+4. Parent-child render chains are tested with real models.
 
-### Width Contract
+## What Not to Test
 
-Every component must render within its assigned width. This is the core behavioral invariant for `View()`:
+Skip low-value tests:
 
-```go
-func TestQuery_View(t *testing.T) {
-    t.Run("respects width", func(t *testing.T) {
-        m := New(theme, scope)
-        m.SetWidth(80)
-        // populate with data...
+1. Trivial getters/setters.
+2. Framework internals.
+3. One-line delegators with no behavior.
 
-        teatest.AssertMaxWidth(t, 80, m.View())
-    })
-}
-```
+## File Naming
 
-Test at multiple widths to catch edge cases:
+| Type | File | Build Tag | Prefix |
+|------|------|-----------|--------|
+| Unit | `*_test.go` | none | `Test` |
+| Integration | `*_integration_test.go` | `integration` | `TestIntegration_` |
+| Correctness | `*_correctness_test.go` | `correctness` | `TestCorrectness_` |
 
-```go
-for _, width := range []int{40, 80, 120, 200} {
-    t.Run(fmt.Sprintf("width_%d", width), func(t *testing.T) {
-        // ...
-        teatest.AssertMaxWidth(t, width, m.View())
-    })
-}
-```
+## PR Checklist for Chat Changes
 
-### Test the Real Rendering Chain
+Before merging a chat-related change:
 
-Parent components wrap child `View()` output with padding, borders, etc. Test with real models to catch width accounting bugs between layers:
-
-```go
-// BAD: simulating the parent's rendering with manual lipgloss calls
-body := lipgloss.NewStyle().PaddingLeft(2).Render(childView)
-
-// GOOD: using real models — catches disagreements between parent and child
-parent := assistant.New(theme, "id", width, nil, scope)
-parent.AddBlock(realToolModel)
-teatest.AssertMaxWidth(t, width, parent.View())
-```
-
-### Test Construction-Time Rendering
-
-Components may render before `SetWidth` is called (e.g. a query completes during streaming before any resize event). Test both paths:
-
-```go
-// Path 1: construction-time width only (no SetWidth call)
-m := New(theme, "id", width, nil, scope)
-m.AddBlock(tool)
-teatest.AssertMaxWidth(t, width, m.View())
-
-// Path 2: after explicit SetWidth
-m.SetWidth(newWidth)
-teatest.AssertMaxWidth(t, newWidth, m.View())
-```
-
-### ANSI Integrity
-
-Components that render styled text can break ANSI escape sequences when slicing strings by byte offset instead of visible position. Use `AssertNoRawEscapes` to catch this:
-
-```go
-func TestView(t *testing.T) {
-    t.Run("no raw escape sequences", func(t *testing.T) {
-        m := New(theme)
-        m.SetWidth(50)
-
-        teatest.AssertNoRawEscapes(t, m.View())
-    })
-}
-```
-
-This catches bugs like `view[:bytePos]` slicing through a `\x1b[38;2;110;231;183m` color code, leaving raw `38;2;110;231;183m` visible to the user.
-
-### Test Helpers
-
-| Package | Import | Use |
-|---------|--------|-----|
-| `teatest` | `github.com/usetero/cli/internal/tea/teatest` | `AssertMaxWidth()` — no line exceeds width; `AssertExactWidth()` — widest line equals width; `AssertNoRawEscapes()` — no broken ANSI sequences |
-| `logtest` | `github.com/usetero/cli/internal/log/logtest` | `NewScope(t)` for test loggers |
-| `styles` | `github.com/usetero/cli/internal/styles` | `NewTheme(true)` for dark theme in tests |
-
-### Reference Tests
-
-- `assistant_test.go` — full rendering chain: assistant → tool → query
-- `query_test.go` — single component width testing at multiple widths
-- `palette_test.go` — ANSI integrity + width at multiple sizes
-- `input_test.go` — cursor marker insertion doesn't break escapes
-
-## What to Test
-
-Test:
-- State transitions
-- Error handling
-- Coordination between components
-- Edge cases that could break
-
-Skip:
-- One-line delegators
-- Simple getters
-- Framework behavior
-- Code you're about to delete
-
-## What Makes Tests Good
-
-- Fast (mock external deps)
-- Deterministic (no randomness, no timing)
-- Clear failures (you know what broke)
-- Resilient (survive refactoring)
-
-The goal is confidence. When tests pass, you ship.
+1. `internal/chat` reducer/client tests cover new lifecycle paths.
+2. `internal/app/chat` tests cover orchestration and DB outcomes.
+3. At least one regression test reproduces the issue fixed.
+4. `go test ./internal/chat ./internal/app/chat/...` passes.
+5. New invariants are documented here if behavior changed.

@@ -22,19 +22,21 @@ type Model struct {
 	blockTheme   styles.Theme // theme with elevated bg for blocks
 	scope        log.Scope
 	id           domain.MessageID
+	turnID       domain.MessageID
 	blocks       []blocks.Block
 	width        int
 	toolRegistry *chattools.Registry
 }
 
 // New creates a new assistant message view.
-func New(theme styles.Theme, id domain.MessageID, width int, toolRegistry *chattools.Registry, scope log.Scope) *Model {
+func New(theme styles.Theme, turnID, id domain.MessageID, width int, toolRegistry *chattools.Registry, scope log.Scope) *Model {
 	scope = scope.Child("assistant")
 	return &Model{
 		theme:        theme,
 		blockTheme:   theme.WithBg(theme.BgElevated),
 		scope:        scope,
 		id:           id,
+		turnID:       turnID,
 		width:        width,
 		toolRegistry: toolRegistry,
 	}
@@ -154,16 +156,16 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 	var child tools.Child
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
-		child = query.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Query, m.scope)
+		child = query.New(m.blockTheme, index, m.turnID.String(), toolUse.ID, width, m.toolRegistry.Query, m.scope)
 	case m.toolRegistry.Show != nil && toolUse.Name == m.toolRegistry.Show.Name():
-		child = show.New(m.blockTheme, index, toolUse.ID, width, m.toolRegistry.Show, m.scope)
+		child = show.New(m.blockTheme, index, m.turnID.String(), toolUse.ID, width, m.toolRegistry.Show, m.scope)
 	default:
 		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
 		if !ok {
 			m.scope.Warn("unknown tool, using generic action", "name", toolUse.Name)
 			entry = chattools.UnknownTool(toolUse.Name)
 		}
-		child = action.New(index, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
+		child = action.New(index, m.turnID.String(), toolUse.ID, width, entry.Config, entry.Exec, m.scope)
 	}
 	return tools.New(m.blockTheme, index, toolUse.ID, width, child)
 }

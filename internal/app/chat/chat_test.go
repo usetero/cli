@@ -67,6 +67,28 @@ func failingClient() *chattest.MockClient {
 	}
 }
 
+func abortedClient(reason string) *chattest.MockClient {
+	return &chattest.MockClient{
+		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+			msg := &domain.Message{
+				ID:      "asst-1",
+				Model:   "test-model",
+				Content: []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "partial"}}},
+			}
+			onSnapshot(chat.StreamSnapshot{
+				ConversationID: "conv-1",
+				TurnID:         "turn-1",
+				Seq:            1,
+				Status:         chat.StreamStatusAborted,
+				AbortReason:    reason,
+				Done:           true,
+				Message:        msg,
+			})
+			return &chat.StreamResult{Message: msg}, nil
+		},
+	}
+}
+
 // submitAndDrain sends a UserSubmittedInput and drains the cmd loop.
 func submitAndDrain(m *Model, text string, maxSteps int) {
 	cmd := m.Update(msgs.UserSubmittedInput{Text: text})
@@ -138,6 +160,46 @@ func TestStreamFailed(t *testing.T) {
 		messages := listMessages(t, m)
 		if len(messages) != 0 {
 			t.Errorf("expected 0 messages after stream failure, got %d (roles: %v)", len(messages), messageRoles(messages))
+		}
+	})
+}
+
+func TestStreamAborted(t *testing.T) {
+	t.Parallel()
+
+	t.Run("non-user abort persists partial assistant message", func(t *testing.T) {
+		t.Parallel()
+		m := newTestChat(t, abortedClient("context_canceled"))
+
+		submitAndDrain(m, "hello", 40)
+
+		messages := listMessages(t, m)
+		if len(messages) != 2 {
+			t.Fatalf("expected 2 messages, got %d (roles: %v)", len(messages), messageRoles(messages))
+		}
+		if messages[0].Role != domain.RoleUser {
+			t.Fatalf("message 0 role = %s, want user", messages[0].Role)
+		}
+		if messages[1].Role != domain.RoleAssistant {
+			t.Fatalf("message 1 role = %s, want assistant", messages[1].Role)
+		}
+		if messages[1].StopReason != "aborted" {
+			t.Fatalf("assistant stop_reason = %q, want %q", messages[1].StopReason, "aborted")
+		}
+	})
+
+	t.Run("user_cancelled abort does not persist assistant message", func(t *testing.T) {
+		t.Parallel()
+		m := newTestChat(t, abortedClient("user_cancelled"))
+
+		submitAndDrain(m, "hello", 40)
+
+		messages := listMessages(t, m)
+		if len(messages) != 1 {
+			t.Fatalf("expected 1 message, got %d (roles: %v)", len(messages), messageRoles(messages))
+		}
+		if messages[0].Role != domain.RoleUser {
+			t.Fatalf("message role = %s, want user", messages[0].Role)
 		}
 	})
 }

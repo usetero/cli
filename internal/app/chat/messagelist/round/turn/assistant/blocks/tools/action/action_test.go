@@ -26,7 +26,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("accumulates input from content blocks", func(t *testing.T) {
 		t.Parallel()
 
-		m := New(0, "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
 
 		m.Update(msgs.AssistantContentUpdated{
 			Message: domain.Message{
@@ -48,7 +48,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("ignores blocks with wrong index", func(t *testing.T) {
 		t.Parallel()
 
-		m := New(0, "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
 
 		m.Update(msgs.AssistantContentUpdated{
 			Message: domain.Message{
@@ -74,7 +74,7 @@ func TestUpdate(t *testing.T) {
 			return domaintools.Result{Content: map[string]any{"ok": true}}, nil
 		}
 
-		m := New(0, "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
 
 		cmd := m.Update(msgs.StreamCompleted{
 			Message: domain.Message{
@@ -104,6 +104,9 @@ func TestUpdate(t *testing.T) {
 		if completed.ToolUseID != "tool-1" {
 			t.Errorf("ToolUseID = %q, want %q", completed.ToolUseID, "tool-1")
 		}
+		if completed.TurnID != "turn-1" {
+			t.Errorf("TurnID = %q, want %q", completed.TurnID, "turn-1")
+		}
 		if completed.Error != nil {
 			t.Errorf("unexpected error in completed: %v", completed.Error)
 		}
@@ -116,7 +119,7 @@ func TestUpdate(t *testing.T) {
 			return domaintools.Result{}, errors.New("exec failed")
 		}
 
-		m := New(0, "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
 
 		cmd := m.Update(msgs.StreamCompleted{
 			Message: domain.Message{
@@ -156,7 +159,7 @@ func TestUpdate(t *testing.T) {
 			return domaintools.Result{Content: map[string]any{"ok": true}}, nil
 		}
 
-		m := New(0, "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), executor, logtest.NewScope(t))
 
 		content := []domain.Block{
 			{Index: 0, Type: domain.BlockTypeToolUse, ToolUse: &domain.ToolUse{
@@ -196,7 +199,7 @@ func TestConfigDelegation(t *testing.T) {
 		},
 	}
 
-	m := New(0, "tool-1", 80, config, nil, logtest.NewScope(t))
+	m := New(0, "turn-1", "tool-1", 80, config, nil, logtest.NewScope(t))
 	m.input = json.RawMessage(`{"action":"disable"}`)
 	m.result = domaintools.Result{Content: map[string]any{"name": "svc"}}
 

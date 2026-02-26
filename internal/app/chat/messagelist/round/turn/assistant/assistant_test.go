@@ -34,9 +34,9 @@ func TestBlocksNoWrapping(t *testing.T) {
 			contentWidth := assistantWidth - block.BorderWidth
 
 			// Real assistant model
-			m := New(theme, "test-msg", assistantWidth, nil, scope)
+			m := New(theme, "turn-1", "test-msg", assistantWidth, nil, scope)
 			// Real query model — pass contentWidth (same as production in newToolBlock)
-			q := query.New(theme, 0, "tool-1", contentWidth, nil, scope)
+			q := query.New(theme, 0, "turn-1", "tool-1", contentWidth, nil, scope)
 			q.SetRows(rows)
 
 			// Real tool model wrapping query (same as production)
@@ -66,10 +66,10 @@ func TestCancel(t *testing.T) {
 		theme := styles.NewTheme(true)
 		scope := logtest.NewScope(t)
 
-		m := New(theme, "test-msg", 80, nil, scope)
+		m := New(theme, "turn-1", "test-msg", 80, nil, scope)
 
 		// Add a tool block in pending state
-		q := query.New(theme, 0, "tool-1", 78, nil, scope)
+		q := query.New(theme, 0, "turn-1", "tool-1", 78, nil, scope)
 		tool := tools.New(theme, 0, "tool-1", 78, q)
 		m.AddBlock(tool)
 
@@ -90,7 +90,7 @@ func TestCancel(t *testing.T) {
 		theme := styles.NewTheme(true)
 		scope := logtest.NewScope(t)
 
-		m := New(theme, "test-msg", 80, nil, scope)
+		m := New(theme, "turn-1", "test-msg", 80, nil, scope)
 		m.Cancel() // should not panic
 	})
 }

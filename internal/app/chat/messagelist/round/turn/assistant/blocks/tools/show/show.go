@@ -25,6 +25,7 @@ type Model struct {
 	theme    styles.Theme
 	scope    log.Scope
 	index    int
+	turnID   string
 	toolID   string
 	state    tools.State
 	executor *chattools.ShowTool
@@ -46,11 +47,12 @@ type Model struct {
 }
 
 // New creates a new show tool model.
-func New(theme styles.Theme, index int, toolID string, width int, executor *chattools.ShowTool, scope log.Scope) *Model {
+func New(theme styles.Theme, index int, turnID, toolID string, width int, executor *chattools.ShowTool, scope log.Scope) *Model {
 	return &Model{
 		theme:    theme,
 		scope:    scope.Child("show"),
 		index:    index,
+		turnID:   turnID,
 		toolID:   toolID,
 		state:    tools.StateAccumulating,
 		executor: executor,
@@ -132,6 +134,7 @@ func (m *Model) execute() tea.Cmd {
 func (m *Model) fireCompleted() tea.Cmd {
 	return func() tea.Msg {
 		return msgs.ToolCompleted{
+			TurnID:    m.turnID,
 			ToolUseID: m.toolID,
 			Result:    domaintools.Result{Content: m.result.ToMap()},
 			Error:     m.err,

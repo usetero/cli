@@ -31,6 +31,9 @@ const (
 // event is a single event from the Chat API response stream.
 // This is internal to the chat package.
 type event struct {
+	ConversationID string        `json:"conversation_id,omitempty"`
+	TurnID         string        `json:"turn_id,omitempty"`
+	Seq            int           `json:"seq,omitempty"`
 	Type           EventType     `json:"type"`
 	Text           *textContent  `json:"text,omitempty"`
 	Thinking       *textContent  `json:"thinking,omitempty"`

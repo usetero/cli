@@ -2,6 +2,7 @@ package turn
 
 import (
 	"context"
+	"errors"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
@@ -58,17 +59,21 @@ type Model struct {
 // streamState holds the channel for receiving stream updates.
 type streamState struct {
 	updates chan streamUpdate
-	cancel  context.CancelFunc
+	cancel  context.CancelCauseFunc
 	done    bool
 }
 
 // streamUpdate is sent through the channel as the stream progresses.
 type streamUpdate struct {
 	message *domain.Message
+	status  chatclient.StreamStatus
+	abort   string
 	result  *chatclient.StreamResult // final result, only set on done
 	err     error
 	done    bool
 }
+
+var errUserCancelled = errors.New("user_cancelled")
 
 // streamUpdateMsg is the internal message for stream handling.
 type streamUpdateMsg struct {
@@ -102,7 +107,7 @@ func New(
 		conversationID:   conversationID,
 		accountID:        accountID,
 		userMessage:      user.New(theme.WithBg(theme.BgElevated), userMessageID, input, width-block.BorderWidth),
-		assistantMessage: assistant.New(theme, "", width, toolRegistry, scope),
+		assistantMessage: assistant.New(theme, userMessageID, "", width, toolRegistry, scope),
 		state:            StateIdle,
 		width:            width,
 		db:               db,
@@ -137,12 +142,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(cmds...)
 
 	case msgs.ToolCompleted:
+		if msg.GetTurnID() != "" && msg.GetTurnID() != m.userMessage.ID().String() {
+			return nil
+		}
 		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
 
 	case assistantPersisted:
 		m.persisted = true
-		// If tools are already done, fire now that persist is complete.
-		if m.state == StateComplete && m.pendingTools > 0 && len(m.toolResults) >= m.pendingTools {
+		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
 			return m.fireToolResults()
 		}
 		return nil
@@ -167,17 +174,17 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	m.scope.Info("tool completed", "tool_use_id", toolUseID, "collected", len(m.toolResults), "pending", m.pendingTools)
 
 	// Only fire results once we're awaiting and have all of them
-	if m.state != StateAwaitingToolResults {
+	next := reduceOnToolCompleted(m.state, len(m.toolResults), m.pendingTools)
+	if next == m.state {
 		return nil
 	}
-
-	if len(m.toolResults) >= m.pendingTools {
+	m.state = next
+	if m.state == StateComplete {
 		m.scope.Info("all tools completed")
-		m.state = StateComplete
-		if m.persisted {
+		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
 			return m.fireToolResults()
 		}
-		return nil // assistantPersisted handler will fire tool results
+		return nil
 	}
 	return nil
 }
@@ -187,7 +194,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 	m.scope.Debug("starting stream", "message_count", len(messages))
 	m.state = StateStreaming
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	updates := make(chan streamUpdate, 10)
 	m.stream = &streamState{updates: updates, cancel: cancel}
 
@@ -200,16 +207,27 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 			Context:        chatContext,
 		}
 
-		var lastMessage *domain.Message
-		result, err := m.chatClient.Stream(ctx, req, func(msg *domain.Message) {
-			lastMessage = msg
-			updates <- streamUpdate{message: msg}
+		var lastSnapshot *chatclient.StreamSnapshot
+		result, err := m.chatClient.StreamSnapshots(ctx, req, func(s chatclient.StreamSnapshot) {
+			ss := s
+			lastSnapshot = &ss
+			if !s.Done {
+				updates <- streamUpdate{message: s.Message, status: s.Status}
+			}
 		})
 
 		if err != nil {
 			updates <- streamUpdate{err: err, done: true}
 		} else {
-			updates <- streamUpdate{message: lastMessage, result: result, done: true}
+			var lastMessage *domain.Message
+			var status chatclient.StreamStatus
+			var abort string
+			if lastSnapshot != nil {
+				lastMessage = lastSnapshot.Message
+				status = lastSnapshot.Status
+				abort = lastSnapshot.AbortReason
+			}
+			updates <- streamUpdate{message: lastMessage, status: status, abort: abort, result: result, done: true}
 		}
 	}()
 
@@ -256,7 +274,7 @@ func (m *Model) AssistantMessageID() domain.MessageID {
 // The partial content remains rendered but nothing is persisted.
 func (m *Model) Cancel() {
 	if m.stream != nil && !m.stream.done {
-		m.stream.cancel()
+		m.stream.cancel(errUserCancelled)
 		m.stream.done = true
 	}
 	m.assistantMessage.Cancel()
@@ -291,6 +309,39 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	}
 
 	if update.done {
+		if update.status == chatclient.StreamStatusAborted {
+			reason := update.abort
+			if reason == "" {
+				reason = "context_canceled"
+			}
+			m.scope.Info("stream aborted", "reason", reason)
+			m.assistantMessage.Cancel()
+			m.state = StateComplete
+
+			// User-cancelled stream: keep current behavior (do not persist).
+			if reason == errUserCancelled.Error() {
+				return nil
+			}
+
+			msg := update.message
+			if msg == nil {
+				msg = &domain.Message{}
+			}
+			msg.StopReason = "aborted"
+
+			turnID := m.userMessage.ID()
+			return tea.Batch(
+				func() tea.Msg {
+					return msgs.StreamCompleted{
+						TurnID:     turnID,
+						Message:    *msg,
+						StopReason: msg.StopReason,
+					}
+				},
+				m.persistAssistantMessage(msg),
+			)
+		}
+
 		m.scope.Info("stream completed", "stop_reason", update.message.StopReason)
 
 		// Extract metadata from stream result if present
@@ -306,18 +357,12 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		if update.message.StopReason == "tool_use" {
 			m.pendingTools, m.pendingToolIDs = collectToolUseIDs(update.message.Content)
 			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
-
-			// Check if tools already completed during streaming.
-			// Don't fire tool results yet — wait for persistAssistantMessage
-			// to complete first (via assistantPersisted handler).
-			if len(m.toolResults) >= m.pendingTools {
+			m.state = reduceOnStreamDone(update.message.StopReason, len(m.toolResults), m.pendingTools)
+			if m.state == StateComplete {
 				m.scope.Info("all tools already completed")
-				m.state = StateComplete
-			} else {
-				m.state = StateAwaitingToolResults
 			}
 		} else {
-			m.state = StateComplete
+			m.state = reduceOnStreamDone(update.message.StopReason, len(m.toolResults), m.pendingTools)
 		}
 
 		// Fire StreamCompleted and persist

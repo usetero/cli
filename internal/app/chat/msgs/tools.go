@@ -6,10 +6,14 @@ import (
 
 // ToolCompleted is fired when any tool finishes executing.
 type ToolCompleted struct {
+	TurnID    string
 	ToolUseID string
 	Result    domaintools.Result
 	Error     error
 }
+
+// GetTurnID returns the turn ID.
+func (m ToolCompleted) GetTurnID() string { return m.TurnID }
 
 // GetToolUseID returns the tool use ID.
 func (m ToolCompleted) GetToolUseID() string { return m.ToolUseID }

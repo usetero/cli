@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,6 +52,10 @@ type StreamResult struct {
 
 // Client sends messages to the Chat API and streams responses.
 type Client interface {
+	// StreamSnapshots sends the conversation to the Chat API and streams normalized snapshots.
+	// Each snapshot includes scoped progress metadata (conversation/turn/seq/status).
+	StreamSnapshots(ctx context.Context, req Request, onSnapshot func(StreamSnapshot)) (*StreamResult, error)
+
 	// Stream sends the conversation to the Chat API and streams the response.
 	// The onMessage callback is called each time the message is updated with new content.
 	// The returned StreamResult contains the final message and any metadata.
@@ -113,6 +118,16 @@ func (c *client) SetAccountID(accountID domain.AccountID) {
 // The onMessage callback is called each time the message is updated with new content.
 // Global tools are automatically merged with any request-specific tools.
 func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain.Message)) (*StreamResult, error) {
+	return c.StreamSnapshots(ctx, req, func(s StreamSnapshot) {
+		if onMessage != nil {
+			onMessage(s.Message)
+		}
+	})
+}
+
+// StreamSnapshots sends the conversation to the Chat API and streams normalized snapshots.
+// Global tools are automatically merged with any request-specific tools.
+func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot func(StreamSnapshot)) (*StreamResult, error) {
 	// Merge global tools with request-specific tools
 	allTools := append(c.globalTools, req.Tools...)
 	req.Tools = allTools
@@ -180,31 +195,42 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 		return nil, fmt.Errorf("expected text/event-stream, got %s: %s", contentType, string(respBody))
 	}
 
-	// Use internal accumulator to build the message from events
-	acc := newAccumulator()
+	// Build typed stream snapshots via reducer.
+	red := newReducer(req.ConversationID)
 
 	err = readStream(resp.Body, func(e event) error {
-		acc.handle(e)
-		if onMessage != nil {
-			onMessage(acc.message())
+		snap, err := red.apply(e)
+		if err != nil {
+			return err
+		}
+		if onSnapshot != nil {
+			onSnapshot(*snap)
 		}
 		return nil
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			reason := "context_canceled"
+			if cause := context.Cause(ctx); cause != nil {
+				reason = cause.Error()
+			}
+			if onSnapshot != nil {
+				if snap := red.abortSnapshot(reason); snap != nil {
+					onSnapshot(*snap)
+				}
+			}
+			return &StreamResult{
+				Message:  red.acc.message(),
+				Metadata: red.metadata(),
+			}, nil
+		}
 		return nil, err
 	}
 
 	result := &StreamResult{
-		Message: acc.message(),
+		Message: red.acc.message(),
 	}
-	if acc.title != "" || acc.contextWindow > 0 || acc.inputTokens > 0 {
-		result.Metadata = &StreamMetadata{
-			Title:         acc.title,
-			ContextWindow: acc.contextWindow,
-			InputTokens:   acc.inputTokens,
-			OutputTokens:  acc.outputTokens,
-		}
-	}
+	result.Metadata = red.metadata()
 
 	return result, nil
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -146,11 +147,11 @@ func TestCancel(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateStreaming
-		m.stream = &streamState{
-			updates: make(chan streamUpdate),
-			cancel:  func() {},
-			done:    false,
-		}
+			m.stream = &streamState{
+				updates: make(chan streamUpdate),
+				cancel:  func(error) {},
+				done:    false,
+			}
 
 		m.Cancel()
 
@@ -174,6 +175,40 @@ func TestCancel(t *testing.T) {
 
 		if m.state != StateComplete {
 			t.Errorf("expected StateComplete, got %d", m.state)
+		}
+	})
+
+	t.Run("aborted user_cancelled does not emit completion cmd", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateStreaming
+
+		cmd := m.handleStreamUpdate(streamUpdate{
+			message: &domain.Message{ID: "asst-1"},
+			status:  chatclient.StreamStatusAborted,
+			abort:   "user_cancelled",
+			done:    true,
+		})
+
+		if cmd != nil {
+			t.Error("expected nil cmd for user_cancelled abort")
+		}
+	})
+
+	t.Run("aborted non-user emits completion cmd", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateStreaming
+
+		cmd := m.handleStreamUpdate(streamUpdate{
+			message: &domain.Message{ID: "asst-1"},
+			status:  chatclient.StreamStatusAborted,
+			abort:   "context_canceled",
+			done:    true,
+		})
+
+		if cmd == nil {
+			t.Error("expected non-nil cmd for non-user abort")
 		}
 	})
 }

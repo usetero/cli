@@ -22,6 +22,17 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.doFunc(req)
 }
 
+type blockingReadCloser struct {
+	ctx context.Context
+}
+
+func (b *blockingReadCloser) Read(_ []byte) (int, error) {
+	<-b.ctx.Done()
+	return 0, b.ctx.Err()
+}
+
+func (b *blockingReadCloser) Close() error { return nil }
+
 func TestClient_Stream(t *testing.T) {
 	t.Parallel()
 
@@ -339,4 +350,175 @@ data: [DONE]
 			t.Errorf("ToolUse.Input = %q, want %q", string(lastMessage.Content[0].ToolUse.Input), expectedInput)
 		}
 	})
+}
+
+func TestClient_StreamSnapshots(t *testing.T) {
+	t.Parallel()
+
+	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3"}}
+data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"Hello"}}
+data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":3,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
+data: [DONE]
+`
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(strings.NewReader(stream)),
+			}, nil
+		},
+	}
+
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	var snaps []chat.StreamSnapshot
+	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, func(s chat.StreamSnapshot) {
+		snaps = append(snaps, s)
+	})
+	if err != nil {
+		t.Fatalf("StreamSnapshots() error = %v", err)
+	}
+
+	if len(snaps) == 0 {
+		t.Fatal("expected at least one snapshot")
+	}
+
+	last := snaps[len(snaps)-1]
+	if !last.Done {
+		t.Fatal("last.Done = false, want true")
+	}
+	if last.Status != chat.StreamStatusCompleted {
+		t.Fatalf("last.Status = %q, want %q", last.Status, chat.StreamStatusCompleted)
+	}
+	if last.ConversationID != "conv-1" {
+		t.Fatalf("last.ConversationID = %q, want conv-1", last.ConversationID)
+	}
+	if last.TurnID != "turn-1" {
+		t.Fatalf("last.TurnID = %q, want turn-1", last.TurnID)
+	}
+	if last.Seq != 3 {
+		t.Fatalf("last.Seq = %d, want 3", last.Seq)
+	}
+	if last.Metadata == nil {
+		t.Fatal("last.Metadata = nil, want non-nil")
+	}
+}
+
+func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.T) {
+	t.Parallel()
+
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       &blockingReadCloser{ctx: req.Context()},
+			}, nil
+		},
+	}
+
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(errors.New("user_cancelled"))
+
+	var snaps []chat.StreamSnapshot
+	result, err := client.StreamSnapshots(ctx, chat.Request{ConversationID: "conv-1"}, func(s chat.StreamSnapshot) {
+		snaps = append(snaps, s)
+	})
+	if err != nil {
+		t.Fatalf("StreamSnapshots() error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result on canceled context")
+	}
+	if len(snaps) == 0 {
+		t.Fatal("expected aborted snapshot")
+	}
+
+	last := snaps[len(snaps)-1]
+	if !last.Done {
+		t.Fatal("last.Done = false, want true")
+	}
+	if last.Status != chat.StreamStatusAborted {
+		t.Fatalf("last.Status = %q, want %q", last.Status, chat.StreamStatusAborted)
+	}
+	if last.AbortReason != "user_cancelled" {
+		t.Fatalf("last.AbortReason = %q, want user_cancelled", last.AbortReason)
+	}
+}
+
+func TestClient_StreamSnapshots_RejectsNonMonotonicSeq(t *testing.T) {
+	t.Parallel()
+
+	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"a"}}
+data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"b"}}
+`
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(strings.NewReader(stream)),
+			}, nil
+		},
+	}
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "non-monotonic seq") {
+		t.Fatalf("error = %q, want non-monotonic seq", err.Error())
+	}
+}
+
+func TestClient_StreamSnapshots_RejectsTurnMismatch(t *testing.T) {
+	t.Parallel()
+
+	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"text_delta","text":{"content":"a"}}
+data: {"conversation_id":"conv-1","turn_id":"turn-2","seq":2,"type":"text_delta","text":{"content":"b"}}
+`
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(strings.NewReader(stream)),
+			}, nil
+		},
+	}
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "turn_id mismatch") {
+		t.Fatalf("error = %q, want turn_id mismatch", err.Error())
+	}
 }
