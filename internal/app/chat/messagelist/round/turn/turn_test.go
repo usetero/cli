@@ -282,6 +282,23 @@ func TestHandleToolCompleted(t *testing.T) {
 			t.Error("expected nil cmd — persist hasn't completed yet")
 		}
 	})
+
+	t.Run("unknown tool completion increments protocol violation counter", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+		m.state = StateAwaitingToolResults
+		m.pendingTools = 1
+		m.pendingToolIDs = map[string]bool{"tool-1": true}
+
+		m.handleToolCompleted("tool-x", tools.Result{ToolUseID: "tool-x"})
+
+		if got := m.protocolViolationCount; got != 1 {
+			t.Fatalf("protocolViolationCount = %d, want 1", got)
+		}
+		if len(m.toolResults) != 0 {
+			t.Fatalf("toolResults len = %d, want 0", len(m.toolResults))
+		}
+	})
 }
 
 func TestInterleavedToolUseFlow(t *testing.T) {
@@ -399,6 +416,41 @@ func TestFireToolResultsOnlyOnce(t *testing.T) {
 		cmd2 := m.fireToolResults()
 		if cmd2 != nil {
 			t.Error("expected nil cmd on second fireToolResults call")
+		}
+	})
+}
+
+func TestUpdate_ProtocolViolationTelemetry(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tool completed turn mismatch increments counter", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+
+		m.Update(msgs.ToolCompleted{
+			TurnID:    "user-other",
+			ToolUseID: "tool-1",
+		})
+
+		if got := m.protocolViolationCount; got != 1 {
+			t.Fatalf("protocolViolationCount = %d, want 1", got)
+		}
+	})
+
+	t.Run("assistant persisted turn mismatch increments counter", func(t *testing.T) {
+		t.Parallel()
+		m := newTestTurn(t)
+
+		m.Update(assistantPersisted{
+			turnID:    "user-other",
+			messageID: "asst-1",
+		})
+
+		if got := m.protocolViolationCount; got != 1 {
+			t.Fatalf("protocolViolationCount = %d, want 1", got)
+		}
+		if m.persisted {
+			t.Fatal("persisted should remain false for mismatched turn")
 		}
 	})
 }

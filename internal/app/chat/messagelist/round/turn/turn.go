@@ -54,6 +54,9 @@ type Model struct {
 	persisted        bool // true after assistantMessage is written to DB
 	firedToolResults bool // true after fireToolResults has been called
 
+	// Protocol guard telemetry (incremented on dropped/malformed lifecycle events).
+	protocolViolationCount int
+
 	db           sqlite.DB
 	chatClient   chatclient.Client
 	toolRegistry *chattools.Registry
@@ -147,12 +150,24 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case msgs.ToolCompleted:
 		if msg.GetTurnID() != m.userMessage.ID() {
+			m.reportProtocolViolation(
+				"tool_completed_turn_mismatch",
+				"received_turn_id", msg.GetTurnID(),
+				"expected_turn_id", m.userMessage.ID(),
+				"tool_use_id", msg.GetToolUseID(),
+			)
 			return nil
 		}
 		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
 
 	case assistantPersisted:
 		if msg.turnID != m.userMessage.ID() {
+			m.reportProtocolViolation(
+				"assistant_persisted_turn_mismatch",
+				"received_turn_id", msg.turnID,
+				"expected_turn_id", m.userMessage.ID(),
+				"message_id", msg.messageID,
+			)
 			return nil
 		}
 		m.persisted = true
@@ -173,6 +188,12 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	// Before pendingToolIDs is set (during streaming), accept all tools —
 	// they'll be validated once the stream completes and IDs are known.
 	if m.pendingToolIDs != nil && !m.pendingToolIDs[toolUseID] {
+		m.reportProtocolViolation(
+			"tool_completed_unknown_tool_use_id",
+			"tool_use_id", toolUseID,
+			"pending", m.pendingTools,
+			"collected", len(m.toolResults),
+		)
 		return nil
 	}
 
@@ -497,4 +518,14 @@ func collectToolUseIDs(content []domain.Block) (int, map[string]bool) {
 		}
 	}
 	return len(ids), ids
+}
+
+func (m *Model) reportProtocolViolation(reason string, kv ...any) {
+	m.protocolViolationCount++
+	fields := []any{
+		"reason", reason,
+		"count", m.protocolViolationCount,
+	}
+	fields = append(fields, kv...)
+	m.scope.Warn("protocol violation", fields...)
 }
