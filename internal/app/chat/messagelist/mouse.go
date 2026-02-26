@@ -9,6 +9,28 @@ import (
 	"github.com/usetero/cli/internal/tea/highlight"
 )
 
+func (m *Model) selectionState() selectionState {
+	return selectionState{
+		mouseDown:      m.mouseDown,
+		mouseDownBlock: m.mouseDownBlock,
+		mouseDownX:     m.mouseDownX,
+		mouseDownY:     m.mouseDownY,
+		mouseDragBlock: m.mouseDragBlock,
+		mouseDragX:     m.mouseDragX,
+		mouseDragY:     m.mouseDragY,
+	}
+}
+
+func (m *Model) setSelectionState(state selectionState) {
+	m.mouseDown = state.mouseDown
+	m.mouseDownBlock = state.mouseDownBlock
+	m.mouseDownX = state.mouseDownX
+	m.mouseDownY = state.mouseDownY
+	m.mouseDragBlock = state.mouseDragBlock
+	m.mouseDragX = state.mouseDragX
+	m.mouseDragY = state.mouseDragY
+}
+
 // --- Click handling ---
 
 // handleBlockClick handles a click on a specific block.
@@ -28,12 +50,13 @@ func (m *Model) handleBlockClick(idx, y int) {
 
 // hasHighlight returns whether there is a current text selection.
 func (m *Model) hasHighlight() bool {
-	if m.mouseDownBlock < 0 || m.mouseDragBlock < 0 {
+	state := m.selectionState()
+	if state.mouseDownBlock < 0 || state.mouseDragBlock < 0 {
 		return false
 	}
-	return m.mouseDownBlock != m.mouseDragBlock ||
-		m.mouseDownY != m.mouseDragY ||
-		m.mouseDownX != m.mouseDragX
+	return state.mouseDownBlock != state.mouseDragBlock ||
+		state.mouseDownY != state.mouseDragY ||
+		state.mouseDownX != state.mouseDragX
 }
 
 // getHighlightRange returns the normalized selection range (start <= end).

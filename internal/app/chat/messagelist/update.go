@@ -30,6 +30,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			viewX := msg.X - m.originX - outerBorderWidth
 			viewY := msg.Y - m.originY
 			blockIdx, blockY := m.vp.ItemAtY(viewY)
+			hit := blockIdx >= 0
 			m.scope.Debug("click",
 				"msgX", msg.X, "msgY", msg.Y,
 				"originX", m.originX, "originY", m.originY,
@@ -50,33 +51,35 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 						"kind", b.block.Kind())
 				}
 			}
-			if blockIdx >= 0 {
-				m.vp.SetFocusIdx(blockIdx)
-				m.mouseDown = true
-				m.mouseDownBlock = blockIdx
-				m.mouseDownX = viewX
-				m.mouseDownY = blockY
-				m.mouseDragBlock = blockIdx
-				m.mouseDragX = viewX
-				m.mouseDragY = blockY
+			state, decision := reduceSelectionClick(
+				m.selectionState(),
+				msg.Button,
+				selectionPoint{block: blockIdx, x: viewX, y: blockY},
+				hit,
+			)
+			m.setSelectionState(state)
+			if decision.setFocusIdx {
+				m.vp.SetFocusIdx(decision.focusIdx)
 			}
 		}
 
 	case tea.MouseMotionMsg:
-		if m.mouseDown && msg.Button == tea.MouseLeft {
-			viewX := msg.X - m.originX - outerBorderWidth
-			viewY := msg.Y - m.originY
-			blockIdx, blockY := m.vp.ItemAtY(viewY)
-			if blockIdx >= 0 {
-				m.mouseDragBlock = blockIdx
-				m.mouseDragX = viewX
-				m.mouseDragY = blockY
-			}
-		}
+		viewX := msg.X - m.originX - outerBorderWidth
+		viewY := msg.Y - m.originY
+		blockIdx, blockY := m.vp.ItemAtY(viewY)
+		hit := blockIdx >= 0
+		state := reduceSelectionMotion(
+			m.selectionState(),
+			msg.Button,
+			selectionPoint{block: blockIdx, x: viewX, y: blockY},
+			hit,
+		)
+		m.setSelectionState(state)
 
 	case tea.MouseReleaseMsg:
-		if m.mouseDown {
-			m.mouseDown = false
+		state, decision := reduceSelectionRelease(m.selectionState())
+		m.setSelectionState(state)
+		if decision.handle {
 			hl := m.hasHighlight()
 			m.scope.Debug("release",
 				"mouseDownBlock", m.mouseDownBlock,
@@ -94,10 +97,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 					})
 				} else {
 					m.scope.Debug("release: empty highlight, treating as click")
-					m.handleBlockClick(m.mouseDownBlock, m.mouseDownY)
+					m.handleBlockClick(decision.clickBlock, decision.clickY)
 				}
 			} else {
-				m.handleBlockClick(m.mouseDownBlock, m.mouseDownY)
+				m.handleBlockClick(decision.clickBlock, decision.clickY)
 			}
 		}
 
