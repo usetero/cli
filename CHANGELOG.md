@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.22.3](https://github.com/usetero/cli/compare/v1.22.2...v1.22.3) (2026-02-26)
+
+
+### Bug Fixes
+
+* enforce strict v2 transcript sequencing invariants ([6563f4f](https://github.com/usetero/cli/commit/6563f4fe2aa62df01c47105f5c8dac4930e2530c))
+* enforce tool-use lineage invariants before chat requests ([df2a1c9](https://github.com/usetero/cli/commit/df2a1c9d5327cd1a1ee2ea6cf7caf04dabb469d6))
+* harden chat v2 protocol handling and isolate wire contract ([d8a4cea](https://github.com/usetero/cli/commit/d8a4cea46e7c48a069b95054c9b81e084e7a67c3))
+* log and count protocol violations in turn lifecycle ([9418b5f](https://github.com/usetero/cli/commit/9418b5f4cf6f039251e4a1f2495320209371dc15))
+* preserve assistant tool_use lineage in tool-result followups ([8c926f1](https://github.com/usetero/cli/commit/8c926f1d2fb245c685ef6a819298e19d645d644a))
+* preserve tool-result sequencing and classify chat 4xx errors ([8ae965f](https://github.com/usetero/cli/commit/8ae965f9d2444885f954cbd2af6052ad171d19a3))
+* unblock GitHub Actions runner selection and workflow lint ([62e8cbc](https://github.com/usetero/cli/commit/62e8cbcbfe14bb258df95b80d880cb5a21ef15a3))
+
 ## [1.22.2](https://github.com/usetero/cli/compare/v1.22.1...v1.22.2) (2026-02-26)
 
 
