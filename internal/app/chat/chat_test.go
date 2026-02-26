@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -278,6 +279,95 @@ func TestToolResultFollowupRequestContainsAssistantAndToolResult(t *testing.T) {
 	}
 	if got := second[2].Content[0].ToolResult.ToolUseID; got != "toolu_1" {
 		t.Fatalf("tool_use_id = %q, want %q", got, "toolu_1")
+	}
+}
+
+func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T) {
+	t.Parallel()
+
+	var requests []chat.Request
+	var mu sync.Mutex
+	call := 0
+	client := &chattest.MockClient{
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+			mu.Lock()
+			requests = append(requests, req)
+			call++
+			n := call
+			mu.Unlock()
+
+			if n == 1 {
+				msg := &domain.Message{
+					// Intentionally empty ID: mirrors stream payloads that do not carry message IDs.
+					ID:         "",
+					Model:      "test-model",
+					StopReason: "tool_use",
+					Content: []domain.Block{{
+						Index: 0,
+						Type:  domain.BlockTypeToolUse,
+						ToolUse: &domain.ToolUse{
+							ID:            "toolu_1",
+							Name:          "query",
+							Input:         json.RawMessage(`{"sql":"select 1"}`),
+							InputComplete: true,
+						},
+					}},
+				}
+				onSnapshot(chat.StreamSnapshot{
+					ConversationID: req.ConversationID,
+					TurnID:         "turn-1",
+					Seq:            1,
+					Status:         chat.StreamStatusToolUse,
+					Done:           true,
+					Message:        msg,
+				})
+				return &chat.StreamResult{Message: msg}, nil
+			}
+
+			msg := &domain.Message{
+				ID:         "asst-2",
+				Model:      "test-model",
+				StopReason: "end_turn",
+				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "done"}}},
+			}
+			onSnapshot(chat.StreamSnapshot{
+				ConversationID: req.ConversationID,
+				TurnID:         "turn-2",
+				Seq:            1,
+				Status:         chat.StreamStatusCompleted,
+				Done:           true,
+				Message:        msg,
+			})
+			return &chat.StreamResult{Message: msg}, nil
+		},
+	}
+
+	m := newTestChat(t, client)
+	submitAndDrain(m, "run a query", 60)
+	submitToolResultsAndDrain(m, []domaintools.Result{{
+		ToolUseID: "toolu_1",
+		Content: map[string]any{
+			"rows": []map[string]any{{"service_id": "svc-1"}},
+		},
+	}}, 60)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(requests) < 2 {
+		t.Fatalf("requests = %d, want >= 2", len(requests))
+	}
+	second := requests[1].Messages
+	if len(second) != 3 {
+		t.Fatalf("second request message count = %d, want 3", len(second))
+	}
+	if second[1].Role != domain.RoleAssistant {
+		t.Fatalf("second[1].role = %q, want assistant", second[1].Role)
+	}
+	if len(second[1].Content) != 1 || second[1].Content[0].Type != domain.BlockTypeToolUse {
+		t.Fatalf("second[1].content = %#v, want single tool_use block", second[1].Content)
+	}
+	if got := second[1].Content[0].ToolUse.ID; got != "toolu_1" {
+		t.Fatalf("assistant tool_use.id = %q, want toolu_1", got)
 	}
 }
 

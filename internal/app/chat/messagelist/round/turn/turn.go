@@ -160,6 +160,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			// Internal completion events are broadcast; non-owner turns ignore.
 			return nil
 		}
+		if msg.messageID != "" {
+			m.assistantMessage.SetID(msg.messageID)
+		}
 		m.persisted = true
 		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
 			return m.fireToolResults()
@@ -351,6 +354,9 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			if msg == nil {
 				msg = &domain.Message{}
 			}
+			if msg.ID == "" {
+				msg.ID = domain.NewMessageID()
+			}
 			msg.StopReason = "aborted"
 
 			turnID := m.userMessage.ID()
@@ -365,6 +371,9 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			)
 		}
 
+		if update.message.ID == "" {
+			update.message.ID = domain.NewMessageID()
+		}
 		m.scope.Info("stream completed", "stop_reason", update.message.StopReason)
 
 		// Extract metadata from stream result if present
