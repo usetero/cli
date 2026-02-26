@@ -371,6 +371,108 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 	}
 }
 
+func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
+	t.Parallel()
+
+	var requests []chat.Request
+	var mu sync.Mutex
+	call := 0
+	client := &chattest.MockClient{
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+			mu.Lock()
+			requests = append(requests, req)
+			call++
+			n := call
+			mu.Unlock()
+
+			if n == 1 {
+				msg := &domain.Message{
+					ID:         "asst-1",
+					Model:      "test-model",
+					StopReason: "tool_use",
+					Content: []domain.Block{{
+						Index: 0,
+						Type:  domain.BlockTypeToolUse,
+						ToolUse: &domain.ToolUse{
+							ID:            "toolu_1",
+							Name:          "query",
+							Input:         json.RawMessage(`{"sql":"select 1"}`),
+							InputComplete: true,
+						},
+					}},
+				}
+				onSnapshot(chat.StreamSnapshot{
+					ConversationID: req.ConversationID,
+					TurnID:         "turn-1",
+					Seq:            1,
+					Status:         chat.StreamStatusToolUse,
+					Done:           true,
+					Message:        msg,
+				})
+				return &chat.StreamResult{Message: msg}, nil
+			}
+
+			msg := &domain.Message{
+				ID:         domain.MessageID(fmt.Sprintf("asst-%d", n)),
+				Model:      "test-model",
+				StopReason: "end_turn",
+				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "done"}}},
+			}
+			onSnapshot(chat.StreamSnapshot{
+				ConversationID: req.ConversationID,
+				TurnID:         fmt.Sprintf("turn-%d", n),
+				Seq:            1,
+				Status:         chat.StreamStatusCompleted,
+				Done:           true,
+				Message:        msg,
+			})
+			return &chat.StreamResult{Message: msg}, nil
+		},
+	}
+
+	m := newTestChat(t, client)
+	submitAndDrain(m, "run a query", 80)
+
+	stored := listMessages(t, m)
+	if len(stored) == 0 {
+		t.Fatal("expected first user message")
+	}
+	firstTurnID := stored[0].ID
+
+	cmd := m.Update(msgs.ToolCompleted{
+		TurnID:    firstTurnID,
+		ToolUseID: "toolu_1",
+		Result: domaintools.Result{
+			ToolUseID: "toolu_1",
+			Content: map[string]any{
+				"rows": []map[string]any{{"service_id": "svc-1"}},
+			},
+		},
+	})
+	teatest.DrainCmds(m.Update, cmd, 120)
+
+	submitAndDrain(m, "what are my top disabled services?", 120)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(requests) < 3 {
+		t.Fatalf("requests = %d, want >= 3", len(requests))
+	}
+	third := requests[2].Messages
+	if len(third) < 5 {
+		t.Fatalf("third request message count = %d, want >= 5", len(third))
+	}
+	if third[1].Role != domain.RoleAssistant || third[1].StopReason != "tool_use" {
+		t.Fatalf("third[1] = role=%q stop_reason=%q, want assistant tool_use", third[1].Role, third[1].StopReason)
+	}
+	if third[2].Role != domain.RoleUser || len(third[2].Content) == 0 || third[2].Content[0].Type != domain.BlockTypeToolResult {
+		t.Fatalf("third[2] = %#v, want user tool_result message", third[2])
+	}
+	if got := third[2].Content[0].ToolResult.ToolUseID; got != "toolu_1" {
+		t.Fatalf("third[2] tool_use_id = %q, want toolu_1", got)
+	}
+}
+
 func TestStreamFailed(t *testing.T) {
 	t.Parallel()
 

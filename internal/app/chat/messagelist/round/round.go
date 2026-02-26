@@ -239,17 +239,18 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 		if m.session == nil {
 			m.session = chatclient.NewSession(m.conversationID, nil)
 		}
-		_ = m.session.AppendUserToolResultsMessage(msgID, domainResults)
+		toolResultMessage := m.session.AppendUserToolResultsMessage(msgID, domainResults)
 		messages := m.session.Messages()
 		for _, summary := range summarizeHistory(messages) {
 			m.scope.Debug("next turn history", "summary", summary)
 		}
 
 		return nextTurnReady{
-			roundID:   m.id,
-			messageID: msgID,
-			results:   results,
-			messages:  messages,
+			roundID:           m.id,
+			messageID:         msgID,
+			results:           results,
+			messages:          messages,
+			toolResultMessage: toolResultMessage,
 		}
 	}
 }
@@ -295,10 +296,11 @@ func summarizeHistory(messages []domain.Message) []string {
 
 // nextTurnReady is an internal message to create the next turn after persistence.
 type nextTurnReady struct {
-	roundID   domain.MessageID
-	messageID domain.MessageID
-	results   []domaintools.Result
-	messages  []domain.Message
+	roundID           domain.MessageID
+	messageID         domain.MessageID
+	results           []domaintools.Result
+	messages          []domain.Message
+	toolResultMessage domain.Message
 }
 
 // handleNextTurnReady creates and starts the next turn.
@@ -322,8 +324,11 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 	)
 
 	m.turns = append(m.turns, nextTurn)
-
-	return nextTurn.StartStream(msg.messages, nil)
+	startStream := nextTurn.StartStream(msg.messages, nil)
+	notifyPersist := func() tea.Msg {
+		return msgs.ToolResultMessagePersisted{Message: msg.toolResultMessage}
+	}
+	return tea.Batch(startStream, notifyPersist)
 }
 
 // Blocks returns all visual blocks from all turns in this round.

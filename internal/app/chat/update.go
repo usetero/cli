@@ -64,6 +64,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.session.RecordAssistantMessage(msg.Message)
 		}
 
+	case msgs.ToolResultMessagePersisted:
+		if m.session == nil {
+			m.session = chatclient.NewSession(m.conversationID, nil)
+		}
+		m.session.AppendMessage(msg.Message)
+
 	case msgs.StreamFailed:
 		return m.handleStreamFailed(msg)
 

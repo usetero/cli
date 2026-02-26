@@ -39,3 +39,10 @@ type ToolResultsReady struct {
 	TurnID  domain.MessageID     // identifies which turn completed
 	Results []domaintools.Result // collected tool results
 }
+
+// ToolResultMessagePersisted is fired when the round persists an internal
+// user tool_result message during a tool loop. The top-level chat session uses
+// this to keep in-memory request history aligned with round-local state.
+type ToolResultMessagePersisted struct {
+	Message domain.Message
+}
