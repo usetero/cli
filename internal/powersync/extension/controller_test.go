@@ -1,9 +1,13 @@
 package extension_test
 
 import (
+	"bufio"
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/powersync/extension"
 )
@@ -138,6 +142,107 @@ func TestController_NotifyTokenRefreshed(t *testing.T) {
 			t.Errorf("NotifyTokenRefreshed() error = %v", err)
 		}
 	})
+}
+
+func TestController_NotifyUploadCompleted_AcceptsCompletedBatchProtocol(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	database := dbtest.OpenTestDB(t)
+	controller := extension.NewController(database)
+	defer controller.Close()
+
+	_, err := controller.Start(ctx, extension.StartRequest{IncludeDefaults: true})
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	_, err = controller.NotifyConnection(ctx, extension.ConnectionEstablished)
+	if err != nil {
+		t.Fatalf("NotifyConnection(established) error = %v", err)
+	}
+
+	// Simulate a completed upload batch that is waiting on server checkpoint 42.
+	_, err = database.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+	if err != nil {
+		t.Fatalf("setup bucket: %v", err)
+	}
+	dbtest.InsertCrudEntry(t, database, 1, nil, `{"op":"PUT","type":"messages","id":"m1","data":{}}`)
+	if err := db.CompleteBatch(ctx, database, 1, "42"); err != nil {
+		t.Fatalf("CompleteBatch() error = %v", err)
+	}
+
+	var beforeLast, beforeTarget int64
+	if err := database.QueryRow(ctx, "SELECT last_op, target_op FROM ps_buckets WHERE name = '$local'").Scan(&beforeLast, &beforeTarget); err != nil {
+		t.Fatalf("read before checkpoint: %v", err)
+	}
+
+	_, err = controller.NotifyUploadCompleted(ctx)
+	if err != nil {
+		t.Fatalf("NotifyUploadCompleted() error = %v", err)
+	}
+
+	// Feed server checkpoint line acknowledging op 42.
+	_, err = controller.SendTextLine(ctx, `{"checkpoint":{"last_op_id":"42","buckets":[]}}`)
+	if err != nil {
+		t.Fatalf("SendTextLine(checkpoint) error = %v", err)
+	}
+
+	var afterLast, afterTarget int64
+	if err := database.QueryRow(ctx, "SELECT last_op, target_op FROM ps_buckets WHERE name = '$local'").Scan(&afterLast, &afterTarget); err != nil {
+		t.Fatalf("read after checkpoint: %v", err)
+	}
+
+	t.Logf("before: last_op=%d target_op=%d after: last_op=%d target_op=%d", beforeLast, beforeTarget, afterLast, afterTarget)
+
+	if afterLast < beforeLast {
+		t.Fatalf("last_op regressed: before=%d after=%d", beforeLast, afterLast)
+	}
+	if afterTarget < beforeTarget {
+		t.Fatalf("target_op regressed: before=%d after=%d", beforeTarget, afterTarget)
+	}
+	// The synthetic checkpoint line above is only validated for protocol acceptance.
+	// The native extension controls checkpoint application details internally.
+}
+
+func TestController_ReplaysCheckpointFixtureLines(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	database := dbtest.OpenTestDB(t)
+	controller := extension.NewController(database)
+	defer controller.Close()
+
+	_, err := controller.Start(ctx, extension.StartRequest{IncludeDefaults: true})
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	_, err = controller.NotifyConnection(ctx, extension.ConnectionEstablished)
+	if err != nil {
+		t.Fatalf("NotifyConnection(established) error = %v", err)
+	}
+
+	path := filepath.Join("testdata", "checkpoint_lines.ndjson")
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open fixture %s: %v", path, err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	lineNo := 0
+	for scanner.Scan() {
+		lineNo++
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		if _, err := controller.SendTextLine(ctx, line); err != nil {
+			t.Fatalf("SendTextLine(line %d) error = %v", lineNo, err)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
 }
 
 func instructionTypes(instructions []extension.Instruction) []extension.InstructionType {

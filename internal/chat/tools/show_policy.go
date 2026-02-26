@@ -173,11 +173,11 @@ func summarizeEvidence(ev domain.Evidence) map[string]any {
 			varyingKeys[i] = f.Key
 		}
 		return map[string]any{
-			"type":           "constant_varies",
-			"example_count":  ev.ExampleCount,
-			"constant_count": len(ev.Constant),
-			"varying_count":  len(ev.Varying),
-			"total_fields":   len(ev.Constant) + len(ev.Varying),
+			"type":            "constant_varies",
+			"example_count":   ev.ExampleCount,
+			"constant_count":  len(ev.Constant),
+			"varying_count":   len(ev.Varying),
+			"total_fields":    len(ev.Constant) + len(ev.Varying),
 			"constant_fields": constantKeys,
 			"varying_fields":  varyingKeys,
 		}

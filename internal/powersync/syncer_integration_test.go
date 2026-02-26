@@ -10,6 +10,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
@@ -52,7 +53,7 @@ func TestIntegration_Syncer(t *testing.T) {
 		t.Fatalf("Org preferences not found: %v (run: task run)", err)
 	}
 	orgPrefs := preferences.NewOrgService(orgCfg, logger)
-	accountID := orgPrefs.GetDefaultAccountID()
+	accountID := domain.AccountID(orgPrefs.GetDefaultAccountID())
 	if accountID == "" {
 		t.Fatalf("No default account (run: task run)")
 	}
@@ -61,7 +62,7 @@ func TestIntegration_Syncer(t *testing.T) {
 
 	// Create API services
 	services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
-	services.SetAccountID(domain.AccountID(accountID))
+	services.SetAccountID(accountID)
 
 	// Validate account exists via API
 	account, err := services.Accounts.Get(context.Background(), accountID)
@@ -96,7 +97,7 @@ func TestIntegration_Syncer(t *testing.T) {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
-		var lastPhase powersync.Phase
+		lastState := ""
 		for {
 			select {
 			case <-firstSyncDone:
@@ -104,15 +105,16 @@ func TestIntegration_Syncer(t *testing.T) {
 				goto done
 			case <-ticker.C:
 				state := syncer.State()
-				if state.Phase != lastPhase {
-					t.Logf("Phase: %s", state.Phase)
-					if state.Phase == powersync.PhaseError {
-						t.Fatalf("Sync error: %v", state.Error)
+				summary := summarizeState(state)
+				if summary != lastState {
+					t.Logf("State: %s", summary)
+					if errState, ok := state.(*powersync.Error); ok {
+						t.Fatalf("Sync error: %v", errState.Err)
 					}
-					lastPhase = state.Phase
+					lastState = summary
 				}
 			case <-ctx.Done():
-				t.Fatalf("Timeout waiting for first sync, last phase: %s, error: %v", syncer.State().Phase, syncer.State().Error)
+				t.Fatalf("Timeout waiting for first sync, last state: %s", summarizeState(syncer.State()))
 			}
 		}
 	done:
@@ -136,4 +138,29 @@ func countBuckets(db sqlite.DB) (int64, error) {
 	var count int64
 	err := db.QueryRow(context.Background(), "SELECT COUNT(*) FROM ps_buckets").Scan(&count)
 	return count, err
+}
+
+func summarizeState(state powersync.State) string {
+	switch s := state.(type) {
+	case *powersync.Disconnected:
+		return "disconnected"
+	case *powersync.Connecting:
+		return "connecting"
+	case *powersync.Syncing:
+		if s.Progress != nil {
+			return "syncing " + s.Progress.String()
+		}
+		return "syncing"
+	case *powersync.Ready:
+		return "ready"
+	case *powersync.Reconnecting:
+		if s.Degraded {
+			return "reconnecting (degraded)"
+		}
+		return "reconnecting"
+	case *powersync.Error:
+		return "error: " + s.Err.Error()
+	default:
+		return "unknown"
+	}
 }

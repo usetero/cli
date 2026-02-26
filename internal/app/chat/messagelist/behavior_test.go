@@ -21,7 +21,7 @@ func addCompletedRound(t *testing.T, m *Model, turnID domain.MessageID, text str
 		TurnID:     turnID,
 		StopReason: "end_turn",
 		Message: domain.Message{
-			ID:         domain.MessageID("asst-" + turnID),
+			ID:         "asst-" + turnID,
 			StopReason: "end_turn",
 			Content: []domain.Block{
 				{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: text}},

@@ -29,7 +29,7 @@ func NewRootCmd(scope log.Scope, version string) *cobra.Command {
 	// Subcommands
 	rootCmd.AddCommand(NewAuthCmd(scope, cliConfig))
 	rootCmd.AddCommand(NewResetCmd(scope, cliConfig))
-	rootCmd.AddCommand(NewDebugCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewInternalCmd(scope, cliConfig))
 
 	return rootCmd
 }

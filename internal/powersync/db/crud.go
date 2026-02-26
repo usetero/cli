@@ -3,7 +3,9 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/usetero/cli/internal/sqlite"
@@ -85,7 +87,7 @@ func (q *CrudQueue) GetNextEntry(ctx context.Context) (*CrudEntry, error) {
 		&row.ID, &row.TxID, &row.Data,
 	)
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get next crud entry: %w", err)
@@ -188,7 +190,7 @@ func (q *CrudQueue) CheckHealth(ctx context.Context) error {
 		err = q.db.QueryRow(ctx,
 			"SELECT target_op, last_op FROM ps_buckets WHERE name = '$local'",
 		).Scan(&targetOp, &lastOp)
-		if err != nil && err.Error() != "sql: no rows in result set" {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("check local bucket: %w", err)
 		}
 		if err == nil && targetOp > lastOp {

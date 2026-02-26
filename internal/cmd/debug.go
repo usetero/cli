@@ -17,21 +17,21 @@ import (
 	"github.com/usetero/cli/internal/workos"
 )
 
-func NewDebugCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
-	scope = scope.Child("debug")
+func NewInternalInspectCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
+	scope = scope.Child("inspect")
 
-	debugCmd := &cobra.Command{
-		Use:   "debug",
-		Short: "Debug and diagnostic commands",
-		Long:  "Commands for debugging and diagnosing issues with Tero.",
+	inspectCmd := &cobra.Command{
+		Use:   "inspect",
+		Short: "Inspect local and remote state",
+		Long:  "Read-only diagnostics for local preferences, paths, and API state.",
 	}
 
-	debugCmd.AddCommand(newDebugStatusCmd(scope, cliConfig))
-	debugCmd.AddCommand(newDebugPrefsCmd(scope, cliConfig))
-	debugCmd.AddCommand(newDebugGraphQLCmd(scope, cliConfig))
-	debugCmd.AddCommand(newDebugPathsCmd(scope, cliConfig))
+	inspectCmd.AddCommand(newDebugStatusCmd(scope, cliConfig))
+	inspectCmd.AddCommand(newDebugPrefsCmd(scope, cliConfig))
+	inspectCmd.AddCommand(newDebugGraphQLCmd(scope, cliConfig))
+	inspectCmd.AddCommand(newDebugPathsCmd(scope, cliConfig))
 
-	return debugCmd
+	return inspectCmd
 }
 
 // newDebugStatusCmd shows the current datadog account status

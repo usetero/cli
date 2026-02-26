@@ -510,7 +510,19 @@ func (m *Model) startSync(accountID string) error {
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
 
 	// Create and start uploader
-	m.uploader = upload.New(m.db, psClient, m.authService, m.services.Conversations, m.services.Messages, m.services.Services, m.services.Policies, m.scope)
+	m.uploader = upload.New(
+		m.db,
+		psClient,
+		m.authService,
+		m.services.Conversations,
+		m.services.Messages,
+		m.services.Services,
+		m.services.Policies,
+		m.scope,
+		upload.WithBatchCompletedHook(func(ctx context.Context) error {
+			return m.syncer.NotifyUploadCompleted(ctx)
+		}),
+	)
 	go func() {
 		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
 			m.scope.Error("uploader error", "error", err)

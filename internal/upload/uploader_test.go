@@ -145,6 +145,118 @@ func TestUploader_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("invokes batch completed hook after successful batch", func(t *testing.T) {
+		t.Parallel()
+
+		testDB := dbtest.OpenTestDB(t)
+		ctx := context.Background()
+
+		_, err := testDB.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
+
+		convID := uuid.New().String()
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+
+		conversations := &apitest.MockConversations{
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
+			},
+		}
+
+		hookCalled := make(chan struct{}, 1)
+		uploader := upload.New(
+			testDB,
+			psapitest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			conversations,
+			apitest.NewMockMessages(),
+			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
+			logtest.NewScope(t),
+			upload.WithBatchCompletedHook(func(context.Context) error {
+				select {
+				case hookCalled <- struct{}{}:
+				default:
+				}
+				return nil
+			}),
+		)
+
+		runCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		done := make(chan error)
+		go func() {
+			done <- uploader.Run(runCtx)
+		}()
+
+		select {
+		case <-hookCalled:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for batch completed hook")
+		}
+
+		cancel()
+		<-done
+	})
+
+	t.Run("batch completed hook error is non-fatal", func(t *testing.T) {
+		t.Parallel()
+
+		testDB := dbtest.OpenTestDB(t)
+		ctx := context.Background()
+
+		_, err := testDB.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES ('$local', 0, 0)")
+		if err != nil {
+			t.Fatalf("setup bucket: %v", err)
+		}
+
+		convID := uuid.New().String()
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+
+		conversations := &apitest.MockConversations{
+			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
+			},
+		}
+
+		uploader := upload.New(
+			testDB,
+			psapitest.NewMockClient(),
+			powersynctest.NewMockTokenRefresher("token"),
+			conversations,
+			apitest.NewMockMessages(),
+			apitest.NewMockAPIServiceServices(),
+			apitest.NewMockPolicies(),
+			logtest.NewScope(t),
+			upload.WithBatchCompletedHook(func(context.Context) error {
+				return errors.New("hook failed")
+			}),
+		)
+
+		runCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		done := make(chan error)
+		go func() {
+			done <- uploader.Run(runCtx)
+		}()
+
+		select {
+		case event := <-uploader.Events():
+			if _, ok := event.(upload.SyncingEvent); !ok {
+				t.Fatalf("expected SyncingEvent, got %T", event)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for syncing event")
+		}
+
+		cancel()
+		<-done
+	})
+
 	t.Run("skips unknown tables and completes batch", func(t *testing.T) {
 		t.Parallel()
 

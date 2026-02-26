@@ -147,11 +147,11 @@ func TestCancel(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateStreaming
-			m.stream = &streamState{
-				updates: make(chan streamUpdate),
-				cancel:  func(error) {},
-				done:    false,
-			}
+		m.stream = &streamState{
+			updates: make(chan streamUpdate),
+			cancel:  func(error) {},
+			done:    false,
+		}
 
 		m.Cancel()
 

@@ -107,4 +107,3 @@ func TestReducerProperty_NoEventsAfterTerminal(t *testing.T) {
 		t.Fatal("expected error for event after terminal, got nil")
 	}
 }
-

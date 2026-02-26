@@ -4,20 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/powersync/extension"
 	"github.com/usetero/cli/internal/sqlite"
-)
-
-const (
-	initialRetryDelay = 1 * time.Second
-	maxRetryDelay     = 10 * time.Second
-	errorStateAfter   = 3 // show error state after this many consecutive failures
 )
 
 // TokenRefresher provides access tokens for authentication.
@@ -35,9 +29,21 @@ type Syncer interface {
 	Stop()
 	State() State
 	IsReady() bool
+	NotifyUploadCompleted(ctx context.Context) error
+}
+
+// ControlPlane wraps extension control operations used by the syncer.
+type ControlPlane interface {
+	Start(ctx context.Context, req extension.StartRequest) ([]extension.Instruction, error)
+	SendTextLine(ctx context.Context, line string) ([]extension.Instruction, error)
+	NotifyConnection(ctx context.Context, event extension.ConnectionEvent) ([]extension.Instruction, error)
+	NotifyTokenRefreshed(ctx context.Context) ([]extension.Instruction, error)
+	NotifyUploadCompleted(ctx context.Context) ([]extension.Instruction, error)
+	Close() error
 }
 
 var _ Syncer = (*syncer)(nil)
+var _ ControlPlane = (*extension.Controller)(nil)
 
 // syncer implements Syncer.
 type syncer struct {
@@ -45,12 +51,15 @@ type syncer struct {
 	tokenRefresher TokenRefresher
 	scope          log.Scope
 	clientFactory  func(endpoint string) api.Client
+	controlPlaneFn func(db sqlite.DB) ControlPlane
+	streamCapture  StreamCapture
 
 	database    sqlite.DB
 	accountID   string
-	controller  *extension.Controller
+	control     ControlPlane
 	client      api.Client
 	onFirstSync func()
+	controlMu   sync.Mutex
 
 	// State - protected by atomic operations
 	state atomic.Pointer[stateWrapper]
@@ -74,6 +83,20 @@ func WithClientFactory(factory func(endpoint string) api.Client) SyncerOption {
 	}
 }
 
+// WithControlPlaneFactory sets a custom control plane factory (for testing).
+func WithControlPlaneFactory(factory func(db sqlite.DB) ControlPlane) SyncerOption {
+	return func(s *syncer) {
+		s.controlPlaneFn = factory
+	}
+}
+
+// WithStreamCapture sets a best-effort raw sync-stream capture sink.
+func WithStreamCapture(capture StreamCapture) SyncerOption {
+	return func(s *syncer) {
+		s.streamCapture = capture
+	}
+}
+
 // NewSyncer creates a new Syncer. Call Start() when you have a database ready.
 func NewSyncer(endpoint string, tokenRefresher TokenRefresher, scope log.Scope, opts ...SyncerOption) Syncer {
 	s := &syncer{
@@ -81,6 +104,9 @@ func NewSyncer(endpoint string, tokenRefresher TokenRefresher, scope log.Scope, 
 		tokenRefresher: tokenRefresher,
 		scope:          scope.Child("powersync"),
 		clientFactory:  api.NewClient,
+		controlPlaneFn: func(db sqlite.DB) ControlPlane {
+			return extension.NewController(db)
+		},
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -92,7 +118,7 @@ func NewSyncer(endpoint string, tokenRefresher TokenRefresher, scope log.Scope, 
 // Start begins syncing. The onFirstSync callback fires once when initial sync completes.
 func (s *syncer) Start(ctx context.Context, database sqlite.DB, accountID string, onFirstSync func()) error {
 	if accountID == "" {
-		panic("powersync: accountID is required")
+		return fmt.Errorf("powersync: accountID is required")
 	}
 	if s.cancel != nil {
 		return fmt.Errorf("already started")
@@ -118,7 +144,7 @@ func (s *syncer) Start(ctx context.Context, database sqlite.DB, accountID string
 	s.database = database
 	s.accountID = accountID
 	s.onFirstSync = onFirstSync
-	s.controller = extension.NewController(database)
+	s.control = s.controlPlaneFn(database)
 	s.client = s.clientFactory(s.endpoint)
 	s.client.SetToken(token)
 	s.done = make(chan struct{})
@@ -138,10 +164,20 @@ func (s *syncer) Stop() {
 		<-s.done
 		s.cancel = nil
 	}
-	if s.controller != nil {
-		s.controller.Close()
-		s.controller = nil
+	s.controlMu.Lock()
+	if s.control != nil {
+		_ = s.control.Close()
+		s.control = nil
 	}
+	s.controlMu.Unlock()
+
+	if s.streamCapture != nil {
+		if err := s.streamCapture.Close(); err != nil {
+			s.scope.Warn("failed to close stream capture", "error", err)
+		}
+		s.streamCapture = nil
+	}
+
 	s.client = nil
 	s.database = nil
 	s.done = nil
@@ -163,230 +199,21 @@ func (s *syncer) IsReady() bool {
 	return ok
 }
 
+func (s *syncer) NotifyUploadCompleted(ctx context.Context) error {
+	instructions, err := s.controlPlaneNotifyUploadCompleted(ctx)
+	if errors.Is(err, errControlPlaneUnavailable) {
+		// Upload completion can legitimately race with shutdown or run before start.
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("notify upload completed: %w", err)
+	}
+	if _, err := s.applyInstructions(ctx, instructions); err != nil {
+		return fmt.Errorf("apply upload completion instructions: %w", err)
+	}
+	return nil
+}
+
 func (s *syncer) setState(state State) {
 	s.state.Store(&stateWrapper{state: state})
-}
-
-// run is the main sync loop with retry logic.
-func (s *syncer) run(ctx context.Context) {
-	defer close(s.done)
-
-	retryDelay := initialRetryDelay
-	retries := 0
-
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-
-		err := s.syncOnce(ctx)
-		if err == nil {
-			retryDelay = initialRetryDelay
-			retries = 0
-			continue
-		}
-		if ctx.Err() != nil {
-			return
-		}
-
-		var clientErr *api.Error
-		if errors.As(err, &clientErr) {
-			if clientErr.IsAuth() {
-				s.scope.Debug("auth error, force-refreshing token")
-				s.setState(NewReconnecting(false))
-				if err := s.forceRefreshToken(ctx); err != nil {
-					// Refresh failed — backoff and try again later.
-					// Don't give up. The server may be down, we'll recover when it's back.
-					retries++
-					s.scope.Debug("token refresh failed, retrying", log.Duration("delay", retryDelay), log.Any("error", err))
-					s.setState(NewReconnecting(retries >= errorStateAfter))
-					s.wait(ctx, retryDelay)
-					retryDelay = min(retryDelay*2, maxRetryDelay)
-				}
-				continue
-			}
-
-			if clientErr.IsPermanent() {
-				s.setError(err)
-				return
-			}
-		}
-
-		// Transient API errors and non-API errors (e.g. extension state
-		// errors) are retried with backoff. syncOnce calls Start() which
-		// resets the extension state via tear_down(), so retry is safe.
-		retries++
-		s.scope.Debug("transient error, retrying", log.Duration("delay", retryDelay), log.Int("attempt", retries), log.Any("error", err))
-		s.setState(NewReconnecting(retries >= errorStateAfter))
-		s.wait(ctx, retryDelay)
-		retryDelay = min(retryDelay*2, maxRetryDelay)
-	}
-}
-
-// syncOnce runs one sync session: start controller, connect stream, process lines.
-func (s *syncer) syncOnce(ctx context.Context) error {
-	// Proactively refresh the token before connecting. This avoids a
-	// needless 401 round-trip when the stream dropped after hours and the
-	// token expired while we were connected. GetAccessToken checks the JWT
-	// exp claim and only hits the network if the token is actually expired.
-	// We only update the HTTP client here — no controller notification,
-	// since the controller hasn't started its iteration yet.
-	if token, err := s.tokenRefresher.GetAccessToken(ctx); err != nil {
-		return err
-	} else {
-		s.client.SetToken(token)
-	}
-
-	instructions, err := s.controller.Start(ctx, extension.StartRequest{
-		IncludeDefaults: true,
-		Parameters:      map[string]any{"account_id": s.accountID},
-	})
-	if err != nil {
-		return fmt.Errorf("controller start: %w", err)
-	}
-
-	for _, inst := range instructions {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		switch inst.Type {
-		case extension.InstructionEstablishSyncStream:
-			if err := s.connectAndSync(ctx, inst.Request); err != nil {
-				return err
-			}
-		case extension.InstructionFetchCredentials:
-			if err := s.refreshToken(ctx); err != nil {
-				return err
-			}
-		default:
-			// Other instruction types are handled elsewhere or ignored at this level
-		}
-	}
-
-	return nil
-}
-
-// connectAndSync connects to the stream and processes lines until disconnect.
-func (s *syncer) connectAndSync(ctx context.Context, req *api.SyncStreamRequest) error {
-	if req == nil {
-		return fmt.Errorf("no sync request")
-	}
-
-	s.scope.Debug("connecting stream")
-	s.setState(NewSyncing())
-
-	// Track if we've notified connection established
-	connected := false
-
-	err := s.client.SyncStream(ctx, req, func(line []byte) error {
-		// Notify connection established on first line received
-		// This ensures the PowerSync extension knows the stream is active
-		if !connected {
-			if _, err := s.controller.NotifyConnection(ctx, extension.ConnectionEstablished); err != nil {
-				return fmt.Errorf("notify connected: %w", err)
-			}
-			connected = true
-		}
-		return s.handleLine(line)
-	})
-
-	if connected {
-		_, _ = s.controller.NotifyConnection(ctx, extension.ConnectionEnded)
-	}
-
-	if err != nil {
-		return fmt.Errorf("stream: %w", err)
-	}
-	return nil
-}
-
-// handleLine processes a single line from the sync stream.
-func (s *syncer) handleLine(line []byte) error {
-	ctx := context.Background() // Lines are processed synchronously
-
-	instructions, err := s.controller.SendTextLine(ctx, string(line))
-	if err != nil {
-		return fmt.Errorf("send line: %w", err)
-	}
-
-	for _, inst := range instructions {
-		switch inst.Type {
-		case extension.InstructionDidCompleteSync:
-			s.scope.Debug("sync complete")
-			s.setState(NewReady())
-			s.fireFirstSync()
-
-		case extension.InstructionUpdateSyncStatus:
-			if inst.SyncStatus != nil && inst.SyncStatus.Downloading != nil {
-				downloaded, total := inst.SyncStatus.Downloading.TotalProgress()
-				s.setState(NewSyncing().WithProgress(downloaded, total))
-				s.scope.Debug("sync progress", "downloaded", downloaded, "total", total)
-			}
-
-		case extension.InstructionFetchCredentials:
-			s.scope.Debug("received FetchCredentials", "didExpire", inst.DidExpire)
-			if err := s.refreshToken(ctx); err != nil {
-				return err
-			}
-
-		case extension.InstructionCloseSyncStream:
-			s.scope.Debug("received CloseSyncStream")
-			return nil
-
-		case extension.InstructionLogLine:
-			s.scope.Debug("powersync", "severity", inst.Severity, "line", inst.Line)
-		default:
-			// Other instruction types not expected during line processing
-		}
-	}
-
-	return nil
-}
-
-func (s *syncer) fireFirstSync() {
-	// Only fire once - check if we're transitioning to ready
-	if s.onFirstSync != nil {
-		s.scope.Info("sync connected")
-		s.onFirstSync()
-		s.onFirstSync = nil // Don't fire again
-	}
-}
-
-func (s *syncer) refreshToken(ctx context.Context) error {
-	token, err := s.tokenRefresher.GetAccessToken(ctx)
-	if err != nil {
-		return err
-	}
-	s.client.SetToken(token)
-	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
-		return fmt.Errorf("notify token refreshed: %w", err)
-	}
-	return nil
-}
-
-// forceRefreshToken unconditionally refreshes the token, bypassing local
-// expiration checks. Used when the server has rejected the current token.
-func (s *syncer) forceRefreshToken(ctx context.Context) error {
-	token, err := s.tokenRefresher.ForceRefreshAccessToken(ctx)
-	if err != nil {
-		return err
-	}
-	s.client.SetToken(token)
-	if _, err := s.controller.NotifyTokenRefreshed(ctx); err != nil {
-		return fmt.Errorf("notify token refreshed: %w", err)
-	}
-	return nil
-}
-
-func (s *syncer) setError(err error) {
-	s.setState(NewError(err))
-	s.scope.Error("sync failed", log.Any("error", err))
-}
-
-func (s *syncer) wait(ctx context.Context, d time.Duration) {
-	select {
-	case <-ctx.Done():
-	case <-time.After(d):
-	}
 }

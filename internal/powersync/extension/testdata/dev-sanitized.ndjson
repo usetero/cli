@@ -1,0 +1,2 @@
+{"checkpoint":{"buckets":[{"bucket":"redacted_9d6690cd17d4","checksum":-484225811,"count":50463,"priority":3,"subscriptions":[{"default":0}]}],"last_op_id":"17975363","streams":[{"errors":[],"is_default":true,"name":"redacted_1148223160fd"}],"write_checkpoint":"170"}}
+{"checkpoint_complete":{"last_op_id":"17975363"}}

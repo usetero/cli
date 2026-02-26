@@ -61,22 +61,22 @@ func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, cat
 	result := make([]domain.PolicyCategoryStatus, len(rows))
 	for i, row := range rows {
 		result[i] = domain.PolicyCategoryStatus{
-			Category:               domain.PolicyCategory(row.Category),
-			DisplayName:            row.DisplayName,
-			Principle:              row.Principle,
-			PendingCount:           row.PendingCount,
-			ApprovedCount:          row.ApprovedCount,
-			DismissedCount:         row.DismissedCount,
+			Category:                   domain.PolicyCategory(row.Category),
+			DisplayName:                row.DisplayName,
+			Principle:                  row.Principle,
+			PendingCount:               row.PendingCount,
+			ApprovedCount:              row.ApprovedCount,
+			DismissedCount:             row.DismissedCount,
 			PolicyPendingCriticalCount: row.PolicyPendingCriticalCount,
 			PolicyPendingHighCount:     row.PolicyPendingHighCount,
 			PolicyPendingMediumCount:   row.PolicyPendingMediumCount,
 			PolicyPendingLowCount:      row.PolicyPendingLowCount,
-			EstimatedVolumePerHour: row.EstimatedVolumeReductionPerHour,
-			EstimatedBytesPerHour:  row.EstimatedBytesReductionPerHour,
-			EstimatedCostPerHour:   row.EstimatedCostReductionPerHourUsd,
-			EventsWithVolumes:      row.EventsWithVolumes,
-			TotalEvents:            row.TotalEventCount,
-			Action:                 domain.PolicyAction(row.PolicyAction),
+			EstimatedVolumePerHour:     row.EstimatedVolumeReductionPerHour,
+			EstimatedBytesPerHour:      row.EstimatedBytesReductionPerHour,
+			EstimatedCostPerHour:       row.EstimatedCostReductionPerHourUsd,
+			EventsWithVolumes:          row.EventsWithVolumes,
+			TotalEvents:                row.TotalEventCount,
+			Action:                     domain.PolicyAction(row.PolicyAction),
 		}
 	}
 	return result, nil

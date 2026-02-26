@@ -59,4 +59,29 @@ Test behavior and invariants first. Coverage is a lagging indicator, not the goa
 
 ```bash
 go test ./internal/chat ./internal/app/chat/... -count=1
+
+## PowerSync Replay Fixtures
+
+Use these commands for deterministic PowerSync correctness testing:
+
+```bash
+# 1) Capture raw fixture on demand (dev or prd)
+TERO_ENV=dev task internal:powersync:capture OUTPUT=fixtures/powersync/dev-raw.ndjson DURATION=120s
+
+# 2) Sanitize to commit-safe fixture
+task internal:powersync:sanitize-fixture INPUT="$HOME/.tero/environments/dev/fixtures/powersync/dev-raw.ndjson" OUTPUT="internal/powersync/extension/testdata/dev-sanitized.ndjson" MAX_LINES=500
+
+# 3) Run deterministic replay correctness test (uses committed fixture by default:
+#    internal/powersync/extension/testdata/dev-sanitized.ndjson)
+task test:correctness:powersync-replay
+
+# 4) Run replay against a specific raw/sanitized fixture
+task test:correctness:powersync-replay FIXTURE="$HOME/.tero/environments/prd/fixtures/powersync/prd-stream-2026-02-26.ndjson"
+```
+
+Rules:
+
+1. Never commit raw production fixtures.
+2. Commit only sanitized fixtures (prefer dev captures).
+3. Keep committed fixtures small enough for fast CI.
 ```

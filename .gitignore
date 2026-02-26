@@ -45,3 +45,8 @@ docs/VISION.md
 .hermit/
 tmp/
 /admin
+
+# PowerSync raw fixture captures (local/on-demand only, never commit)
+fixtures/powersync/*raw*.ndjson
+fixtures/powersync/prd-*.ndjson
+fixtures/powersync/dev-raw-*.ndjson

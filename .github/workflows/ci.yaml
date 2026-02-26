@@ -29,3 +29,6 @@ jobs:
 
       - name: Run Unit Tests (Task + Hermit)
         run: task test
+
+      - name: Run PowerSync Replay Correctness Test
+        run: task test:correctness:powersync-replay

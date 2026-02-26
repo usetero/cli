@@ -425,11 +425,11 @@ func (d *database) WithTx(ctx context.Context, fn func(tx *Tx) error) error {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
-	if err := fn(&Tx{tx: tx}); err != nil {
+	if fnErr := fn(&Tx{tx: tx}); fnErr != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("rollback failed: %w (original error: %w)", rbErr, err)
+			return fmt.Errorf("rollback failed: %w (original error: %w)", rbErr, fnErr)
 		}
-		return err
+		return fnErr
 	}
 
 	if err := tx.Commit(); err != nil {

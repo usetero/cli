@@ -30,6 +30,20 @@ type Uploader interface {
 	Events() <-chan Event
 }
 
+// BatchCompletedHook is called after a batch is atomically completed in SQLite.
+// Errors are logged and do not fail the upload cycle.
+type BatchCompletedHook func(ctx context.Context) error
+
+// Option configures uploader behavior.
+type Option func(*uploader)
+
+// WithBatchCompletedHook installs a callback invoked after each successful batch completion.
+func WithBatchCompletedHook(hook BatchCompletedHook) Option {
+	return func(u *uploader) {
+		u.batchCompletedHook = hook
+	}
+}
+
 // uploader is the concrete implementation of Uploader.
 type uploader struct {
 	db             sqlite.DB
@@ -50,6 +64,8 @@ type uploader struct {
 	// State tracking
 	stalledSince *time.Time
 	stalledEntry *db.CrudEntry
+
+	batchCompletedHook BatchCompletedHook
 }
 
 // New creates a new uploader.
@@ -62,9 +78,10 @@ func New(
 	services api.Services,
 	policies api.Policies,
 	scope log.Scope,
+	opts ...Option,
 ) Uploader {
 	scope = scope.Child("upload")
-	return &uploader{
+	u := &uploader{
 		db:             database,
 		queue:          db.NewCrudQueue(database),
 		client:         client,
@@ -81,6 +98,10 @@ func New(
 		maxRetries:   defaultMaxRetries,
 		events:       make(chan Event, 10),
 	}
+	for _, opt := range opts {
+		opt(u)
+	}
+	return u
 }
 
 // Events returns the channel for receiving upload status events.
@@ -175,6 +196,11 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 	lastID := entries[len(entries)-1].ID
 	if err := db.CompleteBatch(ctx, u.db, lastID, checkpoint); err != nil {
 		return 0, fmt.Errorf("complete batch: %w", err)
+	}
+	if u.batchCompletedHook != nil {
+		if err := u.batchCompletedHook(ctx); err != nil {
+			u.scope.Warn("batch completion hook failed", "error", err)
+		}
 	}
 
 	u.scope.Debug("completed batch", "count", len(entries), "checkpoint", checkpoint)

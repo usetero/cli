@@ -9,10 +9,11 @@ import (
 
 // MockSyncer is a test double for powersync.Syncer.
 type MockSyncer struct {
-	StartFunc   func(ctx context.Context, db sqlite.DB, accountID string, onFirstSync func()) error
-	StopFunc    func()
-	StateFunc   func() powersync.State
-	IsReadyFunc func() bool
+	StartFunc                 func(ctx context.Context, db sqlite.DB, accountID string, onFirstSync func()) error
+	StopFunc                  func()
+	StateFunc                 func() powersync.State
+	IsReadyFunc               func() bool
+	NotifyUploadCompletedFunc func(ctx context.Context) error
 }
 
 var _ powersync.Syncer = (*MockSyncer)(nil)
@@ -47,4 +48,11 @@ func (m *MockSyncer) IsReady() bool {
 		return m.IsReadyFunc()
 	}
 	return false
+}
+
+func (m *MockSyncer) NotifyUploadCompleted(ctx context.Context) error {
+	if m.NotifyUploadCompletedFunc != nil {
+		return m.NotifyUploadCompletedFunc(ctx)
+	}
+	return nil
 }

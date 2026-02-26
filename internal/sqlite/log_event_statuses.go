@@ -29,10 +29,10 @@ func (l *logEventStatusesImpl) ListByService(ctx context.Context, serviceName st
 	result := make([]domain.LogEventStatus, len(rows))
 	for i, row := range rows {
 		result[i] = domain.LogEventStatus{
-			Name:                row.LogEventName,
-			VolumePerHour:       row.VolumePerHour,
-			BytesPerHour:        row.BytesPerHour,
-			CostPerHourUSD:      row.CostPerHourUsd,
+			Name:                       row.LogEventName,
+			VolumePerHour:              row.VolumePerHour,
+			BytesPerHour:               row.BytesPerHour,
+			CostPerHourUSD:             row.CostPerHourUsd,
 			PendingPolicyCount:         row.PendingPolicyCount,
 			ApprovedPolicyCount:        row.ApprovedPolicyCount,
 			PolicyPendingCriticalCount: row.PolicyPendingCriticalCount,

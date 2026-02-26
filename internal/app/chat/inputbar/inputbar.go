@@ -23,10 +23,10 @@ const (
 	textareaHeight = 3 // visible input lines
 
 	// Layout: border(1) + innerPadL(2) + text + innerPadR(2)
-	borderWidth   = 1
-	innerPadX     = 2
-	innerPadY     = 1
-	chrome        = borderWidth + innerPadX*2
+	borderWidth = 1
+	innerPadX   = 2
+	innerPadY   = 1
+	chrome      = borderWidth + innerPadX*2
 
 	inputBarHeight = textareaHeight + innerPadY*2 // textarea + top/bottom inner padding
 )

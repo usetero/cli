@@ -65,6 +65,8 @@ func (m *Model) handleMouseRelease(_ tea.MouseReleaseMsg) []tea.Cmd {
 		"dragX", m.mouseDragX, "dragY", m.mouseDragY)
 
 	switch action {
+	case releaseActionNoop:
+		return nil
 	case releaseActionCopy:
 		return []tea.Cmd{
 			tea.SetClipboard(text),
