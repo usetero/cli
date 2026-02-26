@@ -88,15 +88,26 @@ func TestUpdate(t *testing.T) {
 			},
 		})
 
+		if m.state != tools.StateExecuting {
+			t.Fatalf("expected StateExecuting, got %d", m.state)
+		}
+		if cmd == nil {
+			t.Fatal("expected execution cmd")
+		}
+
+		completeCmd := m.Update(cmd())
 		if m.state != tools.StateComplete {
-			t.Fatalf("expected StateComplete, got %d", m.state)
+			t.Fatalf("expected StateComplete after execution, got %d", m.state)
 		}
 		if m.err != nil {
 			t.Fatalf("unexpected error: %v", m.err)
 		}
+		if completeCmd == nil {
+			t.Fatal("expected completion cmd")
+		}
 
 		// Execute the command and check the message
-		msg := cmd()
+		msg := completeCmd()
 		completed, ok := msg.(msgs.ToolCompleted)
 		if !ok {
 			t.Fatalf("expected msgs.ToolCompleted, got %T", msg)
@@ -133,14 +144,25 @@ func TestUpdate(t *testing.T) {
 			},
 		})
 
+		if m.state != tools.StateExecuting {
+			t.Fatalf("expected StateExecuting, got %d", m.state)
+		}
+		if cmd == nil {
+			t.Fatal("expected execution cmd")
+		}
+
+		completeCmd := m.Update(cmd())
 		if m.state != tools.StateComplete {
-			t.Fatalf("expected StateComplete, got %d", m.state)
+			t.Fatalf("expected StateComplete after execution, got %d", m.state)
 		}
 		if m.err == nil {
 			t.Fatal("expected error, got nil")
 		}
+		if completeCmd == nil {
+			t.Fatal("expected completion cmd")
+		}
 
-		msg := cmd()
+		msg := completeCmd()
 		completed, ok := msg.(msgs.ToolCompleted)
 		if !ok {
 			t.Fatalf("expected msgs.ToolCompleted, got %T", msg)
@@ -169,7 +191,11 @@ func TestUpdate(t *testing.T) {
 			}},
 		}
 
-		m.Update(msgs.StreamCompleted{Message: domain.Message{Content: content}})
+		cmd := m.Update(msgs.StreamCompleted{Message: domain.Message{Content: content}})
+		if cmd == nil {
+			t.Fatal("expected execution cmd")
+		}
+		m.Update(cmd())
 		m.Update(msgs.StreamCompleted{Message: domain.Message{Content: content}})
 
 		if callCount != 1 {

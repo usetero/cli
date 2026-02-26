@@ -47,6 +47,12 @@ type Model struct {
 	duration    time.Duration
 }
 
+type queryExecutedMsg struct {
+	result   domaintools.QueryResult
+	err      error
+	duration time.Duration
+}
+
 // New creates a new query tool model.
 func New(theme styles.Theme, index int, turnID, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
 	scope = scope.Child("query")
@@ -69,6 +75,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
+	case queryExecutedMsg:
+		m.duration = msg.duration
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = tools.StateComplete
+			m.scope.Error("query failed", "error", msg.err)
+			return m.fireCompleted()
+		}
+
+		m.rows = msg.result.Rows
+		m.rowsDropped = msg.result.RowsDropped
+		m.state = tools.StateComplete
+		m.scope.Info("query completed", "row_count", len(m.rows), "rows_dropped", m.rowsDropped, "duration", m.duration)
+		return m.fireCompleted()
 	}
 	return nil
 }
@@ -209,21 +229,16 @@ func (m *Model) execute() tea.Cmd {
 		m.scope.Error("query failed", "error", m.err)
 		return m.fireCompleted()
 	}
-
-	result, err := m.executor.Execute(json.RawMessage(m.input))
-	m.duration = time.Since(start)
-	if err != nil {
-		m.err = err
-		m.state = tools.StateComplete
-		m.scope.Error("query failed", "error", err)
-		return m.fireCompleted()
+	input := append([]byte(nil), []byte(m.input)...)
+	executor := m.executor
+	return func() tea.Msg {
+		result, err := executor.Execute(json.RawMessage(input))
+		return queryExecutedMsg{
+			result:   result,
+			err:      err,
+			duration: time.Since(start),
+		}
 	}
-
-	m.rows = result.Rows
-	m.rowsDropped = result.RowsDropped
-	m.state = tools.StateComplete
-	m.scope.Info("query completed", "row_count", len(m.rows), "rows_dropped", m.rowsDropped, "duration", m.duration)
-	return m.fireCompleted()
 }
 
 func (m *Model) fireCompleted() tea.Cmd {

@@ -39,6 +39,11 @@ type Model struct {
 	err    error
 }
 
+type actionExecutedMsg struct {
+	result domaintools.Result
+	err    error
+}
+
 // New creates a new generic action tool model.
 func New(index int, turnID, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
 	return &Model{
@@ -60,6 +65,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
+	case actionExecutedMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = tools.StateComplete
+			m.scope.Error("action failed", "name", m.config.DisplayName(m.input), "error", msg.err)
+			return m.fireCompleted()
+		}
+
+		m.result = msg.result
+		m.state = tools.StateComplete
+		m.scope.Info("action completed", "name", m.config.DisplayName(m.input))
+		return m.fireCompleted()
 	}
 	return nil
 }
@@ -84,19 +101,12 @@ func (m *Model) handleContent(content []domain.Block) tea.Cmd {
 func (m *Model) execute() tea.Cmd {
 	m.state = tools.StateExecuting
 	m.scope.Info("executing action", "name", m.config.DisplayName(m.input), "input", string(m.input))
-
-	result, err := m.executor(m.input)
-	if err != nil {
-		m.err = err
-		m.state = tools.StateComplete
-		m.scope.Error("action failed", "name", m.config.DisplayName(m.input), "error", err)
-		return m.fireCompleted()
+	input := append(json.RawMessage(nil), m.input...)
+	executor := m.executor
+	return func() tea.Msg {
+		result, err := executor(input)
+		return actionExecutedMsg{result: result, err: err}
 	}
-
-	m.result = result
-	m.state = tools.StateComplete
-	m.scope.Info("action completed", "name", m.config.DisplayName(m.input))
-	return m.fireCompleted()
 }
 
 func (m *Model) fireCompleted() tea.Cmd {

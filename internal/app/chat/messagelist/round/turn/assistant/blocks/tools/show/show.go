@@ -46,6 +46,11 @@ type Model struct {
 	card *policycard.Model
 }
 
+type showExecutedMsg struct {
+	result domaintools.ShowResult
+	err    error
+}
+
 // New creates a new show tool model.
 func New(theme styles.Theme, index int, turnID, toolID string, width int, executor *chattools.ShowTool, scope log.Scope) *Model {
 	return &Model{
@@ -70,6 +75,29 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
+	case showExecutedMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = tools.StateComplete
+			m.scope.Error("show failed", "error", msg.err)
+			return m.fireCompleted()
+		}
+
+		m.result = msg.result
+		m.state = tools.StateComplete
+
+		// Create entity-specific child components based on result type.
+		if msg.result.Entity == domaintools.EntityPolicy && msg.result.Data != nil {
+			if p, ok := msg.result.Data["policy"].(*domain.Policy); ok {
+				m.policy = p
+				m.card = policycard.New(m.theme)
+				m.card.SetPolicy(p)
+				m.card.SetWidth(m.width)
+			}
+		}
+
+		m.scope.Info("show completed", "entity", string(msg.result.Entity), "id", msg.result.ID)
+		return m.fireCompleted()
 	}
 	return nil
 }
@@ -105,30 +133,12 @@ func (m *Model) execute() tea.Cmd {
 		m.state = tools.StateComplete
 		return m.fireCompleted()
 	}
-
-	result, err := m.executor.Execute(json.RawMessage(m.input))
-	if err != nil {
-		m.err = err
-		m.state = tools.StateComplete
-		m.scope.Error("show failed", "error", err)
-		return m.fireCompleted()
+	input := append([]byte(nil), []byte(m.input)...)
+	executor := m.executor
+	return func() tea.Msg {
+		result, err := executor.Execute(json.RawMessage(input))
+		return showExecutedMsg{result: result, err: err}
 	}
-
-	m.result = result
-	m.state = tools.StateComplete
-
-	// Create entity-specific child components based on result type.
-	if result.Entity == domaintools.EntityPolicy && result.Data != nil {
-		if p, ok := result.Data["policy"].(*domain.Policy); ok {
-			m.policy = p
-			m.card = policycard.New(m.theme)
-			m.card.SetPolicy(p)
-			m.card.SetWidth(m.width)
-		}
-	}
-
-	m.scope.Info("show completed", "entity", string(result.Entity), "id", result.ID)
-	return m.fireCompleted()
 }
 
 func (m *Model) fireCompleted() tea.Cmd {
