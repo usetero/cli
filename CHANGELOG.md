@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.22.2](https://github.com/usetero/cli/compare/v1.22.1...v1.22.2) (2026-02-26)
+
+
+### Bug Fixes
+
+* restructure CLI CI workflows for strict checks ([9d71eaa](https://github.com/usetero/cli/commit/9d71eaa2ce1ef86a3114bb967a799dcfc017837b))
+* scope chat tool lifecycle messages by turn and tool IDs ([b1012dd](https://github.com/usetero/cli/commit/b1012dd20ae88a03fb1069d29bffbebfc310d579))
+
 ## [1.22.1](https://github.com/usetero/cli/compare/v1.22.0...v1.22.1) (2026-02-26)
 
 
