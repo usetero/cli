@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
+	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -35,7 +36,7 @@ func (s *stubChild) Err() error             { return s.err }
 func newTestTool(t *testing.T, child *stubChild) *Model {
 	t.Helper()
 	theme := styles.NewTheme(true)
-	return New(theme, 0, "tool-1", 80, child)
+	return New(theme, 0, "turn-1", "tool-1", 80, child)
 }
 
 func TestStatusRendering(t *testing.T) {
@@ -216,5 +217,20 @@ func TestKind(t *testing.T) {
 	m := newTestTool(t, child)
 	if m.Kind() != block.KindTool {
 		t.Errorf("expected KindTool, got %d", m.Kind())
+	}
+}
+
+func TestUpdate_IgnoresToolCompletedFromDifferentTurn(t *testing.T) {
+	t.Parallel()
+	child := &stubChild{name: "Query", state: StateAccumulating}
+	m := newTestTool(t, child)
+
+	m.Update(msgs.ToolCompleted{
+		TurnID:    "turn-2",
+		ToolUseID: "tool-1",
+	})
+
+	if m.status != StatusPending {
+		t.Fatalf("status = %d, want StatusPending", m.status)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
@@ -109,5 +110,24 @@ func TestAutoExpand(t *testing.T) {
 	m := New(styles.NewTheme(true), 0, "turn-1", "tool-1", 80, &chattools.ShowTool{}, logtest.NewScope(t))
 	if !m.AutoExpand() {
 		t.Fatal("AutoExpand() = false, want true")
+	}
+}
+
+func TestUpdate_IgnoresExecutionCompletionFromDifferentToolInstance(t *testing.T) {
+	t.Parallel()
+
+	m := New(styles.NewTheme(true), 0, "turn-1", "tool-1", 80, nil, logtest.NewScope(t))
+	cmd := m.Update(showExecutedMsg{
+		toolID: "tool-2",
+		result: domaintools.ShowResult{Entity: domaintools.EntityPolicy, ID: "p-2"},
+	})
+	if cmd != nil {
+		t.Fatal("expected nil cmd for foreign completion")
+	}
+	if m.state != tools.StateAccumulating {
+		t.Fatalf("state = %d, want StateAccumulating", m.state)
+	}
+	if m.result.ID != "" {
+		t.Fatalf("unexpected result id %q", m.result.ID)
 	}
 }

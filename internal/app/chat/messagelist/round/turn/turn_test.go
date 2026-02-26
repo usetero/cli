@@ -340,7 +340,7 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		m.persisted = false
 
 		// Simulate assistantPersisted arriving
-		cmd := m.Update(assistantPersisted{messageID: "asst-1"})
+		cmd := m.Update(assistantPersisted{turnID: m.userMessage.ID(), messageID: "asst-1"})
 
 		if !m.persisted {
 			t.Error("expected persisted = true")
@@ -370,7 +370,7 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		m.state = StateComplete
 		m.pendingTools = 0
 
-		cmd := m.Update(assistantPersisted{messageID: "asst-1"})
+		cmd := m.Update(assistantPersisted{turnID: m.userMessage.ID(), messageID: "asst-1"})
 
 		if !m.persisted {
 			t.Error("expected persisted = true")

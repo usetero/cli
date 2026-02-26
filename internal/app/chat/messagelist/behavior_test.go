@@ -1,6 +1,7 @@
 package messagelist
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,9 +9,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	chat "github.com/usetero/cli/internal/chat"
+	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
+	"github.com/usetero/cli/internal/tea/teatest"
 )
 
 func addCompletedRound(t *testing.T, m *Model, turnID domain.MessageID, text string) {
@@ -232,5 +237,107 @@ func TestBehavior_StaleToolCompletedIgnored(t *testing.T) {
 	}
 	if !m.rounds[1].IsActive() {
 		t.Fatalf("round[1] should remain active after stale tool completion")
+	}
+}
+
+func TestBehavior_ToolResultsStayBoundToOriginalBlock(t *testing.T) {
+	t.Parallel()
+
+	type toolInput struct {
+		Name string `json:"name"`
+	}
+
+	actionTool := chattools.NewActionTool(
+		chat.Tool{Name: "set_service_enabled"},
+		func(input json.RawMessage) (domaintools.Result, error) {
+			var in toolInput
+			if err := json.Unmarshal(input, &in); err != nil {
+				return domaintools.Result{}, err
+			}
+			return domaintools.Result{
+				Content: map[string]any{
+					"name": in.Name,
+				},
+			}, nil
+		},
+		action.Config{
+			DisplayName: func(_ json.RawMessage) string { return "Enable Service" },
+			Status:      func(_ json.RawMessage) string { return "Enabling" },
+			Result: func(result domaintools.Result) string {
+				name, _ := result.Content["name"].(string)
+				return name + " enabled"
+			},
+		},
+	)
+	registry := chattools.NewRegistry(nil, nil, map[string]chattools.ActionTool{
+		"set_service_enabled": actionTool,
+	})
+
+	m := newStreamingMessageList(t)
+	m.toolRegistry = registry
+
+	m.StartTurn("conv-1", "acct-1", "user-1", msgs.UserSubmittedInput{Text: "enable"}, nil, nil)
+
+	cmd1 := m.Update(msgs.AssistantContentUpdated{
+		TurnID: "user-1",
+		Message: domain.Message{
+			ID: "asst-1",
+			Content: []domain.Block{
+				{
+					Index: 0,
+					Type:  domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:            "tool-1",
+						Name:          "set_service_enabled",
+						Input:         json.RawMessage(`{"name":"alpha"}`),
+						InputComplete: true,
+					},
+				},
+			},
+		},
+	})
+	teatest.DrainCmds(m.Update, cmd1, 64)
+
+	viewAfterFirst := m.View()
+	if !strings.Contains(viewAfterFirst, "alpha enabled") {
+		t.Fatalf("expected first result in view, got:\n%s", viewAfterFirst)
+	}
+
+	cmd2 := m.Update(msgs.AssistantContentUpdated{
+		TurnID: "user-1",
+		Message: domain.Message{
+			ID: "asst-1",
+			Content: []domain.Block{
+				{
+					Index: 0,
+					Type:  domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:            "tool-1",
+						Name:          "set_service_enabled",
+						Input:         json.RawMessage(`{"name":"alpha"}`),
+						InputComplete: true,
+					},
+				},
+				{
+					Index: 1,
+					Type:  domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:            "tool-2",
+						Name:          "set_service_enabled",
+						Input:         json.RawMessage(`{"name":"beta"}`),
+						InputComplete: true,
+					},
+				},
+			},
+		},
+	})
+	teatest.DrainCmds(m.Update, cmd2, 128)
+
+	viewAfterSecond := m.View()
+	if strings.Count(viewAfterSecond, "alpha enabled") != 1 {
+		t.Fatalf("expected alpha result to remain exactly once, got:\n%s", viewAfterSecond)
+	}
+	if strings.Count(viewAfterSecond, "beta enabled") != 1 {
+		t.Fatalf("expected beta result exactly once, got:\n%s", viewAfterSecond)
 	}
 }

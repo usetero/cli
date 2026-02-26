@@ -26,7 +26,7 @@ type Model struct {
 	theme    styles.Theme
 	scope    log.Scope
 	index    int
-	turnID   string
+	turnID   domain.MessageID
 	toolID   string
 	state    tools.State
 	executor *chattools.QueryTool
@@ -48,13 +48,14 @@ type Model struct {
 }
 
 type queryExecutedMsg struct {
+	toolID   string
 	result   domaintools.QueryResult
 	err      error
 	duration time.Duration
 }
 
 // New creates a new query tool model.
-func New(theme styles.Theme, index int, turnID, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
+func New(theme styles.Theme, index int, turnID domain.MessageID, toolID string, width int, executor *chattools.QueryTool, scope log.Scope) *Model {
 	scope = scope.Child("query")
 	return &Model{
 		theme:    theme,
@@ -76,6 +77,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
 	case queryExecutedMsg:
+		if msg.toolID != m.toolID {
+			return nil
+		}
 		m.duration = msg.duration
 		if msg.err != nil {
 			m.err = msg.err
@@ -234,6 +238,7 @@ func (m *Model) execute() tea.Cmd {
 	return func() tea.Msg {
 		result, err := executor.Execute(json.RawMessage(input))
 		return queryExecutedMsg{
+			toolID:   m.toolID,
 			result:   result,
 			err:      err,
 			duration: time.Since(start),

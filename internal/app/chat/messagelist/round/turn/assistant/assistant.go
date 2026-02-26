@@ -155,23 +155,23 @@ func (m *Model) hasBlock(index int) bool {
 func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *tools.Model {
 	if m.toolRegistry == nil {
 		entry := chattools.UnknownTool(toolUse.Name)
-		child := action.New(index, m.turnID.String(), toolUse.ID, width, entry.Config, entry.Exec, m.scope)
-		return tools.New(m.blockTheme, index, toolUse.ID, width, child)
+		child := action.New(index, m.turnID, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
+		return tools.New(m.blockTheme, index, m.turnID, toolUse.ID, width, child)
 	}
 
 	var child tools.Child
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
-		child = query.New(m.blockTheme, index, m.turnID.String(), toolUse.ID, width, m.toolRegistry.Query, m.scope)
+		child = query.New(m.blockTheme, index, m.turnID, toolUse.ID, width, m.toolRegistry.Query, m.scope)
 	case m.toolRegistry.Show != nil && toolUse.Name == m.toolRegistry.Show.Name():
-		child = show.New(m.blockTheme, index, m.turnID.String(), toolUse.ID, width, m.toolRegistry.Show, m.scope)
+		child = show.New(m.blockTheme, index, m.turnID, toolUse.ID, width, m.toolRegistry.Show, m.scope)
 	default:
 		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
 		if !ok {
 			m.scope.Warn("unknown tool, using generic action", "name", toolUse.Name)
 			entry = chattools.UnknownTool(toolUse.Name)
 		}
-		child = action.New(index, m.turnID.String(), toolUse.ID, width, entry.Config, entry.Exec, m.scope)
+		child = action.New(index, m.turnID, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
 	}
-	return tools.New(m.blockTheme, index, toolUse.ID, width, child)
+	return tools.New(m.blockTheme, index, m.turnID, toolUse.ID, width, child)
 }

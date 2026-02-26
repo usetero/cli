@@ -13,6 +13,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/cursor"
@@ -37,6 +38,7 @@ type Model struct {
 	textarea    textarea.Model
 	width       int
 	scope       log.Scope
+	activeTurn  domain.MessageID
 	pendingText string // saved input text, restored on stream failure
 	placeholder string // rendered outside textarea to avoid bg issues
 }
@@ -143,13 +145,23 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case msgs.StreamFailed:
+		if msg.TurnID != m.activeTurn {
+			return nil
+		}
 		if m.pendingText != "" {
 			m.textarea.SetValue(m.pendingText)
 			m.pendingText = ""
 		}
 		return nil
 
+	case msgs.TurnStarted:
+		m.activeTurn = msg.UserMessageID
+		return nil
+
 	case msgs.StreamCompleted:
+		if msg.TurnID != m.activeTurn {
+			return nil
+		}
 		m.pendingText = ""
 		return nil
 	}

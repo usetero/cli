@@ -27,7 +27,7 @@ type Config struct {
 type Model struct {
 	scope    log.Scope
 	index    int
-	turnID   string
+	turnID   domain.MessageID
 	toolID   string
 	state    tools.State
 	config   Config
@@ -40,12 +40,13 @@ type Model struct {
 }
 
 type actionExecutedMsg struct {
+	toolID string
 	result domaintools.Result
 	err    error
 }
 
 // New creates a new generic action tool model.
-func New(index int, turnID, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
+func New(index int, turnID domain.MessageID, toolID string, width int, config Config, executor Executor, scope log.Scope) *Model {
 	return &Model{
 		scope:    scope,
 		index:    index,
@@ -66,6 +67,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
 	case actionExecutedMsg:
+		if msg.toolID != m.toolID {
+			return nil
+		}
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = tools.StateComplete
@@ -105,7 +109,7 @@ func (m *Model) execute() tea.Cmd {
 	executor := m.executor
 	return func() tea.Msg {
 		result, err := executor(input)
-		return actionExecutedMsg{result: result, err: err}
+		return actionExecutedMsg{toolID: m.toolID, result: result, err: err}
 	}
 }
 

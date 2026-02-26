@@ -87,6 +87,7 @@ type streamUpdateMsg struct {
 // assistantPersisted is fired after the assistant message is written to the DB.
 // It gates fireToolResults to prevent racing with persistence.
 type assistantPersisted struct {
+	turnID    domain.MessageID
 	messageID domain.MessageID
 }
 
@@ -145,12 +146,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(cmds...)
 
 	case msgs.ToolCompleted:
-		if msg.GetTurnID() != "" && msg.GetTurnID() != m.userMessage.ID().String() {
+		if msg.GetTurnID() != m.userMessage.ID() {
 			return nil
 		}
 		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
 
 	case assistantPersisted:
+		if msg.turnID != m.userMessage.ID() {
+			return nil
+		}
 		m.persisted = true
 		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
 			return m.fireToolResults()
@@ -459,7 +463,10 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 		}
 
 		m.scope.Info("assistant message persisted", "message_id", msgID)
-		return assistantPersisted{messageID: msgID}
+		return assistantPersisted{
+			turnID:    m.userMessage.ID(),
+			messageID: msgID,
+		}
 	}
 }
 

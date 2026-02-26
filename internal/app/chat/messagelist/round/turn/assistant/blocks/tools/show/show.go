@@ -25,7 +25,7 @@ type Model struct {
 	theme    styles.Theme
 	scope    log.Scope
 	index    int
-	turnID   string
+	turnID   domain.MessageID
 	toolID   string
 	state    tools.State
 	executor *chattools.ShowTool
@@ -47,12 +47,13 @@ type Model struct {
 }
 
 type showExecutedMsg struct {
+	toolID string
 	result domaintools.ShowResult
 	err    error
 }
 
 // New creates a new show tool model.
-func New(theme styles.Theme, index int, turnID, toolID string, width int, executor *chattools.ShowTool, scope log.Scope) *Model {
+func New(theme styles.Theme, index int, turnID domain.MessageID, toolID string, width int, executor *chattools.ShowTool, scope log.Scope) *Model {
 	return &Model{
 		theme:    theme,
 		scope:    scope.Child("show"),
@@ -76,6 +77,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
 	case showExecutedMsg:
+		if msg.toolID != m.toolID {
+			return nil
+		}
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = tools.StateComplete
@@ -137,7 +141,7 @@ func (m *Model) execute() tea.Cmd {
 	executor := m.executor
 	return func() tea.Msg {
 		result, err := executor.Execute(json.RawMessage(input))
-		return showExecutedMsg{result: result, err: err}
+		return showExecutedMsg{toolID: m.toolID, result: result, err: err}
 	}
 }
 

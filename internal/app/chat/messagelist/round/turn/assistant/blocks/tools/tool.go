@@ -5,6 +5,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/thinking"
 )
@@ -70,6 +71,7 @@ type AutoExpander interface {
 type Model struct {
 	theme  styles.Theme
 	index  int
+	turnID domain.MessageID
 	toolID string
 	width  int
 	status Status
@@ -82,12 +84,13 @@ type Model struct {
 }
 
 // New creates a new tool model wrapping the given child.
-func New(theme styles.Theme, index int, toolID string, width int, child Child) *Model {
+func New(theme styles.Theme, index int, turnID domain.MessageID, toolID string, width int, child Child) *Model {
 	// Child gets width minus outer padding and body padding
 	child.SetWidth(width - block.PaddingX*2 - bodyPaddingH)
 	return &Model{
 		theme:    theme,
 		index:    index,
+		turnID:   turnID,
 		toolID:   toolID,
 		width:    width,
 		status:   StatusPending,
@@ -121,7 +124,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	// Listen for completion messages to update status
 	if completed, ok := msg.(msgs.ToolCompleted); ok {
-		if completed.GetToolUseID() == m.toolID {
+		if completed.GetTurnID() == m.turnID && completed.GetToolUseID() == m.toolID {
 			if completed.GetError() != nil {
 				m.status = StatusError
 			} else {

@@ -3,7 +3,10 @@ package query
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
+	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/teatest"
@@ -74,6 +77,28 @@ func TestViewWidthZero(t *testing.T) {
 	// With width 0, no clipping happens — just make sure it doesn't panic
 	if output == "" {
 		t.Error("expected non-empty output even with width=0")
+	}
+}
+
+func TestUpdate_IgnoresExecutionCompletionFromDifferentToolInstance(t *testing.T) {
+	t.Parallel()
+	theme := styles.NewTheme(true)
+	scope := logtest.NewScope(t)
+
+	m := New(theme, 0, "turn-1", "tool-1", 80, nil, scope)
+	cmd := m.Update(queryExecutedMsg{
+		toolID:   "tool-2",
+		result:   domaintools.QueryResult{Rows: []map[string]any{{"name": "wrong"}}},
+		duration: 100 * time.Millisecond,
+	})
+	if cmd != nil {
+		t.Fatal("expected nil cmd for foreign completion")
+	}
+	if m.state != tools.StateAccumulating {
+		t.Fatalf("state = %d, want StateAccumulating", m.state)
+	}
+	if len(m.rows) != 0 {
+		t.Fatalf("rows = %d, want 0", len(m.rows))
 	}
 }
 

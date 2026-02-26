@@ -202,6 +202,27 @@ func TestUpdate(t *testing.T) {
 			t.Errorf("executor called %d times, want 1", callCount)
 		}
 	})
+
+	t.Run("ignores execution completion from different tool instance", func(t *testing.T) {
+		t.Parallel()
+
+		m := New(0, "turn-1", "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
+		foreign := actionExecutedMsg{
+			toolID: "tool-2",
+			result: domaintools.Result{Content: map[string]any{"ok": true}},
+		}
+
+		cmd := m.Update(foreign)
+		if cmd != nil {
+			t.Fatal("expected nil cmd for foreign completion")
+		}
+		if m.state != tools.StateAccumulating {
+			t.Fatalf("state = %d, want StateAccumulating", m.state)
+		}
+		if m.result.Content != nil {
+			t.Fatal("result should remain untouched")
+		}
+	})
 }
 
 func TestConfigDelegation(t *testing.T) {

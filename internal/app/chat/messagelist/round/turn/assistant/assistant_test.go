@@ -42,7 +42,7 @@ func TestBlocksNoWrapping(t *testing.T) {
 			q.SetRows(rows)
 
 			// Real tool model wrapping query (same as production)
-			tool := tools.New(theme, 0, "tool-1", contentWidth, q)
+			tool := tools.New(theme, 0, "turn-1", "tool-1", contentWidth, q)
 			tool.ForceStatus(tools.StatusSuccess)
 
 			// Add tool block to assistant
@@ -72,7 +72,7 @@ func TestCancel(t *testing.T) {
 
 		// Add a tool block in pending state
 		q := query.New(theme, 0, "turn-1", "tool-1", 78, nil, scope)
-		tool := tools.New(theme, 0, "tool-1", 78, q)
+		tool := tools.New(theme, 0, "turn-1", "tool-1", 78, q)
 		m.AddBlock(tool)
 
 		m.Cancel()
