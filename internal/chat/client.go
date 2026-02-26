@@ -185,7 +185,12 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 		)
 	}
 
-	body, err := json.Marshal(req)
+	wireReq, err := toWireRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("build wire request: %w", err)
+	}
+
+	body, err := json.Marshal(wireReq)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}

@@ -21,7 +21,7 @@ func (q *Queries) CountServices(ctx context.Context) (int64, error) {
 }
 
 const getService = `-- name: GetService :one
-SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name, updated_at FROM services WHERE id = ?
+SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name FROM services WHERE id = ?
 `
 
 func (q *Queries) GetService(ctx context.Context, id *string) (Service, error) {
@@ -35,13 +35,12 @@ func (q *Queries) GetService(ctx context.Context, id *string) (Service, error) {
 		&i.Enabled,
 		&i.InitialWeeklyLogCount,
 		&i.Name,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listServices = `-- name: ListServices :many
-SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name, updated_at FROM services ORDER BY name
+SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name FROM services ORDER BY name
 `
 
 func (q *Queries) ListServices(ctx context.Context) ([]Service, error) {
@@ -61,7 +60,6 @@ func (q *Queries) ListServices(ctx context.Context) ([]Service, error) {
 			&i.Enabled,
 			&i.InitialWeeklyLogCount,
 			&i.Name,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -77,7 +75,7 @@ func (q *Queries) ListServices(ctx context.Context) ([]Service, error) {
 }
 
 const listServicesByAccount = `-- name: ListServicesByAccount :many
-SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name, updated_at FROM services WHERE account_id = ? ORDER BY name
+SELECT id, account_id, created_at, description, enabled, initial_weekly_log_count, name FROM services WHERE account_id = ? ORDER BY name
 `
 
 func (q *Queries) ListServicesByAccount(ctx context.Context, accountID *string) ([]Service, error) {
@@ -97,7 +95,6 @@ func (q *Queries) ListServicesByAccount(ctx context.Context, accountID *string) 
 			&i.Enabled,
 			&i.InitialWeeklyLogCount,
 			&i.Name,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

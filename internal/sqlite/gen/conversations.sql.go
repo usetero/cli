@@ -21,7 +21,7 @@ func (q *Queries) CountConversations(ctx context.Context) (int64, error) {
 }
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations WHERE id = ?
+SELECT id, account_id, created_at, title, user_id, view_id, workspace_id FROM conversations WHERE id = ?
 `
 
 func (q *Queries) GetConversation(ctx context.Context, id *string) (Conversation, error) {
@@ -32,7 +32,6 @@ func (q *Queries) GetConversation(ctx context.Context, id *string) (Conversation
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.Title,
-		&i.UpdatedAt,
 		&i.UserID,
 		&i.ViewID,
 		&i.WorkspaceID,
@@ -41,9 +40,9 @@ func (q *Queries) GetConversation(ctx context.Context, id *string) (Conversation
 }
 
 const getLatestConversationByAccount = `-- name: GetLatestConversationByAccount :one
-SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations
+SELECT id, account_id, created_at, title, user_id, view_id, workspace_id FROM conversations
 WHERE account_id = ?
-ORDER BY updated_at DESC
+ORDER BY created_at DESC
 LIMIT 1
 `
 
@@ -55,7 +54,6 @@ func (q *Queries) GetLatestConversationByAccount(ctx context.Context, accountID 
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.Title,
-		&i.UpdatedAt,
 		&i.UserID,
 		&i.ViewID,
 		&i.WorkspaceID,
@@ -64,8 +62,8 @@ func (q *Queries) GetLatestConversationByAccount(ctx context.Context, accountID 
 }
 
 const insertConversation = `-- name: InsertConversation :exec
-INSERT INTO conversations (id, account_id, workspace_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO conversations (id, account_id, workspace_id, created_at)
+VALUES (?, ?, ?, ?)
 `
 
 type InsertConversationParams struct {
@@ -73,7 +71,6 @@ type InsertConversationParams struct {
 	AccountID   *string
 	WorkspaceID *string
 	CreatedAt   *string
-	UpdatedAt   *string
 }
 
 func (q *Queries) InsertConversation(ctx context.Context, arg InsertConversationParams) error {
@@ -82,15 +79,14 @@ func (q *Queries) InsertConversation(ctx context.Context, arg InsertConversation
 		arg.AccountID,
 		arg.WorkspaceID,
 		arg.CreatedAt,
-		arg.UpdatedAt,
 	)
 	return err
 }
 
 const listConversationsByAccount = `-- name: ListConversationsByAccount :many
-SELECT id, account_id, created_at, title, updated_at, user_id, view_id, workspace_id FROM conversations
+SELECT id, account_id, created_at, title, user_id, view_id, workspace_id FROM conversations
 WHERE account_id = ?
-ORDER BY updated_at DESC
+ORDER BY created_at DESC
 `
 
 func (q *Queries) ListConversationsByAccount(ctx context.Context, accountID *string) ([]Conversation, error) {
@@ -107,7 +103,6 @@ func (q *Queries) ListConversationsByAccount(ctx context.Context, accountID *str
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.Title,
-			&i.UpdatedAt,
 			&i.UserID,
 			&i.ViewID,
 			&i.WorkspaceID,
@@ -126,16 +121,15 @@ func (q *Queries) ListConversationsByAccount(ctx context.Context, accountID *str
 }
 
 const updateConversationTitle = `-- name: UpdateConversationTitle :exec
-UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?
+UPDATE conversations SET title = ? WHERE id = ?
 `
 
 type UpdateConversationTitleParams struct {
-	Title     *string
-	UpdatedAt *string
-	ID        *string
+	Title *string
+	ID    *string
 }
 
 func (q *Queries) UpdateConversationTitle(ctx context.Context, arg UpdateConversationTitleParams) error {
-	_, err := q.db.ExecContext(ctx, updateConversationTitle, arg.Title, arg.UpdatedAt, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateConversationTitle, arg.Title, arg.ID)
 	return err
 }

@@ -9,7 +9,6 @@ type Conversation struct {
 	AccountID   *string
 	CreatedAt   *string
 	Title       *string
-	UpdatedAt   *string
 	UserID      *string
 	ViewID      *string
 	WorkspaceID *string
@@ -32,7 +31,6 @@ type DatadogAccount struct {
 	CreatedAt         *string
 	Name              *string
 	Site              *string
-	UpdatedAt         *string
 }
 
 type DatadogAccountStatusesCache struct {
@@ -75,7 +73,6 @@ type DatadogAccountStatusesCache struct {
 	PolicyPendingLowCount                  *int64
 	PolicyPendingMediumCount               *int64
 	ReadyForUse                            *int64
-	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
 	ServiceVolumePerHour                   *float64
 }
@@ -86,7 +83,6 @@ type DatadogLogIndex struct {
 	CostPerMillionEventsIndexed *float64
 	CreatedAt                   *string
 	DatadogAccountID            *string
-	LastSeenAt                  *string
 	Name                        *string
 }
 
@@ -104,19 +100,16 @@ type LogEvent struct {
 	ServiceID             *string
 	Severity              *string
 	SignalPurpose         *string
-	UpdatedAt             *string
 }
 
 type LogEventField struct {
-	ID                     *string
-	AccountID              *string
-	BaselineAvgBytes       *float64
-	CreatedAt              *string
-	DistributionObservedAt *string
-	FieldPath              *string
-	LastSeenAt             *string
-	LogEventID             *string
-	ValueDistribution      *string
+	ID                *string
+	AccountID         *string
+	BaselineAvgBytes  *float64
+	CreatedAt         *string
+	FieldPath         *string
+	LogEventID        *string
+	ValueDistribution *string
 }
 
 type LogEventPolicy struct {
@@ -136,7 +129,6 @@ type LogEventPolicy struct {
 	LogEventID                    *string
 	Severity                      *string
 	Subjective                    *int64
-	UpdatedAt                     *string
 	WorkspaceID                   *string
 }
 
@@ -162,7 +154,6 @@ type LogEventPolicyCategoryStatusesCache struct {
 	PolicyPendingLowCount                  *int64
 	PolicyPendingMediumCount               *int64
 	Principle                              *string
-	RefreshedAt                            *string
 	Subjective                             *int64
 	TotalEventCount                        *int64
 }
@@ -185,7 +176,6 @@ type LogEventPolicyStatusesCache struct {
 	LogEventID                             *string
 	LogEventName                           *string
 	PolicyID                               *string
-	RefreshedAt                            *string
 	ServiceID                              *string
 	ServiceName                            *string
 	Severity                               *string
@@ -229,7 +219,6 @@ type LogEventStatusesCache struct {
 	PolicyPendingHighCount                 *int64
 	PolicyPendingLowCount                  *int64
 	PolicyPendingMediumCount               *int64
-	RefreshedAt                            *string
 	ServiceID                              *string
 	VolumePerHour                          *float64
 }
@@ -253,7 +242,6 @@ type Service struct {
 	Enabled               *int64
 	InitialWeeklyLogCount *int64
 	Name                  *string
-	UpdatedAt             *string
 }
 
 type ServiceStatusesCache struct {
@@ -290,7 +278,6 @@ type ServiceStatusesCache struct {
 	PolicyPendingHighCount                 *int64
 	PolicyPendingLowCount                  *int64
 	PolicyPendingMediumCount               *int64
-	RefreshedAt                            *string
 	ServiceCostPerHourVolumeUsd            *float64
 	ServiceDebugVolumePerHour              *float64
 	ServiceErrorVolumePerHour              *float64
@@ -306,7 +293,6 @@ type Team struct {
 	AccountID   *string
 	CreatedAt   *string
 	Name        *string
-	UpdatedAt   *string
 	WorkspaceID *string
 }
 
@@ -336,5 +322,4 @@ type Workspace struct {
 	CreatedAt *string
 	Name      *string
 	Purpose   *string
-	UpdatedAt *string
 }

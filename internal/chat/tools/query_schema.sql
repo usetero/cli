@@ -28,7 +28,6 @@ CREATE TABLE conversations (
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
     created_at TEXT, -- When the conversation was created
     title TEXT, -- AI-generated title, set after first exchange
-    updated_at TEXT, -- When the conversation was last updated
     user_id TEXT, -- WorkOS user ID who owns this conversation
     view_id TEXT, -- If set, this conversation is for iterating on a specific view
     workspace_id TEXT -- Workspace this conversation belongs to
@@ -75,7 +74,6 @@ CREATE TABLE datadog_account_statuses_cache (
     policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
     policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     ready_for_use INTEGER, -- True when at least 1 log event has been analyzed
-    refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour across all services
     service_volume_per_hour REAL -- Ground-truth throughput in events/hour from service_log_volumes across all services
 );
@@ -87,8 +85,7 @@ CREATE TABLE datadog_accounts (
     cost_per_gb_ingested REAL, -- Cost per GB of log data ingested (USD). NULL = using Datadog's published rate ($0.10/GB). Set to override with actual contract rate.
     created_at TEXT, -- When the Datadog account was created
     name TEXT, -- Display name for this Datadog account
-    site TEXT, -- Datadog regional site. US1: datadoghq.com, US3: us3.datadoghq.com, US5: us5.datadoghq.com, EU1: datadoghq.eu, US1_FED: ddog-gov.com, AP1: ap1.datadoghq.com, AP2: ap2.datadoghq.com.
-    updated_at TEXT -- When the Datadog account was last updated
+    site TEXT -- Datadog regional site. US1: datadoghq.com, US3: us3.datadoghq.com, US5: us5.datadoghq.com, EU1: datadoghq.eu, US1_FED: ddog-gov.com, AP1: ap1.datadoghq.com, AP2: ap2.datadoghq.com.
 );
 
 -- Discovered Datadog log index where logs are stored (e.g., main, security, compliance)
@@ -98,7 +95,6 @@ CREATE TABLE datadog_log_indexes (
     cost_per_million_events_indexed REAL, -- Cost per million events indexed in this index (USD). NULL = using Datadog's published rate ($1.70/M). SIEM indexes cost more — set accordingly.
     created_at TEXT, -- When this index was first discovered
     datadog_account_id TEXT, -- The Datadog account this index belongs to
-    last_seen_at TEXT, -- Last time we saw logs flowing to this index
     name TEXT -- Index name from Datadog (e.g., 'main', 'security', 'compliance') - this is the stable identifier
 );
 
@@ -108,9 +104,7 @@ CREATE TABLE log_event_fields (
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
     baseline_avg_bytes REAL, -- Current trailing 7-day volume-weighted average bytes for this attribute. Refreshed on volume ingestion.
     created_at TEXT, -- When this field was first discovered
-    distribution_observed_at TEXT, -- When value_distribution was last refreshed from production data.
     field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
-    last_seen_at TEXT, -- When this field was last seen in production log samples.
     log_event_id TEXT, -- The log event this field belongs to
     -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
     -- Opaque JSON data. Query using SQLite json_extract() or json_each().
@@ -173,7 +167,6 @@ CREATE TABLE log_event_policies (
     log_event_id TEXT, -- The log event this policy applies to
     severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Auto-set via trigger. Values: low, medium, high, critical.
     subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false). Auto-set via trigger from CategoryMeta.
-    updated_at TEXT, -- When this policy was last updated
     workspace_id TEXT -- The workspace that owns this policy
 );
 
@@ -200,7 +193,6 @@ CREATE TABLE log_event_policy_category_statuses_cache (
     policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
     policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
     principle TEXT, -- What this category detects — the fundamental test for membership
-    refreshed_at TEXT,
     subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
     total_event_count INTEGER -- Total log events that have a policy in this category
 );
@@ -224,7 +216,6 @@ CREATE TABLE log_event_policy_statuses_cache (
     log_event_id TEXT, -- The log event this policy targets
     log_event_name TEXT, -- Name of the targeted log event (denormalized for display)
     policy_id TEXT, -- The policy this status row represents
-    refreshed_at TEXT,
     service_id TEXT, -- Service that produces the targeted log event (denormalized)
     service_name TEXT, -- Name of the service (denormalized for display)
     severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Values: low, medium, high, critical.
@@ -269,7 +260,6 @@ CREATE TABLE log_event_statuses_cache (
     policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
     policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
     policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    refreshed_at TEXT,
     service_id TEXT, -- Service ID (denormalized from log_event)
     volume_per_hour REAL -- Current throughput in events/hour (rolling 7-day)
 );
@@ -310,8 +300,7 @@ CREATE TABLE log_events (
     name TEXT, -- Snake_case identifier unique per service, e.g. nginx_access_log
     service_id TEXT, -- Service that produces this event
     severity TEXT, -- Predominant log severity level, derived from example records. Nullable when examples have no severity info. Values: debug, info, warn, error, other.
-    signal_purpose TEXT, -- What role this event serves: diagnostic (investigate incidents), operational (system behavior), lifecycle (state transitions), ephemeral (transient state).
-    updated_at TEXT -- When the log event was last updated
+    signal_purpose TEXT -- What role this event serves: diagnostic (investigate incidents), operational (system behavior), lifecycle (state transitions), ephemeral (transient state).
 );
 
 -- Single message in a chat conversation. Append-only — never updated or deleted.
@@ -379,7 +368,6 @@ CREATE TABLE service_statuses_cache (
     policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
     policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
     policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour based on total service volume
     service_debug_volume_per_hour REAL, -- Debug-level events/hour from rolling 7-day window
     service_error_volume_per_hour REAL, -- Error-level events/hour from rolling 7-day window
@@ -398,8 +386,7 @@ CREATE TABLE services (
     description TEXT, -- AI-generated description of what this service does and its telemetry characteristics
     enabled INTEGER, -- Whether log analysis and policy generation is active for this service
     initial_weekly_log_count INTEGER, -- Approximate weekly log count from initial discovery (7-day period from Datadog)
-    name TEXT, -- Service identifier in telemetry (e.g., 'checkout-service')
-    updated_at TEXT -- When the service was last updated
+    name TEXT -- Service identifier in telemetry (e.g., 'checkout-service')
 );
 
 -- Group of users within a workspace that reviews policies and manages services
@@ -408,7 +395,6 @@ CREATE TABLE teams (
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
     created_at TEXT, -- When the team was created
     name TEXT, -- Human-readable name within the workspace
-    updated_at TEXT, -- When the team was last updated
     workspace_id TEXT -- Parent workspace this team belongs to
 );
 
@@ -440,7 +426,6 @@ CREATE TABLE workspaces (
     account_id TEXT, -- Parent account this workspace belongs to
     created_at TEXT, -- When the workspace was created
     name TEXT, -- Human-readable name within the account
-    purpose TEXT, -- Primary purpose determining evaluation strategy. observability: performance and reliability, security: threat detection, compliance: regulatory requirements.
-    updated_at TEXT -- When the workspace was last updated
+    purpose TEXT -- Primary purpose determining evaluation strategy. observability: performance and reliability, security: threat detection, compliance: regulatory requirements.
 );
 

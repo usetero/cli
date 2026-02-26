@@ -72,6 +72,25 @@ func TestReducer(t *testing.T) {
 		}
 	})
 
+	t.Run("allows metadata_update after message_stop before done", func(t *testing.T) {
+		t.Parallel()
+
+		r := newReducer("conv-1")
+		_, _ = r.apply(event{Seq: 1, Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}})
+		_, _ = r.apply(event{Seq: 2, Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "end_turn", InputTokens: intPtr(10), OutputTokens: intPtr(2)}})
+		snap, err := r.apply(event{Seq: 3, Type: EventTypeMetadataUpdate, Metadata: &metadata{Title: "hello"}})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if snap == nil || snap.Metadata == nil || snap.Metadata.Title != "hello" {
+			t.Fatalf("expected metadata title on snapshot, got %#v", snap)
+		}
+		_, err = r.apply(event{Seq: 4, Done: true})
+		if err != nil {
+			t.Fatalf("unexpected done error: %v", err)
+		}
+	})
+
 	t.Run("rejects done before message_stop", func(t *testing.T) {
 		t.Parallel()
 

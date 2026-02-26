@@ -792,7 +792,6 @@ type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogA
 	ReadyForUse                            bool                            `json:"readyForUse"`
 	LogEventCount                          int                             `json:"logEventCount"`
 	LogEventAnalyzedCount                  int                             `json:"logEventAnalyzedCount"`
-	LogEventQuarantinedCount               int                             `json:"logEventQuarantinedCount"`
 	LogServiceCount                        int                             `json:"logServiceCount"`
 	LogActiveServices                      int                             `json:"logActiveServices"`
 	DisabledServices                       int                             `json:"disabledServices"`
@@ -843,11 +842,6 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 // GetLogEventAnalyzedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventAnalyzedCount, and is useful for accessing the field via an interface.
 func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventAnalyzedCount() int {
 	return v.LogEventAnalyzedCount
-}
-
-// GetLogEventQuarantinedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventQuarantinedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventQuarantinedCount() int {
-	return v.LogEventQuarantinedCount
 }
 
 // GetLogServiceCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogServiceCount, and is useful for accessing the field via an interface.
@@ -2868,7 +2862,6 @@ query GetDatadogAccountStatus ($id: ID!) {
 					readyForUse
 					logEventCount
 					logEventAnalyzedCount
-					logEventQuarantinedCount
 					logServiceCount
 					logActiveServices
 					disabledServices

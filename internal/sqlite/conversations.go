@@ -45,7 +45,6 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID domain.Account
 		AccountID:   &accountIDStr,
 		WorkspaceID: &workspaceIDStr,
 		CreatedAt:   &now,
-		UpdatedAt:   &now,
 	})
 	if err != nil {
 		return "", WrapSQLiteError(err, "insert conversation")
@@ -56,12 +55,10 @@ func (c *conversationsImpl) Create(ctx context.Context, accountID domain.Account
 
 // UpdateTitle sets the title on a conversation.
 func (c *conversationsImpl) UpdateTitle(ctx context.Context, id domain.ConversationID, title string) error {
-	now := time.Now().UTC().Format(time.RFC3339)
 	idStr := id.String()
 	err := c.write.UpdateConversationTitle(ctx, gen.UpdateConversationTitleParams{
-		Title:     &title,
-		UpdatedAt: &now,
-		ID:        &idStr,
+		Title: &title,
+		ID:    &idStr,
 	})
 	return WrapSQLiteError(err, "update conversation title")
 }

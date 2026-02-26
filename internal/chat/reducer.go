@@ -104,7 +104,7 @@ func (r *reducer) apply(e event) (*StreamSnapshot, error) {
 		if e.Type == EventTypeMessageStart {
 			return nil, fmt.Errorf("protocol error: duplicate message_start")
 		}
-		if r.stopped {
+		if r.stopped && e.Type != EventTypeMetadataUpdate {
 			return nil, fmt.Errorf("protocol error: event %q after message_stop", e.Type)
 		}
 	}

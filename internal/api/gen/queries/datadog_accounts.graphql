@@ -42,7 +42,6 @@ query GetDatadogAccountStatus($id: ID!) {
                     readyForUse
                     logEventCount
                     logEventAnalyzedCount
-                    logEventQuarantinedCount
                     logServiceCount
                     logActiveServices
                     disabledServices

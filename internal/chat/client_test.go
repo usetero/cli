@@ -68,7 +68,16 @@ func TestClient_Stream(t *testing.T) {
 
 		_, err := client.Stream(context.Background(), chat.Request{
 			ConversationID: "conv-1",
-			Messages:       []domain.Message{},
+			Messages: []domain.Message{{
+				ID:             "msg-1",
+				ConversationID: "conv-1",
+				Role:           domain.RoleUser,
+				Content: []domain.Block{{
+					Index: 0,
+					Type:  domain.BlockTypeText,
+					Text:  &domain.TextBlock{Content: "hello"},
+				}},
+			}},
 		}, func(msg *domain.Message) {})
 
 		if err != nil {
@@ -86,6 +95,18 @@ func TestClient_Stream(t *testing.T) {
 		}
 		if capturedReq.Header.Get("Accept") != "text/event-stream" {
 			t.Errorf("Accept = %q, want %q", capturedReq.Header.Get("Accept"), "text/event-stream")
+		}
+
+		body, err := io.ReadAll(capturedReq.Body)
+		if err != nil {
+			t.Fatalf("ReadAll(body) error = %v", err)
+		}
+		payload := string(body)
+		forbidden := []string{`"conversation_id"`, `"index"`, `"id"`, `"created_at"`}
+		for _, f := range forbidden {
+			if strings.Contains(payload, f) {
+				t.Fatalf("request payload unexpectedly contains %s: %s", f, payload)
+			}
 		}
 	})
 

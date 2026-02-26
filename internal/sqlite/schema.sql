@@ -16,7 +16,6 @@ CREATE TABLE conversations (
     account_id TEXT,
     created_at TEXT,
     title TEXT,
-    updated_at TEXT,
     user_id TEXT,
     view_id TEXT,
     workspace_id TEXT
@@ -62,7 +61,6 @@ CREATE TABLE datadog_account_statuses_cache (
     policy_pending_low_count INTEGER,
     policy_pending_medium_count INTEGER,
     ready_for_use INTEGER,
-    refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL,
     service_volume_per_hour REAL
 );
@@ -73,8 +71,7 @@ CREATE TABLE datadog_accounts (
     cost_per_gb_ingested REAL,
     created_at TEXT,
     name TEXT,
-    site TEXT,
-    updated_at TEXT
+    site TEXT
 );
 
 CREATE TABLE datadog_log_indexes (
@@ -83,7 +80,6 @@ CREATE TABLE datadog_log_indexes (
     cost_per_million_events_indexed REAL,
     created_at TEXT,
     datadog_account_id TEXT,
-    last_seen_at TEXT,
     name TEXT
 );
 
@@ -92,9 +88,7 @@ CREATE TABLE log_event_fields (
     account_id TEXT,
     baseline_avg_bytes REAL,
     created_at TEXT,
-    distribution_observed_at TEXT,
     field_path TEXT,
-    last_seen_at TEXT,
     log_event_id TEXT,
     value_distribution TEXT
 );
@@ -116,7 +110,6 @@ CREATE TABLE log_event_policies (
     log_event_id TEXT,
     severity TEXT,
     subjective INTEGER,
-    updated_at TEXT,
     workspace_id TEXT
 );
 
@@ -142,7 +135,6 @@ CREATE TABLE log_event_policy_category_statuses_cache (
     policy_pending_low_count INTEGER,
     policy_pending_medium_count INTEGER,
     principle TEXT,
-    refreshed_at TEXT,
     subjective INTEGER,
     total_event_count INTEGER
 );
@@ -165,7 +157,6 @@ CREATE TABLE log_event_policy_statuses_cache (
     log_event_id TEXT,
     log_event_name TEXT,
     policy_id TEXT,
-    refreshed_at TEXT,
     service_id TEXT,
     service_name TEXT,
     severity TEXT,
@@ -209,7 +200,6 @@ CREATE TABLE log_event_statuses_cache (
     policy_pending_high_count INTEGER,
     policy_pending_low_count INTEGER,
     policy_pending_medium_count INTEGER,
-    refreshed_at TEXT,
     service_id TEXT,
     volume_per_hour REAL
 );
@@ -227,8 +217,7 @@ CREATE TABLE log_events (
     name TEXT,
     service_id TEXT,
     severity TEXT,
-    signal_purpose TEXT,
-    updated_at TEXT
+    signal_purpose TEXT
 );
 
 CREATE TABLE messages (
@@ -276,7 +265,6 @@ CREATE TABLE service_statuses_cache (
     policy_pending_high_count INTEGER,
     policy_pending_low_count INTEGER,
     policy_pending_medium_count INTEGER,
-    refreshed_at TEXT,
     service_cost_per_hour_volume_usd REAL,
     service_debug_volume_per_hour REAL,
     service_error_volume_per_hour REAL,
@@ -294,8 +282,7 @@ CREATE TABLE services (
     description TEXT,
     enabled INTEGER,
     initial_weekly_log_count INTEGER,
-    name TEXT,
-    updated_at TEXT
+    name TEXT
 );
 
 CREATE TABLE teams (
@@ -303,7 +290,6 @@ CREATE TABLE teams (
     account_id TEXT,
     created_at TEXT,
     name TEXT,
-    updated_at TEXT,
     workspace_id TEXT
 );
 
@@ -332,6 +318,5 @@ CREATE TABLE workspaces (
     account_id TEXT,
     created_at TEXT,
     name TEXT,
-    purpose TEXT,
-    updated_at TEXT
+    purpose TEXT
 );
