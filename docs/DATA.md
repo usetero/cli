@@ -1,28 +1,41 @@
-# Data Flow
+# Data
 
-This repo uses two data flows.
+This repo has two data movement patterns.
 
-## 1) Direct Query Flow (CLI)
+## 1) Query Path (CLI)
 
-1. User runs a command.
-2. Command calls `internal/api`.
-3. Control plane responds.
-4. Output is rendered directly.
+1. Parse user input.
+2. Build API request.
+3. Call control plane.
+4. Render response.
 
-Use this for stateless command execution.
+Characteristics:
 
-## 2) Sync + Local Read Flow (TUI)
+1. No local sync dependency.
+2. Best for direct, stateless commands.
 
-1. PowerSync syncs remote data into local SQLite.
-2. TUI reads from local SQLite for responsive rendering.
-3. Mutations go to control plane; sync converges local state.
+## 2) Sync Path (TUI)
 
-Use this for interactive views and offline-tolerant UX.
+1. Remote changes sync through PowerSync.
+2. Data is materialized in local SQLite.
+3. TUI reads local data for low-latency rendering.
+4. Mutations are sent upstream; sync converges local state.
 
-## Chat Data Notes
+Characteristics:
 
-1. Message history is persisted in SQLite.
-2. Streaming assistant events are reduced before UI application.
-3. Turn scoping is mandatory for streamed content and tool completions.
-4. User-cancelled partial assistant output is not persisted as a committed assistant turn.
+1. Better UX for interactive views.
+2. Works with transient network issues.
 
+## Source of Truth
+
+1. Control plane is authoritative.
+2. SQLite is a read-optimized replica/cache.
+3. Local projection bugs must never redefine business truth.
+
+## Chat Data Guarantees
+
+1. Message history persists in SQLite.
+2. Stream events are reduced before UI applies them.
+3. Stream and tool events are turn-scoped.
+4. User-cancelled partial assistant content is not persisted as committed assistant output.
+5. Non-user aborts may be persisted with `stop_reason=aborted`.

@@ -1,45 +1,54 @@
 # Architecture
 
-Tero CLI is a presentation layer over the control plane. It exposes three interfaces:
+Tero CLI is a presentation layer over the control plane.
 
-1. TUI (`internal/app`, Bubble Tea models).
-2. CLI commands (`internal/cmd`, direct API calls).
-3. MCP server (`internal/mcp`, planned).
+## System Boundary
 
-## Core Rules
+1. CLI does presentation, interaction, and transport orchestration.
+2. Control plane owns business logic and authoritative state.
+3. Local storage/sync exists for responsiveness, not ownership.
 
-1. The control plane is source of truth.
-2. Local state exists for UX/perf only (cache/sync), not ownership.
-3. Wiring lives in `cmd/`; domain and services stay implementation-agnostic.
+## Interfaces
+
+1. TUI: interactive Bubble Tea interface under `internal/app`.
+2. CLI commands: command entrypoints under `internal/cmd`.
+3. MCP: planned transport surface documented in `MCP.md`.
+
+## Dependency Rules
+
+1. Domain models live in `internal/domain` and are shared.
+2. Service code depends on interfaces, not concrete implementations.
+3. Wiring/composition is done in `cmd/` only.
+4. Presentation layers call services; services do not depend on presentation.
 
 ## Data Patterns
 
-1. Query path (CLI): command -> API client -> control plane.
-2. Sync path (TUI/MCP): PowerSync -> local SQLite -> UI reads local projections.
+1. Direct query path: CLI command -> API client -> control plane.
+2. Sync path: PowerSync -> SQLite -> TUI read models.
 
 ## Chat Architecture
 
-Chat has two layers with explicit boundaries:
+Chat is intentionally split into two layers:
 
-1. `internal/chat`: stream protocol/reducer/client semantics.
-2. `internal/app/chat`: Bubble Tea orchestration and rendering.
+1. `internal/chat`: stream protocol, reducer semantics, snapshot guarantees.
+2. `internal/app/chat`: turn/round/message-list orchestration and rendering.
 
-Design intent:
+Key design choice:
 
-1. Stream events are reduced into stable snapshots.
-2. Turn/round/message-list orchestration applies scoped events.
-3. UI handlers execute side effects; reducers own transition policy.
+1. Reducers determine transitions.
+2. Handlers execute side effects.
+3. Stream/tool events must be scoped to turn IDs.
 
 ## Directory Map
 
 ```text
-cmd/                 composition/wiring
-internal/app/        TUI pages/components
-internal/cmd/        CLI commands
-internal/chat/       chat streaming and protocol logic
+cmd/                 composition and dependency wiring
+internal/app/        Bubble Tea app/pages/components
+internal/cmd/        CLI command handlers
+internal/chat/       chat protocol/stream logic
 internal/api/        control plane API client
-internal/sqlite/     local storage
-internal/powersync/  sync engine integration
+internal/sqlite/     local database access
+internal/powersync/  sync integration
 internal/domain/     shared domain types
+internal/auth/       authentication
 ```
-

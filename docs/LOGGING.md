@@ -1,28 +1,28 @@
 # Logging
 
-Logging should help debug behavior without becoming noise.
+Logging should help debug behavior quickly without spamming normal workflows.
 
 ## Principles
 
-1. Log decisions and state transitions, not every render path.
-2. Scope logs by component (`scope.Child(...)`) so traces are readable.
-3. Prefer structured fields over interpolated strings.
-4. Keep debug logs cheap and remove one-off instrumentation after incidents.
+1. Log state transitions and boundary events.
+2. Use structured fields, not interpolated strings.
+3. Use scoped loggers (`scope.Child(...)`) for component provenance.
+4. Remove temporary debug instrumentation after incidents are resolved.
 
 ## Levels
 
-1. `Debug`: transient diagnostic detail.
-2. `Info`: lifecycle milestones and expected transitions.
-3. `Warn`: recoverable anomalies.
-4. `Error`: failures requiring attention.
+1. `Debug`: local diagnostic detail.
+2. `Info`: expected lifecycle transitions.
+3. `Warn`: unexpected but recoverable conditions.
+4. `Error`: failures that impact behavior.
 
 ## Chat Logging Guidance
 
-1. Log stream lifecycle boundaries and reasons (`completed`, `aborted`, `failed`).
-2. Include turn identifiers for scoped events.
-3. Avoid per-block rendering logs in normal operation.
+1. Log stream lifecycle boundaries and reasons.
+2. Include `turn_id`/`conversation_id` when available.
+3. Avoid per-render/per-block logging in steady state.
 
-## See Also
+## Relationship to Observability
 
-Operational and production observability notes live in [OBSERVABILITY.md](OBSERVABILITY.md).
-
+Use this document for logging policy and coding conventions.
+Use [OBSERVABILITY.md](OBSERVABILITY.md) for operational diagnostics and runtime investigation patterns.

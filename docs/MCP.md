@@ -1,20 +1,27 @@
 # MCP
 
-MCP support is planned. Treat this as a design placeholder until implementation lands.
+Status: planned. This document defines the intended architecture so implementation stays consistent.
 
-## Intended Role
+## Purpose
 
-Expose Tero capabilities to MCP-compatible hosts while reusing internal services.
+Expose a safe, typed subset of Tero capabilities to MCP-compatible clients.
 
 ## Design Constraints
 
-1. No business logic in transport handlers.
+1. Transport layer contains no business logic.
 2. Reuse existing domain/service boundaries.
-3. Keep request/response contracts explicit and versionable.
+3. Define explicit request/response schemas.
+4. Version behavior changes intentionally.
 
-## Initial Implementation Plan
+## Implementation Plan
 
-1. Define tool/resource surface area.
-2. Add transport adapter and capability registration.
+1. Define tool/resource surface and capability boundaries.
+2. Add transport adapter and registration.
 3. Add contract tests for request validation and response shape.
+4. Add error taxonomy mapping to MCP response semantics.
 
+## Testing Expectations
+
+1. Contract tests for schemas and validation.
+2. Behavior tests for successful and failing calls.
+3. No hidden coupling to UI-only types.
