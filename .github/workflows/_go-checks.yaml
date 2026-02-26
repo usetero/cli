@@ -1,0 +1,60 @@
+name: Reusable Go Checks
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Cirrus runner image
+        required: false
+        default: ghcr.io/cirruslabs/ubuntu-runner-amd64:24.04-sm
+        type: string
+
+jobs:
+  quality:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
+
+      - name: Run quality gate (fmt, lint, unit tests)
+        run: task do
+
+      - name: Verify generated code is up to date (offline checks)
+        run: |
+          set -euo pipefail
+
+          # Regenerate API client from committed schema snapshot.
+          (cd internal/api/gen && go run github.com/Khan/genqlient)
+
+          # Regenerate SQLite reflection/sqlc artifacts from embedded schema snapshot.
+          go generate ./internal/sqlite
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Generated artifacts are out of date. Run generation locally and commit results."
+            git status --short
+            git diff
+            exit 1
+          fi
+
+  powersync-replay:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
+
+      - name: Run PowerSync replay correctness test
+        run: task test:correctness:powersync-replay

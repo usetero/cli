@@ -1,13 +1,13 @@
-name: CI
+name: PR CI
 
 on:
-  push:
+  pull_request:
     branches: [master]
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.sha }}
-  cancel-in-progress: false
+  group: pr-ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -20,4 +20,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
-      - run: echo "Push checks passed"
+      - run: echo "PR checks passed"
