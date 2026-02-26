@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -40,7 +39,8 @@ func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
 			return tools.Result{}, err
 		}
 
-		ctx := context.Background()
+		ctx, cancel := withToolTimeout()
+		defer cancel()
 
 		svc, err := db.Services().Get(ctx, in.ServiceID)
 		if errors.Is(err, sql.ErrNoRows) {

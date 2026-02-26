@@ -87,7 +87,8 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 		return tools.QueryResult{}, err
 	}
 
-	ctx := context.Background()
+	ctx, cancel := withToolTimeout()
+	defer cancel()
 
 	// Reject queries with full table scans on JOINed tables — these hang for 30-60s.
 	if err := t.checkQueryPlan(ctx, in.SQL); err != nil {
@@ -106,7 +107,9 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 		return tools.QueryResult{}, err
 	}
 
-	var results []map[string]any
+	results := make([]map[string]any, 0, 64)
+	rowsDropped := 0
+	totalBytes := 2 // [] in JSON
 	for rows.Next() {
 		values := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -122,54 +125,45 @@ func (t *QueryTool) Execute(input json.RawMessage) (tools.QueryResult, error) {
 		for i, col := range cols {
 			row[col] = values[i]
 		}
-		results = append(results, row)
+		capRowFields(row)
+
+		rowBytes, err := json.Marshal(row)
+		if err != nil {
+			return tools.QueryResult{}, err
+		}
+		nextTotal := totalBytes + len(rowBytes)
+		if len(results) > 0 {
+			nextTotal++ // JSON comma between rows
+		}
+
+		if len(results) < maxResultRows && nextTotal <= maxResultBytes {
+			results = append(results, row)
+			totalBytes = nextTotal
+			continue
+		}
+		rowsDropped++
 	}
 
 	if err := rows.Err(); err != nil {
 		return tools.QueryResult{}, err
 	}
 
-	capped, dropped := capResults(results)
-	return tools.QueryResult{Rows: capped, RowsDropped: dropped}, nil
+	return tools.QueryResult{Rows: results, RowsDropped: rowsDropped}, nil
 }
 
 const (
+	maxResultRows  = 500
 	maxFieldBytes  = 4096   // truncate any string value longer than this
-	maxResultBytes = 102400 // drop trailing rows if total JSON exceeds this
+	maxResultBytes = 102400 // drop trailing rows when total JSON exceeds this
 )
 
-// capResults truncates large string values and drops trailing rows to keep
-// the serialized result within size limits. Returns the capped rows and the
-// number of rows that were dropped.
-func capResults(rows []map[string]any) ([]map[string]any, int) {
-	for _, row := range rows {
-		for k, v := range row {
-			s, ok := v.(string)
-			if ok && len(s) > maxFieldBytes {
-				row[k] = s[:maxFieldBytes] + "…(truncated)"
-			}
+func capRowFields(row map[string]any) {
+	for k, v := range row {
+		s, ok := v.(string)
+		if ok && len(s) > maxFieldBytes {
+			row[k] = s[:maxFieldBytes] + "…(truncated)"
 		}
 	}
-
-	b, err := json.Marshal(rows)
-	if err != nil || len(b) <= maxResultBytes {
-		return rows, 0
-	}
-
-	// Binary search for the max number of rows that fit.
-	total := len(rows)
-	lo, hi := 0, total
-	for lo < hi {
-		mid := (lo + hi + 1) / 2
-		b, _ = json.Marshal(rows[:mid])
-		if len(b) <= maxResultBytes {
-			lo = mid
-		} else {
-			hi = mid - 1
-		}
-	}
-
-	return rows[:lo], total - lo
 }
 
 // checkQueryPlan runs EXPLAIN QUERY PLAN and rejects queries that would do

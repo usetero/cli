@@ -2,6 +2,8 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -70,4 +72,43 @@ func TestCheckQueryPlan(t *testing.T) {
 			t.Errorf("expected nil for invalid SQL, got: %v", err)
 		}
 	})
+}
+
+func TestQueryToolExecute_CapsLargeResults(t *testing.T) {
+	t.Parallel()
+
+	db := sqlitetest.OpenBareDB(t)
+	ctx := context.Background()
+
+	if _, err := db.Raw().ExecContext(ctx, `CREATE TABLE test_rows (id INTEGER PRIMARY KEY, payload TEXT)`); err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+
+	payload := strings.Repeat("x", 2000)
+	for i := 0; i < 200; i++ {
+		if _, err := db.Raw().ExecContext(ctx, `INSERT INTO test_rows (payload) VALUES (?)`, fmt.Sprintf("%s-%d", payload, i)); err != nil {
+			t.Fatalf("insert row %d: %v", i, err)
+		}
+	}
+
+	tool := NewQueryTool(db)
+	input, err := json.Marshal(map[string]any{
+		"sql":    "SELECT id, payload FROM test_rows ORDER BY id",
+		"status": "running",
+		"result": "done",
+	})
+	if err != nil {
+		t.Fatalf("marshal input: %v", err)
+	}
+
+	result, err := tool.Execute(input)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if len(result.Rows) == 0 {
+		t.Fatalf("expected at least one row")
+	}
+	if result.RowsDropped == 0 {
+		t.Fatalf("expected rows to be dropped by cap")
+	}
 }

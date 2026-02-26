@@ -124,15 +124,6 @@ func (u *uploader) Run(ctx context.Context) error {
 		default:
 		}
 
-		// Refresh token before each upload cycle
-		token, err := u.tokenRefresher.GetAccessToken(ctx)
-		if err != nil {
-			u.scope.Warn("failed to get access token", "error", err)
-			u.wait(ctx, u.retryDelay)
-			continue
-		}
-		u.client.SetToken(token)
-
 		// Process all pending entries
 		processed, err := u.uploadAll(ctx)
 		if err != nil {
@@ -172,6 +163,12 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 	if len(entries) == 0 {
 		return 0, nil
 	}
+
+	token, err := u.tokenRefresher.GetAccessToken(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("get access token: %w", err)
+	}
+	u.client.SetToken(token)
 
 	// Upload each entry to backend
 	emit := u.emitter(ctx)

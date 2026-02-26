@@ -114,7 +114,8 @@ func (t *ShowTool) Execute(input json.RawMessage) (tools.ShowResult, error) {
 		return tools.ShowResult{}, fmt.Errorf("either id or sql must be provided")
 	}
 
-	ctx := context.Background()
+	ctx, cancel := withToolTimeout()
+	defer cancel()
 	result, err := resolver.fetch(ctx, id)
 	if err != nil {
 		return tools.ShowResult{}, err
@@ -125,7 +126,8 @@ func (t *ShowTool) Execute(input json.RawMessage) (tools.ShowResult, error) {
 
 // resolveIDFromSQL runs a SQL query and extracts the id column from the single result row.
 func (t *ShowTool) resolveIDFromSQL(query string) (string, error) {
-	ctx := context.Background()
+	ctx, cancel := withToolTimeout()
+	defer cancel()
 
 	if err := t.checkQueryPlan(ctx, query); err != nil {
 		return "", err

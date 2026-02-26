@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	retryMax     = 3
-	retryWaitMin = 100 * time.Millisecond
-	retryWaitMax = 2 * time.Second
+	retryMax          = 3
+	retryWaitMin      = 100 * time.Millisecond
+	retryWaitMax      = 2 * time.Second
+	defaultAPITimeout = 30 * time.Second
 )
 
 // Client defines the interface for communicating with the Tero control plane.
@@ -67,6 +69,7 @@ type client struct {
 	auth      auth.Auth
 	http      *http.Client
 	accountID string
+	mu        sync.RWMutex
 }
 
 // Ensure client implements Client.
@@ -82,15 +85,20 @@ func NewClient(endpoint string, authService auth.Auth) Client {
 	retryClient.RetryWaitMax = retryWaitMax
 	retryClient.Logger = nil
 
+	httpClient := retryClient.StandardClient()
+	httpClient.Timeout = defaultAPITimeout
+
 	return &client{
 		endpoint: endpoint,
 		auth:     authService,
-		http:     retryClient.StandardClient(),
+		http:     httpClient,
 	}
 }
 
 // SetAccountID sets the account ID header for scoped requests.
 func (c *client) SetAccountID(accountID domain.AccountID) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.accountID = accountID.String()
 }
 
@@ -100,11 +108,17 @@ func (c *client) gql(ctx context.Context) (graphql.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	accountID := c.accountIDSnapshot()
+	timeout := c.http.Timeout
+	if timeout <= 0 {
+		timeout = defaultAPITimeout
+	}
 
 	httpClient := &http.Client{
+		Timeout: timeout,
 		Transport: &authTransport{
 			token:     token,
-			accountID: c.accountID,
+			accountID: accountID,
 			base:      c.http.Transport,
 		},
 	}
@@ -125,7 +139,17 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if t.accountID != "" {
 		req.Header.Set("X-Account-ID", t.accountID)
 	}
-	return t.base.RoundTrip(req)
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return base.RoundTrip(req)
+}
+
+func (c *client) accountIDSnapshot() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.accountID
 }
 
 // RawQuery executes an arbitrary GraphQL query and returns the raw result.

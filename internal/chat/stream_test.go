@@ -203,4 +203,27 @@ data: [DONE]
 			t.Errorf("handler called %d times, want 2", callCount)
 		}
 	})
+
+	t.Run("handles large event payloads over default scanner limit", func(t *testing.T) {
+		t.Parallel()
+
+		large := strings.Repeat("a", 70*1024)
+		stream := `data: {"type":"text_delta","text":{"content":"` + large + `"}}
+data: [DONE]
+`
+		var events []event
+		err := readStream(strings.NewReader(stream), func(e event) error {
+			events = append(events, e)
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("readStream() error = %v", err)
+		}
+		if len(events) != 2 {
+			t.Fatalf("got %d events, want 2", len(events))
+		}
+		if events[0].Text == nil || len(events[0].Text.Content) != len(large) {
+			t.Fatalf("unexpected payload length: got %d, want %d", len(events[0].Text.Content), len(large))
+		}
+	})
 }

@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -34,7 +33,8 @@ func NewApprovePolicyAction(db sqlite.DB, userIDFunc func() string) ActionTool {
 			return tools.Result{}, err
 		}
 
-		ctx := context.Background()
+		ctx, cancel := withToolTimeout()
+		defer cancel()
 
 		if err := db.LogEventPolicies().Approve(ctx, in.PolicyID, userIDFunc()); err != nil {
 			return tools.Result{}, fmt.Errorf("approve policy: %w", err)

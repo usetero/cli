@@ -10,6 +10,10 @@ import (
 
 // streamDone is the SSE sentinel value indicating the stream is complete.
 const streamDone = "[DONE]"
+const (
+	streamScannerInitialBuffer = 64 * 1024
+	streamScannerMaxBuffer     = 4 * 1024 * 1024
+)
 
 // eventHandler is called for each event in the response stream.
 type eventHandler func(event) error
@@ -17,6 +21,7 @@ type eventHandler func(event) error
 // readStream reads SSE events from the reader and calls the handler for each.
 func readStream(r io.Reader, handler eventHandler) error {
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, streamScannerInitialBuffer), streamScannerMaxBuffer)
 
 	for scanner.Scan() {
 		line := scanner.Text()

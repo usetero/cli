@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -26,9 +27,10 @@ import (
 )
 
 const (
-	retryMax     = 3
-	retryWaitMin = 100 * time.Millisecond
-	retryWaitMax = 2 * time.Second
+	retryMax             = 3
+	retryWaitMin         = 100 * time.Millisecond
+	retryWaitMax         = 2 * time.Second
+	defaultStreamTimeout = 10 * time.Minute
 )
 
 // HTTPDoer is the interface for making HTTP requests.
@@ -71,6 +73,7 @@ type client struct {
 	httpClient  HTTPDoer
 	auth        auth.Auth
 	accountID   domain.AccountID
+	mu          sync.RWMutex
 	scope       log.Scope
 	globalTools []Tool
 }
@@ -111,6 +114,8 @@ func NewClientWithHTTP(endpoint string, authService auth.Auth, httpClient HTTPDo
 
 // SetAccountID sets the account ID for requests.
 func (c *client) SetAccountID(accountID domain.AccountID) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.accountID = accountID
 }
 
@@ -128,11 +133,15 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 // StreamSnapshots sends the conversation to the Chat API and streams normalized snapshots.
 // Global tools are automatically merged with any request-specific tools.
 func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot func(StreamSnapshot)) (*StreamResult, error) {
+	ctx, cancel := withDefaultTimeout(ctx, defaultStreamTimeout)
+	defer cancel()
+
 	// Merge global tools with request-specific tools
-	allTools := append(c.globalTools, req.Tools...)
+	allTools := append(append([]Tool(nil), c.globalTools...), req.Tools...)
 	req.Tools = allTools
 
 	url := c.endpoint + "/api/chat/v1/messages"
+	accountID := c.accountIDSnapshot()
 
 	c.scope.Debug("sending to chat API",
 		log.String("url", url),
@@ -169,7 +178,7 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	c.setHeaders(httpReq, token)
+	c.setHeaders(httpReq, token, accountID)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
@@ -184,7 +193,7 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 			log.Int("status", resp.StatusCode),
 			log.String("url", url),
 			log.String("body", string(respBody)),
-			log.String("account_id", c.accountID.String()),
+			log.String("account_id", accountID.String()),
 		)
 		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -209,8 +218,8 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			reason := "context_canceled"
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			reason := err.Error()
 			if cause := context.Cause(ctx); cause != nil {
 				reason = cause.Error()
 			}
@@ -235,13 +244,26 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 	return result, nil
 }
 
-func (c *client) setHeaders(req *http.Request, token string) {
+func (c *client) setHeaders(req *http.Request, token string, accountID domain.AccountID) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+token)
-	if c.accountID != "" {
-		req.Header.Set("X-Account-ID", c.accountID.String())
+	if accountID != "" {
+		req.Header.Set("X-Account-ID", accountID.String())
 	}
+}
+
+func (c *client) accountIDSnapshot() domain.AccountID {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.accountID
+}
+
+func withDefaultTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, timeout)
 }
 
 // tokenClaims holds the subset of JWT claims we log for debugging.
