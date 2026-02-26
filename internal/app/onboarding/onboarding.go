@@ -147,6 +147,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.OrgSelected:
 		m.scope.Info("organization selected", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
+		m.services = m.services.WithAccountID("")
 		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.orgPrefs, m.scope))
 
 	case msgs.NoOrgs:
@@ -156,6 +157,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.OrgCreated:
 		m.scope.Info("organization created", slog.String("org_id", msg.Org.ID.String()))
 		m.org = &msg.Org
+		m.services = m.services.WithAccountID("")
 		return m.setStep(accounts.NewSelect(m.ctx, m.theme, msg.Org, m.services, m.orgPrefs, m.scope))
 
 	// Account messages
@@ -163,6 +165,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.scope.Info("account selected", slog.String("account_id", msg.Account.ID.String()))
 		m.org = &msg.Org
 		m.account = &msg.Account
+		m.services = m.services.WithAccountID(msg.Account.ID)
 		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.scope))
 
 	case msgs.NoAccounts:
@@ -173,6 +176,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.scope.Info("account created", slog.String("account_id", msg.Account.ID.String()))
 		m.org = &msg.Org
 		m.account = &msg.Account
+		m.services = m.services.WithAccountID(msg.Account.ID)
 		return m.setStep(datadog.NewCheck(m.ctx, m.theme, msg.Account, m.services, m.scope))
 
 	// Datadog messages

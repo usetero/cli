@@ -58,8 +58,8 @@ func (m *Model) startSync(accountID string) error {
 	}
 	m.scope.Info("syncer started", "account_id", accountID)
 
-	// Set account ID on services
-	m.services.SetAccountID(domain.AccountID(accountID))
+	// Scope API services to the active account.
+	m.services = m.services.WithAccountID(domain.AccountID(accountID))
 
 	// Create PowerSync API client for write checkpoints
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)

@@ -134,7 +134,7 @@ func (m *Model) fetchData() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
 		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
@@ -157,7 +157,7 @@ func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
 		defer cancel()
 		logEvents, err := db.LogEventStatuses().ListByService(ctx, svc.Name, 25)
 		if err != nil {

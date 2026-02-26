@@ -140,7 +140,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 func (m *Model) fetchWorkspaceCount(db sqlite.DB) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), workspaceCountTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), workspaceCountTimeout)
 		defer cancel()
 
 		var count int64

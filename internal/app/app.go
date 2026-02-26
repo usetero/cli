@@ -320,8 +320,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 		// Create chat client with tool definitions
-		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions())
-		m.chatClient.SetAccountID(msg.Account.ID)
+		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
+			WithAccountID(msg.Account.ID)
 
 		// Forward to onboarding so it can continue
 		if m.onboarding != nil {
@@ -751,7 +751,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.chatClient = nil
 	m.toolRegistry = nil
 	m.chat = nil
-	m.services.SetAccountID("") // clear stale account scope
+	m.services = m.services.WithAccountID("") // clear stale account scope
 
 	m.statusBar = statusbar.New(m.theme, m.scope, m.syncer, m.cfg.APIEndpoint, m.cfg.Env)
 	m.windowTitle = ""

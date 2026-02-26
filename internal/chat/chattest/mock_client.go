@@ -12,6 +12,7 @@ type MockClient struct {
 	StreamFunc          func(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error)
 	StreamSnapshotsFunc func(ctx context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error)
 	SetAccountFunc      func(accountID domain.AccountID)
+	WithAccountFunc     func(accountID domain.AccountID) chat.Client
 }
 
 var _ chat.Client = (*MockClient)(nil)
@@ -48,4 +49,14 @@ func (m *MockClient) SetAccountID(accountID domain.AccountID) {
 	if m.SetAccountFunc != nil {
 		m.SetAccountFunc(accountID)
 	}
+}
+
+func (m *MockClient) WithAccountID(accountID domain.AccountID) chat.Client {
+	if m.WithAccountFunc != nil {
+		return m.WithAccountFunc(accountID)
+	}
+	if m.SetAccountFunc != nil {
+		m.SetAccountFunc(accountID)
+	}
+	return m
 }

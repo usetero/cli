@@ -3,6 +3,7 @@ package apitest
 import (
 	"context"
 
+	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/gen"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -10,6 +11,7 @@ import (
 // MockClient implements api.Client for testing.
 type MockClient struct {
 	SetAccountIDFunc                        func(accountID domain.AccountID)
+	WithAccountIDFunc                       func(accountID domain.AccountID) api.Client
 	RawQueryFunc                            func(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error)
 	ListOrganizationsFunc                   func(ctx context.Context) (*gen.ListOrganizationsResponse, error)
 	CreateOrganizationAndBootstrapFunc      func(ctx context.Context, input gen.CreateOrganizationInput) (*gen.CreateOrganizationAndBootstrapResponse, error)
@@ -39,6 +41,16 @@ func (m *MockClient) SetAccountID(accountID domain.AccountID) {
 	if m.SetAccountIDFunc != nil {
 		m.SetAccountIDFunc(accountID)
 	}
+}
+
+func (m *MockClient) WithAccountID(accountID domain.AccountID) api.Client {
+	if m.WithAccountIDFunc != nil {
+		return m.WithAccountIDFunc(accountID)
+	}
+	if m.SetAccountIDFunc != nil {
+		m.SetAccountIDFunc(accountID)
+	}
+	return m
 }
 
 func (m *MockClient) RawQuery(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error) {

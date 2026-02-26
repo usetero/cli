@@ -207,7 +207,7 @@ func newDebugGraphQLCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Com
 			if orgCfg != nil {
 				orgPrefs := preferences.NewOrgService(orgCfg, scope)
 				if accountID := orgPrefs.GetDefaultAccountID(); accountID != "" {
-					services.SetAccountID(accountID)
+					services = services.WithAccountID(accountID)
 				}
 			}
 

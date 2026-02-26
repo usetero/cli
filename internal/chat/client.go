@@ -65,6 +65,8 @@ type Client interface {
 
 	// SetAccountID sets the account ID for requests.
 	SetAccountID(accountID domain.AccountID)
+	// WithAccountID returns a new client scoped to accountID.
+	WithAccountID(accountID domain.AccountID) Client
 }
 
 // client is the concrete implementation of Client.
@@ -117,6 +119,18 @@ func (c *client) SetAccountID(accountID domain.AccountID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.accountID = accountID
+}
+
+// WithAccountID returns a copy scoped to the given account.
+func (c *client) WithAccountID(accountID domain.AccountID) Client {
+	return &client{
+		endpoint:    c.endpoint,
+		httpClient:  c.httpClient,
+		auth:        c.auth,
+		accountID:   accountID,
+		scope:       c.scope,
+		globalTools: append([]Tool(nil), c.globalTools...),
+	}
 }
 
 // Stream sends the conversation to the Chat API and streams the response.

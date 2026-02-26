@@ -127,7 +127,7 @@ func (m *Model) fetchData() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
 		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
@@ -160,7 +160,7 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
 		defer cancel()
 		policies, err := db.CompliancePolicies().ListPendingPoliciesByCategory(ctx, cat.Category, 25)
 		if err != nil {

@@ -22,10 +22,22 @@ type timeoutDB struct {
 }
 
 func withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	return WithTimeout(ctx, defaultQueryTimeout)
+}
+
+// WithTimeout applies timeout unless ctx already has a deadline.
+// If ctx is nil, context.Background() is used.
+func WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if _, ok := ctx.Deadline(); ok {
 		return ctx, func() {}
 	}
-	return context.WithTimeout(ctx, defaultQueryTimeout)
+	if timeout <= 0 {
+		timeout = defaultQueryTimeout
+	}
+	return context.WithTimeout(ctx, timeout)
 }
 
 func (t *timeoutDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {

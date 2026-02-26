@@ -109,7 +109,6 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			for _, acc := range m.accounts {
 				if acc.ID == prefID {
 					m.scope.Debug("using saved account preference", "id", acc.ID)
-					m.services.SetAccountID(acc.ID)
 					return m.emitSelected(acc)
 				}
 			}
@@ -119,7 +118,6 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			m.scope.Debug("auto-selected account (only one)")
 			acc := m.accounts[0]
 			_ = m.prefs.SetDefaultAccountID(acc.ID)
-			m.services.SetAccountID(acc.ID)
 			return m.emitSelected(acc)
 		}
 
@@ -134,7 +132,6 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 			if item := m.list.SelectedItem(); item != nil {
 				if acc, ok := item.(domain.Account); ok {
 					_ = m.prefs.SetDefaultAccountID(acc.ID)
-					m.services.SetAccountID(acc.ID)
 					return m.emitSelected(acc)
 				}
 			}

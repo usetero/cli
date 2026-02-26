@@ -25,6 +25,8 @@ const (
 type Client interface {
 	// SetAccountID sets the account ID header for scoped requests.
 	SetAccountID(accountID domain.AccountID)
+	// WithAccountID returns a new client scoped to accountID.
+	WithAccountID(accountID domain.AccountID) Client
 
 	// RawQuery executes an arbitrary GraphQL query (for debugging).
 	RawQuery(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error)
@@ -100,6 +102,16 @@ func (c *client) SetAccountID(accountID domain.AccountID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.accountID = accountID.String()
+}
+
+// WithAccountID returns a copy scoped to the given account.
+func (c *client) WithAccountID(accountID domain.AccountID) Client {
+	return &client{
+		endpoint:  c.endpoint,
+		auth:      c.auth,
+		http:      c.http,
+		accountID: accountID.String(),
+	}
 }
 
 // gql returns a graphql.Client configured with fresh auth token.

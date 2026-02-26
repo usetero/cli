@@ -12,6 +12,7 @@ import (
 // This is the primary public interface for interacting with the Tero API.
 type APIServices struct {
 	client          Client
+	scope           log.Scope
 	Organizations   Organizations
 	Accounts        Accounts
 	Workspaces      Workspaces
@@ -36,9 +37,13 @@ func NewAPIServices(client Client, scope log.Scope) APIServices {
 }
 
 func newAPIServices(client Client, scope log.Scope) APIServices {
-	scope = scope.Child("api")
+	return newAPIServicesWithScope(client, scope.Child("api"))
+}
+
+func newAPIServicesWithScope(client Client, scope log.Scope) APIServices {
 	return APIServices{
 		client:          client,
+		scope:           scope,
 		Organizations:   NewOrganizationService(client, scope),
 		Accounts:        NewAccountService(client, scope),
 		Workspaces:      NewWorkspaceService(client, scope),
@@ -53,6 +58,11 @@ func newAPIServices(client Client, scope log.Scope) APIServices {
 // SetAccountID sets the account ID header for scoped requests.
 func (s APIServices) SetAccountID(accountID domain.AccountID) {
 	s.client.SetAccountID(accountID)
+}
+
+// WithAccountID returns a new APIServices value scoped to accountID.
+func (s APIServices) WithAccountID(accountID domain.AccountID) APIServices {
+	return newAPIServicesWithScope(s.client.WithAccountID(accountID), s.scope)
 }
 
 // RawQuery executes an arbitrary GraphQL query (for debugging).

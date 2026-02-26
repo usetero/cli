@@ -121,7 +121,7 @@ func (m *Model) fetchPending() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
 		defer cancel()
 		pending, err := db.PendingUploadCounts(ctx)
 		if err != nil {
