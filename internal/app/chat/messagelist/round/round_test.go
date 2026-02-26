@@ -64,9 +64,8 @@ func TestBlocks(t *testing.T) {
 		m := newTestRound(t)
 
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		if m.State() != StateComplete {
@@ -139,9 +138,8 @@ func TestUpdate(t *testing.T) {
 		m := newTestRound(t)
 
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		if m.State() != StateComplete {
@@ -154,9 +152,8 @@ func TestUpdate(t *testing.T) {
 		m := newTestRound(t)
 
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "tool_use",
-			Message:    domain.Message{ID: "asst-1", StopReason: "tool_use"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "tool_use"},
 		})
 
 		if m.State() != StateActive {
@@ -169,9 +166,8 @@ func TestUpdate(t *testing.T) {
 		m := newTestRound(t)
 
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "unknown-turn",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "unknown-turn",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		if m.State() != StateActive {
@@ -187,9 +183,8 @@ func TestUpdate(t *testing.T) {
 
 		// StreamCompleted for our turn should not change state back
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		// State should still be cancelled, not complete
@@ -338,9 +333,8 @@ func TestStreamFailed(t *testing.T) {
 
 		m.Update(msgs.StreamFailed{TurnID: "user-1", Err: errors.New("fail")})
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		if m.State() != StateFailed {
@@ -404,4 +398,32 @@ func TestDuration(t *testing.T) {
 			t.Error("expected fixed duration after cancel")
 		}
 	})
+}
+
+func TestSummarizeToolResults(t *testing.T) {
+	t.Parallel()
+
+	results := []tools.Result{
+		{
+			ToolUseID: "tool-1",
+			Content: map[string]any{
+				"rows": []map[string]any{{"service_id": "ad"}, {"service_id": "email"}},
+			},
+		},
+		{
+			ToolUseID: "tool-2",
+			Error:     &tools.ErrorResult{Message: "boom"},
+		},
+	}
+
+	summaries := summarizeToolResults(results)
+	if len(summaries) != 2 {
+		t.Fatalf("len(summaries)=%d, want 2", len(summaries))
+	}
+	if got := summaries[0]; got != "tool_use_id=tool-1 is_error=false rows=2" {
+		t.Fatalf("summaries[0]=%q", got)
+	}
+	if got := summaries[1]; got != "tool_use_id=tool-2 is_error=true" {
+		t.Fatalf("summaries[1]=%q", got)
+	}
 }

@@ -71,6 +71,11 @@ func (m *Model) ID() domain.MessageID {
 	return m.id
 }
 
+// Input returns the submitted input for this user message.
+func (m *Model) Input() msgs.UserSubmittedInput {
+	return m.input
+}
+
 // Kind implements block.Block.
 func (m *Model) Kind() block.Kind {
 	return block.KindUser

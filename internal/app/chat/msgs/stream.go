@@ -21,7 +21,6 @@ type AssistantContentUpdated struct {
 type StreamCompleted struct {
 	TurnID        domain.MessageID // user message ID that started this turn
 	Message       domain.Message
-	StopReason    string
 	Title         string // AI-generated conversation title, if provided
 	ContextWindow int    // model's max token capacity
 	InputTokens   int    // tokens consumed by input this turn

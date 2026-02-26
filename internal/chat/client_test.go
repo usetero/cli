@@ -39,6 +39,19 @@ data: {"chat_stream_version":"v2","type":"message_stop","message_stop":{"stop_re
 data: [DONE]
 `
 
+func validRequest() chat.Request {
+	return chat.Request{
+		ConversationID: "00000000-0000-0000-0000-000000000001",
+		Messages: []domain.Message{{
+			Role: domain.RoleUser,
+			Content: []domain.Block{{
+				Type: domain.BlockTypeText,
+				Text: &domain.TextBlock{Content: "hello"},
+			}},
+		}},
+	}
+}
+
 func TestClient_Stream(t *testing.T) {
 	t.Parallel()
 
@@ -67,10 +80,10 @@ func TestClient_Stream(t *testing.T) {
 		client.SetAccountID("acc-123")
 
 		_, err := client.Stream(context.Background(), chat.Request{
-			ConversationID: "conv-1",
+			ConversationID: "00000000-0000-0000-0000-000000000001",
 			Messages: []domain.Message{{
 				ID:             "msg-1",
-				ConversationID: "conv-1",
+				ConversationID: "00000000-0000-0000-0000-000000000001",
 				Role:           domain.RoleUser,
 				Content: []domain.Block{{
 					Index: 0,
@@ -102,11 +115,17 @@ func TestClient_Stream(t *testing.T) {
 			t.Fatalf("ReadAll(body) error = %v", err)
 		}
 		payload := string(body)
-		forbidden := []string{`"conversation_id"`, `"index"`, `"id"`, `"created_at"`}
+		forbidden := []string{`"index"`, `"id"`, `"created_at"`}
 		for _, f := range forbidden {
 			if strings.Contains(payload, f) {
 				t.Fatalf("request payload unexpectedly contains %s: %s", f, payload)
 			}
+		}
+		if !strings.Contains(payload, `"chat_protocol_version":"v2"`) {
+			t.Fatalf("request payload missing chat_protocol_version=v2: %s", payload)
+		}
+		if !strings.Contains(payload, `"conversation_id":"00000000-0000-0000-0000-000000000001"`) {
+			t.Fatalf("request payload missing conversation_id: %s", payload)
 		}
 	})
 
@@ -133,12 +152,12 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com/", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
 		if err != nil {
 			t.Fatalf("Stream() error = %v", err)
 		}
 
-		want := "https://api.example.com/api/chat/v1/messages"
+		want := "https://api.example.com/api/chat/v2/messages"
 		if capturedReq.URL.String() != want {
 			t.Errorf("URL = %q, want %q", capturedReq.URL.String(), want)
 		}
@@ -162,7 +181,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -220,7 +239,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -249,7 +268,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -279,7 +298,7 @@ func TestClient_Stream(t *testing.T) {
 
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {})
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
 		if err == nil {
 			t.Fatal("Stream() expected error, got nil")
 		}
@@ -317,7 +336,7 @@ data: [DONE]
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
 		var messages []*domain.Message
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {
 			// Make a copy since the message is built incrementally
 			msgCopy := *msg
 			messages = append(messages, &msgCopy)
@@ -381,7 +400,7 @@ data: [DONE]
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
 		var lastMessage *domain.Message
-		_, err := client.Stream(context.Background(), chat.Request{}, func(msg *domain.Message) {
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {
 			lastMessage = msg
 		})
 
@@ -441,7 +460,7 @@ data: [DONE]
 		}
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		result, err := client.Stream(context.Background(), chat.Request{}, nil)
+		result, err := client.Stream(context.Background(), validRequest(), nil)
 		if err != nil {
 			t.Fatalf("Stream() error = %v", err)
 		}
@@ -481,7 +500,7 @@ data: {"chat_stream_version":"v2","error":"internal error"}
 		}
 		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-		_, err := client.Stream(context.Background(), chat.Request{}, nil)
+		_, err := client.Stream(context.Background(), validRequest(), nil)
 		if err == nil || !strings.Contains(err.Error(), "server error: internal error") {
 			t.Fatalf("error = %v", err)
 		}
@@ -529,7 +548,7 @@ data: {"chat_stream_version":"v2","error":"internal error"}
 		}()
 
 		for i := 0; i < 100; i++ {
-			if _, err := scoped.Stream(context.Background(), chat.Request{}, nil); err != nil {
+			if _, err := scoped.Stream(context.Background(), validRequest(), nil); err != nil {
 				close(stop)
 				<-done
 				t.Fatalf("scoped Stream() error at iter %d: %v", i, err)
@@ -544,9 +563,9 @@ data: {"chat_stream_version":"v2","error":"internal error"}
 func TestClient_StreamSnapshots(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"Hello"}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":3,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"Hello"}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":3,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
 data: [DONE]
 `
 	httpClient := &mockHTTPClient{
@@ -568,7 +587,7 @@ data: [DONE]
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
 	var snaps []chat.StreamSnapshot
-	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, func(s chat.StreamSnapshot) {
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), func(s chat.StreamSnapshot) {
 		snaps = append(snaps, s)
 	})
 	if err != nil {
@@ -586,8 +605,8 @@ data: [DONE]
 	if last.Status != chat.StreamStatusCompleted {
 		t.Fatalf("last.Status = %q, want %q", last.Status, chat.StreamStatusCompleted)
 	}
-	if last.ConversationID != "conv-1" {
-		t.Fatalf("last.ConversationID = %q, want conv-1", last.ConversationID)
+	if last.ConversationID != "00000000-0000-0000-0000-000000000001" {
+		t.Fatalf("last.ConversationID = %q, want 00000000-0000-0000-0000-000000000001", last.ConversationID)
 	}
 	if last.TurnID != "turn-1" {
 		t.Fatalf("last.TurnID = %q, want turn-1", last.TurnID)
@@ -625,7 +644,7 @@ func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.
 	cancel(errors.New("user_cancelled"))
 
 	var snaps []chat.StreamSnapshot
-	result, err := client.StreamSnapshots(ctx, chat.Request{ConversationID: "conv-1"}, func(s chat.StreamSnapshot) {
+	result, err := client.StreamSnapshots(ctx, validRequest(), func(s chat.StreamSnapshot) {
 		snaps = append(snaps, s)
 	})
 	if err != nil {
@@ -653,9 +672,9 @@ func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.
 func TestClient_StreamSnapshots_RejectsNonMonotonicSeq(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"b"}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"b"}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":2,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
 `
 	httpClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
@@ -673,7 +692,7 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1",
 	}
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -685,8 +704,8 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1",
 func TestClient_StreamSnapshots_RejectsTurnMismatch(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-2","seq":2,"type":"text_delta","text":{"content":"b"}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-2","seq":2,"type":"text_delta","text":{"content":"b"}}
 `
 	httpClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
@@ -704,7 +723,7 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-2",
 	}
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -716,8 +735,8 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-2",
 func TestClient_StreamSnapshots_RejectsMalformedToolOrdering(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
-data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"tool_input_delta","tool_use_id":"missing","tool_input_delta":"{}"}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":2,"type":"tool_input_delta","tool_use_id":"missing","tool_input_delta":"{}"}
 `
 	httpClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
@@ -735,7 +754,7 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1",
 	}
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), nil)
 	if err == nil {
 		t.Fatal("expected protocol error, got nil")
 	}
@@ -747,7 +766,7 @@ data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1",
 func TestClient_StreamSnapshots_RejectsDoneBeforeMessageStop(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"00000000-0000-0000-0000-000000000001","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
 data: [DONE]
 `
 	httpClient := &mockHTTPClient{
@@ -766,7 +785,7 @@ data: [DONE]
 	}
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), nil)
 	if err == nil {
 		t.Fatal("expected protocol error, got nil")
 	}

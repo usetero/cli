@@ -23,8 +23,7 @@ func addCompletedRound(t *testing.T, m *Model, turnID domain.MessageID, text str
 
 	m.StartTurn("conv-1", "acct-1", turnID, msgs.UserSubmittedInput{Text: "prompt " + string(turnID)}, nil, nil)
 	m.Update(msgs.StreamCompleted{
-		TurnID:     turnID,
-		StopReason: "end_turn",
+		TurnID: turnID,
 		Message: domain.Message{
 			ID:         "asst-" + turnID,
 			StopReason: "end_turn",

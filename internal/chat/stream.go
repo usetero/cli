@@ -2,6 +2,7 @@ package chat
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -66,7 +67,7 @@ func decodeEventData(data []byte) (event, error) {
 	}
 
 	var e event
-	if err := json.Unmarshal(data, &e); err != nil {
+	if err := strictUnmarshal(data, &e); err != nil {
 		return event{}, fmt.Errorf("parse event: %w", err)
 	}
 	if e.Type == "" {
@@ -109,4 +110,17 @@ func decodeEventData(data []byte) (event, error) {
 	}
 
 	return e, nil
+}
+
+func strictUnmarshal(data []byte, out any) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(out); err != nil {
+		return err
+	}
+	var trailing struct{}
+	if err := dec.Decode(&trailing); err != io.EOF {
+		return fmt.Errorf("unexpected trailing JSON data")
+	}
+	return nil
 }

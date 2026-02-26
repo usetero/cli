@@ -77,10 +77,10 @@ func EncodeText(content string) (string, error) {
 // EncodeToolResults encodes tool results as blocks for storage.
 func EncodeToolResults(results []ToolResult) (string, error) {
 	blocks := make([]Block, len(results))
-	for i, r := range results {
+	for i := range results {
 		blocks[i] = Block{
 			Type:       BlockTypeToolResult,
-			ToolResult: &r,
+			ToolResult: &results[i],
 		}
 	}
 	return EncodeBlocks(blocks)

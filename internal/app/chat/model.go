@@ -1,0 +1,119 @@
+package chat
+
+import (
+	"time"
+
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/usetero/cli/internal/app/chat/inputbar"
+	"github.com/usetero/cli/internal/app/chat/messagelist"
+	"github.com/usetero/cli/internal/auth"
+	chatclient "github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/chat/tools"
+	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/log"
+	"github.com/usetero/cli/internal/sqlite"
+	"github.com/usetero/cli/internal/styles"
+)
+
+const dbOpTimeout = 2 * time.Second
+
+// Chat-specific key bindings.
+var (
+	scrollUp = key.NewBinding(
+		key.WithKeys("up"),
+		key.WithHelp("↑↓", "scroll"),
+	)
+	focusInputBar = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "focus input"),
+	)
+	focusChat = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "focus chat"),
+	)
+)
+
+// focus tracks which component has keyboard focus.
+type focus int
+
+const (
+	focusEditor focus = iota
+	focusMessages
+)
+
+// Model is the main chat model.
+// It is a flexible component - it renders exactly the size given by SetSize.
+type Model struct {
+	scope log.Scope
+	focus focus
+
+	inputBar    *inputbar.Model
+	messageList *messagelist.Model
+
+	// Conversation is created lazily on first message
+	conversationID domain.ConversationID
+	session        *chatclient.Session
+
+	user      *auth.User
+	account   domain.Account
+	workspace domain.Workspace
+	theme     styles.Theme
+	width     int
+	height    int
+	originX   int
+	originY   int
+
+	// Empty state
+	policySummary *domain.AccountSummary
+
+	// Dependencies
+	db           sqlite.DB
+	chatClient   chatclient.Client
+	toolRegistry *tools.Registry
+}
+
+// emptyStatePollMsg triggers a policy summary fetch for the empty state.
+type emptyStatePollMsg struct{}
+
+// New creates a new chat model.
+func New(
+	user *auth.User,
+	account domain.Account,
+	workspace domain.Workspace,
+	theme styles.Theme,
+	db sqlite.DB,
+	chatClient chatclient.Client,
+	toolRegistry *tools.Registry,
+	scope log.Scope,
+) *Model {
+	scope = scope.Child("chat")
+
+	return &Model{
+		scope:        scope,
+		inputBar:     inputbar.New(user, theme, scope),
+		messageList:  messagelist.New(theme, db, chatClient, toolRegistry, scope),
+		user:         user,
+		account:      account,
+		workspace:    workspace,
+		theme:        theme,
+		db:           db,
+		chatClient:   chatClient,
+		toolRegistry: toolRegistry,
+	}
+}
+
+// Init initializes the model.
+func (m *Model) Init() tea.Cmd {
+	return tea.Batch(
+		m.inputBar.Init(),
+		m.pollEmptyState(),
+	)
+}
+
+func (m *Model) pollEmptyState() tea.Cmd {
+	return tea.Tick(2*time.Second, func(time.Time) tea.Msg {
+		return emptyStatePollMsg{}
+	})
+}

@@ -13,17 +13,8 @@ type ToolCompleted struct {
 	Error     error
 }
 
-// GetTurnID returns the turn ID.
-func (m ToolCompleted) GetTurnID() domain.MessageID { return m.TurnID }
-
-// GetToolUseID returns the tool use ID.
-func (m ToolCompleted) GetToolUseID() string { return m.ToolUseID }
-
-// GetError returns the execution error, if any.
-func (m ToolCompleted) GetError() error { return m.Error }
-
-// GetResult returns the tool result, wrapping the error if present.
-func (m ToolCompleted) GetResult() domaintools.Result {
+// ResultOrError returns the tool result, wrapping Error when present.
+func (m ToolCompleted) ResultOrError() domaintools.Result {
 	r := m.Result
 	r.ToolUseID = m.ToolUseID
 	if m.Error != nil {

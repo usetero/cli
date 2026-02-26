@@ -149,25 +149,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(cmds...)
 
 	case msgs.ToolCompleted:
-		if msg.GetTurnID() != m.userMessage.ID() {
-			m.reportProtocolViolation(
-				"tool_completed_turn_mismatch",
-				"received_turn_id", msg.GetTurnID(),
-				"expected_turn_id", m.userMessage.ID(),
-				"tool_use_id", msg.GetToolUseID(),
-			)
+		if msg.TurnID != m.userMessage.ID() {
+			// Message buses fan out to all turns; non-owner turns ignore.
 			return nil
 		}
-		cmds = append(cmds, m.handleToolCompleted(msg.GetToolUseID(), msg.GetResult()))
+		cmds = append(cmds, m.handleToolCompleted(msg.ToolUseID, msg.ResultOrError()))
 
 	case assistantPersisted:
 		if msg.turnID != m.userMessage.ID() {
-			m.reportProtocolViolation(
-				"assistant_persisted_turn_mismatch",
-				"received_turn_id", msg.turnID,
-				"expected_turn_id", m.userMessage.ID(),
-				"message_id", msg.messageID,
-			)
+			// Internal completion events are broadcast; non-owner turns ignore.
 			return nil
 		}
 		m.persisted = true
@@ -230,9 +220,9 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 		defer close(updates)
 
 		req := chatclient.Request{
-			ConversationID: m.conversationID.String(),
-			Messages:       messages,
-			Context:        chatContext,
+			ConversationID:  m.conversationID.String(),
+			Messages:        messages,
+			ContextEntities: chatContext,
 		}
 
 		var lastSnapshot *chatclient.StreamSnapshot
@@ -290,6 +280,11 @@ func (m *Model) State() State {
 // UserMessageID returns the user message ID.
 func (m *Model) UserMessageID() domain.MessageID {
 	return m.userMessage.ID()
+}
+
+// UserInput returns the input that created this turn's user message.
+func (m *Model) UserInput() msgs.UserSubmittedInput {
+	return m.userMessage.Input()
 }
 
 // AssistantMessageID returns the persisted assistant message ID.
@@ -362,9 +357,8 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 			return tea.Batch(
 				func() tea.Msg {
 					return msgs.StreamCompleted{
-						TurnID:     turnID,
-						Message:    *msg,
-						StopReason: msg.StopReason,
+						TurnID:  turnID,
+						Message: *msg,
 					}
 				},
 				m.persistAssistantMessage(msg),
@@ -401,7 +395,6 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 				return msgs.StreamCompleted{
 					TurnID:        turnID,
 					Message:       *update.message,
-					StopReason:    update.message.StopReason,
 					Title:         title,
 					ContextWindow: contextWindow,
 					InputTokens:   inputTokens,

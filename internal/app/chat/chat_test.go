@@ -3,6 +3,8 @@ package chat
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -11,6 +13,7 @@ import (
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/domain"
+	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"
@@ -91,9 +94,56 @@ func abortedClient(reason string) *chattest.MockClient {
 	}
 }
 
+func recordingCompletingClient(requests *[]chat.Request) *chattest.MockClient {
+	var mu sync.Mutex
+	call := 0
+
+	return &chattest.MockClient{
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+			mu.Lock()
+			*requests = append(*requests, req)
+			call++
+			asstID := domain.MessageID(fmt.Sprintf("asst-%d", call))
+			mu.Unlock()
+
+			msg := &domain.Message{
+				ID:         asstID,
+				Model:      "test-model",
+				StopReason: "end_turn",
+				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}}},
+			}
+
+			if onSnapshot != nil {
+				onSnapshot(chat.StreamSnapshot{
+					ConversationID: "conv-1",
+					TurnID:         "turn-1",
+					Seq:            1,
+					Status:         chat.StreamStatusStreaming,
+					Message:        msg,
+				})
+				onSnapshot(chat.StreamSnapshot{
+					ConversationID: "conv-1",
+					TurnID:         "turn-1",
+					Seq:            2,
+					Status:         chat.StreamStatusCompleted,
+					Done:           true,
+					Message:        msg,
+				})
+			}
+
+			return &chat.StreamResult{Message: msg}, nil
+		},
+	}
+}
+
 // submitAndDrain sends a UserSubmittedInput and drains the cmd loop.
 func submitAndDrain(m *Model, text string, maxSteps int) {
 	cmd := m.Update(msgs.UserSubmittedInput{Text: text})
+	teatest.DrainCmds(m.Update, cmd, maxSteps)
+}
+
+func submitToolResultsAndDrain(m *Model, results []domaintools.Result, maxSteps int) {
+	cmd := m.Update(msgs.UserSubmittedInput{ToolResults: results})
 	teatest.DrainCmds(m.Update, cmd, maxSteps)
 }
 
@@ -148,6 +198,87 @@ func TestCancelActiveRound(t *testing.T) {
 			t.Errorf("invalid message history after cancel + resubmit: %v (roles: %v)", err, messageRoles(messages))
 		}
 	})
+}
+
+func TestRequestHistoryUsesInMemorySessionNotDBRead(t *testing.T) {
+	t.Parallel()
+
+	var requests []chat.Request
+	m := newTestChat(t, recordingCompletingClient(&requests))
+
+	submitAndDrain(m, "first", 50)
+
+	// Simulate durability drift: assistant row missing in SQLite.
+	stored := listMessages(t, m)
+	for _, msg := range stored {
+		if msg.Role == domain.RoleAssistant {
+			if err := m.db.Messages().Delete(context.Background(), msg.ID); err != nil {
+				t.Fatalf("delete assistant: %v", err)
+			}
+		}
+	}
+
+	submitAndDrain(m, "second", 70)
+
+	if len(requests) < 2 {
+		t.Fatalf("requests = %d, want at least 2", len(requests))
+	}
+	second := requests[1].Messages
+	if len(second) < 3 {
+		t.Fatalf("second request message count = %d, want >= 3", len(second))
+	}
+	if second[0].Role != domain.RoleUser {
+		t.Fatalf("second[0].role = %q, want user", second[0].Role)
+	}
+	if second[1].Role != domain.RoleAssistant {
+		t.Fatalf("second[1].role = %q, want assistant (session history)", second[1].Role)
+	}
+	if second[len(second)-1].Role != domain.RoleUser {
+		t.Fatalf("last role = %q, want user", second[len(second)-1].Role)
+	}
+}
+
+func TestToolResultFollowupRequestContainsAssistantAndToolResult(t *testing.T) {
+	t.Parallel()
+
+	var requests []chat.Request
+	m := newTestChat(t, recordingCompletingClient(&requests))
+
+	// Turn 1: user prompt -> assistant response.
+	submitAndDrain(m, "run a query", 50)
+
+	// Turn 2: user tool_result follow-up should include prior assistant + tool_result.
+	submitToolResultsAndDrain(m, []domaintools.Result{{
+		ToolUseID: "toolu_1",
+		Content: map[string]any{
+			"rows": []map[string]any{
+				{"service_id": "svc-1", "weekly_volume": 12345},
+			},
+		},
+	}}, 60)
+
+	if len(requests) < 2 {
+		t.Fatalf("requests = %d, want >= 2", len(requests))
+	}
+	second := requests[1].Messages
+	if len(second) != 3 {
+		t.Fatalf("second request message count = %d, want 3", len(second))
+	}
+	if second[0].Role != domain.RoleUser {
+		t.Fatalf("second[0].role = %q, want user", second[0].Role)
+	}
+	if second[1].Role != domain.RoleAssistant {
+		t.Fatalf("second[1].role = %q, want assistant", second[1].Role)
+	}
+	if second[2].Role != domain.RoleUser {
+		t.Fatalf("second[2].role = %q, want user(tool_result)", second[2].Role)
+	}
+	if len(second[2].Content) != 1 || second[2].Content[0].Type != domain.BlockTypeToolResult {
+		t.Fatalf("second[2] content = %#v, want single tool_result block", second[2].Content)
+	}
+	if got := second[2].Content[0].ToolResult.ToolUseID; got != "toolu_1" {
+		t.Fatalf("tool_use_id = %q, want %q", got, "toolu_1")
+	}
 }
 
 func TestStreamFailed(t *testing.T) {

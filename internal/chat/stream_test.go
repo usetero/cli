@@ -79,6 +79,20 @@ data: [DONE]
 		}
 	})
 
+	t.Run("rejects unknown fields", func(t *testing.T) {
+		t.Parallel()
+
+		stream := `data: {"chat_stream_version":"v2","type":"text_delta","text":{"content":"x"},"unexpected":1}
+`
+		err := readStream(strings.NewReader(stream), func(e event) error { return nil })
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "unknown field") {
+			t.Fatalf("error = %q", err.Error())
+		}
+	})
+
 	t.Run("rejects missing protocol version", func(t *testing.T) {
 		t.Parallel()
 

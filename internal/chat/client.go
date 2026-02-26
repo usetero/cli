@@ -157,16 +157,19 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 	}
 	req.Tools = allTools
 
-	url := c.endpoint + "/api/chat/v1/messages"
+	url := c.endpoint + "/api/chat/v2/messages"
 	accountID := c.accountIDSnapshot()
 
 	c.scope.Debug("sending to chat API",
 		log.String("url", url),
 		log.String("conversation_id", req.ConversationID),
 		log.Int("message_count", len(req.Messages)),
-		log.Int("context_count", len(req.Context)),
+		log.Int("context_count", len(req.ContextEntities)),
 		log.Int("tool_count", len(req.Tools)),
 	)
+	for _, summary := range summarizeRequestMessages(req.Messages) {
+		c.scope.Debug("chat request message", "summary", summary)
+	}
 
 	// Get fresh token for this request
 	token, err := c.auth.GetAccessToken(ctx)
@@ -321,4 +324,23 @@ func parseTokenAudience(token string) (tokenClaims, error) {
 		orgID:   raw.OrgID,
 		expired: raw.Exp > 0 && time.Now().Unix() > raw.Exp,
 	}, nil
+}
+
+func summarizeRequestMessages(messages []domain.Message) []string {
+	out := make([]string, 0, len(messages))
+	for _, msg := range messages {
+		blockKinds := make([]string, 0, len(msg.Content))
+		for _, b := range msg.Content {
+			blockKinds = append(blockKinds, string(b.Type))
+		}
+		out = append(out, fmt.Sprintf(
+			"id=%s role=%s stop_reason=%s blocks=%d kinds=%s",
+			msg.ID,
+			msg.Role,
+			msg.StopReason,
+			len(msg.Content),
+			strings.Join(blockKinds, ","),
+		))
+	}
+	return out
 }

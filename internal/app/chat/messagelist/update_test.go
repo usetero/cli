@@ -76,8 +76,7 @@ func TestUpdate_StreamCompleted(t *testing.T) {
 
 		// StreamCompleted must update streaming state before rebuildBlocks reads it.
 		m.Update(msgs.StreamCompleted{
-			TurnID:     userMsgID,
-			StopReason: "end_turn",
+			TurnID: userMsgID,
 			Message: domain.Message{
 				ID:         "asst-1",
 				StopReason: "end_turn",
@@ -141,9 +140,8 @@ func TestCancelActiveRound(t *testing.T) {
 
 		// Complete it via StreamCompleted
 		m.Update(msgs.StreamCompleted{
-			TurnID:     "user-1",
-			StopReason: "end_turn",
-			Message:    domain.Message{ID: "asst-1", StopReason: "end_turn"},
+			TurnID:  "user-1",
+			Message: domain.Message{ID: "asst-1", StopReason: "end_turn"},
 		})
 
 		m.CancelActiveRound() // should not change state

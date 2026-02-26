@@ -2,6 +2,8 @@ package round
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -50,6 +52,7 @@ type Model struct {
 	accountID      domain.AccountID
 
 	turns    []*turn.Model
+	session  *chatclient.Session // authoritative in-memory history for active tool loop
 	thinking *thinking.Model
 	state    State
 	lastErr  error
@@ -119,6 +122,7 @@ func (m *Model) StartStream(messages []domain.Message, context []domain.ContextE
 	if len(m.turns) == 0 {
 		return nil
 	}
+	m.session = chatclient.NewSession(m.conversationID, messages)
 	return m.turns[0].StartStream(messages, context)
 }
 
@@ -135,11 +139,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case msgs.StreamCompleted:
 		// Check if this is for our current turn
 		if m.isOurTurn(msg.TurnID) {
-			if msg.StopReason != "tool_use" {
+			if m.session != nil {
+				m.session.RecordAssistantMessage(msg.Message)
+			}
+			if msg.Message.StopReason != "tool_use" {
 				// Round complete - no more tool calls
 				m.state = StateComplete
 				m.endTime = time.Now()
-				m.scope.Info("round complete", "stop_reason", msg.StopReason)
+				m.scope.Info("round complete", "stop_reason", msg.Message.StopReason)
 			}
 			// If tool_use, turn will collect results and fire ToolResultsReady
 		}
@@ -193,9 +200,17 @@ func (m *Model) isOurTurn(turnID domain.MessageID) bool {
 	return false
 }
 
-// startNextTurn persists tool results, loads messages, and creates the next turn.
+// HasTurn reports whether this round owns turnID.
+func (m *Model) HasTurn(turnID domain.MessageID) bool {
+	return m.isOurTurn(turnID)
+}
+
+// startNextTurn persists tool results and creates the next turn using in-memory history.
 func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 	m.scope.Info("starting next turn", "result_count", len(results))
+	for _, summary := range summarizeToolResults(results) {
+		m.scope.Debug("next turn tool result", "summary", summary)
+	}
 
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
@@ -216,15 +231,18 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 
 		msgID, err := m.db.Messages().CreateToolResultMessage(ctx, m.accountID, m.conversationID, domainResults)
 		if err != nil {
+			// Durability failure should not block the active chat loop.
 			m.scope.Error("failed to create tool result message", "error", err)
-			return nil
+			msgID = domain.NewMessageID()
 		}
 
-		// Load all messages for the API call
-		messages, err := m.db.Messages().List(ctx, m.conversationID)
-		if err != nil {
-			m.scope.Error("failed to load messages", "error", err)
-			return nil
+		if m.session == nil {
+			m.session = chatclient.NewSession(m.conversationID, nil)
+		}
+		_ = m.session.AppendUserToolResultsMessage(msgID, domainResults)
+		messages := m.session.Messages()
+		for _, summary := range summarizeHistory(messages) {
+			m.scope.Debug("next turn history", "summary", summary)
 		}
 
 		return nextTurnReady{
@@ -234,6 +252,45 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 			messages:  messages,
 		}
 	}
+}
+
+func summarizeToolResults(results []domaintools.Result) []string {
+	out := make([]string, 0, len(results))
+	for _, r := range results {
+		rows := -1
+		if rawRows, ok := r.Content["rows"]; ok {
+			if list, ok := rawRows.([]map[string]any); ok {
+				rows = len(list)
+			} else if listAny, ok := rawRows.([]any); ok {
+				rows = len(listAny)
+			}
+		}
+		if rows >= 0 {
+			out = append(out, fmt.Sprintf("tool_use_id=%s is_error=%t rows=%d", r.ToolUseID, r.IsError(), rows))
+			continue
+		}
+		out = append(out, fmt.Sprintf("tool_use_id=%s is_error=%t", r.ToolUseID, r.IsError()))
+	}
+	return out
+}
+
+func summarizeHistory(messages []domain.Message) []string {
+	out := make([]string, 0, len(messages))
+	for _, msg := range messages {
+		blockKinds := make([]string, 0, len(msg.Content))
+		for _, b := range msg.Content {
+			blockKinds = append(blockKinds, string(b.Type))
+		}
+		out = append(out, fmt.Sprintf(
+			"id=%s role=%s stop_reason=%s blocks=%d kinds=%s",
+			msg.ID,
+			msg.Role,
+			msg.StopReason,
+			len(msg.Content),
+			strings.Join(blockKinds, ","),
+		))
+	}
+	return out
 }
 
 // nextTurnReady is an internal message to create the next turn after persistence.

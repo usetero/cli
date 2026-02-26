@@ -23,6 +23,16 @@ func (m *Model) LastRound() *round.Model {
 	return m.rounds[len(m.rounds)-1]
 }
 
+// HasTurn returns true when any round owns the given turn/user-message ID.
+func (m *Model) HasTurn(turnID domain.MessageID) bool {
+	for _, r := range m.rounds {
+		if r.HasTurn(turnID) {
+			return true
+		}
+	}
+	return false
+}
+
 // RemoveLastRound removes the last round and rebuilds blocks.
 func (m *Model) RemoveLastRound() {
 	if len(m.rounds) == 0 {

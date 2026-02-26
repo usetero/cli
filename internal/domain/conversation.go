@@ -36,9 +36,17 @@ const (
 	ContextSourceAssistant ContextSource = "assistant"
 )
 
+// ContextEntityType identifies supported entity kinds for chat context.
+type ContextEntityType string
+
+const (
+	ContextEntityTypeService  ContextEntityType = "service"
+	ContextEntityTypeLogEvent ContextEntityType = "log_event"
+)
+
 // ContextEntity is an entity attached to a conversation for the AI to reference.
 // The client sends entity IDs; the server loads full entity data for the system prompt.
 type ContextEntity struct {
-	EntityType string `json:"entity_type"` // "service", "log_event", "policy", etc.
-	EntityID   string `json:"entity_id"`
+	EntityType ContextEntityType `json:"entity_type"`
+	EntityID   string            `json:"entity_id"`
 }

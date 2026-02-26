@@ -420,10 +420,10 @@ func TestFireToolResultsOnlyOnce(t *testing.T) {
 	})
 }
 
-func TestUpdate_ProtocolViolationTelemetry(t *testing.T) {
+func TestUpdate_TurnScopedRouting(t *testing.T) {
 	t.Parallel()
 
-	t.Run("tool completed turn mismatch increments counter", func(t *testing.T) {
+	t.Run("tool completed turn mismatch is ignored", func(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 
@@ -432,12 +432,12 @@ func TestUpdate_ProtocolViolationTelemetry(t *testing.T) {
 			ToolUseID: "tool-1",
 		})
 
-		if got := m.protocolViolationCount; got != 1 {
-			t.Fatalf("protocolViolationCount = %d, want 1", got)
+		if got := m.protocolViolationCount; got != 0 {
+			t.Fatalf("protocolViolationCount = %d, want 0", got)
 		}
 	})
 
-	t.Run("assistant persisted turn mismatch increments counter", func(t *testing.T) {
+	t.Run("assistant persisted turn mismatch is ignored", func(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 
@@ -446,8 +446,8 @@ func TestUpdate_ProtocolViolationTelemetry(t *testing.T) {
 			messageID: "asst-1",
 		})
 
-		if got := m.protocolViolationCount; got != 1 {
-			t.Fatalf("protocolViolationCount = %d, want 1", got)
+		if got := m.protocolViolationCount; got != 0 {
+			t.Fatalf("protocolViolationCount = %d, want 0", got)
 		}
 		if m.persisted {
 			t.Fatal("persisted should remain false for mismatched turn")

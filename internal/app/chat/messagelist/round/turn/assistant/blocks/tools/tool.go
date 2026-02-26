@@ -124,8 +124,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	// Listen for completion messages to update status
 	if completed, ok := msg.(msgs.ToolCompleted); ok {
-		if completed.GetTurnID() == m.turnID && completed.GetToolUseID() == m.toolID {
-			if completed.GetError() != nil {
+		if completed.TurnID == m.turnID && completed.ToolUseID == m.toolID {
+			if completed.Error != nil {
 				m.status = StatusError
 			} else {
 				m.status = StatusSuccess
