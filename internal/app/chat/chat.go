@@ -172,6 +172,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.handlePersistedMessage(msg))
 
 	case msgs.StreamFailed:
+		errorClass := chatclient.ClassifyStreamError(msg.Err)
+		m.scope.Warn("stream failed", "class", string(errorClass), "error", msg.Err)
+
 		// Forward to round so it transitions to StateFailed.
 		cmds = append(cmds, m.messageList.Update(msg))
 
@@ -201,7 +204,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 		cmds = append(cmds, m.inputBar.Update(msg))
-		cmds = append(cmds, appmsg.ErrorCmd(msg.Err.Error(), nil, false))
+		cmds = append(cmds, appmsg.ErrorCmd(chatclient.UserFacingStreamError(msg.Err), msg.Err, false))
 		return tea.Batch(cmds...)
 
 	case tea.MouseClickMsg:

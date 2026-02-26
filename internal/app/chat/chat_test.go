@@ -5,7 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/domain"
@@ -162,6 +164,19 @@ func TestStreamFailed(t *testing.T) {
 			t.Errorf("expected 0 messages after stream failure, got %d (roles: %v)", len(messages), messageRoles(messages))
 		}
 	})
+
+	t.Run("maps protocol errors to user-friendly toast", func(t *testing.T) {
+		t.Parallel()
+		m := newTestChat(t, completingClient())
+		cmd := m.Update(msgs.StreamFailed{TurnID: "turn-1", Err: errors.New("protocol error: unknown event type")})
+		errMsg, ok := extractErrorToast(cmd)
+		if !ok {
+			t.Fatal("expected error toast command")
+		}
+		if errMsg.Message != "The chat service returned an unexpected stream format. Please retry." {
+			t.Fatalf("toast message = %q", errMsg.Message)
+		}
+	})
 }
 
 func TestStreamAborted(t *testing.T) {
@@ -228,4 +243,31 @@ func messageRoles(messages []domain.Message) []string {
 		roles[i] = string(m.Role)
 	}
 	return roles
+}
+
+func extractErrorToast(cmd tea.Cmd) (appmsg.Error, bool) {
+	if cmd == nil {
+		return appmsg.Error{}, false
+	}
+	msg := cmd()
+	if msg == nil {
+		return appmsg.Error{}, false
+	}
+	if e, ok := msg.(appmsg.Error); ok {
+		return e, true
+	}
+	batch, ok := msg.(tea.BatchMsg)
+	if !ok {
+		return appmsg.Error{}, false
+	}
+	for _, sub := range batch {
+		if sub == nil {
+			continue
+		}
+		subMsg := sub()
+		if e, ok := subMsg.(appmsg.Error); ok {
+			return e, true
+		}
+	}
+	return appmsg.Error{}, false
 }

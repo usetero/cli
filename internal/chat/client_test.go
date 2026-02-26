@@ -34,6 +34,11 @@ func (b *blockingReadCloser) Read(_ []byte) (int, error) {
 
 func (b *blockingReadCloser) Close() error { return nil }
 
+const minimalValidStream = `data: {"chat_stream_version":"v2","type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
+data: [DONE]
+`
+
 func TestClient_Stream(t *testing.T) {
 	t.Parallel()
 
@@ -47,7 +52,7 @@ func TestClient_Stream(t *testing.T) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
-					Body:       io.NopCloser(strings.NewReader("data: [DONE]\n")),
+					Body:       io.NopCloser(strings.NewReader(minimalValidStream)),
 				}, nil
 			},
 		}
@@ -94,7 +99,7 @@ func TestClient_Stream(t *testing.T) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
-					Body:       io.NopCloser(strings.NewReader("data: [DONE]\n")),
+					Body:       io.NopCloser(strings.NewReader(minimalValidStream)),
 				}, nil
 			},
 		}
@@ -142,6 +147,38 @@ func TestClient_Stream(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "access token") {
 			t.Errorf("error = %q, want to contain 'access token'", err.Error())
+		}
+	})
+
+	t.Run("returns error on invalid outgoing tool definitions", func(t *testing.T) {
+		t.Parallel()
+
+		httpCalled := false
+		httpClient := &mockHTTPClient{
+			doFunc: func(req *http.Request) (*http.Response, error) {
+				httpCalled = true
+				return nil, errors.New("should not send request")
+			},
+		}
+		mockAuth := &authtest.MockAuth{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+		}
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+		_, err := client.Stream(context.Background(), chat.Request{
+			Tools: []chat.Tool{{
+				Name:        "",
+				Description: "bad",
+				InputSchema: chat.NewObjectSchema(map[string]chat.Property{}, nil),
+			}},
+		}, nil)
+		if err == nil || !strings.Contains(err.Error(), "validate tools") {
+			t.Fatalf("error = %v", err)
+		}
+		if httpCalled {
+			t.Fatal("HTTP request should not be sent for invalid tools")
 		}
 	})
 
@@ -208,7 +245,7 @@ func TestClient_Stream(t *testing.T) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Type": []string{"application/json"}},
-					Body:       io.NopCloser(strings.NewReader(`{"error": "something"}`)),
+					Body:       io.NopCloser(strings.NewReader(`{"chat_stream_version":"v2","error": "something"}`)),
 				}, nil
 			},
 		}
@@ -233,11 +270,11 @@ func TestClient_Stream(t *testing.T) {
 	t.Run("builds message from stream and calls onMessage", func(t *testing.T) {
 		t.Parallel()
 
-		stream := `data: {"type":"message_start","message_start":{"model":"claude-3"}}
-data: {"type":"text_delta","text":{"content":"Hello"}}
-data: {"type":"text_delta","text":{"content":" world"}}
-data: {"type":"content_block_stop"}
-data: {"type":"message_stop","message_stop":{"stop_reason":"end_turn"}}
+		stream := `data: {"chat_stream_version":"v2","type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","type":"text_delta","text":{"content":"Hello"}}
+data: {"chat_stream_version":"v2","type":"text_delta","text":{"content":" world"}}
+data: {"chat_stream_version":"v2","type":"content_block_stop"}
+data: {"chat_stream_version":"v2","type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
 data: [DONE]
 `
 		httpClient := &mockHTTPClient{
@@ -296,12 +333,12 @@ data: [DONE]
 	t.Run("accumulates tool use with input deltas", func(t *testing.T) {
 		t.Parallel()
 
-		stream := `data: {"type":"message_start","message_start":{"model":"claude-3"}}
-data: {"type":"tool_use","tool_use":{"id":"tool-1","name":"query"}}
-data: {"type":"tool_input_delta","tool_input_delta":"{\"sql\":"}
-data: {"type":"tool_input_delta","tool_input_delta":" \"SELECT 1\"}"}
-data: {"type":"content_block_stop"}
-data: {"type":"message_stop","message_stop":{"stop_reason":"tool_use"}}
+		stream := `data: {"chat_stream_version":"v2","type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","type":"tool_use","tool_use":{"id":"tool-1","name":"query"}}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-1","tool_input_delta":"{\"sql\":"}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-1","tool_input_delta":"\"SELECT 1\"}"}
+data: {"chat_stream_version":"v2","type":"content_block_stop","tool_use_id":"tool-1"}
+data: {"chat_stream_version":"v2","type":"message_stop","message_stop":{"stop_reason":"tool_use","input_tokens":10,"output_tokens":2}}
 data: [DONE]
 `
 		httpClient := &mockHTTPClient{
@@ -346,9 +383,86 @@ data: [DONE]
 		if lastMessage.Content[0].ToolUse.Name != "query" {
 			t.Errorf("ToolUse.Name = %q, want %q", lastMessage.Content[0].ToolUse.Name, "query")
 		}
-		expectedInput := `{"sql": "SELECT 1"}`
+		expectedInput := `{"sql":"SELECT 1"}`
 		if string(lastMessage.Content[0].ToolUse.Input) != expectedInput {
 			t.Errorf("ToolUse.Input = %q, want %q", string(lastMessage.Content[0].ToolUse.Input), expectedInput)
+		}
+	})
+
+	t.Run("handles multiple interleaved tool calls", func(t *testing.T) {
+		t.Parallel()
+
+		stream := `data: {"chat_stream_version":"v2","type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","type":"tool_use","tool_use":{"id":"tool-a","name":"query"}}
+data: {"chat_stream_version":"v2","type":"tool_use","tool_use":{"id":"tool-b","name":"query"}}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-a","tool_input_delta":"{\"sql\":\"SELECT "}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-b","tool_input_delta":"{\"sql\":\"SELECT "}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-a","tool_input_delta":"1\"}"}
+data: {"chat_stream_version":"v2","type":"tool_input_delta","tool_use_id":"tool-b","tool_input_delta":"2\"}"}
+data: {"chat_stream_version":"v2","type":"content_block_stop","tool_use_id":"tool-b"}
+data: {"chat_stream_version":"v2","type":"content_block_stop","tool_use_id":"tool-a"}
+data: {"chat_stream_version":"v2","type":"message_stop","message_stop":{"stop_reason":"tool_use","input_tokens":10,"output_tokens":2}}
+data: [DONE]
+`
+		httpClient := &mockHTTPClient{
+			doFunc: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+					Body:       io.NopCloser(strings.NewReader(stream)),
+				}, nil
+			},
+		}
+		mockAuth := &authtest.MockAuth{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+		}
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+		result, err := client.Stream(context.Background(), chat.Request{}, nil)
+		if err != nil {
+			t.Fatalf("Stream() error = %v", err)
+		}
+		if result == nil || result.Message == nil {
+			t.Fatal("expected stream result message")
+		}
+		if len(result.Message.Content) != 2 {
+			t.Fatalf("content blocks = %d, want 2", len(result.Message.Content))
+		}
+		if string(result.Message.Content[0].ToolUse.Input) != `{"sql":"SELECT 1"}` {
+			t.Fatalf("tool-a input = %s", string(result.Message.Content[0].ToolUse.Input))
+		}
+		if string(result.Message.Content[1].ToolUse.Input) != `{"sql":"SELECT 2"}` {
+			t.Fatalf("tool-b input = %s", string(result.Message.Content[1].ToolUse.Input))
+		}
+	})
+
+	t.Run("fails on mid-stream error frame", func(t *testing.T) {
+		t.Parallel()
+
+		stream := `data: {"chat_stream_version":"v2","type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","error":"internal error"}
+`
+		httpClient := &mockHTTPClient{
+			doFunc: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+					Body:       io.NopCloser(strings.NewReader(stream)),
+				}, nil
+			},
+		}
+		mockAuth := &authtest.MockAuth{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+		}
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+		_, err := client.Stream(context.Background(), chat.Request{}, nil)
+		if err == nil || !strings.Contains(err.Error(), "server error: internal error") {
+			t.Fatalf("error = %v", err)
 		}
 	})
 
@@ -363,7 +477,7 @@ data: [DONE]
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
-					Body:       io.NopCloser(strings.NewReader("data: [DONE]\n")),
+					Body:       io.NopCloser(strings.NewReader(minimalValidStream)),
 				}, nil
 			},
 		}
@@ -409,9 +523,9 @@ data: [DONE]
 func TestClient_StreamSnapshots(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3"}}
-data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"Hello"}}
-data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":3,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"Hello"}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":3,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
 data: [DONE]
 `
 	httpClient := &mockHTTPClient{
@@ -518,8 +632,9 @@ func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.
 func TestClient_StreamSnapshots_RejectsNonMonotonicSeq(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"a"}}
-data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"b"}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta","text":{"content":"b"}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"message_stop","message_stop":{"stop_reason":"end_turn","input_tokens":10,"output_tokens":2}}
 `
 	httpClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
@@ -549,8 +664,8 @@ data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"text_delta"
 func TestClient_StreamSnapshots_RejectsTurnMismatch(t *testing.T) {
 	t.Parallel()
 
-	stream := `data: {"conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"text_delta","text":{"content":"a"}}
-data: {"conversation_id":"conv-1","turn_id":"turn-2","seq":2,"type":"text_delta","text":{"content":"b"}}
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-2","seq":2,"type":"text_delta","text":{"content":"b"}}
 `
 	httpClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
@@ -574,5 +689,67 @@ data: {"conversation_id":"conv-1","turn_id":"turn-2","seq":2,"type":"text_delta"
 	}
 	if !strings.Contains(err.Error(), "turn_id mismatch") {
 		t.Fatalf("error = %q, want turn_id mismatch", err.Error())
+	}
+}
+
+func TestClient_StreamSnapshots_RejectsMalformedToolOrdering(t *testing.T) {
+	t.Parallel()
+
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":2,"type":"tool_input_delta","tool_use_id":"missing","tool_input_delta":"{}"}
+`
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(strings.NewReader(stream)),
+			}, nil
+		},
+	}
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	if err == nil {
+		t.Fatal("expected protocol error, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown tool_use_id") {
+		t.Fatalf("error = %q, want unknown tool_use_id", err.Error())
+	}
+}
+
+func TestClient_StreamSnapshots_RejectsDoneBeforeMessageStop(t *testing.T) {
+	t.Parallel()
+
+	stream := `data: {"chat_stream_version":"v2","conversation_id":"conv-1","turn_id":"turn-1","seq":1,"type":"message_start","message_start":{"model":"claude-3","context_window":200000}}
+data: [DONE]
+`
+	httpClient := &mockHTTPClient{
+		doFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       io.NopCloser(strings.NewReader(stream)),
+			}, nil
+		},
+	}
+	mockAuth := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			return "token", nil
+		},
+	}
+	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+	_, err := client.StreamSnapshots(context.Background(), chat.Request{ConversationID: "conv-1"}, nil)
+	if err == nil {
+		t.Fatal("expected protocol error, got nil")
+	}
+	if !strings.Contains(err.Error(), "before message_stop") {
+		t.Fatalf("error = %q, want before message_stop", err.Error())
 	}
 }

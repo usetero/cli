@@ -1,33 +1,28 @@
 package chat
 
-import "github.com/usetero/cli/internal/domain"
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+
+	"github.com/usetero/cli/internal/domain"
+)
 
 // accumulator builds a domain.Message from a stream of protocol events.
-// It handles delta events by accumulating them into complete blocks.
-//
-// Protocol:
-//   - text_delta* → content_block_stop
-//   - thinking_delta* → content_block_stop
-//   - tool_use → tool_input_delta* → content_block_stop
-//   - message_stop (always last)
 type accumulator struct {
-	model      string
-	stopReason string
-	blocks     []domain.Block // completed blocks
-	current    *domain.Block  // text/thinking block being built from deltas
-	done       bool
-	nextIndex  int // next block index to assign
-
-	// Tool accumulation - tool_use starts it, deltas build input, content_block_stop finalizes
-	currentTool *toolAccumulator
-
-	// Post-stream metadata
-	title string
-
-	// Token usage
+	model         string
+	stopReason    string
+	blocks        []domain.Block
+	current       *domain.Block
+	nextIndex     int
+	title         string
 	contextWindow int
 	inputTokens   int
 	outputTokens  int
+
+	openTools     map[string]*toolAccumulator
+	openToolOrder []string
+	seenTools     map[string]struct{}
 }
 
 type toolAccumulator struct {
@@ -37,109 +32,86 @@ type toolAccumulator struct {
 	input []byte
 }
 
-// newAccumulator creates a new accumulator.
 func newAccumulator() *accumulator {
-	return &accumulator{}
+	return &accumulator{
+		openTools: make(map[string]*toolAccumulator),
+		seenTools: make(map[string]struct{}),
+	}
 }
 
-// handle processes a single event from the stream.
-func (a *accumulator) handle(e event) {
+func (a *accumulator) handle(e event) error {
 	if e.Done {
-		a.finalizeCurrent()
-		a.done = true
-		return
+		return nil
 	}
 
 	switch e.Type {
 	case EventTypeMessageStart:
-		if e.MessageStart != nil {
-			a.model = e.MessageStart.Model
-			a.contextWindow = e.MessageStart.ContextWindow
-		}
+		a.model = e.MessageStart.Model
+		a.contextWindow = *e.MessageStart.ContextWindow
+		return nil
 
 	case EventTypeMessageStop:
-		if e.MessageStop != nil {
-			a.stopReason = e.MessageStop.StopReason
-			a.inputTokens = e.MessageStop.InputTokens
-			a.outputTokens = e.MessageStop.OutputTokens
+		if len(a.openTools) > 0 {
+			return fmt.Errorf("protocol error: message_stop with %d unfinished tool blocks", len(a.openTools))
 		}
+		a.stopReason = e.MessageStop.StopReason
+		a.inputTokens = *e.MessageStop.InputTokens
+		a.outputTokens = *e.MessageStop.OutputTokens
 		a.finalizeCurrent()
+		return nil
 
 	case EventTypeTextDelta:
-		a.handleTextDelta(e)
+		a.handleTextDelta(*e.Text.Content)
+		return nil
 
 	case EventTypeThinkingDelta:
-		a.handleThinkingDelta(e)
+		a.handleThinkingDelta(*e.Thinking.Content)
+		return nil
 
 	case EventTypeToolUse:
 		a.finalizeCurrent()
-		if e.ToolUse == nil {
-			return
+		if _, exists := a.seenTools[e.ToolUse.ID]; exists {
+			return fmt.Errorf("protocol error: duplicate tool_use id %q", e.ToolUse.ID)
 		}
-		// Start accumulating a new tool
-		a.currentTool = &toolAccumulator{
+		a.seenTools[e.ToolUse.ID] = struct{}{}
+		a.openTools[e.ToolUse.ID] = &toolAccumulator{
 			index: a.nextIndex,
 			id:    e.ToolUse.ID,
 			name:  e.ToolUse.Name,
 		}
+		a.openToolOrder = append(a.openToolOrder, e.ToolUse.ID)
 		a.nextIndex++
+		return nil
 
 	case EventTypeToolInputDelta:
-		// Append to current tool's input buffer
-		if a.currentTool != nil {
-			a.currentTool.input = append(a.currentTool.input, e.ToolInputDelta...)
+		tool, ok := a.openTools[e.ToolUseID]
+		if !ok {
+			return fmt.Errorf("protocol error: tool_input_delta for unknown tool_use_id %q", e.ToolUseID)
 		}
+		tool.input = append(tool.input, e.ToolInputDelta...)
+		return nil
 
 	case EventTypeContentBlockStop:
-		// Finalize whatever block is in progress
-		a.finalizeCurrent()
-		a.finalizeCurrentTool()
+		if e.ToolUseID == "" {
+			if len(a.openTools) > 0 && a.current == nil {
+				return fmt.Errorf("protocol error: content_block_stop missing tool_use_id for open tool block")
+			}
+			a.finalizeCurrent()
+			return nil
+		}
+		return a.finalizeTool(e.ToolUseID)
 
 	case EventTypeMetadataUpdate:
-		if e.Metadata != nil && e.Metadata.Title != "" {
+		if e.Metadata.Title != "" {
 			a.title = e.Metadata.Title
 		}
-
-	case EventTypeText, EventTypeThinking, EventTypeToolResult:
-		// Complete blocks - just append
-		a.finalizeCurrent()
-		a.blocks = append(a.blocks, a.eventToBlock(e))
+		return nil
 	}
+
+	return fmt.Errorf("protocol error: unhandled event type %q", e.Type)
 }
 
-// eventToBlock converts a complete block event to a domain.Block.
-func (a *accumulator) eventToBlock(e event) domain.Block {
-	switch e.Type {
-	case EventTypeText:
-		content := ""
-		if e.Text != nil {
-			content = e.Text.Content
-		}
-		return domain.Block{
-			Type: domain.BlockTypeText,
-			Text: &domain.TextBlock{Content: content},
-		}
-	case EventTypeThinking:
-		content := ""
-		if e.Thinking != nil {
-			content = e.Thinking.Content
-		}
-		return domain.Block{
-			Type:     domain.BlockTypeThinking,
-			Thinking: &domain.Thinking{Content: content},
-		}
-	default:
-		// Unknown type - return empty block
-		return domain.Block{}
-	}
-}
-
-func (a *accumulator) handleTextDelta(e event) {
-	delta := ""
-	if e.Text != nil {
-		delta = e.Text.Content
-	}
-
+func (a *accumulator) handleTextDelta(delta string) {
 	if a.current == nil || a.current.Type != domain.BlockTypeText {
 		a.finalizeCurrent()
 		a.current = &domain.Block{
@@ -148,17 +120,12 @@ func (a *accumulator) handleTextDelta(e event) {
 			Text:  &domain.TextBlock{Content: delta},
 		}
 		a.nextIndex++
-	} else {
-		a.current.Text.Content += delta
+		return
 	}
+	a.current.Text.Content += delta
 }
 
-func (a *accumulator) handleThinkingDelta(e event) {
-	delta := ""
-	if e.Thinking != nil {
-		delta = e.Thinking.Content
-	}
-
+func (a *accumulator) handleThinkingDelta(delta string) {
 	if a.current == nil || a.current.Type != domain.BlockTypeThinking {
 		a.finalizeCurrent()
 		a.current = &domain.Block{
@@ -167,58 +134,69 @@ func (a *accumulator) handleThinkingDelta(e event) {
 			Thinking: &domain.Thinking{Content: delta},
 		}
 		a.nextIndex++
-	} else {
-		a.current.Thinking.Content += delta
+		return
 	}
+	a.current.Thinking.Content += delta
 }
 
 func (a *accumulator) finalizeCurrent() {
-	if a.current != nil {
-		a.blocks = append(a.blocks, *a.current)
-		a.current = nil
+	if a.current == nil {
+		return
 	}
+	a.blocks = append(a.blocks, *a.current)
+	a.current = nil
 }
 
-func (a *accumulator) finalizeCurrentTool() {
-	if a.currentTool != nil {
-		a.blocks = append(a.blocks, domain.Block{
-			Index: a.currentTool.index,
-			Type:  domain.BlockTypeToolUse,
-			ToolUse: &domain.ToolUse{
-				ID:            a.currentTool.id,
-				Name:          a.currentTool.name,
-				Input:         a.currentTool.input,
-				InputComplete: true,
-			},
-		})
-		a.currentTool = nil
+func (a *accumulator) finalizeTool(toolUseID string) error {
+	tool, ok := a.openTools[toolUseID]
+	if !ok {
+		return fmt.Errorf("protocol error: content_block_stop for unknown tool_use_id %q", toolUseID)
 	}
+	if !json.Valid(tool.input) {
+		return fmt.Errorf("protocol error: invalid JSON tool input for %q", toolUseID)
+	}
+
+	a.blocks = append(a.blocks, domain.Block{
+		Index: tool.index,
+		Type:  domain.BlockTypeToolUse,
+		ToolUse: &domain.ToolUse{
+			ID:            tool.id,
+			Name:          tool.name,
+			Input:         json.RawMessage(append([]byte(nil), tool.input...)),
+			InputComplete: true,
+		},
+	})
+	delete(a.openTools, toolUseID)
+	return nil
 }
 
-// message returns the current state of the message being built.
-// This includes completed blocks plus any in-progress block.
 func (a *accumulator) message() *domain.Message {
-	// Build content: completed blocks + in-progress
 	content := make([]domain.Block, len(a.blocks))
 	copy(content, a.blocks)
 
-	// Add any in-progress text/thinking block
 	if a.current != nil {
 		content = append(content, *a.current)
 	}
 
-	// Add any in-progress tool (for live rendering before content_block_stop)
-	if a.currentTool != nil {
+	for _, id := range a.openToolOrder {
+		tool, ok := a.openTools[id]
+		if !ok {
+			continue
+		}
 		content = append(content, domain.Block{
-			Index: a.currentTool.index,
+			Index: tool.index,
 			Type:  domain.BlockTypeToolUse,
 			ToolUse: &domain.ToolUse{
-				ID:    a.currentTool.id,
-				Name:  a.currentTool.name,
-				Input: a.currentTool.input,
+				ID:    tool.id,
+				Name:  tool.name,
+				Input: json.RawMessage(append([]byte(nil), tool.input...)),
 			},
 		})
 	}
+
+	sort.Slice(content, func(i, j int) bool {
+		return content[i].Index < content[j].Index
+	})
 
 	return &domain.Message{
 		Role:       domain.RoleAssistant,
@@ -226,9 +204,4 @@ func (a *accumulator) message() *domain.Message {
 		Model:      a.model,
 		StopReason: a.stopReason,
 	}
-}
-
-// isDone returns true when the stream is complete.
-func (a *accumulator) isDone() bool {
-	return a.done
 }

@@ -1,76 +1,98 @@
 package chat
 
-// Protocol types for the Chat API SSE stream.
-// These types are internal to the chat package - the TUI and other callers
-// only see the final domain.Message that gets built from these events.
+import "encoding/json"
+
+const chatStreamVersionV2 = "v2"
 
 // EventType identifies the kind of SSE event from the Chat API.
 type EventType string
 
 const (
-	// Delta events - streaming content fragments.
-	EventTypeTextDelta      EventType = "text_delta"
-	EventTypeThinkingDelta  EventType = "thinking_delta"
-	EventTypeToolInputDelta EventType = "tool_input_delta"
-
-	// Complete block events.
-	EventTypeText       EventType = "text"
-	EventTypeThinking   EventType = "thinking"
-	EventTypeToolUse    EventType = "tool_use"
-	EventTypeToolResult EventType = "tool_result"
-
-	// Stream lifecycle events.
 	EventTypeMessageStart     EventType = "message_start"
-	EventTypeMessageStop      EventType = "message_stop"
+	EventTypeTextDelta        EventType = "text_delta"
+	EventTypeThinkingDelta    EventType = "thinking_delta"
+	EventTypeToolUse          EventType = "tool_use"
+	EventTypeToolInputDelta   EventType = "tool_input_delta"
 	EventTypeContentBlockStop EventType = "content_block_stop"
-
-	// Post-stream metadata.
-	EventTypeMetadataUpdate EventType = "metadata_update"
+	EventTypeMessageStop      EventType = "message_stop"
+	EventTypeMetadataUpdate   EventType = "metadata_update"
 )
 
 // event is a single event from the Chat API response stream.
 // This is internal to the chat package.
 type event struct {
-	ConversationID string        `json:"conversation_id,omitempty"`
-	TurnID         string        `json:"turn_id,omitempty"`
-	Seq            int           `json:"seq,omitempty"`
-	Type           EventType     `json:"type"`
-	Text           *textContent  `json:"text,omitempty"`
-	Thinking       *textContent  `json:"thinking,omitempty"`
+	ChatStreamVersion string    `json:"chat_stream_version"`
+	ConversationID    string    `json:"conversation_id,omitempty"`
+	TurnID            string    `json:"turn_id,omitempty"`
+	Seq               int       `json:"seq,omitempty"`
+	Type              EventType `json:"type"`
+
+	Text     *textContent `json:"text,omitempty"`
+	Thinking *textContent `json:"thinking,omitempty"`
+
 	ToolUse        *toolUseEvent `json:"tool_use,omitempty"`
+	ToolUseID      string        `json:"tool_use_id,omitempty"`
 	ToolInputDelta string        `json:"tool_input_delta,omitempty"`
-	MessageStart   *messageStart `json:"message_start,omitempty"`
-	MessageStop    *messageStop  `json:"message_stop,omitempty"`
-	Metadata       *metadata     `json:"metadata,omitempty"`
-	Done           bool          `json:"-"` // Set when stream is complete (after [DONE])
+
+	MessageStart *messageStart `json:"message_start,omitempty"`
+	MessageStop  *messageStop  `json:"message_stop,omitempty"`
+	Metadata     *metadata     `json:"metadata,omitempty"`
+
+	Done bool `json:"-"`
 }
 
-// textContent holds text or thinking content.
 type textContent struct {
-	Content string `json:"content"`
+	Content *string `json:"content"`
 }
 
-// toolUseEvent is a tool call event from the stream.
 type toolUseEvent struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Input []byte `json:"input,omitempty"` // Only populated for complete tool_use, not during streaming
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
-// messageStart contains metadata sent at the start of a message stream.
 type messageStart struct {
 	Model         string `json:"model"`
-	ContextWindow int    `json:"context_window,omitempty"`
+	ContextWindow *int   `json:"context_window"`
 }
 
-// messageStop contains metadata sent at the end of a message stream.
 type messageStop struct {
 	StopReason   string `json:"stop_reason"`
-	InputTokens  int    `json:"input_tokens,omitempty"`
-	OutputTokens int    `json:"output_tokens,omitempty"`
+	InputTokens  *int   `json:"input_tokens"`
+	OutputTokens *int   `json:"output_tokens"`
 }
 
-// metadata contains post-stream metadata updates.
 type metadata struct {
 	Title string `json:"title,omitempty"`
+}
+
+// errorEnvelope represents an error frame from the stream.
+type errorEnvelope struct {
+	Error any `json:"error"`
+}
+
+func parseErrorMessage(raw json.RawMessage) (string, bool) {
+	var frame errorEnvelope
+	if err := json.Unmarshal(raw, &frame); err != nil {
+		return "", false
+	}
+	if frame.Error == nil {
+		return "", false
+	}
+
+	switch v := frame.Error.(type) {
+	case string:
+		if v == "" {
+			return "", false
+		}
+		return v, true
+	case map[string]any:
+		if msg, _ := v["message"].(string); msg != "" {
+			return msg, true
+		}
+		if msg, _ := v["error"].(string); msg != "" {
+			return msg, true
+		}
+	}
+
+	return "", false
 }

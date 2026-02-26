@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/usetero/cli/internal/domain"
@@ -9,110 +10,129 @@ import (
 func TestAccumulator(t *testing.T) {
 	t.Parallel()
 
-	t.Run("accumulates text deltas into single block", func(t *testing.T) {
+	t.Run("happy path text-only stream", func(t *testing.T) {
 		t.Parallel()
 
 		acc := newAccumulator()
-
-		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
-		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: "Hello"}})
-		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: " world"}})
-		acc.handle(event{Type: EventTypeContentBlockStop})
-		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "end_turn"}})
-		acc.handle(event{Done: true})
-
-		if !acc.isDone() {
-			t.Error("expected isDone")
+		events := []event{
+			{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}},
+			{Type: EventTypeTextDelta, Text: &textContent{Content: strPtr("Hello")}},
+			{Type: EventTypeTextDelta, Text: &textContent{Content: strPtr(" world")}},
+			{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "end_turn", InputTokens: intPtr(9), OutputTokens: intPtr(2)}},
+			{Done: true},
+		}
+		for _, e := range events {
+			if err := acc.handle(e); err != nil {
+				t.Fatalf("handle(%s) error = %v", e.Type, err)
+			}
 		}
 
 		msg := acc.message()
 		if msg.Model != "claude-3" {
-			t.Errorf("model = %q, want claude-3", msg.Model)
+			t.Fatalf("model = %q", msg.Model)
 		}
 		if msg.StopReason != "end_turn" {
-			t.Errorf("stop_reason = %q, want end_turn", msg.StopReason)
+			t.Fatalf("stop_reason = %q", msg.StopReason)
 		}
-
-		if len(msg.Content) != 1 {
-			t.Fatalf("expected 1 block, got %d", len(msg.Content))
-		}
-		if msg.Content[0].Index != 0 {
-			t.Errorf("index = %d, want 0", msg.Content[0].Index)
-		}
-		if msg.Content[0].Type != domain.BlockTypeText {
-			t.Errorf("type = %s, want text", msg.Content[0].Type)
+		if len(msg.Content) != 1 || msg.Content[0].Type != domain.BlockTypeText {
+			t.Fatalf("unexpected content: %#v", msg.Content)
 		}
 		if msg.Content[0].Text.Content != "Hello world" {
-			t.Errorf("content = %q, want 'Hello world'", msg.Content[0].Text.Content)
+			t.Fatalf("text = %q", msg.Content[0].Text.Content)
 		}
 	})
 
-	t.Run("accumulates tool_input_delta and finalizes on content_block_stop", func(t *testing.T) {
+	t.Run("single tool call", func(t *testing.T) {
 		t.Parallel()
 
 		acc := newAccumulator()
-
-		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
-		// tool_use starts with ID + name, no input
-		acc.handle(event{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}})
-		// input streams as deltas
-		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `{"sql"`})
-		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `: "SELECT 1"}`})
-		// content_block_stop finalizes
-		acc.handle(event{Type: EventTypeContentBlockStop})
-		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use"}})
-		acc.handle(event{Done: true})
+		events := []event{
+			{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}},
+			{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}},
+			{Type: EventTypeToolInputDelta, ToolUseID: "tool-1", ToolInputDelta: `{"sql":`},
+			{Type: EventTypeToolInputDelta, ToolUseID: "tool-1", ToolInputDelta: `"SELECT 1"}`},
+			{Type: EventTypeContentBlockStop, ToolUseID: "tool-1"},
+			{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use", InputTokens: intPtr(10), OutputTokens: intPtr(2)}},
+			{Done: true},
+		}
+		for _, e := range events {
+			if err := acc.handle(e); err != nil {
+				t.Fatalf("handle(%s) error = %v", e.Type, err)
+			}
+		}
 
 		msg := acc.message()
-		if len(msg.Content) != 1 {
-			t.Fatalf("expected 1 block, got %d", len(msg.Content))
+		if len(msg.Content) != 1 || msg.Content[0].Type != domain.BlockTypeToolUse {
+			t.Fatalf("unexpected content: %#v", msg.Content)
 		}
-		if msg.Content[0].Index != 0 {
-			t.Errorf("index = %d, want 0", msg.Content[0].Index)
+		if string(msg.Content[0].ToolUse.Input) != `{"sql":"SELECT 1"}` {
+			t.Fatalf("input = %s", string(msg.Content[0].ToolUse.Input))
 		}
-		if msg.Content[0].Type != domain.BlockTypeToolUse {
-			t.Errorf("type = %s, want tool_use", msg.Content[0].Type)
-		}
-		if msg.Content[0].ToolUse.ID != "tool-1" {
-			t.Errorf("id = %s, want tool-1", msg.Content[0].ToolUse.ID)
-		}
-		if msg.Content[0].ToolUse.Name != "query" {
-			t.Errorf("name = %s, want query", msg.Content[0].ToolUse.Name)
-		}
-		if string(msg.Content[0].ToolUse.Input) != `{"sql": "SELECT 1"}` {
-			t.Errorf("input = %s, want {\"sql\": \"SELECT 1\"}", string(msg.Content[0].ToolUse.Input))
+		if !msg.Content[0].ToolUse.InputComplete {
+			t.Fatal("expected InputComplete=true")
 		}
 	})
 
-	t.Run("handles text then tool in sequence", func(t *testing.T) {
+	t.Run("multiple interleaved tool calls", func(t *testing.T) {
 		t.Parallel()
 
 		acc := newAccumulator()
-
-		acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3"}})
-		acc.handle(event{Type: EventTypeTextDelta, Text: &textContent{Content: "Let me check"}})
-		acc.handle(event{Type: EventTypeContentBlockStop})
-		acc.handle(event{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}})
-		acc.handle(event{Type: EventTypeToolInputDelta, ToolInputDelta: `{}`})
-		acc.handle(event{Type: EventTypeContentBlockStop})
-		acc.handle(event{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use"}})
-		acc.handle(event{Done: true})
+		events := []event{
+			{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}},
+			{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "a", Name: "query"}},
+			{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "b", Name: "query"}},
+			{Type: EventTypeToolInputDelta, ToolUseID: "a", ToolInputDelta: `{"sql":"SELECT `},
+			{Type: EventTypeToolInputDelta, ToolUseID: "b", ToolInputDelta: `{"sql":"SELECT `},
+			{Type: EventTypeToolInputDelta, ToolUseID: "a", ToolInputDelta: `1"}`},
+			{Type: EventTypeToolInputDelta, ToolUseID: "b", ToolInputDelta: `2"}`},
+			{Type: EventTypeContentBlockStop, ToolUseID: "b"},
+			{Type: EventTypeContentBlockStop, ToolUseID: "a"},
+			{Type: EventTypeMessageStop, MessageStop: &messageStop{StopReason: "tool_use", InputTokens: intPtr(10), OutputTokens: intPtr(2)}},
+			{Done: true},
+		}
+		for _, e := range events {
+			if err := acc.handle(e); err != nil {
+				t.Fatalf("handle(%s) error = %v", e.Type, err)
+			}
+		}
 
 		msg := acc.message()
 		if len(msg.Content) != 2 {
-			t.Fatalf("expected 2 blocks, got %d", len(msg.Content))
+			t.Fatalf("blocks = %d, want 2", len(msg.Content))
 		}
-		if msg.Content[0].Index != 0 {
-			t.Errorf("block 0: index = %d, want 0", msg.Content[0].Index)
+		if string(msg.Content[0].ToolUse.Input) != `{"sql":"SELECT 1"}` {
+			t.Fatalf("tool a input = %s", string(msg.Content[0].ToolUse.Input))
 		}
-		if msg.Content[0].Type != domain.BlockTypeText {
-			t.Errorf("block 0: type = %s, want text", msg.Content[0].Type)
+		if string(msg.Content[1].ToolUse.Input) != `{"sql":"SELECT 2"}` {
+			t.Fatalf("tool b input = %s", string(msg.Content[1].ToolUse.Input))
 		}
-		if msg.Content[1].Index != 1 {
-			t.Errorf("block 1: index = %d, want 1", msg.Content[1].Index)
+	})
+
+	t.Run("malformed ordering errors", func(t *testing.T) {
+		t.Parallel()
+
+		acc := newAccumulator()
+		if err := acc.handle(event{Type: EventTypeToolInputDelta, ToolUseID: "missing", ToolInputDelta: "{}"}); err == nil {
+			t.Fatal("expected unknown tool error")
 		}
-		if msg.Content[1].Type != domain.BlockTypeToolUse {
-			t.Errorf("block 1: type = %s, want tool_use", msg.Content[1].Type)
+
+		acc = newAccumulator()
+		_ = acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}})
+		if err := acc.handle(event{Type: EventTypeContentBlockStop, ToolUseID: "missing"}); err == nil {
+			t.Fatal("expected unknown stop id error")
+		}
+	})
+
+	t.Run("rejects invalid tool input JSON", func(t *testing.T) {
+		t.Parallel()
+
+		acc := newAccumulator()
+		_ = acc.handle(event{Type: EventTypeMessageStart, MessageStart: &messageStart{Model: "claude-3", ContextWindow: intPtr(200000)}})
+		_ = acc.handle(event{Type: EventTypeToolUse, ToolUse: &toolUseEvent{ID: "tool-1", Name: "query"}})
+		_ = acc.handle(event{Type: EventTypeToolInputDelta, ToolUseID: "tool-1", ToolInputDelta: `{`})
+		err := acc.handle(event{Type: EventTypeContentBlockStop, ToolUseID: "tool-1"})
+		if err == nil || !strings.Contains(err.Error(), "invalid JSON") {
+			t.Fatalf("error = %v, want invalid JSON", err)
 		}
 	})
 }

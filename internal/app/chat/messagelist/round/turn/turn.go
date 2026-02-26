@@ -291,7 +291,8 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		if m.stream != nil && m.stream.done {
 			return nil
 		}
-		m.scope.Error("stream error", "error", update.err)
+		errorClass := chatclient.ClassifyStreamError(update.err)
+		m.scope.Error("stream error", "class", string(errorClass), "error", update.err)
 		m.assistantMessage.Cancel()
 		m.state = StateComplete
 		turnID := m.userMessage.ID()

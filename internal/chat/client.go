@@ -152,6 +152,9 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 
 	// Merge global tools with request-specific tools
 	allTools := append(append([]Tool(nil), c.globalTools...), req.Tools...)
+	if err := validateTools(allTools); err != nil {
+		return nil, fmt.Errorf("validate tools: %w", err)
+	}
 	req.Tools = allTools
 
 	url := c.endpoint + "/api/chat/v1/messages"

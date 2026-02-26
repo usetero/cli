@@ -284,6 +284,50 @@ func TestHandleToolCompleted(t *testing.T) {
 	})
 }
 
+func TestInterleavedToolUseFlow(t *testing.T) {
+	t.Parallel()
+
+	m := newTestTurn(t)
+	m.state = StateStreaming
+	m.assistantMessage.SetID("asst-1")
+
+	// Stream completes with two tool_use blocks from interleaved tool input deltas.
+	m.handleStreamUpdate(streamUpdate{
+		message: &domain.Message{
+			ID:         "asst-1",
+			StopReason: "tool_use",
+			Content: []domain.Block{
+				{Index: 0, Type: domain.BlockTypeToolUse, ToolUse: &domain.ToolUse{ID: "tool-a", Name: "query"}},
+				{Index: 1, Type: domain.BlockTypeToolUse, ToolUse: &domain.ToolUse{ID: "tool-b", Name: "query"}},
+			},
+		},
+		done: true,
+	})
+
+	if m.state != StateAwaitingToolResults {
+		t.Fatalf("expected StateAwaitingToolResults, got %d", m.state)
+	}
+	if m.pendingTools != 2 {
+		t.Fatalf("expected 2 pending tools, got %d", m.pendingTools)
+	}
+
+	// Unknown tool result is ignored once pending IDs are fixed.
+	m.handleToolCompleted("tool-c", tools.Result{ToolUseID: "tool-c"})
+	if len(m.toolResults) != 0 {
+		t.Fatalf("expected 0 collected results after unknown tool, got %d", len(m.toolResults))
+	}
+
+	// Interleaved completions should only complete once all known tools are done.
+	m.handleToolCompleted("tool-b", tools.Result{ToolUseID: "tool-b"})
+	if m.state != StateAwaitingToolResults {
+		t.Fatalf("expected awaiting state after first completion, got %d", m.state)
+	}
+	m.handleToolCompleted("tool-a", tools.Result{ToolUseID: "tool-a"})
+	if m.state != StateComplete {
+		t.Fatalf("expected complete state after all tools, got %d", m.state)
+	}
+}
+
 func TestPersistBeforeFireToolResults(t *testing.T) {
 	t.Parallel()
 

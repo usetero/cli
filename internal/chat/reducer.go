@@ -6,7 +6,6 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-// StreamStatus is the normalized lifecycle status for a chat turn stream.
 type StreamStatus string
 
 const (
@@ -16,8 +15,6 @@ const (
 	StreamStatusAborted   StreamStatus = "aborted"
 )
 
-// StreamSnapshot is the reducer output after applying one stream event.
-// It gives callers a typed, turn-scoped view of stream progress.
 type StreamSnapshot struct {
 	ConversationID string
 	TurnID         string
@@ -29,13 +26,14 @@ type StreamSnapshot struct {
 	Metadata       *StreamMetadata
 }
 
-// reducer validates ordering/scoping and builds snapshots from wire events.
 type reducer struct {
 	acc            *accumulator
 	conversationID string
 	turnID         string
 	lastSeq        int
 	terminal       bool
+	started        bool
+	stopped        bool
 }
 
 func newReducer(conversationID string) *reducer {
@@ -72,24 +70,59 @@ func (r *reducer) apply(e event) (*StreamSnapshot, error) {
 		r.lastSeq = e.Seq
 	}
 
-	r.acc.handle(e)
-
-	status := StreamStatusStreaming
 	if e.Done {
+		if !r.stopped {
+			return nil, fmt.Errorf("protocol error: received [DONE] before message_stop")
+		}
+		if err := r.acc.handle(e); err != nil {
+			return nil, err
+		}
 		r.terminal = true
+
+		status := StreamStatusCompleted
 		if r.acc.stopReason == "tool_use" {
 			status = StreamStatusToolUse
-		} else {
-			status = StreamStatusCompleted
 		}
+
+		return &StreamSnapshot{
+			ConversationID: r.conversationID,
+			TurnID:         r.turnID,
+			Seq:            r.lastSeq,
+			Status:         status,
+			Done:           true,
+			Message:        r.acc.message(),
+			Metadata:       r.metadata(),
+		}, nil
+	}
+
+	if !r.started {
+		if e.Type != EventTypeMessageStart {
+			return nil, fmt.Errorf("protocol error: first event must be message_start, got %q", e.Type)
+		}
+		r.started = true
+	} else {
+		if e.Type == EventTypeMessageStart {
+			return nil, fmt.Errorf("protocol error: duplicate message_start")
+		}
+		if r.stopped {
+			return nil, fmt.Errorf("protocol error: event %q after message_stop", e.Type)
+		}
+	}
+
+	if err := r.acc.handle(e); err != nil {
+		return nil, err
+	}
+
+	if e.Type == EventTypeMessageStop {
+		r.stopped = true
 	}
 
 	return &StreamSnapshot{
 		ConversationID: r.conversationID,
 		TurnID:         r.turnID,
 		Seq:            r.lastSeq,
-		Status:         status,
-		Done:           e.Done,
+		Status:         StreamStatusStreaming,
+		Done:           false,
 		Message:        r.acc.message(),
 		Metadata:       r.metadata(),
 	}, nil
