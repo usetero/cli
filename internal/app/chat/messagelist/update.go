@@ -27,15 +27,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case tea.MouseClickMsg:
 		if msg.Button == tea.MouseLeft {
-			viewX := msg.X - m.originX - outerBorderWidth
-			viewY := msg.Y - m.originY
-			blockIdx, blockY := m.vp.ItemAtY(viewY)
-			hit := blockIdx >= 0
+			target := resolveMouseTarget(msg.X, msg.Y, m.originX, m.originY, m.vp.ItemAtY)
 			m.scope.Debug("click",
 				"msgX", msg.X, "msgY", msg.Y,
 				"originX", m.originX, "originY", m.originY,
-				"viewX", viewX, "viewY", viewY,
-				"blockIdx", blockIdx, "blockY", blockY,
+				"viewX", target.viewX, "viewY", target.viewY,
+				"blockIdx", target.blockIdx, "blockY", target.blockY,
 				"numBlocks", len(m.blocks),
 				"vpHeight", m.height)
 			// Log block heights for debugging
@@ -54,8 +51,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			state, decision := reduceSelectionClick(
 				m.selectionState(),
 				msg.Button,
-				selectionPoint{block: blockIdx, x: viewX, y: blockY},
-				hit,
+				selectionPoint{block: target.blockIdx, x: target.viewX, y: target.blockY},
+				target.hit,
 			)
 			m.setSelectionState(state)
 			if decision.setFocusIdx {
@@ -64,15 +61,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case tea.MouseMotionMsg:
-		viewX := msg.X - m.originX - outerBorderWidth
-		viewY := msg.Y - m.originY
-		blockIdx, blockY := m.vp.ItemAtY(viewY)
-		hit := blockIdx >= 0
+		target := resolveMouseTarget(msg.X, msg.Y, m.originX, m.originY, m.vp.ItemAtY)
 		state := reduceSelectionMotion(
 			m.selectionState(),
 			msg.Button,
-			selectionPoint{block: blockIdx, x: viewX, y: blockY},
-			hit,
+			selectionPoint{block: target.blockIdx, x: target.viewX, y: target.blockY},
+			target.hit,
 		)
 		m.setSelectionState(state)
 
