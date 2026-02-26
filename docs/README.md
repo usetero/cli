@@ -20,6 +20,11 @@ Operational docs:
 2. [OBSERVABILITY.md](OBSERVABILITY.md)
 3. [TOASTS.md](TOASTS.md)
 
+Documentation standards and authoring guidance:
+
+1. [meta/documentation.md](meta/documentation.md)
+2. [meta/agent-docs.md](meta/agent-docs.md)
+
 Chat-specific test planning:
 
 1. [CHAT_TEST_AUDIT.md](CHAT_TEST_AUDIT.md)

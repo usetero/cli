@@ -1,8 +1,5 @@
 # Domain
 
-This file mirrors `AGENTS.md` for tools that still load `CLAUDE.md`.
-Authoritative source: `AGENTS.md`.
-
 Shared domain types for all interfaces (TUI, CLI, MCP, chat tools).
 
 ## Rules
@@ -29,3 +26,4 @@ When adding a new policy analysis category:
 1. Add/update analysis struct in `policy_analysis_*.go`.
 2. Implement/override required `PolicyAnalysis` methods.
 3. Register parser dispatch in `policy_analysis.go`.
+

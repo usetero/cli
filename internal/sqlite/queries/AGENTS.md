@@ -1,8 +1,5 @@
 # SQLite Queries
 
-This file mirrors `AGENTS.md` for tools that still load `CLAUDE.md`.
-Authoritative source: `AGENTS.md`.
-
 This directory contains sqlc source queries. Generated Go lives in `internal/sqlite/gen`.
 
 ## Query Naming
@@ -29,3 +26,4 @@ Examples:
 1. Use `COALESCE` for nullable text where empty string is acceptable.
 2. Keep nullable floats nullable when semantics require distinguishing missing vs zero.
 3. Prefer consistent parameter style across files.
+
