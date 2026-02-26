@@ -170,6 +170,7 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 	for _, summary := range summarizeRequestMessages(req.Messages) {
 		c.scope.Debug("chat request message", "summary", summary)
 	}
+	c.scope.Debug("chat request tool lineage", "summary", summarizeToolLineage(req.Messages))
 
 	// Get fresh token for this request
 	token, err := c.auth.GetAccessToken(ctx)
@@ -343,4 +344,20 @@ func summarizeRequestMessages(messages []domain.Message) []string {
 		))
 	}
 	return out
+}
+
+func summarizeToolLineage(messages []domain.Message) string {
+	toolUses := make([]string, 0)
+	toolResults := make([]string, 0)
+	for _, msg := range messages {
+		for _, b := range msg.Content {
+			if b.ToolUse != nil && b.ToolUse.ID != "" {
+				toolUses = append(toolUses, b.ToolUse.ID)
+			}
+			if b.ToolResult != nil && b.ToolResult.ToolUseID != "" {
+				toolResults = append(toolResults, b.ToolResult.ToolUseID)
+			}
+		}
+	}
+	return fmt.Sprintf("tool_use_ids=[%s] tool_result_ids=[%s]", strings.Join(toolUses, ","), strings.Join(toolResults, ","))
 }

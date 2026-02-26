@@ -195,4 +195,34 @@ func TestValidate(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	})
+
+	t.Run("unknown tool_use_id fails", func(t *testing.T) {
+		t.Parallel()
+		req := newValidRequest()
+		req.Messages[1].Content[0].ToolResult.ToolUseID = "toolu_missing"
+		err := Validate(req)
+		if err == nil || !strings.Contains(err.Error(), `unknown tool_use_id "toolu_missing"`) {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("duplicate tool_use id fails", func(t *testing.T) {
+		t.Parallel()
+		req := newValidRequest()
+		req.Messages = append(req.Messages, Message{
+			Role: RoleAssistant,
+			Content: []Block{{
+				Type: BlockTypeToolUse,
+				ToolUse: &ToolUse{
+					ID:    "toolu_1",
+					Name:  "query",
+					Input: json.RawMessage(`{"sql":"select 2"}`),
+				},
+			}},
+		})
+		err := Validate(req)
+		if err == nil || !strings.Contains(err.Error(), `duplicate tool_use id "toolu_1"`) {
+			t.Fatalf("error = %v", err)
+		}
+	})
 }

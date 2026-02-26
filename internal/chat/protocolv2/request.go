@@ -121,6 +121,9 @@ func Validate(req Request) error {
 			return fmt.Errorf("context_entities[%d]: %w", i, err)
 		}
 	}
+	if err := validateToolReferences(req.Messages); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -221,6 +224,30 @@ func validateContextEntity(entity ContextEntity) error {
 	}
 	if _, err := uuid.Parse(entity.EntityID); err != nil {
 		return fmt.Errorf(`"entity_id" must be a valid UUID`)
+	}
+	return nil
+}
+
+func validateToolReferences(messages []Message) error {
+	seen := make(map[string]struct{})
+	for i, msg := range messages {
+		for j, block := range msg.Content {
+			switch block.Type {
+			case BlockTypeText, BlockTypeThinking:
+				// No cross-message linkage requirements.
+			case BlockTypeToolUse:
+				id := block.ToolUse.ID
+				if _, exists := seen[id]; exists {
+					return fmt.Errorf("messages[%d].content[%d]: duplicate tool_use id %q", i, j, id)
+				}
+				seen[id] = struct{}{}
+			case BlockTypeToolResult:
+				id := block.ToolResult.ToolUseID
+				if _, exists := seen[id]; !exists {
+					return fmt.Errorf("messages[%d].content[%d]: unknown tool_use_id %q", i, j, id)
+				}
+			}
+		}
 	}
 	return nil
 }

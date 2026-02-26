@@ -119,27 +119,40 @@ func TestToWireRequest_SanitizesToolResultContent(t *testing.T) {
 
 	wireReq, err := toWireRequest(Request{
 		ConversationID: "00000000-0000-0000-0000-000000000001",
-		Messages: []domain.Message{{
-			Role: domain.RoleUser,
-			Content: []domain.Block{{
-				Type: domain.BlockTypeToolResult,
-				ToolResult: &domain.ToolResult{
-					ToolUseID: "tool-1",
-					Content: map[string]any{
-						"tool_use_id": "tool-1",
-						"rows":        []map[string]any{{"id": "svc-1"}},
+		Messages: []domain.Message{
+			{
+				Role: domain.RoleAssistant,
+				Content: []domain.Block{{
+					Type: domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:    "tool-1",
+						Name:  "query",
+						Input: json.RawMessage(`{"sql":"select 1"}`),
 					},
-				},
-			}},
-		}},
+				}},
+			},
+			{
+				Role: domain.RoleUser,
+				Content: []domain.Block{{
+					Type: domain.BlockTypeToolResult,
+					ToolResult: &domain.ToolResult{
+						ToolUseID: "tool-1",
+						Content: map[string]any{
+							"tool_use_id": "tool-1",
+							"rows":        []map[string]any{{"id": "svc-1"}},
+						},
+					},
+				}},
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("toWireRequest() error = %v", err)
 	}
-	if len(wireReq.Messages) != 1 || len(wireReq.Messages[0].Content) != 1 {
+	if len(wireReq.Messages) != 2 || len(wireReq.Messages[1].Content) != 1 {
 		t.Fatalf("unexpected wire request shape: %#v", wireReq)
 	}
-	content := wireReq.Messages[0].Content[0].ToolResult.Content
+	content := wireReq.Messages[1].Content[0].ToolResult.Content
 	var parsed map[string]any
 	if err := json.Unmarshal(content, &parsed); err != nil {
 		t.Fatalf("tool_result.content should be JSON object, got error: %v", err)
@@ -193,6 +206,36 @@ func TestToWireRequest_RejectsInvalidContextEntity(t *testing.T) {
 		}},
 	})
 	if err == nil || !strings.Contains(err.Error(), "invalid entity_type") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestToWireRequest_RejectsUnknownToolUseReference(t *testing.T) {
+	t.Parallel()
+
+	_, err := toWireRequest(Request{
+		ConversationID: "00000000-0000-0000-0000-000000000001",
+		Messages: []domain.Message{
+			{
+				Role: domain.RoleUser,
+				Content: []domain.Block{{
+					Type: domain.BlockTypeText,
+					Text: &domain.TextBlock{Content: "hello"},
+				}},
+			},
+			{
+				Role: domain.RoleUser,
+				Content: []domain.Block{{
+					Type: domain.BlockTypeToolResult,
+					ToolResult: &domain.ToolResult{
+						ToolUseID: "toolu_missing",
+						Content:   map[string]any{"rows": []any{}},
+					},
+				}},
+			},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), `unknown tool_use_id "toolu_missing"`) {
 		t.Fatalf("error = %v", err)
 	}
 }
