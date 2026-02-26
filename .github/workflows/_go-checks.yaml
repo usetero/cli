@@ -6,7 +6,7 @@ on:
       runner:
         description: Cirrus runner image
         required: false
-        default: ghcr.io/cirruslabs/ubuntu-runner-amd64:24.04-sm
+        default: ubuntu-latest
         type: string
 
 jobs:
