@@ -8,6 +8,8 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
+	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/teatest"
@@ -93,4 +95,37 @@ func TestCancel(t *testing.T) {
 		m := New(theme, "turn-1", "test-msg", 80, nil, scope)
 		m.Cancel() // should not panic
 	})
+}
+
+func TestNilRegistryToolUseDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	theme := styles.NewTheme(true)
+	scope := logtest.NewScope(t)
+	m := New(theme, "turn-1", "test-msg", 80, nil, scope)
+
+	cmd := m.Update(msgs.AssistantContentUpdated{
+		TurnID: "turn-1",
+		Message: domain.Message{
+			Content: []domain.Block{
+				{
+					Index: 0,
+					Type:  domain.BlockTypeToolUse,
+					ToolUse: &domain.ToolUse{
+						ID:            "tool-1",
+						Name:          "unknown_tool",
+						Input:         []byte(`{}`),
+						InputComplete: true,
+					},
+				},
+			},
+		},
+	})
+
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd to initialize tool block")
+	}
+	if len(m.Blocks()) != 1 {
+		t.Fatalf("expected 1 block, got %d", len(m.Blocks()))
+	}
 }

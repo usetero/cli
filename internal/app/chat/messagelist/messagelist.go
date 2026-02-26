@@ -61,6 +61,7 @@ type Model struct {
 
 	// Flat block list for viewport rendering (rebuilt from rounds)
 	blocks []blockEntry
+	layout layoutProjection
 
 	// Viewport: scroll, focus, hit testing (pure math)
 	vp viewport.Model
@@ -164,37 +165,4 @@ func (m *Model) blockHeight(idx int) int {
 		return 1
 	}
 	return h
-}
-
-// gapSize returns the number of gap/divider lines between blocks at idx-1 and idx.
-func (m *Model) gapSize(idx int) int {
-	if idx <= 0 || idx >= len(m.blocks) {
-		return 0
-	}
-
-	prev := m.blocks[idx-1]
-	curr := m.blocks[idx]
-
-	if prev.roundIndex != curr.roundIndex {
-		n := roundGap
-		if !m.rounds[prev.roundIndex].IsActive() {
-			n += gapBeforeDivider + dividerHeight
-		}
-		return n
-	}
-
-	return blockGap
-}
-
-// trailingHeight returns the height of content below the last block
-// (divider for completed rounds).
-func (m *Model) trailingHeight() int {
-	if len(m.blocks) == 0 {
-		return 0
-	}
-	last := m.blocks[len(m.blocks)-1]
-	if !m.rounds[last.roundIndex].IsActive() {
-		return gapBeforeDivider + dividerHeight
-	}
-	return 0
 }

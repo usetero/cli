@@ -98,17 +98,12 @@ func (m *Model) rebuildBlocks() {
 // current block list. Called after rebuildBlocks and after toggles
 // (which change block heights without changing the block list).
 func (m *Model) syncViewportItems() {
-	n := len(m.blocks)
-	heights := make([]int, n)
-	gaps := make([]int, n)
-	for i := range m.blocks {
-		heights[i] = m.blockHeight(i)
-		if i > 0 {
-			gaps[i] = m.gapSize(i)
-		}
-	}
-	m.vp.SetItems(heights, gaps)
-	m.vp.SetTrailingHeight(m.trailingHeight())
+	items := projectItems(m.blocks, m.blockHeight)
+	m.layout = projectLayout(items, func(roundIndex int) bool {
+		return m.rounds[roundIndex].IsActive()
+	})
+	m.vp.SetItems(m.layout.heights, m.layout.gapHeights())
+	m.vp.SetTrailingHeight(m.layout.trailingHeight())
 }
 
 // updateRoundWidths sets the width on all rounds.

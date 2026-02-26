@@ -1,7 +1,6 @@
 package messagelist
 
 import (
-	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
@@ -15,19 +14,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if m.focused {
-			switch {
-			case key.Matches(msg, focusPrevKey):
-				m.vp.FocusPrev()
-			case key.Matches(msg, focusNextKey):
-				m.vp.FocusNext()
-			case key.Matches(msg, scrollUpKey):
-				m.vp.ScrollBy(-1)
-				m.vp.UpdateFocusFromScroll()
-			case key.Matches(msg, scrollDownKey):
-				m.vp.ScrollBy(1)
-				m.vp.UpdateFocusFromScroll()
-			}
+		decision := reduceKeyPress(msg, m.focused)
+		if decision.focusDelta < 0 {
+			m.vp.FocusPrev()
+		} else if decision.focusDelta > 0 {
+			m.vp.FocusNext()
+		}
+		if decision.scrollDelta != 0 {
+			m.vp.ScrollBy(decision.scrollDelta)
+			m.vp.UpdateFocusFromScroll()
 		}
 
 	case tea.MouseClickMsg:
@@ -107,35 +102,32 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case tea.MouseWheelMsg:
-		switch msg.Button {
-		case tea.MouseWheelUp:
-			m.vp.ScrollBy(-5)
-			m.vp.UpdateFocusFromScroll()
-		case tea.MouseWheelDown:
-			m.vp.ScrollBy(5)
+		if delta := reduceMouseWheel(msg.Button); delta != 0 {
+			m.vp.ScrollBy(delta)
 			m.vp.UpdateFocusFromScroll()
 		}
 
-	case msgs.TurnStarted:
-		m.clearSelection()
-		m.rebuildBlocks()
-		m.vp.ScrollToBottom()
-		m.vp.SetFocusIdx(len(m.blocks) - 1)
-
-	case msgs.AssistantContentUpdated, msgs.StreamCompleted, msgs.StreamFailed:
-		// Snapshot scroll position before content changes.
-		wasAtBottom := m.vp.AtBottom()
-
-		// Forward to rounds first so streaming state is updated
-		// before rebuildBlocks reads Blocks().
-		for _, r := range m.rounds {
-			if cmd := r.Update(msg); cmd != nil {
-				cmds = append(cmds, cmd)
+	case msgs.TurnStarted, msgs.AssistantContentUpdated, msgs.StreamCompleted, msgs.StreamFailed:
+		decision := reduceLifecycle(msg, m.vp.AtBottom())
+		if decision.forwardRounds {
+			// Forward to rounds first so streaming state is updated
+			// before rebuildBlocks reads Blocks().
+			for _, r := range m.rounds {
+				if cmd := r.Update(msg); cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 		}
-		m.rebuildBlocks()
-		if wasAtBottom {
+		if decision.clearSelection {
+			m.clearSelection()
+		}
+		if decision.rebuild {
+			m.rebuildBlocks()
+		}
+		if decision.scrollToBottom {
 			m.vp.ScrollToBottom()
+		}
+		if decision.focusLastAtBottom && len(m.blocks) > 0 {
 			m.vp.SetFocusIdx(len(m.blocks) - 1)
 		}
 		return tea.Batch(cmds...)

@@ -153,6 +153,12 @@ func (m *Model) hasBlock(index int) bool {
 
 // newToolBlock creates the appropriate tool model wrapped in chrome.
 func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *tools.Model {
+	if m.toolRegistry == nil {
+		entry := chattools.UnknownTool(toolUse.Name)
+		child := action.New(index, m.turnID.String(), toolUse.ID, width, entry.Config, entry.Exec, m.scope)
+		return tools.New(m.blockTheme, index, toolUse.ID, width, child)
+	}
+
 	var child tools.Child
 	switch {
 	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():

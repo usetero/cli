@@ -94,13 +94,11 @@ func (m *Model) renderVisible() []string {
 
 	// Add trailing divider for the last round if we rendered to the end
 	if reachedEnd && len(m.blocks) > 0 {
-		lastEntry := m.blocks[len(m.blocks)-1]
-		lastRound := m.rounds[lastEntry.roundIndex]
-		if !lastRound.IsActive() {
+		if m.layout.trailingDividerRound >= 0 {
 			for range gapBeforeDivider {
 				lines = append(lines, "")
 			}
-			lines = append(lines, m.divider(lastRound))
+			lines = append(lines, m.divider(m.rounds[m.layout.trailingDividerRound]))
 		}
 	}
 
@@ -142,31 +140,28 @@ func (m *Model) renderBlock(entry blockEntry) string {
 }
 
 // gapLines returns the renderable lines to insert before block at idx.
-// The length always equals gapSize(idx) — gapSize is the source of truth
-// for measurement, this method produces the actual content.
+// The gap projection is the source of truth for measurement.
 func (m *Model) gapLines(idx int) []string {
-	n := m.gapSize(idx)
-	if n == 0 {
+	if idx <= 0 || idx >= len(m.layout.gaps) {
 		return nil
 	}
 
-	prev := m.blocks[idx-1]
-	curr := m.blocks[idx]
-
-	// Same round — just blank lines
-	if prev.roundIndex == curr.roundIndex {
-		return make([]string, n)
+	g := m.layout.gaps[idx]
+	if g.height == 0 {
+		return nil
 	}
 
-	// Different round — blank lines with an optional divider embedded
-	lines := make([]string, 0, n)
-	prevRound := m.rounds[prev.roundIndex]
-	if !prevRound.IsActive() {
-		for range gapBeforeDivider {
-			lines = append(lines, "")
-		}
-		lines = append(lines, m.divider(prevRound))
+	// No divider in this gap, just blank lines.
+	if g.dividerRound < 0 {
+		return make([]string, g.height)
 	}
+
+	// Round boundary gap with a divider for the completed previous round.
+	lines := make([]string, 0, g.height)
+	for range gapBeforeDivider {
+		lines = append(lines, "")
+	}
+	lines = append(lines, m.divider(m.rounds[g.dividerRound]))
 	for range roundGap {
 		lines = append(lines, "")
 	}
