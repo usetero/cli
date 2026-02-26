@@ -30,6 +30,8 @@ const (
 	StateFailed
 )
 
+const dbOpTimeout = 2 * time.Second
+
 // IsActive returns true if the round is in-flight (active or awaiting next turn).
 func (m *Model) IsActive() bool {
 	return m.state == StateActive || m.state == StateAwaitingNextTurn
@@ -196,7 +198,8 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 	m.scope.Info("starting next turn", "result_count", len(results))
 
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
 
 		// Convert to domain format and persist
 		domainResults := make([]domain.ToolResult, len(results))

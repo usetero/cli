@@ -3,6 +3,7 @@ package turn
 import (
 	"context"
 	"errors"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
@@ -27,6 +28,8 @@ const (
 	StateAwaitingToolResults
 	StateComplete
 )
+
+const dbOpTimeout = 2 * time.Second
 
 // Model represents a single user→assistant exchange.
 // It is a fixed-height component - height is determined by content.
@@ -424,7 +427,8 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
 
 		msgID, err := m.db.Messages().CreateAssistantMessage(
 			ctx,

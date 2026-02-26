@@ -22,7 +22,10 @@ import (
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
-const pollInterval = 2 * time.Second
+const (
+	pollInterval = 2 * time.Second
+	dbTimeout    = 2 * time.Second
+)
 
 // pollMsg triggers a policy status check.
 type pollMsg struct{}
@@ -128,7 +131,8 @@ func (m *Model) fetchData() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
 			scope.Error("get summary", "err", err)
@@ -150,7 +154,9 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		policies, err := db.LogEventPolicyStatuses().ListTopPendingPoliciesByCategory(context.Background(), cat.Category, 25)
+		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		defer cancel()
+		policies, err := db.LogEventPolicyStatuses().ListTopPendingPoliciesByCategory(ctx, cat.Category, 25)
 		if err != nil {
 			scope.Error("list top pending policies", "category", cat.Category, "err", err)
 			return detailMsg{err: err}

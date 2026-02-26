@@ -26,6 +26,7 @@ import (
 const (
 	pollInterval = 2 * time.Second
 	maxServices  = 50
+	dbTimeout    = 2 * time.Second
 
 	// levelDisplayThreshold is the minimum fraction of total volume a
 	// non-info level must reach to be shown (1%).
@@ -133,7 +134,8 @@ func (m *Model) fetchData() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
 			scope.Error("get summary", "err", err)
@@ -155,7 +157,9 @@ func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		logEvents, err := db.LogEventStatuses().ListByService(context.Background(), svc.Name, 25)
+		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		defer cancel()
+		logEvents, err := db.LogEventStatuses().ListByService(ctx, svc.Name, 25)
 		if err != nil {
 			scope.Error("list log event statuses", "service", svc.Name, "err", err)
 			return detailMsg{err: err}

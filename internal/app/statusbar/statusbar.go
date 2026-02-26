@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -25,6 +26,12 @@ import (
 )
 
 const diag = "╱"
+const workspaceCountTimeout = 2 * time.Second
+
+type workspaceCountMsg struct {
+	count int64
+	err   error
+}
 
 // Tab indices for the drawer.
 const (
@@ -84,12 +91,8 @@ func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host stri
 
 // SetDB sets the database for status polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	row := db.QueryRow(context.Background(), "SELECT COUNT(*) FROM workspaces")
-	if err := row.Scan(&m.workspaceCount); err != nil {
-		m.scope.Error("scan workspace count", "err", err)
-	}
-
 	return tea.Batch(
+		m.fetchWorkspaceCount(db),
 		m.syncStatus.SetDB(db),
 		m.servicesStatus.SetDB(db),
 		m.wasteStatus.SetDB(db),
@@ -118,6 +121,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.org = msg.Org.Name
 	case onboardingmsg.WorkspaceSelected:
 		m.workspace = msg.Workspace.Name
+	case workspaceCountMsg:
+		if msg.err != nil {
+			m.scope.Error("scan workspace count", "err", msg.err)
+			break
+		}
+		m.workspaceCount = msg.count
 	}
 
 	return tea.Batch(
@@ -127,6 +136,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.qualityStatus.Update(msg),
 		m.complianceStatus.Update(msg),
 	)
+}
+
+func (m *Model) fetchWorkspaceCount(db sqlite.DB) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), workspaceCountTimeout)
+		defer cancel()
+
+		var count int64
+		row := db.QueryRow(ctx, "SELECT COUNT(*) FROM workspaces")
+		if err := row.Scan(&count); err != nil {
+			return workspaceCountMsg{err: err}
+		}
+		return workspaceCountMsg{count: count}
+	}
 }
 
 // SetWidth sets the statusbar width.

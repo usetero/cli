@@ -19,7 +19,10 @@ import (
 	"github.com/usetero/cli/internal/styles"
 )
 
-const pollInterval = 500 * time.Millisecond
+const (
+	pollInterval = 500 * time.Millisecond
+	dbTimeout    = 2 * time.Second
+)
 
 // pollMsg triggers a sync status check.
 type pollMsg struct{}
@@ -118,7 +121,9 @@ func (m *Model) fetchPending() tea.Cmd {
 	db := m.db
 	scope := m.scope
 	return func() tea.Msg {
-		pending, err := db.PendingUploadCounts(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		defer cancel()
+		pending, err := db.PendingUploadCounts(ctx)
 		if err != nil {
 			scope.Error("pending upload counts", "err", err)
 			return pendingMsg{}

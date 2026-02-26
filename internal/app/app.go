@@ -3,9 +3,9 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -28,7 +28,6 @@ import (
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
-	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
@@ -351,14 +350,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.chat.Init()
 
 	case msgs.StreamCompleted:
-		if msg.Title != "" && m.db != nil {
+		if msg.Title != "" && m.db != nil && m.chat != nil {
 			m.statusBar.SetTitle(msg.Title)
 			m.windowTitle = "Tero: " + msg.Title
-			// Persist title in background
+			db := m.db
+			conversationID := m.chat.ConversationID()
+			title := msg.Title
+			scope := m.scope
+			ctx := m.ctx
+			// Persist title in background using immutable captured values.
 			go func() {
-				ctx := context.Background()
-				if err := m.db.Conversations().UpdateTitle(ctx, m.chat.ConversationID(), msg.Title); err != nil {
-					m.scope.Error("failed to update conversation title", "error", err)
+				writeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+				defer cancel()
+				if err := db.Conversations().UpdateTitle(writeCtx, conversationID, title); err != nil {
+					scope.Error("failed to update conversation title", "error", err)
 				}
 			}()
 		}
@@ -467,70 +472,6 @@ func (m *Model) updateKeyBar() {
 	// Always append global bindings
 	bindings = append(bindings, keymap.Global...)
 	m.keyBar.SetKeyBindings(bindings)
-}
-
-// openDatabase opens the SQLite database for the given account.
-func (m *Model) openDatabase(accountID string) error {
-	dbPath, err := m.storage.DatabasePath(accountID)
-	if err != nil {
-		return err
-	}
-
-	db, err := sqlite.Open(m.ctx, dbPath)
-	if err != nil {
-		return err
-	}
-
-	m.db = db
-	m.scope.Info("database opened", "path", dbPath)
-	return nil
-}
-
-// startSync starts the syncer and uploader with the open database.
-func (m *Model) startSync(accountID string) error {
-	if m.db == nil {
-		return fmt.Errorf("database not open")
-	}
-
-	// Create a session context that is cancelled on shutdown.
-	sessionCtx, cancel := context.WithCancel(m.ctx)
-	m.sessionCancel = cancel
-
-	if err := m.syncer.Start(sessionCtx, m.db, accountID, nil); err != nil {
-		cancel()
-		m.sessionCancel = nil
-		return err
-	}
-	m.scope.Info("syncer started", "account_id", accountID)
-
-	// Set account ID on services
-	m.services.SetAccountID(domain.AccountID(accountID))
-
-	// Create PowerSync API client for write checkpoints
-	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
-
-	// Create and start uploader
-	m.uploader = upload.New(
-		m.db,
-		psClient,
-		m.authService,
-		m.services.Conversations,
-		m.services.Messages,
-		m.services.Services,
-		m.services.Policies,
-		m.scope,
-		upload.WithBatchCompletedHook(func(ctx context.Context) error {
-			return m.syncer.NotifyUploadCompleted(ctx)
-		}),
-	)
-	go func() {
-		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
-			m.scope.Error("uploader error", "error", err)
-		}
-	}()
-	m.scope.Info("uploader started", "account_id", accountID)
-
-	return nil
 }
 
 // View renders the app.
@@ -740,19 +681,6 @@ func (m *Model) renderPaletteOverlay(base string) string {
 	}
 
 	return result
-}
-
-func (m *Model) shutdown() {
-	if m.sessionCancel != nil {
-		m.sessionCancel()
-		m.sessionCancel = nil
-	}
-	if m.syncer != nil {
-		m.syncer.Stop()
-	}
-	if m.db != nil {
-		m.db.Close()
-	}
 }
 
 // activateOrg sets the active org, reloads org prefs/storage for the new

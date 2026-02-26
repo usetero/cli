@@ -25,6 +25,8 @@ import (
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
+const dbOpTimeout = 2 * time.Second
+
 // Chat-specific key bindings.
 var (
 	scrollUp = key.NewBinding(
@@ -180,8 +182,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				db := m.db
 				scope := m.scope
 				cmds = append(cmds, func() tea.Msg {
+					ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+					defer cancel()
 					for _, id := range ids {
-						if err := db.Messages().Delete(context.Background(), id); err != nil {
+						if err := db.Messages().Delete(ctx, id); err != nil {
 							scope.Error("failed to delete orphaned message", "id", id, "error", err)
 						}
 					}
@@ -310,8 +314,10 @@ func (m *Model) CancelActiveRound() bool {
 	// Clean up orphaned messages from DB — same as StreamFailed handler.
 	if last != nil {
 		ids := last.LastTurnMessageIDs()
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
 		for _, id := range ids {
-			if err := m.db.Messages().Delete(context.Background(), id); err != nil {
+			if err := m.db.Messages().Delete(ctx, id); err != nil {
 				m.scope.Error("failed to delete orphaned message", "id", id, "error", err)
 			}
 		}
@@ -352,7 +358,8 @@ func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 // createConversation creates a new conversation.
 func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
 
 		convID, err := m.db.Conversations().Create(
 			ctx,
@@ -380,7 +387,8 @@ type conversationCreated struct {
 // persistUserMessage saves the user message and loads history for the API call.
 func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
 
 		var msgID domain.MessageID
 		var err error
