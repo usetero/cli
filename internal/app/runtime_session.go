@@ -65,7 +65,9 @@ func (m *Model) startSync(accountID string) error {
 	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
 
 	// Create and start uploader
-	m.uploader = upload.New(
+	syncer := m.syncer
+	scope := m.scope
+	uploader := upload.New(
 		m.db,
 		psClient,
 		m.authService,
@@ -73,17 +75,18 @@ func (m *Model) startSync(accountID string) error {
 		m.services.Messages,
 		m.services.Services,
 		m.services.Policies,
-		m.scope,
+		scope,
 		upload.WithBatchCompletedHook(func(ctx context.Context) error {
-			return m.syncer.NotifyUploadCompleted(ctx)
+			return syncer.NotifyUploadCompleted(ctx)
 		}),
 	)
+	m.uploader = uploader
 	go func() {
-		if err := m.uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
-			m.scope.Error("uploader error", "error", err)
+		if err := uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
+			scope.Error("uploader error", "error", err)
 		}
 	}()
-	m.scope.Info("uploader started", "account_id", accountID)
+	scope.Info("uploader started", "account_id", accountID)
 
 	return nil
 }

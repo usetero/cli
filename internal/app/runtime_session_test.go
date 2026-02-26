@@ -5,8 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/usetero/cli/internal/api"
+	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/auth/authtest"
+	"github.com/usetero/cli/internal/config"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 	"github.com/usetero/cli/internal/upload"
 )
@@ -106,5 +112,72 @@ func TestShutdown_CleansRuntimeResources(t *testing.T) {
 	}
 	if m.uploader != nil {
 		t.Fatalf("expected uploader to be nil")
+	}
+}
+
+func TestStartSync_RequiresOpenDatabase(t *testing.T) {
+	m := &Model{}
+
+	if err := m.startSync("acc_123"); err == nil {
+		t.Fatalf("expected error when db is not open")
+	}
+}
+
+func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
+	scope := logtest.NewScope(t)
+	db := sqlitetest.OpenBareDB(t)
+
+	syncer := powersynctest.NewMockSyncer()
+	startCalled := false
+	syncer.StartFunc = func(ctx context.Context, gotDB sqlite.DB, accountID string, onFirstSync func()) error {
+		startCalled = true
+		if gotDB != db {
+			t.Fatalf("syncer received unexpected db instance")
+		}
+		if accountID != "acc_123" {
+			t.Fatalf("syncer received accountID=%q", accountID)
+		}
+		return nil
+	}
+
+	mockClient := apitest.NewMockClient()
+	var scopedAccountID domain.AccountID
+	mockClient.SetAccountIDFunc = func(accountID domain.AccountID) {
+		scopedAccountID = accountID
+	}
+
+	authService := &authtest.MockAuth{
+		GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+			<-ctx.Done()
+			return "", ctx.Err()
+		},
+	}
+
+	m := &Model{
+		ctx:         context.Background(),
+		scope:       scope,
+		cfg:         &config.CLIConfig{PowerSyncEndpoint: "https://powersync.example.com"},
+		db:          db,
+		syncer:      syncer,
+		services:    api.NewAPIServices(mockClient, scope),
+		authService: authService,
+	}
+
+	if err := m.startSync("acc_123"); err != nil {
+		t.Fatalf("startSync() error = %v", err)
+	}
+	t.Cleanup(m.shutdown)
+
+	if !startCalled {
+		t.Fatalf("expected syncer start to be called")
+	}
+	if m.sessionCancel == nil {
+		t.Fatalf("expected session cancel to be initialized")
+	}
+	if m.uploader == nil {
+		t.Fatalf("expected uploader to be initialized")
+	}
+	if scopedAccountID != domain.AccountID("acc_123") {
+		t.Fatalf("expected services account scope to be set, got %q", scopedAccountID)
 	}
 }
