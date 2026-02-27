@@ -6,7 +6,9 @@ import (
 	"errors"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
@@ -21,6 +23,30 @@ type resultMsg struct {
 	state msgs.PreflightState
 }
 
+type authCheckedMsg struct {
+	hasValidAuth bool
+}
+
+type orgsLoadedMsg struct {
+	orgs []domain.Organization
+	err  error
+}
+
+type accountsLoadedMsg struct {
+	accounts []domain.Account
+	err      error
+}
+
+type stage int
+
+const (
+	stageStarting stage = iota
+	stageAuth
+	stageOrganizations
+	stageAccounts
+	stageFinalizing
+)
+
 // Model computes onboarding preconditions up-front.
 type Model struct {
 	ctx      context.Context
@@ -30,6 +56,9 @@ type Model struct {
 	userPref preferences.UserPreferences
 	orgPref  preferences.OrgPreferences
 	scope    log.Scope
+	state    msgs.PreflightState
+	stage    stage
+	spinner  spinner.Model
 }
 
 func New(
@@ -62,14 +91,29 @@ func New(
 		userPref: userPref,
 		orgPref:  orgPref,
 		scope:    scope,
+		stage:    stageStarting,
+		spinner: func() spinner.Model {
+			sp := spinner.New()
+			sp.Spinner = spinner.Dot
+			sp.Style = lipgloss.NewStyle().Foreground(theme.Accent).Background(theme.Bg)
+			return sp
+		}(),
 	}
 }
 
 func (m *Model) Init() tea.Cmd {
-	return m.resolve()
+	m.state = msgs.PreflightState{
+		Outcome:            msgs.PreflightOutcomeResolved,
+		Role:               m.userPref.GetRole(),
+		ActiveOrgID:        m.userPref.GetActiveOrgID(),
+		DefaultAccountID:   m.orgPref.GetDefaultAccountID(),
+		DefaultWorkspaceID: m.orgPref.GetDefaultWorkspaceID(),
+	}
+	m.stage = stageAuth
+	return tea.Batch(m.spinner.Tick, m.checkAuth())
 }
 
-func (m *Model) resolve() tea.Cmd {
+func (m *Model) checkAuth() tea.Cmd {
 	return func() tea.Msg {
 		hasValidAuth := false
 		if m.auth.IsAuthenticated() {
@@ -79,69 +123,63 @@ func (m *Model) resolve() tea.Cmd {
 				_ = m.auth.ClearTokens()
 			}
 		}
+		return authCheckedMsg{hasValidAuth: hasValidAuth}
+	}
+}
 
-		state := msgs.PreflightState{
-			Outcome:            msgs.PreflightOutcomeResolved,
-			HasValidAuth:       hasValidAuth,
-			Role:               m.userPref.GetRole(),
-			ActiveOrgID:        m.userPref.GetActiveOrgID(),
-			DefaultAccountID:   m.orgPref.GetDefaultAccountID(),
-			DefaultWorkspaceID: m.orgPref.GetDefaultWorkspaceID(),
-		}
-		if !state.HasValidAuth {
-			return resultMsg{state: state}
-		}
+func (m *Model) loadOrganizations() tea.Cmd {
+	return func() tea.Msg {
+		orgs, err := m.services.WithAccountID("").Organizations.List(m.ctx)
+		return orgsLoadedMsg{orgs: orgs, err: err}
+	}
+}
 
-		unscoped := m.services.WithAccountID("")
+func (m *Model) loadAccounts(orgID domain.OrganizationID) tea.Cmd {
+	return func() tea.Msg {
+		accounts, err := m.services.WithAccountID("").Accounts.List(m.ctx, orgID)
+		return accountsLoadedMsg{accounts: accounts, err: err}
+	}
+}
 
-		orgs, err := unscoped.Organizations.List(m.ctx)
-		if err != nil {
-			m.scope.Warn("preflight org lookup failed", "error", err)
-			state.Outcome, state.Error = preflightOutcomeForError(err)
-			return resultMsg{state: state}
-		}
-		state.Org = resolveOrg(orgs, state.ActiveOrgID)
-		if state.Org == nil {
-			return resultMsg{state: state}
-		}
-
-		accounts, err := unscoped.Accounts.List(m.ctx, state.Org.ID)
-		if err != nil {
-			m.scope.Warn("preflight account lookup failed", "error", err, "org_id", state.Org.ID)
-			state.Outcome, state.Error = preflightOutcomeForError(err)
-			return resultMsg{state: state}
-		}
-		state.Account = resolveAccount(accounts, state.DefaultAccountID)
-		if state.Account == nil {
-			return resultMsg{state: state}
-		}
-
-		accountScoped := m.services.WithAccountID(state.Account.ID)
-		hasDatadog, err := accountScoped.DatadogAccounts.HasAccount(m.ctx, state.Account.ID)
-		if err != nil {
-			m.scope.Warn("preflight datadog lookup failed", "error", err, "account_id", state.Account.ID)
-			state.Outcome, state.Error = preflightOutcomeForError(err)
-			return resultMsg{state: state}
-		}
-		state.HasDatadog = hasDatadog
-		if !state.HasDatadog {
-			return resultMsg{state: state}
-		}
-
-		workspaces, err := accountScoped.Workspaces.List(m.ctx, state.Account.ID)
-		if err != nil {
-			m.scope.Warn("preflight workspace lookup failed", "error", err, "account_id", state.Account.ID)
-			state.Outcome, state.Error = preflightOutcomeForError(err)
-			return resultMsg{state: state}
-		}
-		state.Workspace = resolveWorkspace(workspaces, state.DefaultWorkspaceID)
-
-		return resultMsg{state: state}
+func (m *Model) emitResult() tea.Cmd {
+	m.stage = stageFinalizing
+	return func() tea.Msg {
+		return resultMsg{state: m.state}
 	}
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case authCheckedMsg:
+		m.state.HasValidAuth = msg.hasValidAuth
+		if !m.state.HasValidAuth {
+			return m.emitResult()
+		}
+		m.stage = stageOrganizations
+		return m.loadOrganizations()
+
+	case orgsLoadedMsg:
+		if msg.err != nil {
+			m.scope.Warn("preflight org lookup failed", "error", msg.err)
+			m.state.Outcome, m.state.Error = preflightOutcomeForError(msg.err)
+			return m.emitResult()
+		}
+		m.state.Org = resolveOrg(msg.orgs, m.state.ActiveOrgID)
+		if m.state.Org == nil {
+			return m.emitResult()
+		}
+		m.stage = stageAccounts
+		return m.loadAccounts(m.state.Org.ID)
+
+	case accountsLoadedMsg:
+		if msg.err != nil {
+			m.scope.Warn("preflight account lookup failed", "error", msg.err, "org_id", m.state.Org.ID)
+			m.state.Outcome, m.state.Error = preflightOutcomeForError(msg.err)
+			return m.emitResult()
+		}
+		m.state.Account = resolveAccount(msg.accounts, m.state.DefaultAccountID)
+		return m.emitResult()
+
 	case resultMsg:
 		m.scope.Debug("preflight resolved",
 			"has_valid_auth", msg.state.HasValidAuth,
@@ -152,18 +190,24 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			"outcome", msg.state.Outcome,
 			"org", msg.state.Org != nil,
 			"account", msg.state.Account != nil,
-			"workspace", msg.state.Workspace != nil,
-			"has_datadog", msg.state.HasDatadog,
 			"error", msg.state.Error)
 		return func() tea.Msg {
 			return msgs.PreflightResolved{State: msg.state}
 		}
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return cmd
 	}
 	return nil
 }
 
 func (m *Model) View() string {
-	return m.theme.Styles.Title.Render("Preparing onboarding...")
+	s := m.theme.Styles
+	title := s.Title.Render("Getting ready")
+	statusLine := m.spinner.View() + " " + s.Body.Render(m.stageText())
+	return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 }
 
 func (m *Model) SetSize(width, height int) {}
@@ -202,25 +246,24 @@ func resolveAccount(accounts []domain.Account, defaultAccountID domain.AccountID
 	return nil
 }
 
-func resolveWorkspace(workspaces []domain.Workspace, defaultWorkspaceID domain.WorkspaceID) *domain.Workspace {
-	if defaultWorkspaceID != "" {
-		for _, workspace := range workspaces {
-			if workspace.ID == defaultWorkspaceID {
-				resolved := workspace
-				return &resolved
-			}
-		}
-	}
-	if len(workspaces) == 1 {
-		resolved := workspaces[0]
-		return &resolved
-	}
-	return nil
-}
-
 func preflightOutcomeForError(err error) (msgs.PreflightOutcome, string) {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return msgs.PreflightOutcomeFailed, err.Error()
 	}
 	return msgs.PreflightOutcomeInconclusive, err.Error()
+}
+
+func (m *Model) stageText() string {
+	switch m.stage {
+	case stageAuth:
+		return "Checking authentication"
+	case stageOrganizations:
+		return "Loading organizations"
+	case stageAccounts:
+		return "Loading accounts"
+	case stageFinalizing:
+		return "Finalizing setup"
+	default:
+		return "Preparing onboarding..."
+	}
 }

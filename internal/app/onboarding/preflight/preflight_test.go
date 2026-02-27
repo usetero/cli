@@ -43,22 +43,3 @@ func TestResolveAccount(t *testing.T) {
 		t.Fatalf("resolveAccount single fallback failed: %+v", got)
 	}
 }
-
-func TestResolveWorkspace(t *testing.T) {
-	t.Parallel()
-
-	workspaces := []domain.Workspace{
-		{ID: "ws-1", Name: "One"},
-		{ID: "ws-2", Name: "Two"},
-	}
-
-	if got := resolveWorkspace(workspaces, "ws-2"); got == nil || got.ID != "ws-2" {
-		t.Fatalf("resolveWorkspace by id failed: %+v", got)
-	}
-	if got := resolveWorkspace(workspaces, "missing"); got != nil {
-		t.Fatalf("resolveWorkspace with missing id should be nil, got %+v", got)
-	}
-	if got := resolveWorkspace([]domain.Workspace{{ID: "only", Name: "Only"}}, ""); got == nil || got.ID != "only" {
-		t.Fatalf("resolveWorkspace single fallback failed: %+v", got)
-	}
-}

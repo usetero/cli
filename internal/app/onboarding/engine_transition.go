@@ -20,11 +20,9 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 			slog.String("default_workspace_id", string(msg.State.DefaultWorkspaceID)),
 			slog.Bool("org_resolved", msg.State.Org != nil),
 			slog.Bool("account_resolved", msg.State.Account != nil),
-			slog.Bool("workspace_resolved", msg.State.Workspace != nil),
-			slog.Bool("has_datadog", msg.State.HasDatadog),
 			slog.String("error", msg.State.Error))
 
-		nextGate := GateSync
+		nextGate := GateDatadogCheck
 		if msg.State.Outcome == msgs.PreflightOutcomeFailed || !msg.State.HasValidAuth {
 			nextGate = GateAuthenticate
 		} else if msg.State.Role != msgs.RolePlatform && msg.State.Role != msgs.RoleEngineer {
@@ -33,10 +31,6 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 			nextGate = GateOrgSelect
 		} else if msg.State.Account == nil {
 			nextGate = GateAccountSelect
-		} else if !msg.State.HasDatadog {
-			nextGate = GateDatadogCheck
-		} else if msg.State.Workspace == nil {
-			nextGate = GateWorkspaceSelect
 		}
 
 		if msg.State.Org != nil {
@@ -47,10 +41,6 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 			m.state.account = msg.State.Account
 			m.services = m.services.WithAccountID(msg.State.Account.ID)
 		}
-		if msg.State.Workspace != nil {
-			m.state.workspace = msg.State.Workspace
-		}
-
 		m.scope.Info("preflight decision",
 			slog.String("outcome", string(msg.State.Outcome)),
 			slog.String("next_gate", nextGate.String()))

@@ -56,38 +56,14 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			wantGate: GateAccountSelect,
 		},
 		{
-			name: "resolved account no datadog routes to datadog check",
+			name: "resolved account routes to datadog check",
 			state: msgs.PreflightState{
 				HasValidAuth: true,
 				Role:         msgs.RolePlatform,
 				Org:          ptrOrg("org-1"),
 				Account:      ptrAccount("acc-1"),
-				HasDatadog:   false,
 			},
 			wantGate: GateDatadogCheck,
-		},
-		{
-			name: "resolved datadog no workspace routes to workspace select",
-			state: msgs.PreflightState{
-				HasValidAuth: true,
-				Role:         msgs.RolePlatform,
-				Org:          ptrOrg("org-1"),
-				Account:      ptrAccount("acc-1"),
-				HasDatadog:   true,
-			},
-			wantGate: GateWorkspaceSelect,
-		},
-		{
-			name: "fully resolved routes to sync",
-			state: msgs.PreflightState{
-				HasValidAuth: true,
-				Role:         msgs.RolePlatform,
-				Org:          ptrOrg("org-1"),
-				Account:      ptrAccount("acc-1"),
-				Workspace:    ptrWorkspace("ws-1"),
-				HasDatadog:   true,
-			},
-			wantGate: GateSync,
 		},
 	}
 
