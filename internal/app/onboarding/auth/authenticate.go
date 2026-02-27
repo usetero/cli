@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/browser"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/app/onboarding/errorfmt"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/log"
@@ -25,6 +26,12 @@ const (
 	stateReady
 	statePolling
 	stateComplete
+)
+
+const (
+	defaultPollInterval = 2 * time.Second
+	minPollInterval     = 1 * time.Second
+	maxPollInterval     = 2 * time.Second
 )
 
 // deviceAuthMsg is sent when device auth flow starts.
@@ -97,10 +104,25 @@ func (m *AuthenticateModel) startDeviceAuth() tea.Cmd {
 
 func (m *AuthenticateModel) pollForAuth() tea.Cmd {
 	return func() tea.Msg {
-		interval := time.Duration(m.device.Interval) * time.Second
+		interval := authPollInterval(m.device.Interval)
+		m.scope.Debug("starting auth polling", "provider_interval_seconds", m.device.Interval, "poll_interval", interval)
 		result, err := m.auth.WaitForAuth(m.ctx, m.device.DeviceCode, interval)
 		return authCompleteMsg{result: result, err: err}
 	}
+}
+
+func authPollInterval(providerIntervalSeconds int) time.Duration {
+	interval := time.Duration(providerIntervalSeconds) * time.Second
+	if interval <= 0 {
+		return defaultPollInterval
+	}
+	if interval < minPollInterval {
+		return minPollInterval
+	}
+	if interval > maxPollInterval {
+		return maxPollInterval
+	}
+	return interval
 }
 
 // Update handles messages.
@@ -219,7 +241,10 @@ func (m *AuthenticateModel) View() string {
 	case m.copiedToClipboard:
 		parts = append(parts, s.Success.Render("URL copied to clipboard"))
 	case m.err != nil:
-		parts = append(parts, s.Error.Render("Authentication failed. Press 'r' to retry"))
+		parts = append(parts,
+			s.Error.Render(errorfmt.UserFacing(m.err, "Authentication failed.")),
+			s.Help.Render("Press 'r' to retry"),
+		)
 	default:
 		parts = append(parts, s.Action.Render("Press Enter to open in browser, or 'c' to copy URL"))
 	}

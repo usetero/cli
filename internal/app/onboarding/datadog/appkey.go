@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"context"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
@@ -149,7 +150,7 @@ func (m *AppKeyModel) View() string {
 	if m.creating {
 		status = s.Help.Render("Connecting to Datadog...")
 	} else if m.err != nil {
-		status = s.Error.Render("Invalid Application Key. Please try again.")
+		status = s.Error.Render(appKeyErrorMessage(m.err))
 	}
 
 	parts := []string{title, subtitle, "", m.input.View()}
@@ -177,4 +178,28 @@ func (m *AppKeyModel) ShortHelp() []key.Binding {
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "connect")),
 	)
 	return bindings
+}
+
+func appKeyErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := strings.TrimSpace(err.Error())
+	if msg == "" {
+		return "Failed to connect Datadog. Please try again."
+	}
+
+	// Strip common GraphQL wrapper prefixes so users see the actionable backend message.
+	msg = strings.TrimSpace(strings.TrimPrefix(msg, "graphql:"))
+
+	lower := strings.ToLower(msg)
+	if strings.Contains(lower, "timeout") ||
+		strings.Contains(lower, "deadline exceeded") ||
+		strings.Contains(lower, "connection refused") ||
+		strings.Contains(lower, "network is unreachable") {
+		return "Could not reach Datadog. Check your connection and try again."
+	}
+
+	return msg
 }

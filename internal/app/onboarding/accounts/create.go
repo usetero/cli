@@ -10,6 +10,7 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/app/onboarding/errorfmt"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -138,7 +139,7 @@ func (m *CreateModel) View() string {
 	if m.creating {
 		status = s.Help.Render("Creating...")
 	} else if m.err != nil {
-		status = s.Error.Render("Failed to create account. Try again.")
+		status = s.Error.Render(errorfmt.UserFacing(m.err, "Failed to create account. Try again."))
 	}
 
 	parts := []string{title, subtitle, "", m.input.View()}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/app/onboarding/errorfmt"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -99,7 +100,7 @@ func (m *CheckModel) View() string {
 	s := m.theme.Styles
 
 	if m.err != nil {
-		return s.Error.Render("Failed to check Datadog configuration. Press 'r' to retry.")
+		return s.Error.Render(errorfmt.UserFacing(m.err, "Failed to check Datadog configuration. Press 'r' to retry."))
 	}
 	return s.Title.Render("Checking Datadog configuration...")
 }

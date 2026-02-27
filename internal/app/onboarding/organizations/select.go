@@ -10,6 +10,7 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	"github.com/usetero/cli/internal/app/onboarding/errorfmt"
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/domain"
@@ -205,7 +206,11 @@ func (m *SelectModel) View() string {
 	}
 
 	if m.list.HasError() {
-		return s.Error.Render("Failed to load organizations. Press 'r' to retry.")
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			s.Error.Render(errorfmt.UserFacing(m.list.Error(), "Failed to load organizations.")),
+			s.Help.Render("Press 'r' to retry."),
+		)
 	}
 
 	title := s.Title.Render("Select your organization")
