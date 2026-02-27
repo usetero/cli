@@ -22,7 +22,7 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 			slog.Bool("account_resolved", msg.State.Account != nil),
 			slog.String("error", msg.State.Error))
 
-		nextGate := GateDatadogCheck
+		nextGate := GateRuntimeInit
 		if msg.State.Outcome == msgs.PreflightOutcomeFailed || !msg.State.HasValidAuth {
 			nextGate = GateAuthenticate
 		} else if msg.State.Role != msgs.RolePlatform && msg.State.Role != msgs.RoleEngineer {
@@ -75,8 +75,7 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 		m.scope.Info("account selected", slog.String("account_id", msg.Account.ID.String()))
 		m.state.org = &msg.Org
 		m.state.account = &msg.Account
-		m.services = m.services.WithAccountID(msg.Account.ID)
-		return m.goToGate(GateDatadogCheck)
+		return m.goToGate(GateRuntimeInit)
 
 	case msgs.NoAccounts:
 		m.scope.Debug("no accounts found")
@@ -85,6 +84,12 @@ func (m *Model) handleTransition(msg tea.Msg) tea.Cmd {
 
 	case msgs.AccountCreated:
 		m.scope.Info("account created", slog.String("account_id", msg.Account.ID.String()))
+		m.state.org = &msg.Org
+		m.state.account = &msg.Account
+		return m.goToGate(GateRuntimeInit)
+
+	case msgs.RuntimeReady:
+		m.scope.Info("runtime initialized", slog.String("account_id", msg.Account.ID.String()))
 		m.state.org = &msg.Org
 		m.state.account = &msg.Account
 		m.services = m.services.WithAccountID(msg.Account.ID)

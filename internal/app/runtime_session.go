@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	tea "charm.land/bubbletea/v2"
+	chatclient "github.com/usetero/cli/internal/chat"
+	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/sqlite"
@@ -89,6 +92,41 @@ func (m *Model) startSync(accountID string) error {
 	scope.Info("uploader started", "account_id", accountID)
 
 	return nil
+}
+
+// ensureRuntime opens account database, starts sync, and initializes dependent runtime services.
+func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
+	if err := m.openDatabase(accountID); err != nil {
+		return nil, err
+	}
+
+	if err := m.startSync(accountID); err != nil {
+		return nil, err
+	}
+
+	// Start catalog status polling now that db is ready
+	catalogCmd := m.statusBar.SetDB(m.db)
+
+	// Create tool registry with executors
+	m.toolRegistry = chattools.NewRegistry(
+		chattools.NewQueryTool(m.db, m.scope),
+		chattools.NewShowTool(m.db),
+		map[string]chattools.ActionTool{
+			"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
+			"approve_policy": chattools.NewApprovePolicyAction(m.db, func() string {
+				if m.user != nil {
+					return m.user.ID
+				}
+				return ""
+			}),
+		},
+	)
+
+	// Create chat client with tool definitions
+	m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
+		WithAccountID(domain.AccountID(accountID))
+
+	return catalogCmd, nil
 }
 
 func (m *Model) shutdown() {

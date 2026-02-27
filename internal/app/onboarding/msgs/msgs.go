@@ -61,6 +61,20 @@ type AccountCreated struct {
 	Account domain.Account
 }
 
+// Runtime messages.
+
+// EnsureRuntime requests runtime initialization for the selected account.
+type EnsureRuntime struct {
+	Org     domain.Organization
+	Account domain.Account
+}
+
+// RuntimeReady is emitted when account runtime is initialized.
+type RuntimeReady struct {
+	Org     domain.Organization
+	Account domain.Account
+}
+
 // Datadog messages.
 
 // DatadogReady is emitted when datadog is already configured.

@@ -11,6 +11,7 @@ const (
 	GateOrgCreate        Gate = "org_create"
 	GateAccountSelect    Gate = "account_select"
 	GateAccountCreate    Gate = "account_create"
+	GateRuntimeInit      Gate = "runtime_init"
 	GateDatadogCheck     Gate = "datadog_check"
 	GateDatadogRegion    Gate = "datadog_region"
 	GateDatadogAPIKey    Gate = "datadog_api_key"

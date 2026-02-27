@@ -203,3 +203,11 @@ func (m *SelectModel) ShortHelp() []key.Binding {
 	)
 	return bindings
 }
+
+func (m *SelectModel) Hidden() bool {
+	return m.list.IsLoading()
+}
+
+func (m *SelectModel) StatusText() string {
+	return "Loading workspaces..."
+}

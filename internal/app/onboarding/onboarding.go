@@ -129,12 +129,17 @@ func (m *Model) View() string {
 		return ""
 	}
 
+	view := m.step.View()
+	if v, ok := m.step.(VisibilityProvider); ok && v.Hidden() {
+		view = m.hiddenStepView(v.StatusText())
+	}
+
 	// Bottom-align step content in available space
 	return lipgloss.NewStyle().
 		Width(m.width).
 		Height(m.height).
 		AlignVertical(lipgloss.Bottom).
-		Render(m.step.View())
+		Render(view)
 }
 
 // SetSize updates the model's dimensions.
@@ -152,4 +157,11 @@ func (m *Model) ShortHelp() []key.Binding {
 		return m.step.ShortHelp()
 	}
 	return nil
+}
+
+func (m *Model) hiddenStepView(status string) string {
+	s := m.theme.Styles
+	title := s.Title.Render("Getting ready")
+	body := s.Body.Render(status)
+	return lipgloss.JoinVertical(lipgloss.Left, title, "", body)
 }

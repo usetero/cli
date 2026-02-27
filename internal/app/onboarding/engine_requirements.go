@@ -12,6 +12,7 @@ type gateRequirement struct {
 var gateRequirements = map[Gate]gateRequirement{
 	GateAccountSelect:    {needsOrg: true},
 	GateAccountCreate:    {needsOrg: true},
+	GateRuntimeInit:      {needsOrg: true, needsAccount: true},
 	GateDatadogCheck:     {needsOrg: true, needsAccount: true},
 	GateDatadogAPIKey:    {needsOrg: true, needsAccount: true, needsDDSite: true},
 	GateDatadogAppKey:    {needsOrg: true, needsAccount: true, needsDDSite: true, needsDDAPIKey: true},

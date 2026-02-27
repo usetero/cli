@@ -117,3 +117,11 @@ func (m *CheckModel) ShortHelp() []key.Binding {
 	}
 	return nil
 }
+
+func (m *CheckModel) Hidden() bool {
+	return m.err == nil
+}
+
+func (m *CheckModel) StatusText() string {
+	return "Checking Datadog configuration..."
+}

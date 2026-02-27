@@ -4,6 +4,7 @@ package preflight
 import (
 	"context"
 	"errors"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
@@ -59,6 +60,7 @@ type Model struct {
 	state    msgs.PreflightState
 	stage    stage
 	spinner  spinner.Model
+	started  time.Time
 }
 
 func New(
@@ -102,6 +104,7 @@ func New(
 }
 
 func (m *Model) Init() tea.Cmd {
+	m.started = time.Now()
 	m.state = msgs.PreflightState{
 		Outcome:            msgs.PreflightOutcomeResolved,
 		Role:               m.userPref.GetRole(),
@@ -181,6 +184,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.emitResult()
 
 	case resultMsg:
+		elapsed := time.Since(m.started)
 		m.scope.Debug("preflight resolved",
 			"has_valid_auth", msg.state.HasValidAuth,
 			"role", msg.state.Role,
@@ -190,7 +194,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			"outcome", msg.state.Outcome,
 			"org", msg.state.Org != nil,
 			"account", msg.state.Account != nil,
-			"error", msg.state.Error)
+			"error", msg.state.Error,
+			"elapsed_ms", elapsed.Milliseconds())
 		return func() tea.Msg {
 			return msgs.PreflightResolved{State: msg.state}
 		}

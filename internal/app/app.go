@@ -288,45 +288,26 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg))
 
 	case onboardingmsg.AccountSelected:
-		// Open database and start syncer when account is selected
-		m.scope.Info("account selected", "account_id", msg.Account.ID.String())
-
-		if err := m.openDatabase(msg.Account.ID.String()); err != nil {
-			m.scope.Error("failed to open database", "error", err)
-			return m, appmsg.ErrorCmd("Failed to open database", err, true)
-		}
-
-		if err := m.startSync(msg.Account.ID.String()); err != nil {
-			m.scope.Error("failed to start sync", "error", err)
-			return m, appmsg.ErrorCmd("Failed to start sync", err, true)
-		}
-
-		// Start catalog status polling now that db is ready
-		catalogCmd := m.statusBar.SetDB(m.db)
-
-		// Create tool registry with executors
-		m.toolRegistry = chattools.NewRegistry(
-			chattools.NewQueryTool(m.db, m.scope),
-			chattools.NewShowTool(m.db),
-			map[string]chattools.ActionTool{
-				"set_service_enabled": chattools.NewSetServiceEnabledAction(m.db),
-				"approve_policy": chattools.NewApprovePolicyAction(m.db, func() string {
-					if m.user != nil {
-						return m.user.ID
-					}
-					return ""
-				}),
-			},
-		)
-
-		// Create chat client with tool definitions
-		m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
-			WithAccountID(msg.Account.ID)
-
-		// Forward to onboarding so it can continue
+		// Forward to onboarding engine; runtime init happens at EnsureRuntime gate.
 		if m.onboarding != nil {
-			cmd := m.onboarding.Update(msg)
-			return m, tea.Batch(catalogCmd, cmd)
+			return m, m.onboarding.Update(msg)
+		}
+		return m, nil
+
+	case onboardingmsg.EnsureRuntime:
+		m.scope.Info("ensuring runtime", "account_id", msg.Account.ID.String())
+		start := time.Now()
+		catalogCmd, err := m.ensureRuntime(msg.Account.ID.String())
+		if err != nil {
+			m.scope.Error("failed to ensure runtime", "error", err)
+			return m, appmsg.ErrorCmd("Failed to initialize account runtime", err, true)
+		}
+		m.scope.Info("runtime ensured", "account_id", msg.Account.ID.String(), "elapsed_ms", time.Since(start).Milliseconds())
+		if m.onboarding != nil {
+			return m, tea.Batch(
+				catalogCmd,
+				func() tea.Msg { return onboardingmsg.RuntimeReady{Org: msg.Org, Account: msg.Account} },
+			)
 		}
 		return m, catalogCmd
 

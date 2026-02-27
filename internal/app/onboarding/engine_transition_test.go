@@ -56,14 +56,14 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			wantGate: GateAccountSelect,
 		},
 		{
-			name: "resolved account routes to datadog check",
+			name: "resolved account routes to runtime init",
 			state: msgs.PreflightState{
 				HasValidAuth: true,
 				Role:         msgs.RolePlatform,
 				Org:          ptrOrg("org-1"),
 				Account:      ptrAccount("acc-1"),
 			},
-			wantGate: GateDatadogCheck,
+			wantGate: GateRuntimeInit,
 		},
 	}
 
@@ -78,6 +78,12 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			}
 			if m.gate != tc.wantGate {
 				t.Fatalf("gate = %s, want %s", m.gate, tc.wantGate)
+			}
+			if tc.wantGate == GateRuntimeInit {
+				msg := cmd()
+				if _, ok := msg.(msgs.EnsureRuntime); !ok {
+					t.Fatalf("runtime init should emit EnsureRuntime, got %T", msg)
+				}
 			}
 		})
 	}
@@ -108,6 +114,24 @@ func TestHandleTransitionDatadogState(t *testing.T) {
 	}
 	if m.state.ddAccount != "dd-1" {
 		t.Fatalf("ddAccount = %q, want %q", m.state.ddAccount, "dd-1")
+	}
+}
+
+func TestHandleTransitionRuntimeReady(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	org := ptrOrg("org-1")
+	account := ptrAccount("acc-1")
+
+	if _ = m.handleTransition(msgs.RuntimeReady{Org: *org, Account: *account}); m.gate != GateDatadogCheck {
+		t.Fatalf("expected runtime ready to route to datadog check")
+	}
+	if m.state.org == nil || m.state.org.ID != org.ID {
+		t.Fatalf("org state not set from runtime ready")
+	}
+	if m.state.account == nil || m.state.account.ID != account.ID {
+		t.Fatalf("account state not set from runtime ready")
 	}
 }
 

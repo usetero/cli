@@ -11,6 +11,7 @@ import (
 	"github.com/usetero/cli/internal/app/onboarding/organizations"
 	"github.com/usetero/cli/internal/app/onboarding/preflight"
 	"github.com/usetero/cli/internal/app/onboarding/role"
+	"github.com/usetero/cli/internal/app/onboarding/runtimeinit"
 	"github.com/usetero/cli/internal/app/onboarding/sync"
 	"github.com/usetero/cli/internal/app/onboarding/workspaces"
 )
@@ -49,6 +50,8 @@ func (m *Model) stepForGate(gate Gate) Step {
 		return accounts.NewSelect(m.ctx, m.theme, *m.state.org, m.services, m.orgPrefs, m.scope)
 	case GateAccountCreate:
 		return accounts.NewCreate(m.ctx, m.theme, *m.state.org, m.services, m.orgPrefs, m.scope)
+	case GateRuntimeInit:
+		return runtimeinit.New(m.theme, *m.state.org, *m.state.account, m.scope)
 	case GateDatadogCheck:
 		return datadog.NewCheck(m.ctx, m.theme, *m.state.account, m.services, m.scope)
 	case GateDatadogRegion:
