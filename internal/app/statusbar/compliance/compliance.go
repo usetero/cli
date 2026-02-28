@@ -50,6 +50,7 @@ type Model struct {
 	categories []domain.PolicyCategoryStatus
 	hasData    bool
 	lastState  string
+	fetching   bool
 
 	// Drawer navigation
 	cursor int     // selected row in category list
@@ -92,9 +93,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.db == nil {
 			return nil
 		}
+		if m.fetching {
+			return m.poll()
+		}
+		m.fetching = true
 		return tea.Batch(m.fetchData(), m.poll())
 
 	case tabpoll.DataMsg[fetchedData]:
+		m.fetching = false
 		if msg.Err != nil {
 			return nil
 		}

@@ -20,12 +20,16 @@ import (
 )
 
 const (
-	pollInterval = 500 * time.Millisecond
-	dbTimeout    = 2 * time.Second
+	pollInterval        = 500 * time.Millisecond
+	pendingPollInterval = 2 * time.Second
+	dbTimeout           = 2 * time.Second
 )
 
 // pollMsg triggers a sync status check.
 type pollMsg struct{}
+
+// pendingPollMsg triggers a pending-upload count refresh.
+type pendingPollMsg struct{}
 
 // pendingMsg carries the result of an async pending-upload count.
 type pendingMsg struct {
@@ -43,6 +47,7 @@ type Model struct {
 	// Cached state for change detection
 	lastState    powersync.State
 	totalPending int64
+	pendingFetch bool
 }
 
 // New creates a new sync status model.
@@ -71,12 +76,18 @@ func (m *Model) Init() tea.Cmd {
 	if m.syncer == nil {
 		return nil
 	}
-	return m.poll()
+	return tea.Batch(m.poll(), m.pollPending())
 }
 
 func (m *Model) poll() tea.Cmd {
 	return tea.Tick(pollInterval, func(time.Time) tea.Msg {
 		return pollMsg{}
+	})
+}
+
+func (m *Model) pollPending() tea.Cmd {
+	return tea.Tick(pendingPollInterval, func(time.Time) tea.Msg {
+		return pendingPollMsg{}
 	})
 }
 
@@ -95,7 +106,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.lastState = currentState
 		}
 
-		cmds := []tea.Cmd{m.poll(), m.fetchPending()}
+		cmds := []tea.Cmd{m.poll()}
 		if stateChanged {
 			cmds = append(cmds, func() tea.Msg { return msgs.SyncStateChanged{State: currentState} })
 
@@ -106,7 +117,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 		return tea.Batch(cmds...)
 
+	case pendingPollMsg:
+		if m.db == nil {
+			return m.pollPending()
+		}
+		if m.pendingFetch {
+			return m.pollPending()
+		}
+		m.pendingFetch = true
+		return tea.Batch(m.pollPending(), m.fetchPending())
+
 	case pendingMsg:
+		m.pendingFetch = false
 		m.totalPending = msg.total
 	}
 
