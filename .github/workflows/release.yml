@@ -13,6 +13,12 @@ on:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -33,10 +39,21 @@ jobs:
             goos: linux
             goarch: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
+      - name: Validate tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$ ]] || {
+            echo "invalid release tag: ${TAG_NAME}"
+            exit 1
+          }
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ env.TAG_NAME }}
 
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
         with:
@@ -49,15 +66,14 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CC: ${{ matrix.cc || '' }}
-          TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
+          set -euo pipefail
           VERSION="${TAG_NAME#v}"
           go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o tero ./cmd/tero
 
       - name: Package
-        env:
-          TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
+          set -euo pipefail
           VERSION="${TAG_NAME#v}"
           ARCHIVE="tero_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
           tar czf "${ARCHIVE}" tero LICENSE
@@ -74,6 +90,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -85,14 +103,15 @@ jobs:
       - name: Create checksums
         working-directory: artifacts
         run: |
+          set -euo pipefail
           cat ./*.sha256 > checksums.txt
           rm ./*.sha256
 
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
+          set -euo pipefail
           gh release upload "${TAG_NAME}" \
             artifacts/*.tar.gz \
             artifacts/checksums.txt \
@@ -109,11 +128,11 @@ jobs:
           repositories: homebrew-tap
 
       - name: Update Homebrew formula
-        if: ${{ !contains(github.event.release.tag_name || inputs.tag, '-') }}
+        if: ${{ !contains(env.TAG_NAME, '-') }}
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
-          TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
+          set -euo pipefail
           VERSION="${TAG_NAME#v}"
           BASE_URL="https://github.com/usetero/cli/releases/download/${TAG_NAME}"
 
