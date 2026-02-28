@@ -14,6 +14,7 @@ import (
 
 	"github.com/usetero/cli/internal/app/statusbar/listdetail"
 	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
+	"github.com/usetero/cli/internal/app/statusbar/viewkit"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/log"
@@ -261,11 +262,12 @@ func (m *Model) CompactView() string {
 // ExpandedView renders the detailed catalog status for the drawer.
 func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		if m.db == nil {
-			return muted.Render("Waiting for sync to start...")
-		}
-		return muted.Render("No services discovered yet.")
+		return viewkit.RenderServicesEmptyState(
+			m.theme,
+			m.db != nil,
+			m.summary,
+			"Ask Tero to explore your services and pick which ones to enable.",
+		)
 	}
 
 	// Detail sub-view for a single service.
@@ -275,11 +277,12 @@ func (m *Model) ExpandedView(width, height int) string {
 
 	// All services disabled — show a clear message with guidance.
 	if m.summary.ActiveServices == 0 {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		return muted.Render(fmt.Sprintf(
-			"%d services discovered, all disabled.\nAsk Tero to explore your services and pick which ones to enable.",
-			m.summary.ServiceCount,
-		))
+		return viewkit.RenderServicesEmptyState(
+			m.theme,
+			true,
+			m.summary,
+			"Ask Tero to explore your services and pick which ones to enable.",
+		)
 	}
 
 	// Height budget: summary (1) + gap (1) + table header+border (2) = 4 lines overhead.
@@ -288,11 +291,12 @@ func (m *Model) ExpandedView(width, height int) string {
 		maxRows = 1
 	}
 
-	var lines []string
-	lines = append(lines, m.renderSummary())
-	lines = append(lines, "")
-	lines = append(lines, m.renderServiceTable(width, maxRows))
-	return strings.Join(lines, "\n")
+	return viewkit.ComposeSummaryTableView(
+		m.theme,
+		m.renderSummary(),
+		m.renderServiceTable(width, maxRows),
+		"",
+	)
 }
 
 // renderSummary renders the top summary line.

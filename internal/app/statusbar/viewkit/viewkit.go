@@ -37,6 +37,28 @@ func RenderPolicyEmptyState(
 	return dot + " " + muted.Render(healthyText)
 }
 
+// RenderServicesEmptyState renders the common empty/loading/disabled states
+// for the services tab.
+func RenderServicesEmptyState(
+	theme styles.Theme,
+	dbReady bool,
+	summary domain.AccountSummary,
+	disabledHint string,
+) string {
+	muted := lipgloss.NewStyle().Foreground(theme.TextMuted).Background(theme.Bg)
+	if !dbReady {
+		return muted.Render("Waiting for sync to start...")
+	}
+	if summary.ActiveServices == 0 && summary.ServiceCount > 0 {
+		return muted.Render(fmt.Sprintf(
+			"%d services discovered, all disabled.\n%s",
+			summary.ServiceCount,
+			disabledHint,
+		))
+	}
+	return muted.Render("No services discovered yet.")
+}
+
 // ComposeSummaryTableView joins a headline + table + optional description
 // in the standard expanded-tab layout.
 func ComposeSummaryTableView(theme styles.Theme, headline, tableView, description string) string {
