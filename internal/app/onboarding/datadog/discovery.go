@@ -21,7 +21,10 @@ import (
 
 const discoveryPollInterval = 500 * time.Millisecond
 
-// statusMsg is sent on each poll.
+// pollTickMsg schedules the next async discovery status fetch.
+type pollTickMsg struct{}
+
+// statusMsg carries async discovery status fetch results.
 type statusMsg struct {
 	status *api.DatadogAccountStatus
 	err    error
@@ -88,14 +91,16 @@ func (m *DiscoveryModel) pollStatus() tea.Cmd {
 
 func (m *DiscoveryModel) schedulePoll() tea.Cmd {
 	return tea.Tick(discoveryPollInterval, func(time.Time) tea.Msg {
-		status, err := m.services.DatadogAccounts.GetStatus(m.ctx, m.datadogAccountID)
-		return statusMsg{status: status, err: err}
+		return pollTickMsg{}
 	})
 }
 
 // Update handles messages.
 func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case pollTickMsg:
+		return m.pollStatus()
+
 	case statusMsg:
 		if msg.err != nil {
 			m.scope.Error("discovery status check failed", "error", msg.err)
