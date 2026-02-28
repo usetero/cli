@@ -23,8 +23,8 @@ func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOu
 
 	nextState, next := bootstrap.ApplyPreflight(
 		bootstrap.State{
-			Org:     m.state.org,
-			Account: m.state.account,
+			Org:     m.state.Org,
+			Account: m.state.Account,
 		},
 		bootstrap.PreflightResolved{
 			Outcome:      bootstrap.PreflightOutcome(msg.State.Outcome),
@@ -158,10 +158,10 @@ func (m *Model) handleSyncComplete() TransitionOutcome {
 	completion, ok := bootstrap.CompleteOnboarding(m.toCoreState())
 	if !ok {
 		m.scope.Error("sync completed without required onboarding state",
-			slog.Bool("has_user", m.state.user != nil),
-			slog.Bool("has_org", m.state.org != nil),
-			slog.Bool("has_account", m.state.account != nil),
-			slog.Bool("has_workspace", m.state.workspace != nil),
+			slog.Bool("has_user", m.state.User != nil),
+			slog.Bool("has_org", m.state.Org != nil),
+			slog.Bool("has_account", m.state.Account != nil),
+			slog.Bool("has_workspace", m.state.Workspace != nil),
 		)
 		return noop()
 	}

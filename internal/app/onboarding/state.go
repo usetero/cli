@@ -1,16 +1,5 @@
 package onboarding
 
-import (
-	iauth "github.com/usetero/cli/internal/auth"
-	"github.com/usetero/cli/internal/domain"
-)
+import "github.com/usetero/cli/internal/core/bootstrap"
 
-type onboardingState struct {
-	user      *iauth.User
-	org       *domain.Organization
-	account   *domain.Account
-	workspace *domain.Workspace
-	ddSite    domain.DatadogSite
-	ddAPIKey  string
-	ddAccount domain.DatadogAccountID
-}
+type onboardingState = bootstrap.State

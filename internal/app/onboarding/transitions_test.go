@@ -136,8 +136,8 @@ func TestHandleTransitionWorkspaceSelectedSetsState(t *testing.T) {
 	if m.gate != GateSync {
 		t.Fatalf("gate = %s, want %s", m.gate, GateSync)
 	}
-	if m.state.workspace == nil || m.state.workspace.ID != workspace.ID {
-		t.Fatalf("workspace state not set correctly: %+v", m.state.workspace)
+	if m.state.Workspace == nil || m.state.Workspace.ID != workspace.ID {
+		t.Fatalf("workspace state not set correctly: %+v", m.state.Workspace)
 	}
 }
 
@@ -145,27 +145,27 @@ func TestHandleTransitionDatadogState(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	m.state.account = ptrAccount("acc-1")
+	m.state.Account = ptrAccount("acc-1")
 
 	if _ = m.handleTransition(msgs.DatadogRegionSelected{Site: "US1"}); m.gate != GateDatadogAPIKey {
 		t.Fatalf("expected datadog region to route to api key gate")
 	}
-	if m.state.ddSite != "US1" {
-		t.Fatalf("ddSite = %s, want US1", m.state.ddSite)
+	if m.state.DDSite != "US1" {
+		t.Fatalf("ddSite = %s, want US1", m.state.DDSite)
 	}
 
 	if _ = m.handleTransition(msgs.DatadogAPIKeyEntered{APIKey: "api-key"}); m.gate != GateDatadogAppKey {
 		t.Fatalf("expected api key entered to route to app key gate")
 	}
-	if m.state.ddAPIKey != "api-key" {
-		t.Fatalf("ddAPIKey = %q, want %q", m.state.ddAPIKey, "api-key")
+	if m.state.DDAPIKey != "api-key" {
+		t.Fatalf("ddAPIKey = %q, want %q", m.state.DDAPIKey, "api-key")
 	}
 
 	if _ = m.handleTransition(msgs.DatadogAccountCreated{DatadogAccountID: "dd-1"}); m.gate != GateDatadogDiscovery {
 		t.Fatalf("expected account created to route to discovery gate")
 	}
-	if m.state.ddAccount != "dd-1" {
-		t.Fatalf("ddAccount = %q, want %q", m.state.ddAccount, "dd-1")
+	if m.state.DDAccount != "dd-1" {
+		t.Fatalf("ddAccount = %q, want %q", m.state.DDAccount, "dd-1")
 	}
 }
 
@@ -179,10 +179,10 @@ func TestHandleTransitionRuntimeReady(t *testing.T) {
 	if _ = m.handleTransition(msgs.RuntimeReady{Org: *org, Account: *account}); m.gate != GateDatadogCheck {
 		t.Fatalf("expected runtime ready to route to datadog check")
 	}
-	if m.state.org == nil || m.state.org.ID != org.ID {
+	if m.state.Org == nil || m.state.Org.ID != org.ID {
 		t.Fatalf("org state not set from runtime ready")
 	}
-	if m.state.account == nil || m.state.account.ID != account.ID {
+	if m.state.Account == nil || m.state.Account.ID != account.ID {
 		t.Fatalf("account state not set from runtime ready")
 	}
 }
@@ -214,7 +214,7 @@ func TestHandleTransitionOrgSelectedClearsServiceAccountScope(t *testing.T) {
 		scopedAccountID = accountID
 	}
 
-	m.state.account = ptrAccount("acc-1")
+	m.state.Account = ptrAccount("acc-1")
 	_ = m.handleTransition(msgs.OrgSelected{Org: *ptrOrg("org-2")})
 	if scopedAccountID != "" {
 		t.Fatalf("scoped account id = %q, want empty", scopedAccountID)
@@ -225,10 +225,10 @@ func TestHandleTransitionSyncComplete(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	m.state.user = ptrUser("user-1")
-	m.state.org = ptrOrg("org-1")
-	m.state.account = ptrAccount("acc-1")
-	m.state.workspace = ptrWorkspace("ws-1")
+	m.state.User = ptrUser("user-1")
+	m.state.Org = ptrOrg("org-1")
+	m.state.Account = ptrAccount("acc-1")
+	m.state.Workspace = ptrWorkspace("ws-1")
 
 	cmd := m.handleTransition(msgs.SyncComplete{})
 	if cmd == nil {
@@ -248,8 +248,8 @@ func TestHandleTransitionSyncCompleteMissingStateNoops(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	m.state.user = ptrUser("user-1")
-	m.state.org = ptrOrg("org-1")
+	m.state.User = ptrUser("user-1")
+	m.state.Org = ptrOrg("org-1")
 	// Missing account/workspace should not panic or emit completion payload.
 
 	cmd := m.handleTransition(msgs.SyncComplete{})
