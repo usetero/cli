@@ -1,24 +1,24 @@
 package onboarding
 
+import "github.com/usetero/cli/internal/core/bootstrap"
+
 // Gate represents a deterministic onboarding gate/state.
-type Gate string
+type Gate = bootstrap.Gate
 
 const (
 	GatePreflight        Gate = "preflight"
-	GateAuthenticate     Gate = "authenticate"
-	GateRoleSelect       Gate = "role_select"
-	GateOrgSelect        Gate = "org_select"
-	GateOrgCreate        Gate = "org_create"
-	GateAccountSelect    Gate = "account_select"
-	GateAccountCreate    Gate = "account_create"
-	GateRuntimeInit      Gate = "runtime_init"
-	GateDatadogCheck     Gate = "datadog_check"
-	GateDatadogRegion    Gate = "datadog_region"
-	GateDatadogAPIKey    Gate = "datadog_api_key"
-	GateDatadogAppKey    Gate = "datadog_app_key"
-	GateDatadogDiscovery Gate = "datadog_discovery"
-	GateWorkspaceSelect  Gate = "workspace_select"
-	GateSync             Gate = "sync"
+	GateAuthenticate     Gate = bootstrap.GateAuthenticate
+	GateRoleSelect       Gate = bootstrap.GateRoleSelect
+	GateOrgSelect        Gate = bootstrap.GateOrgSelect
+	GateOrgCreate        Gate = bootstrap.GateOrgCreate
+	GateAccountSelect    Gate = bootstrap.GateAccountSelect
+	GateAccountCreate    Gate = bootstrap.GateAccountCreate
+	GateRuntimeInit      Gate = bootstrap.GateRuntimeInit
+	GateDatadogCheck     Gate = bootstrap.GateDatadogCheck
+	GateDatadogRegion    Gate = bootstrap.GateDatadogRegion
+	GateDatadogAPIKey    Gate = bootstrap.GateDatadogAPIKey
+	GateDatadogAppKey    Gate = bootstrap.GateDatadogAppKey
+	GateDatadogDiscovery Gate = bootstrap.GateDatadogDiscovery
+	GateWorkspaceSelect  Gate = bootstrap.GateWorkspaceSelect
+	GateSync             Gate = bootstrap.GateSync
 )
-
-func (g Gate) String() string { return string(g) }

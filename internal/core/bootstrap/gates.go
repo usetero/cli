@@ -19,3 +19,5 @@ const (
 	GateWorkspaceSelect  Gate = "workspace_select"
 	GateSync             Gate = "sync"
 )
+
+func (g Gate) String() string { return string(g) }
