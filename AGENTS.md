@@ -8,24 +8,24 @@ Start here, then pick your path:
 
 | Doc | What You'll Learn |
 |-----|-------------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Big picture. Three interfaces, two data patterns, code structure. |
-| [DATA.md](docs/DATA.md) | How data flows. Local vs remote, SQLite, PowerSync. |
+| [architecture/system-overview.md](docs/architecture/system-overview.md) | Big picture boundary, ownership, and runtime lifecycle. |
+| [architecture/data-flow.md](docs/architecture/data-flow.md) | How data flows between GraphQL, SQLite, PowerSync, and uploader. |
 
 Then pick your interface:
 
 | Doc | When to Read |
 |-----|--------------|
-| [TEA.md](docs/TEA.md) | Working on the terminal UI. Bubbletea patterns, models, layout. |
-| [MCP.md](docs/MCP.md) | Working on the MCP server. (Not yet implemented.) |
-| [CLI.md](docs/CLI.md) | Adding CLI commands. Direct API access. |
+| [interfaces/tui.md](docs/interfaces/tui.md) | Working on the terminal UI runtime and Bubble Tea boundaries. |
+| [interfaces/mcp.md](docs/interfaces/mcp.md) | MCP adapter constraints. (Planned surface.) |
+| [interfaces/cli.md](docs/interfaces/cli.md) | Adding CLI commands and keeping handlers thin. |
 
 Supporting docs:
 
 | Doc | When to Read |
 |-----|--------------|
-| [TESTING.md](docs/TESTING.md) | Writing tests. |
-| [LOGGING.md](docs/LOGGING.md) | Writing logs. |
-| [DEBUG_WORKFLOWS.md](docs/DEBUG_WORKFLOWS.md) | Running debug workflows safely (`dev` by default). |
+| [operations/testing.md](docs/operations/testing.md) | Writing behavior-first tests and using test workflows. |
+| [operations/logging.md](docs/operations/logging.md) | Writing logs that are useful in production diagnosis. |
+| [operations/debugging.md](docs/operations/debugging.md) | Running debug workflows safely (`dev` by default). |
 
 ## Agent Rules
 
@@ -54,7 +54,7 @@ Supporting docs:
 
 ```
 cmd/                 Wiring. Creates implementations, injects dependencies.
-internal/tui/        TUI. Bubbletea models, pages, chat.
+internal/app/        TUI. Bubble Tea models, pages, onboarding, chat.
 internal/cmd/        CLI commands. Direct API calls.
 internal/chat/       Chat client. Streaming, accumulation.
 internal/api/        GraphQL client. Control plane CRUD.
@@ -69,5 +69,5 @@ internal/auth/       Authentication.
 ```bash
 task do              # Format, lint, test - run before commits
 task run             # Fast iteration
-tail -f ~/.tero/environments/prd/tero.log  # Watch logs
+tail -f ~/.tero/environments/dev/tero.log  # Watch logs (use prd intentionally)
 ```

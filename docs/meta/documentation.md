@@ -1,34 +1,41 @@
-# Documentation
+# Documentation Standards
 
-How to write and maintain docs in this repository.
+These docs should feel like a strong engineer helping another engineer build the
+right model of the system. The goal is not documentation volume; the goal is
+faster correct decisions.
 
-## The Goal
+If a reader finishes a page and still cannot predict how the system behaves
+under failure or edge conditions, the page is not complete yet.
 
-Docs should transfer understanding, not just facts. A reader should leave with a mental model and be able to reason about cases not explicitly listed.
+## What a good doc should do
 
-## Principles
+A useful page in this repository should help a reader:
 
-1. Start with why before how.
-2. Teach invariants and decision boundaries.
-3. Name tradeoffs and rejected alternatives when relevant.
-4. Connect concepts to code paths.
-5. Keep one source of truth per concept.
+1. understand why this part of the system exists,
+2. predict non-happy-path behavior,
+3. identify what must not be broken,
+4. find the right code entry points quickly.
 
-## What Not to Document
+If a page only lists files or commands with no model behind it, it is not done.
 
-1. Language basics and obvious implementation details.
-2. API signatures already visible in code/godoc.
-3. Function-by-function walkthroughs with no architectural value.
+## Writing guidance
 
-## Maintenance Rules
+Start with context and intent, then explain runtime behavior, then anchor to
+invariants and code paths. Use lists where they improve clarity, but avoid
+defaulting to checklist style for conceptual docs.
 
-1. Rewrite for coherence; do not append patchwork.
-2. Delete stale content aggressively.
-3. Update docs when behavior, invariants, or workflows change.
-4. Prefer links over duplicated explanation.
+Prefer prose for “read-to-understand” documents (architecture, domain).
+Use compact lists for operational checklists and reference contracts.
 
-## Docs in `docs/meta/`
+## Maintenance guidance
 
-1. `documentation.md` (this file): writing guidance for human docs.
-2. `agent-docs.md`: writing guidance for `AGENTS.md` agent instruction files.
+Treat docs as part of the implementation contract:
 
+1. update docs in the same change as behavior/workflow changes,
+2. remove stale content aggressively,
+3. keep one canonical page per concept and link to it instead of duplicating.
+
+Coherence matters more than preserving old wording. Rewrite sections fully when
+the model changes.
+Incremental patching is fine for small corrections, but architectural shifts
+usually deserve a deliberate rewrite so the mental model stays coherent.
