@@ -2,6 +2,8 @@ package onboarding
 
 import "charm.land/lipgloss/v2"
 
+import appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+
 // View renders the current step.
 func (m *Model) View() string {
 	if m.step == nil {
@@ -10,7 +12,13 @@ func (m *Model) View() string {
 
 	view := m.step.View()
 	if v, ok := m.step.(VisibilityProvider); ok && v.Hidden() {
-		view = m.hiddenStepView(v.StatusText())
+		status := defaultStatusForGate(m.gate)
+		if s, ok := m.step.(StatusProvider); ok {
+			status = s.Status()
+		} else {
+			status.Details = v.StatusText()
+		}
+		view = m.hiddenStepView(status)
 	}
 
 	// Bottom-align step content in available space
@@ -21,9 +29,9 @@ func (m *Model) View() string {
 		Render(view)
 }
 
-func (m *Model) hiddenStepView(status string) string {
+func (m *Model) hiddenStepView(status appmsg.StepStatus) string {
 	s := m.theme.Styles
-	title := s.Title.Render("Getting ready")
-	body := s.Body.Render(status)
+	title := s.Title.Render(status.Title)
+	body := s.Body.Render(status.Details)
 	return lipgloss.JoinVertical(lipgloss.Left, title, "", body)
 }

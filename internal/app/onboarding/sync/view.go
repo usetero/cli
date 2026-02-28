@@ -46,7 +46,7 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 
 	default:
-		statusLine := m.spinner.View() + " " + s.Body.Render("Starting...")
+		statusLine := m.spinner.View() + " " + s.Body.Render("Initializing sync engine...")
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 	}
 }

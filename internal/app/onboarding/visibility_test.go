@@ -6,6 +6,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
+	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 )
 
 func TestViewDoesNotHideByGateAlone(t *testing.T) {
@@ -43,6 +45,36 @@ func TestViewUsesVisibilityProviderOverride(t *testing.T) {
 	}
 }
 
+func TestViewUsesStructuredStatusProviderOverride(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	m.SetSize(80, 20)
+	m.gate = GateDatadogCheck
+	m.step = hiddenStatusTestStep{
+		hiddenTestStep: hiddenTestStep{
+			fixedTestStep: fixedTestStep{view: "step view should be hidden"},
+			hidden:        true,
+			status:        "fallback status text",
+		},
+		status: appmsg.StepStatus{
+			Title:   "Datadog setup",
+			Details: "Checking Datadog configuration...",
+		},
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "Datadog setup") {
+		t.Fatalf("expected structured status title in hidden view, got: %q", view)
+	}
+	if !strings.Contains(view, "Checking Datadog configuration...") {
+		t.Fatalf("expected structured status details in hidden view, got: %q", view)
+	}
+	if strings.Contains(view, "fallback status text") {
+		t.Fatalf("expected structured status to override fallback status text")
+	}
+}
+
 type fixedTestStep struct {
 	view string
 }
@@ -61,3 +93,10 @@ type hiddenTestStep struct {
 
 func (s hiddenTestStep) Hidden() bool       { return s.hidden }
 func (s hiddenTestStep) StatusText() string { return s.status }
+
+type hiddenStatusTestStep struct {
+	hiddenTestStep
+	status appmsg.StepStatus
+}
+
+func (s hiddenStatusTestStep) Status() appmsg.StepStatus { return s.status }

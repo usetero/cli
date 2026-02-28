@@ -31,22 +31,25 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	}
 
 	for _, gate := range expected {
-		step := m.newStepForGate(gate)
+		step, ok := m.newStepForGate(gate)
+		if !ok {
+			t.Fatalf("gate %s is unexpectedly unsupported", gate)
+		}
 		if step == nil {
 			t.Fatalf("gate %s produced nil step", gate)
 		}
 	}
 }
 
-func TestNewStepForGateUnsupportedPanics(t *testing.T) {
+func TestNewStepForGateUnsupportedReturnsNotOK(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic for unsupported gate")
-		}
-	}()
-
-	_ = m.newStepForGate(Gate("unsupported_gate"))
+	step, ok := m.newStepForGate(Gate("unsupported_gate"))
+	if ok {
+		t.Fatal("expected unsupported gate to return ok=false")
+	}
+	if step != nil {
+		t.Fatalf("expected nil step for unsupported gate, got %T", step)
+	}
 }

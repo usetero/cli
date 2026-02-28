@@ -25,5 +25,10 @@ func (m *Model) goToGate(gate Gate) tea.Cmd {
 }
 
 func (m *Model) runGate(gate Gate) tea.Cmd {
-	return m.setStep(m.newStepForGate(gate))
+	step, ok := m.newStepForGate(gate)
+	if !ok {
+		m.scope.Error("unsupported onboarding gate", slog.String("gate", gate.String()))
+		return nil
+	}
+	return m.setStep(step)
 }

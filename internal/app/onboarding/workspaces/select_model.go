@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -96,4 +97,11 @@ func (m *SelectModel) Hidden() bool {
 
 func (m *SelectModel) StatusText() string {
 	return "Loading workspaces..."
+}
+
+func (m *SelectModel) Status() appmsg.StepStatus {
+	return appmsg.StepStatus{
+		Title:   "Choose workspace",
+		Details: "Loading workspaces...",
+	}
 }

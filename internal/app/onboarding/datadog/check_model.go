@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/api"
+	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
@@ -69,4 +70,11 @@ func (m *CheckModel) Hidden() bool {
 
 func (m *CheckModel) StatusText() string {
 	return "Checking Datadog configuration..."
+}
+
+func (m *CheckModel) Status() appmsg.StepStatus {
+	return appmsg.StepStatus{
+		Title:   "Datadog setup",
+		Details: "Checking Datadog configuration...",
+	}
 }
