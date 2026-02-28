@@ -13,22 +13,22 @@ func (m *Model) setStep(step Step) tea.Cmd {
 	return m.step.Init()
 }
 
-func (m *Model) goToGate(gate Gate) tea.Cmd {
+func (m *Model) goToGate(gate Gate, trigger string) tea.Cmd {
 	requested := gate
 	if rewind := m.rewindGateFor(gate); rewind != gate {
 		m.scope.Warn("rewinding onboarding gate due to unmet requirements", "requested_gate", requested.String(), "rewind_gate", rewind.String())
 		gate = rewind
 	}
-	m.gate = gate
 	m.scope.Debug("onboarding gate transition", slog.String("gate", gate.String()))
-	return m.runGate(gate)
+	return m.runGate(gate, trigger)
 }
 
-func (m *Model) runGate(gate Gate) tea.Cmd {
+func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
 	step, ok := m.newStepForGate(gate)
 	if !ok {
 		m.scope.Error("unsupported onboarding gate", slog.String("gate", gate.String()))
 		return nil
 	}
+	m.enterGate(gate, trigger)
 	return m.setStep(step)
 }

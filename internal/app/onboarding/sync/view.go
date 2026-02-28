@@ -25,9 +25,9 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, title, "", statusLine)
 
 	case *powersync.Syncing:
-		msg := "Syncing your data..."
+		msg := "Syncing your account data..."
 		if state.Progress != nil && state.Progress.Total > 0 {
-			msg = fmt.Sprintf("Syncing your data... (%s)", state.Progress)
+			msg = fmt.Sprintf("Syncing your account data... (%s)", state.Progress)
 		}
 		statusLine := m.spinner.View() + " " + s.Body.Render(msg)
 		parts := []string{title, "", statusLine}

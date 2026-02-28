@@ -97,7 +97,7 @@ func (m *SelectModel) Hidden() bool {
 
 func (m *SelectModel) Status() appmsg.StepStatus {
 	return appmsg.StepStatus{
-		Title:   "Choose workspace",
+		Title:   "Select workspace",
 		Details: "Loading workspaces...",
 	}
 }

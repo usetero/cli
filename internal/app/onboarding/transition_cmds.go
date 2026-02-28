@@ -11,7 +11,7 @@ import (
 func (m *Model) commandForTransition(event bootstrap.Event, transition bootstrap.Transition) tea.Cmd {
 	switch transition.Kind {
 	case bootstrap.TransitionAdvance:
-		nav := m.goToGate(transition.Next)
+		nav := m.goToGate(transition.Next, string(event.Kind))
 		if event.Kind == bootstrap.EventPreflightResolved {
 			m.scope.Info("preflight decision",
 				slog.String("outcome", string(event.Preflight.Outcome)),
@@ -19,6 +19,7 @@ func (m *Model) commandForTransition(event bootstrap.Event, transition bootstrap
 		}
 		return nav
 	case bootstrap.TransitionComplete:
+		m.completeCurrentGate(string(event.Kind))
 		m.scope.Info("onboarding complete",
 			slog.String("org_id", transition.Completion.Org.ID.String()),
 			slog.String("account_id", transition.Completion.Account.ID.String()),

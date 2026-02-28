@@ -3,6 +3,7 @@ package onboarding
 
 import (
 	"context"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -31,10 +32,11 @@ type Model struct {
 	state bootstrap.State
 
 	// Current step
-	gate   Gate
-	step   Step
-	width  int
-	height int
+	gate          Gate
+	gateEnteredAt time.Time
+	step          Step
+	width         int
+	height        int
 }
 
 // New creates a new onboarding model.
@@ -87,7 +89,7 @@ func (m *Model) SetOrgPreferences(prefs preferences.OrgPreferences) {
 // Init starts the onboarding flow with preflight resolution.
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("onboarding started")
-	return m.goToGate(GatePreflight)
+	return m.goToGate(GatePreflight, "init")
 }
 
 // StartFromOrgSelect starts the onboarding flow at the organization selection
@@ -96,5 +98,5 @@ func (m *Model) Init() tea.Cmd {
 // for selection instead of auto-selecting.
 func (m *Model) StartFromOrgSelect() tea.Cmd {
 	m.scope.Info("onboarding started from org select")
-	return m.goToGate(GateOrgSelect)
+	return m.goToGate(GateOrgSelect, "start_from_org_select")
 }

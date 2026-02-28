@@ -44,7 +44,7 @@ func (m *Model) View() string {
 		lipgloss.Left,
 		s.Title.Render("Getting ready"),
 		"",
-		s.Body.Render("Initializing account runtime..."),
+		s.Body.Render("Initializing your account runtime..."),
 	)
 }
 
@@ -57,6 +57,6 @@ func (m *Model) Hidden() bool { return true }
 func (m *Model) Status() appmsg.StepStatus {
 	return appmsg.StepStatus{
 		Title:   "Getting ready",
-		Details: "Initializing account runtime...",
+		Details: "Initializing your account runtime...",
 	}
 }
