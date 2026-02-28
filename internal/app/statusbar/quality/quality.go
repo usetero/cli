@@ -14,6 +14,7 @@ import (
 
 	"github.com/usetero/cli/internal/app/statusbar/listdetail"
 	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
+	"github.com/usetero/cli/internal/app/statusbar/viewkit"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/log"
@@ -250,21 +251,13 @@ func (m *Model) CompactView() string {
 // ExpandedView renders the detailed quality status for the drawer.
 func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		if m.db == nil {
-			return muted.Render("Waiting for sync to start...")
-		}
-		if m.summary.ActiveServices == 0 && m.summary.ServiceCount > 0 {
-			return muted.Render(fmt.Sprintf(
-				"%d services discovered, all disabled.\nEnable services to start detecting quality issues.",
-				m.summary.ServiceCount,
-			))
-		}
-		if m.summary.ActiveServices == 0 {
-			return muted.Render("No services discovered yet.")
-		}
-		dot := lipgloss.NewStyle().Foreground(m.theme.Success).Background(m.theme.Bg).Render("●")
-		return dot + " " + muted.Render("No quality issues detected.")
+		return viewkit.RenderPolicyEmptyState(
+			m.theme,
+			m.db != nil,
+			m.summary,
+			"Enable services to start detecting quality issues.",
+			"No quality issues detected.",
+		)
 	}
 
 	// Detail sub-view for a single category.
@@ -272,21 +265,12 @@ func (m *Model) ExpandedView(width, height int) string {
 		return m.detail.View(width)
 	}
 
-	var lines []string
-	lines = append(lines, m.renderHeadline())
-	lines = append(lines, "")
-
-	if tbl := m.renderCategoryTable(width); tbl != "" {
-		lines = append(lines, tbl)
-	}
-
-	if desc := m.cursorPrinciple(); desc != "" {
-		lines = append(lines, "")
-		muted := lipgloss.NewStyle().Foreground(m.theme.TextMuted).Background(m.theme.Bg)
-		lines = append(lines, muted.Render(desc))
-	}
-
-	return strings.Join(lines, "\n")
+	return viewkit.ComposeSummaryTableView(
+		m.theme,
+		m.renderHeadline(),
+		m.renderCategoryTable(width),
+		m.cursorPrinciple(),
+	)
 }
 
 // renderHeadline renders the quality summary.
