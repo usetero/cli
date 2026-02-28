@@ -1,8 +1,11 @@
 package preflight
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -14,14 +17,19 @@ func TestResolveOrg(t *testing.T) {
 		{ID: "org-2", Name: "Two"},
 	}
 
-	if got := resolveOrg(orgs, "org-2"); got == nil || got.ID != "org-2" {
-		t.Fatalf("resolveOrg by id failed: %+v", got)
+	got := resolveOrg(orgs, "org-2")
+	if got == nil || got.ID != "org-2" {
+		t.Fatalf("expected org-2, got %#v", got)
 	}
-	if got := resolveOrg(orgs, "missing"); got != nil {
-		t.Fatalf("resolveOrg with missing id should be nil, got %+v", got)
+
+	got = resolveOrg(orgs, "")
+	if got != nil {
+		t.Fatalf("expected nil when multiple orgs and no preference")
 	}
-	if got := resolveOrg([]domain.Organization{{ID: "only", Name: "Only"}}, ""); got == nil || got.ID != "only" {
-		t.Fatalf("resolveOrg single fallback failed: %+v", got)
+
+	got = resolveOrg(orgs[:1], "")
+	if got == nil || got.ID != "org-1" {
+		t.Fatalf("expected single org fallback, got %#v", got)
 	}
 }
 
@@ -33,13 +41,32 @@ func TestResolveAccount(t *testing.T) {
 		{ID: "acc-2", Name: "Two"},
 	}
 
-	if got := resolveAccount(accounts, "acc-1"); got == nil || got.ID != "acc-1" {
-		t.Fatalf("resolveAccount by id failed: %+v", got)
+	got := resolveAccount(accounts, "acc-2")
+	if got == nil || got.ID != "acc-2" {
+		t.Fatalf("expected acc-2, got %#v", got)
 	}
-	if got := resolveAccount(accounts, "missing"); got != nil {
-		t.Fatalf("resolveAccount with missing id should be nil, got %+v", got)
+
+	got = resolveAccount(accounts, "")
+	if got != nil {
+		t.Fatalf("expected nil when multiple accounts and no preference")
 	}
-	if got := resolveAccount([]domain.Account{{ID: "only", Name: "Only"}}, ""); got == nil || got.ID != "only" {
-		t.Fatalf("resolveAccount single fallback failed: %+v", got)
+
+	got = resolveAccount(accounts[:1], "")
+	if got == nil || got.ID != "acc-1" {
+		t.Fatalf("expected single account fallback, got %#v", got)
+	}
+}
+
+func TestPreflightOutcomeForError(t *testing.T) {
+	t.Parallel()
+
+	outcome, _ := preflightOutcomeForError(context.DeadlineExceeded)
+	if outcome != msgs.PreflightOutcomeFailed {
+		t.Fatalf("expected failed outcome for deadline exceeded, got %v", outcome)
+	}
+
+	outcome, _ = preflightOutcomeForError(errors.New("boom"))
+	if outcome != msgs.PreflightOutcomeInconclusive {
+		t.Fatalf("expected inconclusive outcome for generic error, got %v", outcome)
 	}
 }
