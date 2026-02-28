@@ -77,6 +77,12 @@ type Model struct {
 // emptyStatePollMsg triggers a policy summary fetch for the empty state.
 type emptyStatePollMsg struct{}
 
+// emptyStateSummaryMsg carries an async empty-state summary fetch result.
+type emptyStateSummaryMsg struct {
+	summary domain.AccountSummary
+	err     error
+}
+
 // New creates a new chat model.
 func New(
 	user *auth.User,

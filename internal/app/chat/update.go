@@ -27,6 +27,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case emptyStatePollMsg:
 		return m.handleEmptyStatePoll()
 
+	case emptyStateSummaryMsg:
+		m.handleEmptyStateSummary(msg)
+		return nil
+
 	case tea.MouseClickMsg:
 		if cmd := m.handleMouseClick(msg); cmd != nil {
 			cmds = append(cmds, cmd)

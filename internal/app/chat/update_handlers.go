@@ -39,14 +39,24 @@ func (m *Model) handleEmptyStatePoll() tea.Cmd {
 	if m.hasMessages() || m.db == nil {
 		return nil // stop polling once messages exist
 	}
+	return tea.Batch(m.fetchEmptyStateSummary(), m.pollEmptyState())
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-	if err == nil {
-		m.policySummary = &summary
+func (m *Model) fetchEmptyStateSummary() tea.Cmd {
+	db := m.db
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+		return emptyStateSummaryMsg{summary: summary, err: err}
 	}
-	return m.pollEmptyState()
+}
+
+func (m *Model) handleEmptyStateSummary(msg emptyStateSummaryMsg) {
+	if msg.err != nil {
+		return
+	}
+	m.policySummary = &msg.summary
 }
 
 func (m *Model) handleMouseClick(msg tea.MouseClickMsg) tea.Cmd {
