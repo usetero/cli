@@ -27,6 +27,7 @@ const (
 	pollInterval = 2 * time.Second
 	maxServices  = 50
 	dbTimeout    = 2 * time.Second
+	pollSource   = "services"
 
 	// levelDisplayThreshold is the minimum fraction of total volume a
 	// non-info level must reach to be shown (1%).
@@ -84,13 +85,16 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) poll() tea.Cmd {
-	return tabpoll.Tick(pollInterval)
+	return tabpoll.Tick(pollSource, pollInterval)
 }
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tabpoll.PollMsg:
+		if msg.Source != pollSource {
+			return nil
+		}
 		if m.db == nil {
 			return nil
 		}

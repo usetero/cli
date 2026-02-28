@@ -10,7 +10,9 @@ import (
 )
 
 // PollMsg triggers a tab data refresh tick.
-type PollMsg struct{}
+type PollMsg struct {
+	Source string
+}
 
 // DataMsg carries typed async fetch results back to a tab model.
 type DataMsg[T any] struct {
@@ -19,9 +21,9 @@ type DataMsg[T any] struct {
 }
 
 // Tick schedules the next poll tick.
-func Tick(interval time.Duration) tea.Cmd {
+func Tick(source string, interval time.Duration) tea.Cmd {
 	return tea.Tick(interval, func(time.Time) tea.Msg {
-		return PollMsg{}
+		return PollMsg{Source: source}
 	})
 }
 

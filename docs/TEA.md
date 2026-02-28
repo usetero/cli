@@ -36,6 +36,23 @@ Use reducers for policy:
 2. Handlers execute side effects (`tea.Cmd`, clipboard, DB via services/models).
 3. Reducer tests should cover edge-case transitions.
 
+## Message Design
+
+Message rules for clean TEA boundaries:
+
+1. Every message has one clear owner (the component that defines its semantics).
+2. Parent broadcast is allowed; child handling must be explicit and narrow.
+3. Timer/poll messages must be namespaced (for example `Source`/`ID`) so one tick cannot trigger unrelated children.
+4. `Update` should quickly ignore non-owned messages; do not schedule cmds for foreign messages.
+5. Messages should describe facts/events, not commands.
+
+Placement and naming:
+
+1. App-wide contracts: `internal/app/msgs` with `FeatureEvent` naming (example: `SyncStateChanged`).
+2. Feature-local contracts: `internal/app/<feature>/msgs`.
+3. Private internal messages can stay unexported in the feature package when not shared.
+4. Prefer specific names (`ServicesPollTick`) over ambiguous names (`PollMsg`) unless the type includes source identity.
+
 ## Projection Rule
 
 If a component has both render math and scroll/hit-test math, compute projection once and reuse it.
