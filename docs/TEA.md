@@ -53,6 +53,17 @@ Placement and naming:
 3. Private internal messages can stay unexported in the feature package when not shared.
 4. Prefer specific names (`ServicesPollTick`) over ambiguous names (`PollMsg`) unless the type includes source identity.
 
+## App Invariants
+
+Hard architecture rules for `internal/app` and onboarding gates:
+
+1. Never do network/DB/filesystem I/O in `Update` or `View`.
+2. All side effects run in `tea.Cmd` functions and return typed messages.
+3. `View` must be deterministic from current model state.
+4. Root app model composes children; children do not reach into parent state.
+5. Onboarding transition policy lives in one place; gates emit facts, not routing commands.
+6. Polling loops must prevent overlapping fetches when prior fetches are still in flight.
+
 ## Projection Rule
 
 If a component has both render math and scroll/hit-test math, compute projection once and reuse it.
