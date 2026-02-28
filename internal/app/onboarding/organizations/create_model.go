@@ -5,9 +5,9 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/google/uuid"
 
 	"github.com/usetero/cli/internal/api"
+
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
@@ -77,19 +77,5 @@ func (m *CreateModel) ShortHelp() []key.Binding {
 	}
 	return []key.Binding{
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "create")),
-	}
-}
-
-func (m *CreateModel) createOrg(name string) tea.Cmd {
-	return func() tea.Msg {
-		id := uuid.New()
-		result, err := m.services.Organizations.Create(m.ctx, api.CreateOrganizationInput{
-			ID:   id,
-			Name: name,
-		})
-		if err != nil {
-			return orgCreatedMsg{err: err}
-		}
-		return orgCreatedMsg{result: result}
 	}
 }

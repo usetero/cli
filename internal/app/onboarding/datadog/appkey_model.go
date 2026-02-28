@@ -7,7 +7,6 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/google/uuid"
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/domain"
@@ -117,22 +116,4 @@ func appKeyErrorMessage(err error) string {
 	}
 
 	return msg
-}
-
-func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
-	return func() tea.Msg {
-		id := uuid.New()
-		ddAccount, err := m.services.DatadogAccounts.CreateAccount(m.ctx, api.CreateDatadogAccountInput{
-			ID:        id,
-			AccountID: m.account.ID,
-			Name:      m.account.Name,
-			Site:      m.site.String(),
-			APIKey:    m.apiKey,
-			AppKey:    appKey,
-		})
-		if err != nil {
-			return accountCreatedMsg{err: err}
-		}
-		return accountCreatedMsg{datadogAccountID: ddAccount.ID}
-	}
 }
