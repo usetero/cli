@@ -23,6 +23,7 @@ func TestDependencyBoundaries(t *testing.T) {
 
 	apiRoot := filepath.Join(root, "internal", "api")
 	coreRoot := filepath.Join(root, "internal", "core")
+	chatRoot := filepath.Join(root, "internal", "app", "chat")
 
 	assertNoForbiddenImports(t, apiRoot, []string{
 		"github.com/usetero/cli/internal/app/",
@@ -30,6 +31,15 @@ func TestDependencyBoundaries(t *testing.T) {
 	assertNoForbiddenImports(t, coreRoot, []string{
 		"github.com/usetero/cli/internal/app/",
 		"github.com/usetero/cli/internal/api/",
+	})
+	assertNoForbiddenImportsExcept(t, chatRoot, []string{
+		"github.com/usetero/cli/internal/api/chatclient",
+	}, []string{
+		filepath.Join("internal", "app", "chat", "model.go"),
+		filepath.Join("internal", "app", "chat", "messagelist", "messagelist.go"),
+		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
+		filepath.Join("internal", "app", "chat", "messagelist", "round", "round.go"),
+		filepath.Join("internal", "app", "chat", "usecase"),
 	})
 }
 
@@ -70,6 +80,60 @@ func assertNoForbiddenImports(t *testing.T, dir string, forbiddenPrefixes []stri
 			p := strings.Trim(imp.Path.Value, `"`)
 			for _, prefix := range forbiddenPrefixes {
 				if strings.HasPrefix(p, prefix) {
+					t.Errorf("%s imports forbidden package %s", path, p)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", dir, err)
+	}
+}
+
+func assertNoForbiddenImportsExcept(t *testing.T, dir string, forbiddenPrefixes []string, allowedRelPaths []string) {
+	t.Helper()
+
+	root, err := findModuleRoot(dir)
+	if err != nil {
+		t.Fatalf("find module root: %v", err)
+	}
+
+	fs := token.NewFileSet()
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		f, err := parser.ParseFile(fs, path, nil, parser.ImportsOnly)
+		if err != nil {
+			return err
+		}
+		for _, imp := range f.Imports {
+			p := strings.Trim(imp.Path.Value, `"`)
+			for _, prefix := range forbiddenPrefixes {
+				if !strings.HasPrefix(p, prefix) {
+					continue
+				}
+				allowed := false
+				for _, allow := range allowedRelPaths {
+					if rel == allow || strings.HasPrefix(rel, allow+string(filepath.Separator)) {
+						allowed = true
+						break
+					}
+				}
+				if !allowed {
 					t.Errorf("%s imports forbidden package %s", path, p)
 				}
 			}

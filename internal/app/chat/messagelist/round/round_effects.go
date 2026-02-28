@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
@@ -24,41 +25,30 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
 		defer cancel()
 
-		// Convert to domain format and persist
-		domainResults := make([]domain.ToolResult, len(results))
-		for i, r := range results {
-			domainResults[i] = domain.ToolResult{
-				ToolUseID: r.ToolUseID,
-				IsError:   r.IsError(),
-				Content:   r.ToMap(),
-			}
-			if r.Error != nil {
-				domainResults[i].Error = r.Error.Message
-			}
-		}
-
-		msgID, err := m.db.Messages().CreateToolResultMessage(ctx, m.accountID, m.conversationID, domainResults)
+		prepared, err := m.toolLoop.PrepareNextTurn(ctx, usecase.PrepareNextTurnInput{
+			AccountID:      m.accountID,
+			ConversationID: m.conversationID,
+			Results:        results,
+			Session:        m.session,
+		})
 		if err != nil {
 			// Durability failure should not block the active chat loop.
 			m.scope.Error("failed to create tool result message", "error", err)
-			msgID = domain.NewMessageID()
 		}
-
 		if m.session == nil {
-			m.session = corechat.NewSession(m.conversationID, nil)
+			m.session = corechat.NewSession(m.conversationID, prepared.Messages)
 		}
-		toolResultMessage := m.session.AppendUserToolResultsMessage(msgID, domainResults)
-		messages := m.session.Messages()
+		messages := prepared.Messages
 		for _, summary := range summarizeHistory(messages) {
 			m.scope.Debug("next turn history", "summary", summary)
 		}
 
 		return nextTurnReady{
 			roundID:           m.id,
-			messageID:         msgID,
+			messageID:         prepared.MessageID,
 			results:           results,
 			messages:          messages,
-			toolResultMessage: toolResultMessage,
+			toolResultMessage: prepared.ToolResultMessage,
 		}
 	}
 }
@@ -125,8 +115,8 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 		msg.messageID,
 		input,
 		m.width,
-		m.db,
-		m.chatClient,
+		m.streamRunner,
+		m.assistantPersister,
 		m.toolRegistry,
 		m.scope,
 	)

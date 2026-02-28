@@ -5,8 +5,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 )
 
@@ -53,8 +53,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
-	errorClass := chatclient.ClassifyStreamError(msg.Err)
-	m.scope.Warn("stream failed", "class", string(errorClass), "error", msg.Err)
+	m.scope.Warn("stream failed", "class", usecase.ClassifyStreamError(msg.Err), "error", msg.Err)
 
 	// Forward to round so it transitions to StateFailed.
 	cmds := []tea.Cmd{m.messageList.Update(msg)}
@@ -88,7 +87,7 @@ func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
 	}
 
 	cmds = append(cmds, m.inputBar.Update(msg))
-	cmds = append(cmds, appmsg.ErrorCmd(chatclient.UserFacingStreamError(msg.Err), msg.Err, false))
+	cmds = append(cmds, appmsg.ErrorCmd(usecase.UserFacingStreamError(msg.Err), msg.Err, false))
 	return tea.Batch(cmds...)
 }
 

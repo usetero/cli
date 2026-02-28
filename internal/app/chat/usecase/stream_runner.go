@@ -20,7 +20,7 @@ type StreamUpdate struct {
 
 // StreamRunner executes one chat stream request and emits ordered updates.
 type StreamRunner interface {
-	Start(ctx context.Context, req chatclient.Request) <-chan StreamUpdate
+	Start(ctx context.Context, req StreamRequest) <-chan StreamUpdate
 }
 
 // ChatStreamRunner bridges chatclient snapshots into use-case updates.
@@ -32,7 +32,7 @@ func NewChatStreamRunner(client chatclient.Client) *ChatStreamRunner {
 	return &ChatStreamRunner{client: client}
 }
 
-func (r *ChatStreamRunner) Start(ctx context.Context, req chatclient.Request) <-chan StreamUpdate {
+func (r *ChatStreamRunner) Start(ctx context.Context, req StreamRequest) <-chan StreamUpdate {
 	updates := make(chan StreamUpdate, 10)
 	if r == nil || r.client == nil {
 		close(updates)
@@ -43,7 +43,12 @@ func (r *ChatStreamRunner) Start(ctx context.Context, req chatclient.Request) <-
 		defer close(updates)
 
 		var lastSnapshot *corechat.StreamSnapshot
-		result, err := r.client.StreamSnapshots(ctx, req, func(s corechat.StreamSnapshot) {
+		wireReq := chatclient.Request{
+			ConversationID:  req.ConversationID.String(),
+			Messages:        req.Messages,
+			ContextEntities: req.ContextEntities,
+		}
+		result, err := r.client.StreamSnapshots(ctx, wireReq, func(s corechat.StreamSnapshot) {
 			ss := s
 			lastSnapshot = &ss
 			if !s.Done {

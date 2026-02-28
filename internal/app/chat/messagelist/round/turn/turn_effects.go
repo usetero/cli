@@ -4,6 +4,7 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -17,30 +18,13 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
 		defer cancel()
 
-		msgID, err := m.db.Messages().CreateAssistantMessage(
-			ctx,
-			m.accountID,
-			m.conversationID,
-			msg.Model,
-		)
+		msgID, err := m.assistantPersister.PersistAssistant(ctx, usecase.PersistAssistantInput{
+			AccountID:      m.accountID,
+			ConversationID: m.conversationID,
+			Message:        *msg,
+		})
 		if err != nil {
-			m.scope.Error("failed to create assistant message", "error", err)
-			return nil
-		}
-
-		content, err := domain.EncodeBlocks(msg.Content)
-		if err != nil {
-			m.scope.Error("failed to encode blocks", "error", err)
-			return nil
-		}
-
-		if err := m.db.Messages().UpdateContent(ctx, msgID, content); err != nil {
-			m.scope.Error("failed to update content", "error", err)
-			return nil
-		}
-
-		if err := m.db.Messages().UpdateMeta(ctx, msgID, msg.Model, msg.StopReason); err != nil {
-			m.scope.Error("failed to update meta", "error", err)
+			m.scope.Error("failed to persist assistant message", "error", err)
 			return nil
 		}
 

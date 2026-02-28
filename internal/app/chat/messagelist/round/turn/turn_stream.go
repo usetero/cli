@@ -4,8 +4,8 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -19,8 +19,8 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 	updates := make(chan streamUpdate, 10)
 	m.stream = &streamState{updates: updates, cancel: cancel}
 
-	req := chatclient.Request{
-		ConversationID:  m.conversationID.String(),
+	req := usecase.StreamRequest{
+		ConversationID:  m.conversationID,
 		Messages:        messages,
 		ContextEntities: chatContext,
 	}
@@ -50,8 +50,7 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		if m.stream != nil && m.stream.done {
 			return nil
 		}
-		errorClass := chatclient.ClassifyStreamError(update.err)
-		m.scope.Error("stream error", "class", string(errorClass), "error", update.err)
+		m.scope.Error("stream error", "class", usecase.ClassifyStreamError(update.err), "error", update.err)
 		m.assistantMessage.Cancel()
 		m.state = StateComplete
 		turnID := m.userMessage.ID()

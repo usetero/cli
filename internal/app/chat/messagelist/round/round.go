@@ -7,6 +7,7 @@ import (
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
@@ -56,9 +57,10 @@ type Model struct {
 	startTime time.Time
 	endTime   time.Time
 
-	db           sqlite.DB
-	chatClient   chatclient.Client
-	toolRegistry *chattools.Registry
+	streamRunner       usecase.StreamRunner
+	assistantPersister usecase.AssistantPersister
+	toolLoop           usecase.ToolLoop
+	toolRegistry       *chattools.Registry
 }
 
 // New creates a new round from explicit user input.
@@ -75,6 +77,9 @@ func New(
 	scope log.Scope,
 ) *Model {
 	scope = scope.Child("round")
+	streamRunner := usecase.NewChatStreamRunner(chatClient)
+	assistantPersister := usecase.NewSQLiteAssistantPersister(db)
+	toolLoop := usecase.NewSQLiteToolLoop(db)
 
 	// Create first turn with user's explicit input
 	firstTurn := turn.New(
@@ -84,26 +89,27 @@ func New(
 		userMessageID,
 		input,
 		width,
-		db,
-		chatClient,
+		streamRunner,
+		assistantPersister,
 		toolRegistry,
 		scope,
 	)
 
 	return &Model{
-		theme:          theme,
-		scope:          scope,
-		id:             userMessageID,
-		conversationID: conversationID,
-		accountID:      accountID,
-		turns:          []*turn.Model{firstTurn},
-		thinking:       thinking.New(theme, thinking.Settings{Label: "Thinking"}),
-		state:          StateActive,
-		width:          width,
-		startTime:      time.Now(),
-		db:             db,
-		chatClient:     chatClient,
-		toolRegistry:   toolRegistry,
+		theme:              theme,
+		scope:              scope,
+		id:                 userMessageID,
+		conversationID:     conversationID,
+		accountID:          accountID,
+		turns:              []*turn.Model{firstTurn},
+		thinking:           thinking.New(theme, thinking.Settings{Label: "Thinking"}),
+		state:              StateActive,
+		width:              width,
+		startTime:          time.Now(),
+		streamRunner:       streamRunner,
+		assistantPersister: assistantPersister,
+		toolLoop:           toolLoop,
+		toolRegistry:       toolRegistry,
 	}
 }
 

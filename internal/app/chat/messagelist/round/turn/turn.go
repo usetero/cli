@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
@@ -15,7 +14,6 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -53,9 +51,9 @@ type Model struct {
 	// Protocol guard telemetry (incremented on dropped/malformed lifecycle events).
 	protocolViolationCount int
 
-	db           sqlite.DB
-	streamRunner usecase.StreamRunner
-	toolRegistry *chattools.Registry
+	streamRunner       usecase.StreamRunner
+	assistantPersister usecase.AssistantPersister
+	toolRegistry       *chattools.Registry
 }
 
 // streamState holds the channel for receiving stream updates.
@@ -98,23 +96,23 @@ func New(
 	userMessageID domain.MessageID,
 	input msgs.UserSubmittedInput,
 	width int,
-	db sqlite.DB,
-	chatClient chatclient.Client,
+	streamRunner usecase.StreamRunner,
+	assistantPersister usecase.AssistantPersister,
 	toolRegistry *chattools.Registry,
 	scope log.Scope,
 ) *Model {
 	scope = scope.Child("turn")
 	return &Model{
-		theme:            theme,
-		scope:            scope,
-		conversationID:   conversationID,
-		accountID:        accountID,
-		userMessage:      user.New(theme.WithBg(theme.BgElevated), userMessageID, input, width-block.BorderWidth),
-		assistantMessage: assistant.New(theme, userMessageID, "", width, toolRegistry, scope),
-		state:            StateIdle,
-		width:            width,
-		db:               db,
-		streamRunner:     usecase.NewChatStreamRunner(chatClient),
-		toolRegistry:     toolRegistry,
+		theme:              theme,
+		scope:              scope,
+		conversationID:     conversationID,
+		accountID:          accountID,
+		userMessage:        user.New(theme.WithBg(theme.BgElevated), userMessageID, input, width-block.BorderWidth),
+		assistantMessage:   assistant.New(theme, userMessageID, "", width, toolRegistry, scope),
+		state:              StateIdle,
+		width:              width,
+		streamRunner:       streamRunner,
+		assistantPersister: assistantPersister,
+		toolRegistry:       toolRegistry,
 	}
 }
