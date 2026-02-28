@@ -33,11 +33,8 @@ func TestDefaultGateDefinitionsCoverageAndContracts(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing definition for gate %s", gate)
 		}
-		if def.runner == nil {
-			t.Fatalf("gate %s has nil runner", gate)
-		}
-		if def.runner.Gate() != gate {
-			t.Fatalf("gate %s runner mismatch: got %s", gate, def.runner.Gate())
+		if def.newStep == nil {
+			t.Fatalf("gate %s has nil step factory", gate)
 		}
 	}
 }

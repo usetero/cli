@@ -13,16 +13,13 @@ import (
 )
 
 type gateDefinition struct {
-	runner  GateRunner
+	newStep func(m *Model) Step
 	display gateDisplayPolicy
 }
 
-func gateDef(gate Gate, newStep func(m *Model) Step, opts ...func(*gateDefinition)) gateDefinition {
+func gateDef(newStep func(m *Model) Step, opts ...func(*gateDefinition)) gateDefinition {
 	def := gateDefinition{
-		runner: gateRunnerFunc{
-			gate: gate,
-			new:  newStep,
-		},
+		newStep: newStep,
 	}
 	for _, opt := range opts {
 		opt(&def)
@@ -45,51 +42,51 @@ func (m *Model) definitionForGate(gate Gate) gateDefinition {
 
 func defaultGateDefinitions() map[Gate]gateDefinition {
 	return map[Gate]gateDefinition{
-		GatePreflight: gateDef(GatePreflight, func(m *Model) Step {
+		GatePreflight: gateDef(func(m *Model) Step {
 			return preflight.New(m.ctx, m.theme, m.services, m.auth, m.userPrefs, m.orgPrefs, m.scope)
 		}),
-		GateAuthenticate: gateDef(GateAuthenticate, func(m *Model) Step {
+		GateAuthenticate: gateDef(func(m *Model) Step {
 			return auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.scope)
 		}),
-		GateRoleSelect: gateDef(GateRoleSelect, func(m *Model) Step {
+		GateRoleSelect: gateDef(func(m *Model) Step {
 			return role.New(m.theme, m.userPrefs, m.scope)
 		}),
-		GateOrgSelect: gateDef(GateOrgSelect, func(m *Model) Step {
+		GateOrgSelect: gateDef(func(m *Model) Step {
 			return organizations.NewSelect(m.ctx, m.theme, m.services, m.userPrefs, m.auth, m.scope)
 		}),
-		GateOrgCreate: gateDef(GateOrgCreate, func(m *Model) Step {
+		GateOrgCreate: gateDef(func(m *Model) Step {
 			return organizations.NewCreate(m.ctx, m.theme, m.services, m.userPrefs, m.scope)
 		}),
-		GateAccountSelect: gateDef(GateAccountSelect, func(m *Model) Step {
+		GateAccountSelect: gateDef(func(m *Model) Step {
 			return accounts.NewSelect(m.ctx, m.theme, *m.state.Org, m.services, m.orgPrefs, m.scope)
 		}),
-		GateAccountCreate: gateDef(GateAccountCreate, func(m *Model) Step {
+		GateAccountCreate: gateDef(func(m *Model) Step {
 			return accounts.NewCreate(m.ctx, m.theme, *m.state.Org, m.services, m.orgPrefs, m.scope)
 		}),
-		GateRuntimeInit: gateDef(GateRuntimeInit, func(m *Model) Step {
+		GateRuntimeInit: gateDef(func(m *Model) Step {
 			return runtimeinit.New(m.theme, *m.state.Org, *m.state.Account, m.scope)
 		},
 			withDisplay(gateDisplayPolicy{hidden: true, status: "Initializing account runtime..."}),
 		),
-		GateDatadogCheck: gateDef(GateDatadogCheck, func(m *Model) Step {
+		GateDatadogCheck: gateDef(func(m *Model) Step {
 			return datadog.NewCheck(m.ctx, m.theme, *m.state.Account, m.services, m.scope)
 		}),
-		GateDatadogRegion: gateDef(GateDatadogRegion, func(m *Model) Step {
+		GateDatadogRegion: gateDef(func(m *Model) Step {
 			return datadog.NewRegion(m.theme, m.scope)
 		}),
-		GateDatadogAPIKey: gateDef(GateDatadogAPIKey, func(m *Model) Step {
+		GateDatadogAPIKey: gateDef(func(m *Model) Step {
 			return datadog.NewAPIKey(m.ctx, m.theme, *m.state.Account, m.state.DDSite, m.services, m.scope)
 		}),
-		GateDatadogAppKey: gateDef(GateDatadogAppKey, func(m *Model) Step {
+		GateDatadogAppKey: gateDef(func(m *Model) Step {
 			return datadog.NewAppKey(m.ctx, m.theme, *m.state.Account, m.state.DDSite, m.state.DDAPIKey, m.services, m.scope)
 		}),
-		GateDatadogDiscovery: gateDef(GateDatadogDiscovery, func(m *Model) Step {
+		GateDatadogDiscovery: gateDef(func(m *Model) Step {
 			return datadog.NewDiscovery(m.ctx, m.theme, m.state.DDAccount, m.services, m.scope)
 		}),
-		GateWorkspaceSelect: gateDef(GateWorkspaceSelect, func(m *Model) Step {
+		GateWorkspaceSelect: gateDef(func(m *Model) Step {
 			return workspaces.NewSelect(m.ctx, m.theme, *m.state.Account, m.services, m.orgPrefs, m.scope)
 		}),
-		GateSync: gateDef(GateSync, func(m *Model) Step {
+		GateSync: gateDef(func(m *Model) Step {
 			return sync.New(m.theme, m.syncer, m.scope)
 		}),
 	}
