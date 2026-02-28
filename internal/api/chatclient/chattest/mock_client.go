@@ -3,7 +3,7 @@ package chattest
 import (
 	"context"
 
-	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/domain"
 )
 

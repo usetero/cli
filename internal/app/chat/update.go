@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
 )
 
 // Update handles messages.

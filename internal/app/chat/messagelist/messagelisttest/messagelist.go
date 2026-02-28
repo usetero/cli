@@ -4,8 +4,8 @@ package messagelisttest
 import (
 	"testing"
 
+	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
-	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"

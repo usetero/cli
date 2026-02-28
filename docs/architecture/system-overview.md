@@ -49,8 +49,10 @@ The boundaries are deliberately simple:
 - `cmd/` and `internal/cmd/` compose dependencies and start surfaces.
 - `internal/app/` and feature subpackages render and coordinate UI state.
 - `internal/core/bootstrap/` owns deterministic onboarding transition policy.
-- service/domain packages (`internal/api`, `internal/auth`, `internal/chat`,
-  `internal/domain`, `internal/preferences`) expose contracts and adapters.
+- `internal/core/chat/` owns pure chat lifecycle/session policy.
+- service/domain packages (`internal/api`, `internal/api/chatclient`,
+  `internal/auth`, `internal/domain`, `internal/preferences`) expose contracts
+  and adapters.
 - data/sync packages (`internal/sqlite`, `internal/powersync`, `internal/upload`)
   own projection storage and convergence mechanics.
 

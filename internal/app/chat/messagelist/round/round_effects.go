@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 )
@@ -45,7 +45,7 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 		}
 
 		if m.session == nil {
-			m.session = chatclient.NewSession(m.conversationID, nil)
+			m.session = corechat.NewSession(m.conversationID, nil)
 		}
 		toolResultMessage := m.session.AppendUserToolResultsMessage(msgID, domainResults)
 		messages := m.session.Messages()

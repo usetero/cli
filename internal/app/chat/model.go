@@ -6,11 +6,12 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	chatclient "github.com/usetero/cli/internal/api/chatclient"
+	"github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/inputbar"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
 	"github.com/usetero/cli/internal/auth"
-	chatclient "github.com/usetero/cli/internal/chat"
-	"github.com/usetero/cli/internal/chat/tools"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
@@ -54,7 +55,7 @@ type Model struct {
 
 	// Conversation is created lazily on first message
 	conversationID domain.ConversationID
-	session        *chatclient.Session
+	session        *corechat.Session
 
 	user      *auth.User
 	account   domain.Account

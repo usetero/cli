@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
-	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/sqlite"
 )

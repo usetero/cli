@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/usetero/cli/internal/chat"
+	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/sqlite"
 )

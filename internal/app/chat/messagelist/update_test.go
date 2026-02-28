@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/usetero/cli/internal/api/chatclient"
+	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	"github.com/usetero/cli/internal/chat"
-	"github.com/usetero/cli/internal/chat/chattest"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"

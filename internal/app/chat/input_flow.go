@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -91,7 +91,7 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 		}
 
 		if m.session == nil {
-			m.session = chatclient.NewSession(m.conversationID, nil)
+			m.session = corechat.NewSession(m.conversationID, nil)
 		}
 		if len(domainResults) > 0 {
 			m.session.AppendUserToolResultsMessage(msgID, domainResults)

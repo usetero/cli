@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/usetero/cli/internal/chat/protocolv2"
+	"github.com/usetero/cli/internal/api/chatclient/protocolv2"
 	"github.com/usetero/cli/internal/domain"
 )
 

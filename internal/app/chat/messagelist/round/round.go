@@ -4,10 +4,11 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	chatclient "github.com/usetero/cli/internal/api/chatclient"
+	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
-	chattools "github.com/usetero/cli/internal/chat/tools"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
@@ -46,7 +47,7 @@ type Model struct {
 	accountID      domain.AccountID
 
 	turns    []*turn.Model
-	session  *chatclient.Session // authoritative in-memory history for active tool loop
+	session  *corechat.Session // authoritative in-memory history for active tool loop
 	thinking *thinking.Model
 	state    State
 	lastErr  error
@@ -116,6 +117,6 @@ func (m *Model) StartStream(messages []domain.Message, context []domain.ContextE
 	if len(m.turns) == 0 {
 		return nil
 	}
-	m.session = chatclient.NewSession(m.conversationID, messages)
+	m.session = corechat.NewSession(m.conversationID, messages)
 	return m.turns[0].StartStream(messages, context)
 }

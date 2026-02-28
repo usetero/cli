@@ -9,6 +9,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/api"
+	chatclient "github.com/usetero/cli/internal/api/chatclient"
+	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat"
 	"github.com/usetero/cli/internal/app/keybar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
@@ -17,8 +19,6 @@ import (
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
-	chatclient "github.com/usetero/cli/internal/chat"
-	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/auth/authtest"
-	"github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 )

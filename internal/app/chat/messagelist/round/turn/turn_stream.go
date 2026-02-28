@@ -4,8 +4,8 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
+	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
 	"github.com/usetero/cli/internal/domain"
 )
 

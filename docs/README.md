@@ -71,7 +71,8 @@ Use these paths when docs and code should be read together:
 - `internal/app/app.go`: root Bubble Tea model and high-level state orchestration.
 - `internal/app/onboarding/`: onboarding orchestrator and gate steps.
 - `internal/core/bootstrap/`: deterministic onboarding transition engine.
-- `internal/chat/`: chat protocol/reducer contracts.
+- `internal/core/chat/`: pure chat lifecycle/session policy.
+- `internal/api/chatclient/`: chat streaming client/protocol adapters.
 - `internal/powersync/`: sync lifecycle and projection pipeline.
 
 ## Documentation Quality Bar

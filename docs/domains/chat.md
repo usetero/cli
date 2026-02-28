@@ -9,9 +9,11 @@ So the code is split intentionally.
 
 ## The two-layer model
 
-`internal/chat` is the protocol core.
-It owns stream event interpretation, reducer semantics, and snapshot behavior.
-Think of it as the correctness engine for “what this stream means.”
+`internal/api/chatclient` is the protocol/transport adapter layer.
+It owns stream wire contracts, parsing, and remote request/response handling.
+
+`internal/core/chat` is the pure chat lifecycle core (for example session/history
+state handling and deterministic message-history mutations).
 
 `internal/app/chat` is the UI/runtime shell.
 It owns Bubble Tea interaction, focus/layout, round lifecycle wiring, and
@@ -32,9 +34,10 @@ These are domain invariants, not “nice to have” details.
 
 ## How to change chat safely
 
-When a change touches stream or turn lifecycle behavior, start in
-`internal/chat` and verify reducer-level semantics first. Then wire it into
-`internal/app/chat` as message-driven orchestration.
+When a change touches transport protocol behavior, start in
+`internal/api/chatclient`. When it touches pure lifecycle/state behavior, start
+in `internal/core/chat`. Then wire the result into `internal/app/chat` as
+message-driven orchestration.
 
 When a change is purely presentation-level, keep it in `internal/app/chat`
 without leaking policy into protocol layers.

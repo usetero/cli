@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	chatclient "github.com/usetero/cli/internal/chat"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
@@ -95,7 +95,7 @@ func (m *Model) handleLifecycleMessage(msg tea.Msg) updateDispatch {
 
 	case msgs.ToolResultMessagePersisted:
 		if m.session == nil {
-			m.session = chatclient.NewSession(m.conversationID, nil)
+			m.session = corechat.NewSession(m.conversationID, nil)
 		}
 		m.session.AppendMessage(msg.Message)
 		return updateDispatch{handled: true}
