@@ -8,11 +8,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	chat "github.com/usetero/cli/internal/api/chatclient"
-	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/tea/teatest"

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
-	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"

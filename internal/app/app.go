@@ -10,8 +10,8 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
-	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat"
+	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/app/keybar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"

@@ -3,9 +3,9 @@ package messagelist
 import (
 	"charm.land/bubbles/v2/key"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
-	"github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
+	"github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"

@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
-	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"

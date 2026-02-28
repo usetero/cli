@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
-	chattools "github.com/usetero/cli/internal/api/chatclient/tools"
+	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/domain"
 	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/upload"
