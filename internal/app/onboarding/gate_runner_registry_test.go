@@ -54,13 +54,13 @@ func TestDefaultGateDefinitionsPolicies(t *testing.T) {
 		t.Fatalf("runtime init hidden policy should include status text")
 	}
 
-	if !defs[GateAccountSelect].requirement.needsOrg {
+	if !defs[GateAccountSelect].requirement.NeedsOrg {
 		t.Fatalf("account select should require org")
 	}
-	if !defs[GateDatadogAPIKey].requirement.needsDDSite {
+	if !defs[GateDatadogAPIKey].requirement.NeedsDDSite {
 		t.Fatalf("datadog api key should require selected site")
 	}
-	if !defs[GateSync].requirement.needsWorkspace {
+	if !defs[GateSync].requirement.NeedsWorkspace {
 		t.Fatalf("sync should require workspace")
 	}
 }

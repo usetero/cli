@@ -69,36 +69,36 @@ func defaultGateDefinitions() map[Gate]gateDefinition {
 		}),
 		GateAccountSelect: gateDef(GateAccountSelect, func(m *Model) Step {
 			return accounts.NewSelect(m.ctx, m.theme, *m.state.org, m.services, m.orgPrefs, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true})),
 		GateAccountCreate: gateDef(GateAccountCreate, func(m *Model) Step {
 			return accounts.NewCreate(m.ctx, m.theme, *m.state.org, m.services, m.orgPrefs, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true})),
 		GateRuntimeInit: gateDef(GateRuntimeInit, func(m *Model) Step {
 			return runtimeinit.New(m.theme, *m.state.org, *m.state.account, m.scope)
 		},
-			withRequirement(gateRequirement{needsOrg: true, needsAccount: true}),
+			withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true}),
 			withDisplay(gateDisplayPolicy{hidden: true, status: "Initializing account runtime..."}),
 		),
 		GateDatadogCheck: gateDef(GateDatadogCheck, func(m *Model) Step {
 			return datadog.NewCheck(m.ctx, m.theme, *m.state.account, m.services, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true})),
 		GateDatadogRegion: gateDef(GateDatadogRegion, func(m *Model) Step {
 			return datadog.NewRegion(m.theme, m.scope)
 		}),
 		GateDatadogAPIKey: gateDef(GateDatadogAPIKey, func(m *Model) Step {
 			return datadog.NewAPIKey(m.ctx, m.theme, *m.state.account, m.state.ddSite, m.services, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true, needsDDSite: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true})),
 		GateDatadogAppKey: gateDef(GateDatadogAppKey, func(m *Model) Step {
 			return datadog.NewAppKey(m.ctx, m.theme, *m.state.account, m.state.ddSite, m.state.ddAPIKey, m.services, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true, needsDDSite: true, needsDDAPIKey: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true, NeedsDDAPIKey: true})),
 		GateDatadogDiscovery: gateDef(GateDatadogDiscovery, func(m *Model) Step {
 			return datadog.NewDiscovery(m.ctx, m.theme, m.state.ddAccount, m.services, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true, needsDDAccount: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDAccount: true})),
 		GateWorkspaceSelect: gateDef(GateWorkspaceSelect, func(m *Model) Step {
 			return workspaces.NewSelect(m.ctx, m.theme, *m.state.account, m.services, m.orgPrefs, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true})),
 		GateSync: gateDef(GateSync, func(m *Model) Step {
 			return sync.New(m.theme, m.syncer, m.scope)
-		}, withRequirement(gateRequirement{needsOrg: true, needsAccount: true, needsWorkspace: true})),
+		}, withRequirement(gateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsWorkspace: true})),
 	}
 }
