@@ -5,14 +5,8 @@ func EventFromMessage(msg any) (Event, bool) {
 	switch msg := msg.(type) {
 	case PreflightResolved:
 		return Event{
-			Kind: EventPreflightResolved,
-			Preflight: PreflightContext{
-				Outcome:      msg.State.Outcome,
-				HasValidAuth: msg.State.HasValidAuth,
-				Role:         msg.State.Role,
-				Org:          msg.State.Org,
-				Account:      msg.State.Account,
-			},
+			Kind:      EventPreflightResolved,
+			Preflight: msg.State,
 		}, true
 	case Authenticated:
 		return Event{Kind: EventAuthenticated, User: msg.User}, true

@@ -12,7 +12,7 @@ func TestApplyPreflight(t *testing.T) {
 	org := &domain.Organization{ID: "org-1", Name: "Org 1"}
 	account := &domain.Account{ID: "acc-1", Name: "Acc 1"}
 
-	state, next := ApplyPreflight(State{}, PreflightContext{
+	state, next := ApplyPreflight(State{}, PreflightState{
 		Outcome:      PreflightOutcomeResolved,
 		HasValidAuth: true,
 		Role:         RolePlatform,

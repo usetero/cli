@@ -32,7 +32,7 @@ const (
 // Event is the canonical transition input consumed by the bootstrap engine.
 type Event struct {
 	Kind             EventKind
-	Preflight        PreflightContext
+	Preflight        PreflightState
 	User             auth.User
 	Role             string
 	Org              domain.Organization

@@ -16,17 +16,8 @@ type State struct {
 	DDAccount domain.DatadogAccountID
 }
 
-// PreflightContext captures the resolved bootstrap context.
-type PreflightContext struct {
-	Outcome      PreflightOutcome
-	HasValidAuth bool
-	Role         string
-	Org          *domain.Organization
-	Account      *domain.Account
-}
-
 // ApplyPreflight applies preflight resolution to state and returns next gate.
-func ApplyPreflight(state State, resolved PreflightContext) (State, Gate) {
+func ApplyPreflight(state State, resolved PreflightState) (State, Gate) {
 	next := DecideNextGate(PreflightInput{
 		Outcome:      resolved.Outcome,
 		HasValidAuth: resolved.HasValidAuth,
