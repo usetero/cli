@@ -13,14 +13,14 @@ Standard debugging workflows for Tero CLI. These workflows are task-driven and e
 
 Default debug environment is `dev`.
 
-1. `task debug:*` defaults to `TERO_ENV=dev`.
+1. `task debug:*` defaults to `DEBUG_ENV=dev`.
 2. `prd` is blocked unless `ALLOW_PRD=1` is explicitly set.
 
 Example:
 
 ```bash
 task debug:ui:logs:slow
-task debug:ui:logs:slow TERO_ENV=prd ALLOW_PRD=1
+task debug:ui:logs:slow DEBUG_ENV=prd ALLOW_PRD=1
 ```
 
 ## Command Map
@@ -44,6 +44,19 @@ Onboarding:
 
 ```bash
 task debug:onboarding:trace
+```
+
+Sync:
+
+```bash
+task debug:sync:trace
+task debug:sync:health
+```
+
+Data:
+
+```bash
+task debug:data:snapshot
 ```
 
 ## Slow UI Diagnostics
@@ -80,3 +93,17 @@ Use `debug:<area>:<action>`:
 
 Add new debug tasks in `taskfiles/debug.yml`.
 
+## Triage Matrix
+
+Use this when debugging quickly:
+
+1. UI lag, key delay, drawer jitter:
+   1. `task debug:ui:logs:slow`
+   2. `task debug:ui:smoke`
+2. Onboarding stuck or unclear gate transitions:
+   1. `task debug:onboarding:trace`
+3. Sync stuck, reconnect loops, upload confusion:
+   1. `task debug:sync:trace`
+   2. `task debug:sync:health`
+4. Data mismatch (UI vs expected local state):
+   1. `task debug:data:snapshot`

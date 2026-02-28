@@ -1,13 +1,13 @@
 version: "3"
 
 vars:
-  TERO_ENV: '{{.TERO_ENV | default "dev"}}'
+  DEBUG_ENV: '{{.DEBUG_ENV | default "dev"}}'
   ENV_PREFIX:
     sh: |
-      if [ "{{.TERO_ENV}}" = "local" ]; then
+      if [ "{{.DEBUG_ENV}}" = "local" ]; then
         echo ""
       else
-        echo "doppler run -c {{.TERO_ENV}} --"
+        echo "doppler run -c {{.DEBUG_ENV}} --"
       fi
 
 tasks:
@@ -15,21 +15,24 @@ tasks:
     desc: List debug workflows
     cmds:
       - |
-        echo "Debug workflows (default TERO_ENV=dev):"
+        echo "Debug workflows (default DEBUG_ENV=dev):"
         echo "  task debug:ui:run"
         echo "  task debug:ui:logs:slow"
         echo "  task debug:ui:logs:all"
         echo "  task debug:ui:smoke"
         echo "  task debug:onboarding:trace"
+        echo "  task debug:sync:trace"
+        echo "  task debug:sync:health"
+        echo "  task debug:data:snapshot"
         echo ""
         echo "To target prd explicitly (discouraged):"
-        echo "  task debug:ui:logs:slow TERO_ENV=prd ALLOW_PRD=1"
+        echo "  task debug:ui:logs:slow DEBUG_ENV=prd ALLOW_PRD=1"
 
   guard:non-prd:
     internal: true
     cmds:
       - |
-        if [ "{{.TERO_ENV}}" = "prd" ] && [ "{{.ALLOW_PRD}}" != "1" ]; then
+        if [ "{{.DEBUG_ENV}}" = "prd" ] && [ "{{.ALLOW_PRD}}" != "1" ]; then
           echo "Refusing to run debug workflow against prd without explicit override."
           echo "Set ALLOW_PRD=1 if you intentionally need prd."
           exit 1
@@ -52,7 +55,7 @@ tasks:
     deps: [guard:non-prd]
     cmds:
       - |
-        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        LOG_FILE="$HOME/.tero/environments/{{.DEBUG_ENV}}/tero.log"
         echo "Tailing slow UI logs from $LOG_FILE"
         tail -n 200 -f "$LOG_FILE" | rg --line-buffered "slow app update|slow app render|SESSION START"
 
@@ -61,7 +64,7 @@ tasks:
     deps: [guard:non-prd]
     cmds:
       - |
-        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        LOG_FILE="$HOME/.tero/environments/{{.DEBUG_ENV}}/tero.log"
         echo "Tailing app logs from $LOG_FILE"
         tail -n 200 -f "$LOG_FILE"
 
@@ -70,7 +73,66 @@ tasks:
     deps: [guard:non-prd]
     cmds:
       - |
-        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        LOG_FILE="$HOME/.tero/environments/{{.DEBUG_ENV}}/tero.log"
         echo "Tailing onboarding trace from $LOG_FILE"
         tail -n 200 -f "$LOG_FILE" | rg --line-buffered "onboarding gate transition|preflight|runtime initialized|datadog|workspace|sync completed|onboarding complete|slow app update|slow app render|SESSION START"
 
+  sync:trace:
+    desc: Tail syncer/uploader activity with slow-loop context
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        LOG_FILE="$HOME/.tero/environments/{{.DEBUG_ENV}}/tero.log"
+        echo "Tailing sync trace from $LOG_FILE"
+        tail -n 300 -f "$LOG_FILE" | rg --line-buffered "scope=powersync|scope=app/upload|sync progress|sync complete|transient error|slow app update|slow app render|SESSION START"
+
+  sync:health:
+    desc: Show recent sync/uploader health snapshot from logs
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        LOG_FILE="$HOME/.tero/environments/{{.DEBUG_ENV}}/tero.log"
+        if [ ! -f "$LOG_FILE" ]; then
+          echo "No log file found at $LOG_FILE"
+          exit 1
+        fi
+        echo "Recent sync health ($LOG_FILE):"
+        echo ""
+        echo "Latest sync + upload lines:"
+        tail -n 800 "$LOG_FILE" | rg "scope=powersync|scope=app/upload|sync complete|transient error|upload loop started|completed batch" | tail -n 40 || true
+        echo ""
+        echo "Latest slow-loop lines:"
+        tail -n 800 "$LOG_FILE" | rg "slow app update|slow app render" | tail -n 20 || true
+        echo ""
+        echo "Latest error lines:"
+        tail -n 800 "$LOG_FILE" | rg " level=ERROR " | tail -n 20 || true
+
+  data:snapshot:
+    desc: Show local SQLite snapshot (counts + pending upload rows)
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        if ! command -v sqlite3 >/dev/null 2>&1; then
+          echo "sqlite3 not installed; install sqlite3 to use debug:data:snapshot"
+          exit 1
+        fi
+        DB_PATH=$(find "$HOME/.tero/environments/{{.DEBUG_ENV}}/orgs" -type f -name "*.sqlite" 2>/dev/null | head -n 1)
+        if [ -z "$DB_PATH" ]; then
+          echo "No SQLite database found under ~/.tero/environments/{{.DEBUG_ENV}}/orgs"
+          exit 1
+        fi
+        echo "SQLite snapshot: $DB_PATH"
+        echo ""
+        sqlite3 "$DB_PATH" <<'SQL'
+        .mode column
+        .headers on
+        SELECT 'services' AS table_name, COUNT(*) AS row_count FROM services
+        UNION ALL
+        SELECT 'log_event_statuses', COUNT(*) FROM log_event_statuses
+        UNION ALL
+        SELECT 'messages', COUNT(*) FROM messages
+        UNION ALL
+        SELECT 'conversations', COUNT(*) FROM conversations
+        UNION ALL
+        SELECT 'ps_crud_pending', COUNT(*) FROM ps_crud;
+        SQL
