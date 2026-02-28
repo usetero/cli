@@ -9,6 +9,28 @@ import (
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
+func (m *Model) toCoreState() bootstrap.State {
+	return bootstrap.State{
+		User:      m.state.user,
+		Org:       m.state.org,
+		Account:   m.state.account,
+		Workspace: m.state.workspace,
+		DDSite:    m.state.ddSite,
+		DDAPIKey:  m.state.ddAPIKey,
+		DDAccount: m.state.ddAccount,
+	}
+}
+
+func (m *Model) applyCoreState(state bootstrap.State) {
+	m.state.user = state.User
+	m.state.org = state.Org
+	m.state.account = state.Account
+	m.state.workspace = state.Workspace
+	m.state.ddSite = state.DDSite
+	m.state.ddAPIKey = state.DDAPIKey
+	m.state.ddAccount = state.DDAccount
+}
+
 func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOutcome {
 	m.scope.Debug("preflight complete",
 		slog.String("outcome", string(msg.State.Outcome)),
@@ -35,8 +57,7 @@ func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOu
 		},
 	)
 	nextGate := Gate(next)
-	m.state.org = nextState.Org
-	m.state.account = nextState.Account
+	m.applyCoreState(nextState)
 	if m.state.org != nil && m.state.account == nil {
 		m.services = m.services.WithAccountID("")
 	}
@@ -51,99 +72,117 @@ func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOu
 
 func (m *Model) handleAuthenticated(msg msgs.Authenticated) TransitionOutcome {
 	m.scope.Info("user authenticated", "user_id", msg.User.ID)
-	m.state.user = &msg.User
-	return advance(GateRoleSelect)
+	nextState, next := bootstrap.ApplyAuthenticated(m.toCoreState(), msg.User)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleRoleSelected(msg msgs.RoleSelected) TransitionOutcome {
 	m.scope.Info("role selected", slog.String("role", msg.Role))
-	return advance(GateOrgSelect)
+	nextState, next := bootstrap.ApplyRoleSelected(m.toCoreState(), msg.Role)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleOrgSelected(msg msgs.OrgSelected) TransitionOutcome {
 	m.scope.Info("organization selected", slog.String("org_id", msg.Org.ID.String()))
-	m.state.org = &msg.Org
+	nextState, next := bootstrap.ApplyOrgSelected(m.toCoreState(), msg.Org)
+	m.applyCoreState(nextState)
 	m.services = m.services.WithAccountID("")
-	return advance(GateAccountSelect)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleNoOrgs() TransitionOutcome {
 	m.scope.Debug("no organizations found")
-	return advance(GateOrgCreate)
+	nextState, next := bootstrap.ApplyNoOrgs(m.toCoreState())
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleOrgCreated(msg msgs.OrgCreated) TransitionOutcome {
 	m.scope.Info("organization created", slog.String("org_id", msg.Org.ID.String()))
-	m.state.org = &msg.Org
+	nextState, next := bootstrap.ApplyOrgCreated(m.toCoreState(), msg.Org)
+	m.applyCoreState(nextState)
 	m.services = m.services.WithAccountID("")
-	return advance(GateAccountSelect)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleAccountSelected(msg msgs.AccountSelected) TransitionOutcome {
 	m.scope.Info("account selected", slog.String("account_id", msg.Account.ID.String()))
-	m.state.org = &msg.Org
-	m.state.account = &msg.Account
-	return advance(GateRuntimeInit)
+	nextState, next := bootstrap.ApplyAccountSelected(m.toCoreState(), msg.Org, msg.Account)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleNoAccounts(msg msgs.NoAccounts) TransitionOutcome {
 	m.scope.Debug("no accounts found")
-	m.state.org = &msg.Org
-	return advance(GateAccountCreate)
+	nextState, next := bootstrap.ApplyNoAccounts(m.toCoreState(), msg.Org)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleAccountCreated(msg msgs.AccountCreated) TransitionOutcome {
 	m.scope.Info("account created", slog.String("account_id", msg.Account.ID.String()))
-	m.state.org = &msg.Org
-	m.state.account = &msg.Account
-	return advance(GateRuntimeInit)
+	nextState, next := bootstrap.ApplyAccountCreated(m.toCoreState(), msg.Org, msg.Account)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleRuntimeReady(msg msgs.RuntimeReady) TransitionOutcome {
 	m.scope.Info("runtime initialized", slog.String("account_id", msg.Account.ID.String()))
-	m.state.org = &msg.Org
-	m.state.account = &msg.Account
+	nextState, next := bootstrap.ApplyRuntimeReady(m.toCoreState(), msg.Org, msg.Account)
+	m.applyCoreState(nextState)
 	m.services = m.services.WithAccountID(msg.Account.ID)
-	return advance(GateDatadogCheck)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogReady() TransitionOutcome {
 	m.scope.Debug("datadog ready")
-	return advance(GateWorkspaceSelect)
+	nextState, next := bootstrap.ApplyDatadogReady(m.toCoreState())
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogNeeded() TransitionOutcome {
 	m.scope.Debug("datadog setup needed")
-	return advance(GateDatadogRegion)
+	nextState, next := bootstrap.ApplyDatadogNeeded(m.toCoreState())
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogRegionSelected(msg msgs.DatadogRegionSelected) TransitionOutcome {
 	m.scope.Info("datadog region selected", slog.String("site", string(msg.Site)))
-	m.state.ddSite = msg.Site
-	return advance(GateDatadogAPIKey)
+	nextState, next := bootstrap.ApplyDatadogRegionSelected(m.toCoreState(), msg.Site)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogAPIKeyEntered(msg msgs.DatadogAPIKeyEntered) TransitionOutcome {
 	m.scope.Debug("datadog api key validated")
-	m.state.ddAPIKey = msg.APIKey
-	return advance(GateDatadogAppKey)
+	nextState, next := bootstrap.ApplyDatadogAPIKeyEntered(m.toCoreState(), msg.APIKey)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogAccountCreated(msg msgs.DatadogAccountCreated) TransitionOutcome {
 	m.scope.Info("datadog account created", slog.String("datadog_account_id", msg.DatadogAccountID.String()))
-	m.state.ddAccount = msg.DatadogAccountID
-	return advance(GateDatadogDiscovery)
+	nextState, next := bootstrap.ApplyDatadogAccountCreated(m.toCoreState(), msg.DatadogAccountID)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleDatadogDiscoveryComplete() TransitionOutcome {
 	m.scope.Info("datadog discovery complete")
-	return advance(GateWorkspaceSelect)
+	nextState, next := bootstrap.ApplyDatadogDiscoveryComplete(m.toCoreState())
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleWorkspaceSelected(msg msgs.WorkspaceSelected) TransitionOutcome {
 	m.scope.Info("workspace selected", slog.String("workspace_id", string(msg.Workspace.ID)))
-	m.state.workspace = &msg.Workspace
-	return advance(GateSync)
+	nextState, next := bootstrap.ApplyWorkspaceSelected(m.toCoreState(), msg.Workspace)
+	m.applyCoreState(nextState)
+	return advance(Gate(next))
 }
 
 func (m *Model) handleSyncComplete() TransitionOutcome {
