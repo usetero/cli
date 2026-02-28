@@ -38,7 +38,7 @@ func newTestChat(t *testing.T, client chat.Client) *Model {
 // blocks until cancelled. Suitable for testing cancel mid-stream.
 func blockingClient() *chattest.MockClient {
 	return &chattest.MockClient{
-		StreamFunc: func(ctx context.Context, _ chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error) {
+		StreamFunc: func(ctx context.Context, _ chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error) {
 			onMessage(&domain.Message{
 				ID:      "asst-1",
 				Content: []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}}},
@@ -53,14 +53,14 @@ func blockingClient() *chattest.MockClient {
 // text response.
 func completingClient() *chattest.MockClient {
 	return &chattest.MockClient{
-		StreamFunc: func(_ context.Context, _ chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error) {
+		StreamFunc: func(_ context.Context, _ chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error) {
 			onMessage(&domain.Message{
 				ID:         "asst-1",
 				Model:      "test-model",
 				StopReason: "end_turn",
 				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}}},
 			})
-			return &chat.StreamResult{}, nil
+			return &corechat.StreamResult{}, nil
 		},
 	}
 }
@@ -68,7 +68,7 @@ func completingClient() *chattest.MockClient {
 // failingClient returns a mock client that returns an error immediately.
 func failingClient() *chattest.MockClient {
 	return &chattest.MockClient{
-		StreamFunc: func(_ context.Context, _ chat.Request, _ func(*domain.Message)) (*chat.StreamResult, error) {
+		StreamFunc: func(_ context.Context, _ chat.Request, _ func(*domain.Message)) (*corechat.StreamResult, error) {
 			return nil, errors.New("connection failed")
 		},
 	}
@@ -76,7 +76,7 @@ func failingClient() *chattest.MockClient {
 
 func abortedClient(reason string) *chattest.MockClient {
 	return &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			msg := &domain.Message{
 				ID:      "asst-1",
 				Model:   "test-model",
@@ -91,7 +91,7 @@ func abortedClient(reason string) *chattest.MockClient {
 				Done:           true,
 				Message:        msg,
 			})
-			return &chat.StreamResult{Message: msg}, nil
+			return &corechat.StreamResult{Message: msg}, nil
 		},
 	}
 }
@@ -101,7 +101,7 @@ func recordingCompletingClient(requests *[]chat.Request) *chattest.MockClient {
 	call := 0
 
 	return &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			mu.Lock()
 			*requests = append(*requests, req)
 			call++
@@ -133,7 +133,7 @@ func recordingCompletingClient(requests *[]chat.Request) *chattest.MockClient {
 				})
 			}
 
-			return &chat.StreamResult{Message: msg}, nil
+			return &corechat.StreamResult{Message: msg}, nil
 		},
 	}
 }
@@ -290,7 +290,7 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 	var mu sync.Mutex
 	call := 0
 	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			mu.Lock()
 			requests = append(requests, req)
 			call++
@@ -322,7 +322,7 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 					Done:           true,
 					Message:        msg,
 				})
-				return &chat.StreamResult{Message: msg}, nil
+				return &corechat.StreamResult{Message: msg}, nil
 			}
 
 			msg := &domain.Message{
@@ -339,7 +339,7 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 				Done:           true,
 				Message:        msg,
 			})
-			return &chat.StreamResult{Message: msg}, nil
+			return &corechat.StreamResult{Message: msg}, nil
 		},
 	}
 
@@ -379,7 +379,7 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 	var mu sync.Mutex
 	call := 0
 	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			mu.Lock()
 			requests = append(requests, req)
 			call++
@@ -410,7 +410,7 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 					Done:           true,
 					Message:        msg,
 				})
-				return &chat.StreamResult{Message: msg}, nil
+				return &corechat.StreamResult{Message: msg}, nil
 			}
 
 			msg := &domain.Message{
@@ -427,7 +427,7 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 				Done:           true,
 				Message:        msg,
 			})
-			return &chat.StreamResult{Message: msg}, nil
+			return &corechat.StreamResult{Message: msg}, nil
 		},
 	}
 

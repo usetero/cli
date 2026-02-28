@@ -19,36 +19,24 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 	updates := make(chan streamUpdate, 10)
 	m.stream = &streamState{updates: updates, cancel: cancel}
 
+	req := chatclient.Request{
+		ConversationID:  m.conversationID.String(),
+		Messages:        messages,
+		ContextEntities: chatContext,
+	}
+
+	runUpdates := m.streamRunner.Start(ctx, req)
 	go func() {
 		defer close(updates)
-
-		req := chatclient.Request{
-			ConversationID:  m.conversationID.String(),
-			Messages:        messages,
-			ContextEntities: chatContext,
-		}
-
-		var lastSnapshot *corechat.StreamSnapshot
-		result, err := m.chatClient.StreamSnapshots(ctx, req, func(s corechat.StreamSnapshot) {
-			ss := s
-			lastSnapshot = &ss
-			if !s.Done {
-				updates <- streamUpdate{message: s.Message, status: s.Status}
+		for u := range runUpdates {
+			updates <- streamUpdate{
+				message: u.Message,
+				status:  u.Status,
+				abort:   u.AbortReason,
+				result:  u.Result,
+				err:     u.Err,
+				done:    u.Done,
 			}
-		})
-
-		if err != nil {
-			updates <- streamUpdate{err: err, done: true}
-		} else {
-			var lastMessage *domain.Message
-			var status corechat.StreamStatus
-			var abort string
-			if lastSnapshot != nil {
-				lastMessage = lastSnapshot.Message
-				status = lastSnapshot.Status
-				abort = lastSnapshot.AbortReason
-			}
-			updates <- streamUpdate{message: lastMessage, status: status, abort: abort, result: result, done: true}
 		}
 	}()
 

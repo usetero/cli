@@ -10,15 +10,15 @@ import (
 
 // MockClient is a mock implementation of chat.Client for testing.
 type MockClient struct {
-	StreamFunc          func(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error)
-	StreamSnapshotsFunc func(ctx context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error)
+	StreamFunc          func(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error)
+	StreamSnapshotsFunc func(ctx context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error)
 	SetAccountFunc      func(accountID domain.AccountID)
 	WithAccountFunc     func(accountID domain.AccountID) chat.Client
 }
 
 var _ chat.Client = (*MockClient)(nil)
 
-func (m *MockClient) Stream(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error) {
+func (m *MockClient) Stream(ctx context.Context, req chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error) {
 	if m.StreamFunc != nil {
 		return m.StreamFunc(ctx, req, onMessage)
 	}
@@ -29,10 +29,10 @@ func (m *MockClient) Stream(ctx context.Context, req chat.Request, onMessage fun
 			}
 		})
 	}
-	return &chat.StreamResult{}, nil
+	return &corechat.StreamResult{}, nil
 }
 
-func (m *MockClient) StreamSnapshots(ctx context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
+func (m *MockClient) StreamSnapshots(ctx context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 	if m.StreamSnapshotsFunc != nil {
 		return m.StreamSnapshotsFunc(ctx, req, onSnapshot)
 	}
@@ -43,7 +43,7 @@ func (m *MockClient) StreamSnapshots(ctx context.Context, req chat.Request, onSn
 			}
 		})
 	}
-	return &chat.StreamResult{}, nil
+	return &corechat.StreamResult{}, nil
 }
 
 func (m *MockClient) SetAccountID(accountID domain.AccountID) {

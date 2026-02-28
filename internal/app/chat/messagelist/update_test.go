@@ -9,6 +9,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
@@ -43,7 +44,7 @@ func newStreamingMessageList(t *testing.T) *Model {
 	db := dbtest.OpenTestDB(t)
 
 	client := &chattest.MockClient{
-		StreamFunc: func(_ context.Context, _ chat.Request, onMessage func(*domain.Message)) (*chat.StreamResult, error) {
+		StreamFunc: func(_ context.Context, _ chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error) {
 			msg := &domain.Message{ID: "asst-1", Content: []domain.Block{
 				{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "hello"}},
 			}}

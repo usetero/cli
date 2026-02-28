@@ -10,6 +10,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
@@ -53,7 +54,7 @@ type Model struct {
 	protocolViolationCount int
 
 	db           sqlite.DB
-	chatClient   chatclient.Client
+	streamRunner usecase.StreamRunner
 	toolRegistry *chattools.Registry
 }
 
@@ -69,7 +70,7 @@ type streamUpdate struct {
 	message *domain.Message
 	status  corechat.StreamStatus
 	abort   string
-	result  *chatclient.StreamResult // final result, only set on done
+	result  *corechat.StreamResult // final result, only set on done
 	err     error
 	done    bool
 }
@@ -113,7 +114,7 @@ func New(
 		state:            StateIdle,
 		width:            width,
 		db:               db,
-		chatClient:       chatClient,
+		streamRunner:     usecase.NewChatStreamRunner(chatClient),
 		toolRegistry:     toolRegistry,
 	}
 }
