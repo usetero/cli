@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOutcome {
@@ -20,14 +21,27 @@ func (m *Model) handlePreflightResolved(msg msgs.PreflightResolved) TransitionOu
 		slog.Bool("account_resolved", msg.State.Account != nil),
 		slog.String("error", msg.State.Error))
 
-	nextGate := decidePreflightGate(msg)
-	if msg.State.Org != nil {
-		m.state.org = msg.State.Org
+	nextState, next := bootstrap.ApplyPreflight(
+		bootstrap.State{
+			Org:     m.state.org,
+			Account: m.state.account,
+		},
+		bootstrap.PreflightResolved{
+			Outcome:      bootstrap.PreflightOutcome(msg.State.Outcome),
+			HasValidAuth: msg.State.HasValidAuth,
+			Role:         msg.State.Role,
+			Org:          msg.State.Org,
+			Account:      msg.State.Account,
+		},
+	)
+	nextGate := Gate(next)
+	m.state.org = nextState.Org
+	m.state.account = nextState.Account
+	if m.state.org != nil && m.state.account == nil {
 		m.services = m.services.WithAccountID("")
 	}
-	if msg.State.Account != nil {
-		m.state.account = msg.State.Account
-		m.services = m.services.WithAccountID(msg.State.Account.ID)
+	if m.state.account != nil {
+		m.services = m.services.WithAccountID(m.state.account.ID)
 	}
 	m.scope.Info("preflight decision",
 		slog.String("outcome", string(msg.State.Outcome)),
