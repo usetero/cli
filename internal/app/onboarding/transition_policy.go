@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // transitionOutcomeFor is the single transition policy entrypoint.
@@ -52,17 +53,12 @@ func (m *Model) transitionOutcomeFor(msg tea.Msg) (TransitionOutcome, bool) {
 }
 
 func decidePreflightGate(msg msgs.PreflightResolved) Gate {
-	if msg.State.Outcome == msgs.PreflightOutcomeFailed || !msg.State.HasValidAuth {
-		return GateAuthenticate
-	}
-	if msg.State.Role != msgs.RolePlatform && msg.State.Role != msgs.RoleEngineer {
-		return GateRoleSelect
-	}
-	if msg.State.Org == nil {
-		return GateOrgSelect
-	}
-	if msg.State.Account == nil {
-		return GateAccountSelect
-	}
-	return GateRuntimeInit
+	next := bootstrap.DecideNextGate(bootstrap.PreflightInput{
+		Outcome:      bootstrap.PreflightOutcome(msg.State.Outcome),
+		HasValidAuth: msg.State.HasValidAuth,
+		Role:         msg.State.Role,
+		HasOrg:       msg.State.Org != nil,
+		HasAccount:   msg.State.Account != nil,
+	})
+	return Gate(next)
 }
