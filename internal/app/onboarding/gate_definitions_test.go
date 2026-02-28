@@ -38,16 +38,3 @@ func TestDefaultGateDefinitionsCoverageAndContracts(t *testing.T) {
 		}
 	}
 }
-
-func TestDefaultGateDefinitionsPolicies(t *testing.T) {
-	t.Parallel()
-
-	defs := defaultGateDefinitions()
-
-	if !defs[GateRuntimeInit].display.hidden {
-		t.Fatalf("runtime init should be hidden by default")
-	}
-	if defs[GateRuntimeInit].display.status == "" {
-		t.Fatalf("runtime init hidden policy should include status text")
-	}
-}

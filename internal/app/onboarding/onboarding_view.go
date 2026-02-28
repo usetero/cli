@@ -9,10 +9,6 @@ func (m *Model) View() string {
 	}
 
 	view := m.step.View()
-	policy := m.displayPolicyForGate(m.gate)
-	if policy.hidden {
-		view = m.hiddenStepView(policy.status)
-	}
 	if v, ok := m.step.(VisibilityProvider); ok && v.Hidden() {
 		view = m.hiddenStepView(v.StatusText())
 	}

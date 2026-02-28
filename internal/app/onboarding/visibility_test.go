@@ -8,38 +8,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-func TestDisplayPolicyForGate(t *testing.T) {
-	t.Parallel()
-	m := newTestModel(t)
-
-	runtimePolicy := m.displayPolicyForGate(GateRuntimeInit)
-	if !runtimePolicy.hidden {
-		t.Fatalf("runtime init gate should be hidden by default")
-	}
-	if runtimePolicy.status == "" {
-		t.Fatalf("runtime init gate should provide default status text")
-	}
-
-	rolePolicy := m.displayPolicyForGate(GateRoleSelect)
-	if rolePolicy.hidden {
-		t.Fatalf("role select should be visible by default")
-	}
-}
-
-func TestViewUsesGateDisplayPolicyHiddenState(t *testing.T) {
+func TestViewDoesNotHideByGateAlone(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
 	m.SetSize(80, 20)
 	m.gate = GateRuntimeInit
-	m.step = fixedTestStep{view: "runtime detail that should be hidden"}
+	m.step = fixedTestStep{view: "runtime detail should be visible"}
 
 	view := m.View()
-	if !strings.Contains(view, "Getting ready") {
-		t.Fatalf("expected hidden gate heading in view, got: %q", view)
-	}
-	if strings.Contains(view, "runtime detail that should be hidden") {
-		t.Fatalf("expected hidden gate to suppress step detail")
+	if !strings.Contains(view, "runtime detail should be visible") {
+		t.Fatalf("expected gate alone not to hide step view, got: %q", view)
 	}
 }
 

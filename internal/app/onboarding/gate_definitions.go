@@ -14,7 +14,6 @@ import (
 
 type gateDefinition struct {
 	newStep func(m *Model) Step
-	display gateDisplayPolicy
 }
 
 var gateDefinitions = defaultGateDefinitions()
@@ -27,12 +26,6 @@ func gateDef(newStep func(m *Model) Step, opts ...func(*gateDefinition)) gateDef
 		opt(&def)
 	}
 	return def
-}
-
-func withDisplay(display gateDisplayPolicy) func(*gateDefinition) {
-	return func(def *gateDefinition) {
-		def.display = display
-	}
 }
 
 func (m *Model) definitionForGate(gate Gate) gateDefinition {
@@ -67,9 +60,7 @@ func defaultGateDefinitions() map[Gate]gateDefinition {
 		}),
 		GateRuntimeInit: gateDef(func(m *Model) Step {
 			return runtimeinit.New(m.theme, *m.state.Org, *m.state.Account, m.scope)
-		},
-			withDisplay(gateDisplayPolicy{hidden: true, status: "Initializing account runtime..."}),
-		),
+		}),
 		GateDatadogCheck: gateDef(func(m *Model) Step {
 			return datadog.NewCheck(m.ctx, m.theme, *m.state.Account, m.services, m.scope)
 		}),
