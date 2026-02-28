@@ -11,6 +11,7 @@ import (
 
 	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/auth/authtest"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 )
@@ -586,8 +587,8 @@ data: [DONE]
 
 	client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
 
-	var snaps []chat.StreamSnapshot
-	_, err := client.StreamSnapshots(context.Background(), validRequest(), func(s chat.StreamSnapshot) {
+	var snaps []corechat.StreamSnapshot
+	_, err := client.StreamSnapshots(context.Background(), validRequest(), func(s corechat.StreamSnapshot) {
 		snaps = append(snaps, s)
 	})
 	if err != nil {
@@ -602,8 +603,8 @@ data: [DONE]
 	if !last.Done {
 		t.Fatal("last.Done = false, want true")
 	}
-	if last.Status != chat.StreamStatusCompleted {
-		t.Fatalf("last.Status = %q, want %q", last.Status, chat.StreamStatusCompleted)
+	if last.Status != corechat.StreamStatusCompleted {
+		t.Fatalf("last.Status = %q, want %q", last.Status, corechat.StreamStatusCompleted)
 	}
 	if last.ConversationID != "00000000-0000-0000-0000-000000000001" {
 		t.Fatalf("last.ConversationID = %q, want 00000000-0000-0000-0000-000000000001", last.ConversationID)
@@ -643,8 +644,8 @@ func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.
 	ctx, cancel := context.WithCancelCause(context.Background())
 	cancel(errors.New("user_cancelled"))
 
-	var snaps []chat.StreamSnapshot
-	result, err := client.StreamSnapshots(ctx, validRequest(), func(s chat.StreamSnapshot) {
+	var snaps []corechat.StreamSnapshot
+	result, err := client.StreamSnapshots(ctx, validRequest(), func(s corechat.StreamSnapshot) {
 		snaps = append(snaps, s)
 	})
 	if err != nil {
@@ -661,8 +662,8 @@ func TestClient_StreamSnapshots_CancelledContextEmitsAbortedSnapshot(t *testing.
 	if !last.Done {
 		t.Fatal("last.Done = false, want true")
 	}
-	if last.Status != chat.StreamStatusAborted {
-		t.Fatalf("last.Status = %q, want %q", last.Status, chat.StreamStatusAborted)
+	if last.Status != corechat.StreamStatusAborted {
+		t.Fatalf("last.Status = %q, want %q", last.Status, corechat.StreamStatusAborted)
 	}
 	if last.AbortReason != "user_cancelled" {
 		t.Fatalf("last.AbortReason = %q, want user_cancelled", last.AbortReason)

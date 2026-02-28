@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -185,7 +185,7 @@ func TestCancel(t *testing.T) {
 
 		cmd := m.handleStreamUpdate(streamUpdate{
 			message: &domain.Message{ID: "asst-1"},
-			status:  chatclient.StreamStatusAborted,
+			status:  corechat.StreamStatusAborted,
 			abort:   "user_cancelled",
 			done:    true,
 		})
@@ -202,7 +202,7 @@ func TestCancel(t *testing.T) {
 
 		cmd := m.handleStreamUpdate(streamUpdate{
 			message: &domain.Message{ID: "asst-1"},
-			status:  chatclient.StreamStatusAborted,
+			status:  corechat.StreamStatusAborted,
 			abort:   "context_canceled",
 			done:    true,
 		})

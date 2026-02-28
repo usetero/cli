@@ -11,6 +11,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/sqlite"
@@ -66,7 +67,7 @@ type streamState struct {
 // streamUpdate is sent through the channel as the stream progresses.
 type streamUpdate struct {
 	message *domain.Message
-	status  chatclient.StreamStatus
+	status  corechat.StreamStatus
 	abort   string
 	result  *chatclient.StreamResult // final result, only set on done
 	err     error

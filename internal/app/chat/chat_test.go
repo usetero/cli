@@ -13,6 +13,7 @@ import (
 	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -75,17 +76,17 @@ func failingClient() *chattest.MockClient {
 
 func abortedClient(reason string) *chattest.MockClient {
 	return &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
 			msg := &domain.Message{
 				ID:      "asst-1",
 				Model:   "test-model",
 				Content: []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "partial"}}},
 			}
-			onSnapshot(chat.StreamSnapshot{
+			onSnapshot(corechat.StreamSnapshot{
 				ConversationID: "conv-1",
 				TurnID:         "turn-1",
 				Seq:            1,
-				Status:         chat.StreamStatusAborted,
+				Status:         corechat.StreamStatusAborted,
 				AbortReason:    reason,
 				Done:           true,
 				Message:        msg,
@@ -100,7 +101,7 @@ func recordingCompletingClient(requests *[]chat.Request) *chattest.MockClient {
 	call := 0
 
 	return &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
 			mu.Lock()
 			*requests = append(*requests, req)
 			call++
@@ -115,18 +116,18 @@ func recordingCompletingClient(requests *[]chat.Request) *chattest.MockClient {
 			}
 
 			if onSnapshot != nil {
-				onSnapshot(chat.StreamSnapshot{
+				onSnapshot(corechat.StreamSnapshot{
 					ConversationID: "conv-1",
 					TurnID:         "turn-1",
 					Seq:            1,
-					Status:         chat.StreamStatusStreaming,
+					Status:         corechat.StreamStatusStreaming,
 					Message:        msg,
 				})
-				onSnapshot(chat.StreamSnapshot{
+				onSnapshot(corechat.StreamSnapshot{
 					ConversationID: "conv-1",
 					TurnID:         "turn-1",
 					Seq:            2,
-					Status:         chat.StreamStatusCompleted,
+					Status:         corechat.StreamStatusCompleted,
 					Done:           true,
 					Message:        msg,
 				})
@@ -289,7 +290,7 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 	var mu sync.Mutex
 	call := 0
 	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
 			mu.Lock()
 			requests = append(requests, req)
 			call++
@@ -313,11 +314,11 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 						},
 					}},
 				}
-				onSnapshot(chat.StreamSnapshot{
+				onSnapshot(corechat.StreamSnapshot{
 					ConversationID: req.ConversationID,
 					TurnID:         "turn-1",
 					Seq:            1,
-					Status:         chat.StreamStatusToolUse,
+					Status:         corechat.StreamStatusToolUse,
 					Done:           true,
 					Message:        msg,
 				})
@@ -330,11 +331,11 @@ func TestToolResultFollowupKeepsAssistantWhenStreamMessageIDMissing(t *testing.T
 				StopReason: "end_turn",
 				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "done"}}},
 			}
-			onSnapshot(chat.StreamSnapshot{
+			onSnapshot(corechat.StreamSnapshot{
 				ConversationID: req.ConversationID,
 				TurnID:         "turn-2",
 				Seq:            1,
-				Status:         chat.StreamStatusCompleted,
+				Status:         corechat.StreamStatusCompleted,
 				Done:           true,
 				Message:        msg,
 			})
@@ -378,7 +379,7 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 	var mu sync.Mutex
 	call := 0
 	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(chat.StreamSnapshot)) (*chat.StreamResult, error) {
+		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*chat.StreamResult, error) {
 			mu.Lock()
 			requests = append(requests, req)
 			call++
@@ -401,11 +402,11 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 						},
 					}},
 				}
-				onSnapshot(chat.StreamSnapshot{
+				onSnapshot(corechat.StreamSnapshot{
 					ConversationID: req.ConversationID,
 					TurnID:         "turn-1",
 					Seq:            1,
-					Status:         chat.StreamStatusToolUse,
+					Status:         corechat.StreamStatusToolUse,
 					Done:           true,
 					Message:        msg,
 				})
@@ -418,11 +419,11 @@ func TestInternalToolLoopKeepsTopLevelSessionAligned(t *testing.T) {
 				StopReason: "end_turn",
 				Content:    []domain.Block{{Index: 0, Type: domain.BlockTypeText, Text: &domain.TextBlock{Content: "done"}}},
 			}
-			onSnapshot(chat.StreamSnapshot{
+			onSnapshot(corechat.StreamSnapshot{
 				ConversationID: req.ConversationID,
 				TurnID:         fmt.Sprintf("turn-%d", n),
 				Seq:            1,
-				Status:         chat.StreamStatusCompleted,
+				Status:         corechat.StreamStatusCompleted,
 				Done:           true,
 				Message:        msg,
 			})

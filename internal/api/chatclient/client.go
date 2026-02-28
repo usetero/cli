@@ -39,28 +39,17 @@ type HTTPDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type StreamMetadata = corechat.StreamMetadata
-type StreamSnapshot = corechat.StreamSnapshot
-type StreamStatus = corechat.StreamStatus
-
-const (
-	StreamStatusStreaming StreamStatus = corechat.StreamStatusStreaming
-	StreamStatusCompleted StreamStatus = corechat.StreamStatusCompleted
-	StreamStatusToolUse   StreamStatus = corechat.StreamStatusToolUse
-	StreamStatusAborted   StreamStatus = corechat.StreamStatusAborted
-)
-
 // StreamResult captures everything the stream produced.
 type StreamResult struct {
 	Message  *domain.Message
-	Metadata *StreamMetadata // nil if no metadata_update event was received
+	Metadata *corechat.StreamMetadata // nil if no metadata_update event was received
 }
 
 // Client sends messages to the Chat API and streams responses.
 type Client interface {
 	// StreamSnapshots sends the conversation to the Chat API and streams normalized snapshots.
 	// Each snapshot includes scoped progress metadata (conversation/turn/seq/status).
-	StreamSnapshots(ctx context.Context, req Request, onSnapshot func(StreamSnapshot)) (*StreamResult, error)
+	StreamSnapshots(ctx context.Context, req Request, onSnapshot func(corechat.StreamSnapshot)) (*StreamResult, error)
 
 	// Stream sends the conversation to the Chat API and streams the response.
 	// The onMessage callback is called each time the message is updated with new content.
@@ -141,7 +130,7 @@ func (c *client) WithAccountID(accountID domain.AccountID) Client {
 // The onMessage callback is called each time the message is updated with new content.
 // Global tools are automatically merged with any request-specific tools.
 func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain.Message)) (*StreamResult, error) {
-	return c.StreamSnapshots(ctx, req, func(s StreamSnapshot) {
+	return c.StreamSnapshots(ctx, req, func(s corechat.StreamSnapshot) {
 		if onMessage != nil {
 			onMessage(s.Message)
 		}
@@ -150,7 +139,7 @@ func (c *client) Stream(ctx context.Context, req Request, onMessage func(*domain
 
 // StreamSnapshots sends the conversation to the Chat API and streams normalized snapshots.
 // Global tools are automatically merged with any request-specific tools.
-func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot func(StreamSnapshot)) (*StreamResult, error) {
+func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot func(corechat.StreamSnapshot)) (*StreamResult, error) {
 	ctx, cancel := withDefaultTimeout(ctx, defaultStreamTimeout)
 	defer cancel()
 

@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -27,8 +28,8 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 			ContextEntities: chatContext,
 		}
 
-		var lastSnapshot *chatclient.StreamSnapshot
-		result, err := m.chatClient.StreamSnapshots(ctx, req, func(s chatclient.StreamSnapshot) {
+		var lastSnapshot *corechat.StreamSnapshot
+		result, err := m.chatClient.StreamSnapshots(ctx, req, func(s corechat.StreamSnapshot) {
 			ss := s
 			lastSnapshot = &ss
 			if !s.Done {
@@ -40,7 +41,7 @@ func (m *Model) StartStream(messages []domain.Message, chatContext []domain.Cont
 			updates <- streamUpdate{err: err, done: true}
 		} else {
 			var lastMessage *domain.Message
-			var status chatclient.StreamStatus
+			var status corechat.StreamStatus
 			var abort string
 			if lastSnapshot != nil {
 				lastMessage = lastSnapshot.Message
@@ -83,7 +84,7 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 	}
 
 	if update.done {
-		if update.status == chatclient.StreamStatusAborted {
+		if update.status == corechat.StreamStatusAborted {
 			reason := update.abort
 			if reason == "" {
 				reason = "context_canceled"
