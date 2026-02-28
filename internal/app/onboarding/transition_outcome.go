@@ -10,7 +10,7 @@ const (
 	TransitionAdvance TransitionKind = "advance"
 )
 
-// TransitionOutcome is the typed contract between transition handlers and the engine.
+// TransitionOutcome is the typed contract between transition handlers and the onboarding orchestrator.
 type TransitionOutcome struct {
 	Kind TransitionKind
 	Next Gate

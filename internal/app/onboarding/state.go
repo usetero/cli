@@ -5,7 +5,7 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-type engineState struct {
+type onboardingState struct {
 	user      *iauth.User
 	org       *domain.Organization
 	account   *domain.Account

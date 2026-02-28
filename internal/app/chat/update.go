@@ -2,87 +2,42 @@ package chat
 
 import (
 	"context"
-	"time"
 
-	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	chatclient "github.com/usetero/cli/internal/chat"
-	"github.com/usetero/cli/internal/tea/keymap"
 )
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
-	// Handle messages this model cares about.
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if key.Matches(msg, keymap.Tab) {
-			cmds = append(cmds, m.toggleFocus())
-			return tea.Batch(cmds...)
+		res := m.handleKeyPress(msg)
+		if res.stop {
+			return res.cmd
 		}
-		if m.focus == focusMessages {
-			// Enter or esc returns to editor.
-			if key.Matches(msg, keymap.Send) || key.Matches(msg, keymap.Exit) {
-				cmds = append(cmds, m.setFocus(focusEditor))
-				return tea.Batch(cmds...)
-			}
-			// Only forward to message list when it's focused.
-			cmds = append(cmds, m.messageList.Update(msg))
-			return tea.Batch(cmds...)
+		if res.handled && res.cmd != nil {
+			cmds = append(cmds, res.cmd)
 		}
 
 	case emptyStatePollMsg:
-		if !m.hasMessages() && m.db != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
-			summary, err := m.db.DatadogAccountStatuses().GetSummary(ctx)
-			if err == nil {
-				m.policySummary = &summary
-			}
-			return m.pollEmptyState()
-		}
-		return nil // stop polling once messages exist
-
-	case msgs.UserSubmittedInput:
-		cmds = append(cmds, m.handleUserInput(msg))
-
-	case conversationCreated:
-		m.scope.Info("conversation created", "id", msg.conversationID)
-		m.conversationID = msg.conversationID
-		cmds = append(cmds, m.persistUserMessage(msg.input))
-
-	case userMessagePersisted:
-		m.scope.Debug("received userMessagePersisted", "message_id", msg.messageID)
-		cmds = append(cmds, m.handlePersistedMessage(msg))
-
-	case msgs.StreamCompleted:
-		if m.session != nil && m.messageList.HasTurn(msg.TurnID) {
-			m.session.RecordAssistantMessage(msg.Message)
-		}
-
-	case msgs.ToolResultMessagePersisted:
-		if m.session == nil {
-			m.session = chatclient.NewSession(m.conversationID, nil)
-		}
-		m.session.AppendMessage(msg.Message)
-
-	case msgs.StreamFailed:
-		return m.handleStreamFailed(msg)
+		return m.handleEmptyStatePoll()
 
 	case tea.MouseClickMsg:
-		// Click on the message list area focuses it.
-		if m.hasMessages() && msg.Y >= m.originY && msg.Y < m.originY+m.height-m.inputBar.Height() {
-			if m.focus != focusMessages {
-				cmds = append(cmds, m.setFocus(focusMessages))
-			}
-		} else if msg.Y >= m.originY+m.height-m.inputBar.Height() {
-			if m.focus != focusEditor {
-				cmds = append(cmds, m.setFocus(focusEditor))
-			}
+		if cmd := m.handleMouseClick(msg); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	default:
+		res := m.handleLifecycleMessage(msg)
+		if res.stop {
+			return res.cmd
+		}
+		if res.handled && res.cmd != nil {
+			cmds = append(cmds, res.cmd)
 		}
 	}
 

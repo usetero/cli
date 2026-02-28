@@ -10,33 +10,8 @@ import (
 	chattools "github.com/usetero/cli/internal/chat/tools"
 	"github.com/usetero/cli/internal/domain"
 	psapi "github.com/usetero/cli/internal/powersync/api"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/upload"
 )
-
-// openDatabase opens the SQLite database for the given account.
-func (m *Model) openDatabase(accountID string) error {
-	if m.db != nil {
-		if err := m.db.Close(); err != nil {
-			m.scope.Warn("failed to close previous database", "error", err)
-		}
-		m.db = nil
-	}
-
-	dbPath, err := m.storage.DatabasePath(accountID)
-	if err != nil {
-		return err
-	}
-
-	db, err := sqlite.Open(m.ctx, dbPath)
-	if err != nil {
-		return err
-	}
-
-	m.db = db
-	m.scope.Info("database opened", "path", dbPath)
-	return nil
-}
 
 // startSync starts the syncer and uploader with the open database.
 func (m *Model) startSync(accountID string) error {
@@ -127,23 +102,4 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 		WithAccountID(domain.AccountID(accountID))
 
 	return catalogCmd, nil
-}
-
-func (m *Model) shutdown() {
-	db := m.db
-
-	if m.sessionCancel != nil {
-		m.sessionCancel()
-		m.sessionCancel = nil
-	}
-	if m.syncer != nil {
-		m.syncer.Stop()
-	}
-	if db != nil {
-		if err := db.Close(); err != nil {
-			m.scope.Warn("failed to close database", "error", err)
-		}
-	}
-	m.db = nil
-	m.uploader = nil
 }

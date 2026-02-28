@@ -20,7 +20,7 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		return tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg)), true
 
 	case onboardingmsg.AccountSelected:
-		// Forward to onboarding engine; runtime init happens at EnsureRuntime gate.
+		// Forward to onboarding orchestrator; runtime init happens at EnsureRuntime gate.
 		if m.onboarding != nil {
 			return m.onboarding.Update(msg), true
 		}
