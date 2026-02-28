@@ -65,6 +65,17 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			},
 			wantGate: GateRuntimeInit,
 		},
+		{
+			name: "failed preflight routes to authenticate even with valid auth",
+			state: msgs.PreflightState{
+				Outcome:      msgs.PreflightOutcomeFailed,
+				HasValidAuth: true,
+				Role:         msgs.RolePlatform,
+				Org:          ptrOrg("org-1"),
+				Account:      ptrAccount("acc-1"),
+			},
+			wantGate: GateAuthenticate,
+		},
 	}
 
 	for _, tc := range tests {
@@ -86,6 +97,49 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		msg      any
+		wantGate Gate
+	}{
+		{name: "datadog ready goes to workspace select", msg: msgs.DatadogReady{}, wantGate: GateWorkspaceSelect},
+		{name: "datadog needed goes to region", msg: msgs.DatadogNeeded{}, wantGate: GateDatadogRegion},
+		{name: "discovery complete goes to workspace select", msg: msgs.DatadogDiscoveryComplete{}, wantGate: GateWorkspaceSelect},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			m := newTestModel(t)
+			_ = m.handleTransition(tc.msg)
+			if m.gate != tc.wantGate {
+				t.Fatalf("gate = %s, want %s", m.gate, tc.wantGate)
+			}
+		})
+	}
+}
+
+func TestHandleTransitionWorkspaceSelectedSetsState(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
+
+	if cmd := m.handleTransition(msgs.WorkspaceSelected{Workspace: workspace}); cmd == nil {
+		t.Fatal("expected transition command")
+	}
+	if m.gate != GateSync {
+		t.Fatalf("gate = %s, want %s", m.gate, GateSync)
+	}
+	if m.state.workspace == nil || m.state.workspace.ID != workspace.ID {
+		t.Fatalf("workspace state not set correctly: %+v", m.state.workspace)
 	}
 }
 
