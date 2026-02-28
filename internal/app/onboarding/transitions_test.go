@@ -79,7 +79,6 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := newTestModel(t)
@@ -114,7 +113,6 @@ func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := newTestModel(t)
@@ -189,6 +187,40 @@ func TestHandleTransitionRuntimeReady(t *testing.T) {
 	}
 }
 
+func TestHandleTransitionRuntimeReadySyncsServiceAccountScope(t *testing.T) {
+	t.Parallel()
+
+	m, client := newTestModelWithClient(t)
+	var scopedAccountID domain.AccountID
+	client.SetAccountIDFunc = func(accountID domain.AccountID) {
+		scopedAccountID = accountID
+	}
+
+	org := ptrOrg("org-1")
+	account := ptrAccount("acc-1")
+
+	_ = m.handleTransition(msgs.RuntimeReady{Org: *org, Account: *account})
+	if scopedAccountID != "acc-1" {
+		t.Fatalf("scoped account id = %q, want %q", scopedAccountID, "acc-1")
+	}
+}
+
+func TestHandleTransitionOrgSelectedClearsServiceAccountScope(t *testing.T) {
+	t.Parallel()
+
+	m, client := newTestModelWithClient(t)
+	var scopedAccountID domain.AccountID
+	client.SetAccountIDFunc = func(accountID domain.AccountID) {
+		scopedAccountID = accountID
+	}
+
+	m.state.account = ptrAccount("acc-1")
+	_ = m.handleTransition(msgs.OrgSelected{Org: *ptrOrg("org-2")})
+	if scopedAccountID != "" {
+		t.Fatalf("scoped account id = %q, want empty", scopedAccountID)
+	}
+}
+
 func TestHandleTransitionSyncComplete(t *testing.T) {
 	t.Parallel()
 
@@ -212,7 +244,27 @@ func TestHandleTransitionSyncComplete(t *testing.T) {
 	}
 }
 
+func TestHandleTransitionSyncCompleteMissingStateNoops(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	m.state.user = ptrUser("user-1")
+	m.state.org = ptrOrg("org-1")
+	// Missing account/workspace should not panic or emit completion payload.
+
+	cmd := m.handleTransition(msgs.SyncComplete{})
+	if cmd != nil {
+		t.Fatal("expected nil command when completion state is incomplete")
+	}
+}
+
 func newTestModel(t *testing.T) *Model {
+	t.Helper()
+	m, _ := newTestModelWithClient(t)
+	return m
+}
+
+func newTestModelWithClient(t *testing.T) (*Model, *apitest.MockClient) {
 	t.Helper()
 
 	scope := logtest.NewScope(t)
@@ -225,7 +277,7 @@ func newTestModel(t *testing.T) *Model {
 
 	m := New(context.Background(), styles.NewTheme(true), services, userPrefs, orgPrefs, authSvc, syncer, scope)
 	m.SetSize(120, 40)
-	return m
+	return m, client
 }
 
 func ptrOrg(id string) *domain.Organization {

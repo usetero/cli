@@ -57,6 +57,7 @@ func ApplyRoleSelected(state State, role string) (State, Gate) {
 
 func ApplyOrgSelected(state State, org domain.Organization) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	return state, GateAccountSelect
 }
 
@@ -66,28 +67,33 @@ func ApplyNoOrgs(state State) (State, Gate) {
 
 func ApplyOrgCreated(state State, org domain.Organization) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	return state, GateAccountSelect
 }
 
 func ApplyAccountSelected(state State, org domain.Organization, account domain.Account) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	state.Account = &account
 	return state, GateRuntimeInit
 }
 
 func ApplyNoAccounts(state State, org domain.Organization) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	return state, GateAccountCreate
 }
 
 func ApplyAccountCreated(state State, org domain.Organization, account domain.Account) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	state.Account = &account
 	return state, GateRuntimeInit
 }
 
 func ApplyRuntimeReady(state State, org domain.Organization, account domain.Account) (State, Gate) {
 	state.Org = &org
+	state = clearAccountScopedState(state)
 	state.Account = &account
 	return state, GateDatadogCheck
 }
@@ -122,4 +128,13 @@ func ApplyDatadogDiscoveryComplete(state State) (State, Gate) {
 func ApplyWorkspaceSelected(state State, workspace domain.Workspace) (State, Gate) {
 	state.Workspace = &workspace
 	return state, GateSync
+}
+
+func clearAccountScopedState(state State) State {
+	state.Account = nil
+	state.Workspace = nil
+	state.DDSite = ""
+	state.DDAPIKey = ""
+	state.DDAccount = ""
+	return state
 }

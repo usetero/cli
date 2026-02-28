@@ -68,11 +68,11 @@ type fixedTestStep struct {
 	view string
 }
 
-func (s fixedTestStep) Init() tea.Cmd                { return nil }
-func (s fixedTestStep) Update(msg tea.Msg) tea.Cmd   { return nil }
-func (s fixedTestStep) View() string                 { return s.view }
-func (s fixedTestStep) SetSize(width, height int)    {}
-func (s fixedTestStep) ShortHelp() []key.Binding     { return nil }
+func (s fixedTestStep) Init() tea.Cmd              { return nil }
+func (s fixedTestStep) Update(msg tea.Msg) tea.Cmd { return nil }
+func (s fixedTestStep) View() string               { return s.view }
+func (s fixedTestStep) SetSize(width, height int)  {}
+func (s fixedTestStep) ShortHelp() []key.Binding   { return nil }
 
 type hiddenTestStep struct {
 	fixedTestStep

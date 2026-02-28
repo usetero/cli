@@ -65,4 +65,3 @@ func (m *Model) stateName() string {
 		return "unknown"
 	}
 }
-

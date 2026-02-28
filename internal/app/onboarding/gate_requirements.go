@@ -10,7 +10,7 @@ func (m *Model) rewindGateFor(target Gate) Gate {
 		return target
 	}
 	rewind := bootstrap.RewindGate(
-		bootstrap.Gate(target),
+		target,
 		def.requirement,
 		bootstrap.State{
 			User:      m.state.user,
@@ -22,5 +22,5 @@ func (m *Model) rewindGateFor(target Gate) Gate {
 			DDAccount: m.state.ddAccount,
 		},
 	)
-	return Gate(rewind)
+	return rewind
 }

@@ -38,7 +38,7 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		if m.onboarding != nil {
 			return tea.Batch(
 				catalogCmd,
-				func() tea.Msg { return onboardingmsg.RuntimeReady{Org: msg.Org, Account: msg.Account} },
+				func() tea.Msg { return onboardingmsg.RuntimeReady(msg) },
 			), true
 		}
 		return catalogCmd, true

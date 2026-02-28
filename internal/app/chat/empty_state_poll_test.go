@@ -78,4 +78,3 @@ func TestEmptyStateSummaryMessageUpdatesState(t *testing.T) {
 		t.Fatalf("unexpected service count: got %d want %d", m.policySummary.ServiceCount, 5)
 	}
 }
-

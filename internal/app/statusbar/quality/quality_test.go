@@ -22,4 +22,3 @@ func TestUpdatePollSourceFiltering(t *testing.T) {
 		t.Fatalf("expected own poll source to schedule fetch")
 	}
 }
-

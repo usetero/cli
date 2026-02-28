@@ -82,4 +82,3 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 		t.Fatalf("expected DatadogDiscoveryComplete message")
 	}
 }
-
