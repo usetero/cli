@@ -54,8 +54,6 @@ func (m *Model) ShortHelp() []key.Binding { return nil }
 
 func (m *Model) Hidden() bool { return true }
 
-func (m *Model) StatusText() string { return "Initializing account runtime..." }
-
 func (m *Model) Status() appmsg.StepStatus {
 	return appmsg.StepStatus{
 		Title:   "Getting ready",

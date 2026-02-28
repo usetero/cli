@@ -7,7 +7,7 @@ import (
 )
 
 // setStep sets the current step and initializes it.
-func (m *Model) setStep(step StepCore) tea.Cmd {
+func (m *Model) setStep(step Step) tea.Cmd {
 	m.step = step
 	m.step.SetSize(m.width, m.height)
 	return m.step.Init()

@@ -68,10 +68,6 @@ func (m *CheckModel) Hidden() bool {
 	return m.err == nil
 }
 
-func (m *CheckModel) StatusText() string {
-	return "Checking Datadog configuration..."
-}
-
 func (m *CheckModel) Status() appmsg.StepStatus {
 	return appmsg.StepStatus{
 		Title:   "Datadog setup",

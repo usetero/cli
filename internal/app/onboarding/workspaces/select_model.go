@@ -95,10 +95,6 @@ func (m *SelectModel) Hidden() bool {
 	return m.list.IsLoading()
 }
 
-func (m *SelectModel) StatusText() string {
-	return "Loading workspaces..."
-}
-
 func (m *SelectModel) Status() appmsg.StepStatus {
 	return appmsg.StepStatus{
 		Title:   "Choose workspace",

@@ -24,7 +24,7 @@ func TestViewDoesNotHideByGateAlone(t *testing.T) {
 	}
 }
 
-func TestViewUsesVisibilityProviderOverride(t *testing.T) {
+func TestViewUsesHiddenStepStatus(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
@@ -33,7 +33,10 @@ func TestViewUsesVisibilityProviderOverride(t *testing.T) {
 	m.step = hiddenTestStep{
 		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 		hidden:        true,
-		status:        "Loading dynamic data...",
+		status: appmsg.StepStatus{
+			Title:   "Loading",
+			Details: "Loading dynamic data...",
+		},
 	}
 
 	view := m.View()
@@ -45,7 +48,7 @@ func TestViewUsesVisibilityProviderOverride(t *testing.T) {
 	}
 }
 
-func TestViewUsesStructuredStatusProviderOverride(t *testing.T) {
+func TestViewUsesOverriddenEmbeddedStatus(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
@@ -55,7 +58,10 @@ func TestViewUsesStructuredStatusProviderOverride(t *testing.T) {
 		hiddenTestStep: hiddenTestStep{
 			fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 			hidden:        true,
-			status:        "fallback status text",
+			status: appmsg.StepStatus{
+				Title:   "Fallback",
+				Details: "fallback status text",
+			},
 		},
 		status: appmsg.StepStatus{
 			Title:   "Datadog setup",
@@ -75,6 +81,30 @@ func TestViewUsesStructuredStatusProviderOverride(t *testing.T) {
 	}
 }
 
+func TestViewHiddenStatusNeverFallsBackToGenericTitle(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	m.SetSize(80, 20)
+	m.gate = GateRuntimeInit
+	m.step = hiddenTestStep{
+		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
+		hidden:        true,
+		status: appmsg.StepStatus{
+			Title:   "Runtime setup",
+			Details: "Initializing account runtime...",
+		},
+	}
+
+	view := m.View()
+	if strings.Contains(view, "Getting ready") {
+		t.Fatalf("expected hidden view to use provider title, got generic title: %q", view)
+	}
+	if !strings.Contains(view, "Runtime setup") {
+		t.Fatalf("expected provider title in hidden view, got: %q", view)
+	}
+}
+
 type fixedTestStep struct {
 	view string
 }
@@ -84,15 +114,19 @@ func (s fixedTestStep) Update(msg tea.Msg) tea.Cmd { return nil }
 func (s fixedTestStep) View() string               { return s.view }
 func (s fixedTestStep) SetSize(width, height int)  {}
 func (s fixedTestStep) ShortHelp() []key.Binding   { return nil }
+func (s fixedTestStep) Hidden() bool               { return false }
+func (s fixedTestStep) Status() appmsg.StepStatus  { return appmsg.StepStatus{} }
 
 type hiddenTestStep struct {
 	fixedTestStep
 	hidden bool
-	status string
+	status appmsg.StepStatus
 }
 
-func (s hiddenTestStep) Hidden() bool       { return s.hidden }
-func (s hiddenTestStep) StatusText() string { return s.status }
+func (s hiddenTestStep) Hidden() bool { return s.hidden }
+func (s hiddenTestStep) Status() appmsg.StepStatus {
+	return s.status
+}
 
 type hiddenStatusTestStep struct {
 	hiddenTestStep

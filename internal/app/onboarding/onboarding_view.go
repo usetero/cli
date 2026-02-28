@@ -11,14 +11,8 @@ func (m *Model) View() string {
 	}
 
 	view := m.step.View()
-	if v, ok := m.step.(VisibilityProvider); ok && v.Hidden() {
-		status := defaultStatusForGate(m.gate)
-		if s, ok := m.step.(StatusProvider); ok {
-			status = s.Status()
-		} else {
-			status.Details = v.StatusText()
-		}
-		view = m.hiddenStepView(status)
+	if m.step.Hidden() {
+		view = m.hiddenStepView(m.step.Status())
 	}
 
 	// Bottom-align step content in available space
