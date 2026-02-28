@@ -1,5 +1,9 @@
 version: "3"
 
+includes:
+  debug:
+    taskfile: ./taskfiles/debug.yml
+
 vars:
   CPU_COUNT:
     sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"

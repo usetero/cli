@@ -25,6 +25,7 @@ Supporting docs:
 |-----|--------------|
 | [TESTING.md](docs/TESTING.md) | Writing tests. |
 | [LOGGING.md](docs/LOGGING.md) | Writing logs. |
+| [DEBUG_WORKFLOWS.md](docs/DEBUG_WORKFLOWS.md) | Running debug workflows safely (`dev` by default). |
 
 ## Agent Rules
 

@@ -1,0 +1,76 @@
+version: "3"
+
+vars:
+  TERO_ENV: '{{.TERO_ENV | default "dev"}}'
+  ENV_PREFIX:
+    sh: |
+      if [ "{{.TERO_ENV}}" = "local" ]; then
+        echo ""
+      else
+        echo "doppler run -c {{.TERO_ENV}} --"
+      fi
+
+tasks:
+  list:
+    desc: List debug workflows
+    cmds:
+      - |
+        echo "Debug workflows (default TERO_ENV=dev):"
+        echo "  task debug:ui:run"
+        echo "  task debug:ui:logs:slow"
+        echo "  task debug:ui:logs:all"
+        echo "  task debug:ui:smoke"
+        echo "  task debug:onboarding:trace"
+        echo ""
+        echo "To target prd explicitly (discouraged):"
+        echo "  task debug:ui:logs:slow TERO_ENV=prd ALLOW_PRD=1"
+
+  guard:non-prd:
+    internal: true
+    cmds:
+      - |
+        if [ "{{.TERO_ENV}}" = "prd" ] && [ "{{.ALLOW_PRD}}" != "1" ]; then
+          echo "Refusing to run debug workflow against prd without explicit override."
+          echo "Set ALLOW_PRD=1 if you intentionally need prd."
+          exit 1
+        fi
+
+  ui:run:
+    desc: Run Tero in debug mode (defaults to TERO_ENV=dev)
+    deps: [guard:non-prd]
+    cmds:
+      - "{{.ENV_PREFIX}} go run ./cmd/tero {{.CLI_ARGS}}"
+
+  ui:smoke:
+    desc: Fast UI safety suite for app/update/render paths
+    deps: [guard:non-prd]
+    cmds:
+      - go test ./internal/app/... ./internal/app/statusbar/...
+
+  ui:logs:slow:
+    desc: Tail slow UI logs (slow app update/render) for selected env
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        echo "Tailing slow UI logs from $LOG_FILE"
+        tail -n 200 -f "$LOG_FILE" | rg --line-buffered "slow app update|slow app render|SESSION START"
+
+  ui:logs:all:
+    desc: Tail full app logs for selected env
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        echo "Tailing app logs from $LOG_FILE"
+        tail -n 200 -f "$LOG_FILE"
+
+  onboarding:trace:
+    desc: Tail onboarding gate transitions and runtime init logs
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        LOG_FILE="$HOME/.tero/environments/{{.TERO_ENV}}/tero.log"
+        echo "Tailing onboarding trace from $LOG_FILE"
+        tail -n 200 -f "$LOG_FILE" | rg --line-buffered "onboarding gate transition|preflight|runtime initialized|datadog|workspace|sync completed|onboarding complete|slow app update|slow app render|SESSION START"
+
