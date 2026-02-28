@@ -116,6 +116,8 @@ func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := newTestModel(t)
+			m.state.Org = ptrOrg("org-1")
+			m.state.Account = ptrAccount("acc-1")
 			_ = m.handleTransition(tc.msg)
 			if m.gate != tc.wantGate {
 				t.Fatalf("gate = %s, want %s", m.gate, tc.wantGate)
@@ -128,6 +130,8 @@ func TestHandleTransitionWorkspaceSelectedSetsState(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
+	m.state.Org = ptrOrg("org-1")
+	m.state.Account = ptrAccount("acc-1")
 	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
 
 	if cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: workspace}); cmd == nil {
@@ -145,6 +149,7 @@ func TestHandleTransitionDatadogState(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
+	m.state.Org = ptrOrg("org-1")
 	m.state.Account = ptrAccount("acc-1")
 
 	if _ = m.handleTransition(bootstrap.DatadogRegionSelected{Site: "US1"}); m.gate != GateDatadogAPIKey {

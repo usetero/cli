@@ -15,50 +15,8 @@ func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
 		return nil, false
 	}
 
-	if preflight, ok := msg.(bootstrap.PreflightResolved); ok {
-		m.logPreflightResolved(preflight)
-	}
-
-	transition := bootstrap.ApplyEvent(m.state, event)
-	m.state = transition.State
-	m.syncServicesToState()
-
-	switch transition.Kind {
-	case bootstrap.TransitionAdvance:
-		nav := m.goToGate(transition.Next)
-		if event.Kind == bootstrap.EventPreflightResolved {
-			m.scope.Info("preflight decision",
-				slog.String("outcome", string(event.Preflight.Outcome)),
-				slog.String("next_gate", transition.Next.String()))
-		}
-		return nav, true
-	case bootstrap.TransitionComplete:
-		m.scope.Info("onboarding complete",
-			slog.String("org_id", transition.Completion.Org.ID.String()),
-			slog.String("account_id", transition.Completion.Account.ID.String()),
-			slog.String("workspace_id", string(transition.Completion.Workspace.ID)),
-		)
-		return func() tea.Msg {
-			return bootstrap.OnboardingComplete{
-				User:      transition.Completion.User,
-				Org:       transition.Completion.Org,
-				Account:   transition.Completion.Account,
-				Workspace: transition.Completion.Workspace,
-			}
-		}, true
-	case bootstrap.TransitionNoop:
-		if event.Kind == bootstrap.EventSyncComplete {
-			m.scope.Error("sync completed without required onboarding state",
-				slog.Bool("has_user", m.state.User != nil),
-				slog.Bool("has_org", m.state.Org != nil),
-				slog.Bool("has_account", m.state.Account != nil),
-				slog.Bool("has_workspace", m.state.Workspace != nil),
-			)
-		}
-		return nil, true
-	default:
-		return nil, true
-	}
+	transition := m.applyTransition(event, msg)
+	return m.commandForTransition(event, transition), true
 }
 
 func (m *Model) logPreflightResolved(preflight bootstrap.PreflightResolved) {

@@ -7,19 +7,20 @@ import (
 )
 
 // setStep sets the current step and initializes it.
-func (m *Model) setStep(step Step) tea.Cmd {
+func (m *Model) setStep(step StepCore) tea.Cmd {
 	m.step = step
 	m.step.SetSize(m.width, m.height)
 	return m.step.Init()
 }
 
 func (m *Model) goToGate(gate Gate) tea.Cmd {
-	m.gate = gate
-	m.scope.Debug("onboarding gate transition", slog.String("gate", gate.String()))
+	requested := gate
 	if rewind := m.rewindGateFor(gate); rewind != gate {
-		m.scope.Warn("rewinding onboarding gate due to unmet requirements", "requested_gate", gate.String(), "rewind_gate", rewind.String())
+		m.scope.Warn("rewinding onboarding gate due to unmet requirements", "requested_gate", requested.String(), "rewind_gate", rewind.String())
 		gate = rewind
 	}
+	m.gate = gate
+	m.scope.Debug("onboarding gate transition", slog.String("gate", gate.String()))
 	return m.runGate(gate)
 }
 

@@ -12,7 +12,7 @@ import (
 	"github.com/usetero/cli/internal/app/onboarding/workspaces"
 )
 
-func (m *Model) newStepForGate(gate Gate) Step {
+func (m *Model) newStepForGate(gate Gate) StepCore {
 	switch gate {
 	case GatePreflight:
 		return preflight.New(m.ctx, m.theme, m.services, m.auth, m.userPrefs, m.orgPrefs, m.scope)

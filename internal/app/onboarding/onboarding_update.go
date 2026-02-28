@@ -40,7 +40,9 @@ func (m *Model) SetSize(width, height int) {
 // ShortHelp returns the key bindings for the short help view.
 func (m *Model) ShortHelp() []key.Binding {
 	if m.step != nil {
-		return m.step.ShortHelp()
+		if h, ok := m.step.(HelpProvider); ok {
+			return h.ShortHelp()
+		}
 	}
 	return nil
 }

@@ -32,7 +32,7 @@ type Model struct {
 
 	// Current step
 	gate   Gate
-	step   Step
+	step   StepCore
 	width  int
 	height int
 }
