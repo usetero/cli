@@ -51,6 +51,8 @@ Sync:
 ```bash
 task debug:sync:trace
 task debug:sync:health
+task debug:sync:capture
+task debug:sync:sanitize-fixture INPUT=... OUTPUT=...
 ```
 
 Data:
@@ -105,5 +107,6 @@ Use this when debugging quickly:
 3. Sync stuck, reconnect loops, upload confusion:
    1. `task debug:sync:trace`
    2. `task debug:sync:health`
+   3. `task debug:sync:capture` (when stream-level fixture capture is needed)
 4. Data mismatch (UI vs expected local state):
    1. `task debug:data:snapshot`

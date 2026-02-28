@@ -23,6 +23,8 @@ tasks:
         echo "  task debug:onboarding:trace"
         echo "  task debug:sync:trace"
         echo "  task debug:sync:health"
+        echo "  task debug:sync:capture"
+        echo "  task debug:sync:sanitize-fixture"
         echo "  task debug:data:snapshot"
         echo ""
         echo "To target prd explicitly (discouraged):"
@@ -106,6 +108,36 @@ tasks:
         echo ""
         echo "Latest error lines:"
         tail -n 800 "$LOG_FILE" | rg " level=ERROR " | tail -n 20 || true
+
+  sync:capture:
+    desc: Capture raw PowerSync NDJSON stream fixture (default DEBUG_ENV=dev)
+    deps: [guard:non-prd]
+    vars:
+      OUTPUT: '{{.OUTPUT | default "fixtures/powersync/capture.ndjson"}}'
+      DURATION: '{{.DURATION | default "90s"}}'
+      MAX_BYTES: '{{.MAX_BYTES | default "26214400"}}'
+    cmds:
+      - |
+        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync capture --output {{.OUTPUT}} --duration {{.DURATION}} --max-bytes {{.MAX_BYTES}}"
+        if [ -n "{{.ACCOUNT_ID}}" ]; then
+          CMD="$CMD --account-id {{.ACCOUNT_ID}}"
+        fi
+        eval "$CMD"
+
+  sync:sanitize-fixture:
+    desc: Sanitize captured PowerSync fixture to commit-safe NDJSON
+    deps: [guard:non-prd]
+    cmds:
+      - |
+        if [ -z "{{.INPUT}}" ] || [ -z "{{.OUTPUT}}" ]; then
+          echo "INPUT and OUTPUT are required"
+          exit 1
+        fi
+        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync sanitize-fixture --input {{.INPUT}} --output {{.OUTPUT}}"
+        if [ -n "{{.MAX_LINES}}" ]; then
+          CMD="$CMD --max-lines {{.MAX_LINES}}"
+        fi
+        eval "$CMD"
 
   data:snapshot:
     desc: Show local SQLite snapshot (counts + pending upload rows)
