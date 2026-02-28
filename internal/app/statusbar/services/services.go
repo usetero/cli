@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/usetero/cli/internal/app/statusbar/listdetail"
+	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/log"
@@ -20,7 +21,6 @@ import (
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/status"
 	"github.com/usetero/cli/internal/tea/components/table"
-	"github.com/usetero/cli/internal/tea/keymap"
 )
 
 const (
@@ -33,14 +33,9 @@ const (
 	levelDisplayThreshold = 0.01
 )
 
-// pollMsg triggers a catalog status check.
-type pollMsg struct{}
-
-// dataMsg carries the result of an async data fetch.
-type dataMsg struct {
+type fetchedData struct {
 	summary  domain.AccountSummary
 	services []domain.ServiceStatus
-	err      error
 }
 
 // detailMsg carries the result of an async detail fetch.
@@ -89,36 +84,28 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) poll() tea.Cmd {
-	return tea.Tick(pollInterval, func(time.Time) tea.Msg {
-		return pollMsg{}
-	})
+	return tabpoll.Tick(pollInterval)
 }
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case pollMsg:
+	case tabpoll.PollMsg:
 		if m.db == nil {
 			return nil
 		}
 		return tea.Batch(m.fetchData(), m.poll())
 
-	case dataMsg:
-		if msg.err != nil {
+	case tabpoll.DataMsg[fetchedData]:
+		if msg.Err != nil {
 			return nil
 		}
-		key := m.stateKey(msg.summary, msg.services)
-		if key != m.lastState {
-			m.summary = msg.summary
-			m.services = msg.services
-			m.hasData = msg.summary.ServiceCount > 0
-			m.lastState = key
-
-			// Clamp cursor if services shrank.
-			if m.cursor >= len(m.services) && len(m.services) > 0 {
-				m.cursor = len(m.services) - 1
-			}
-		}
+		key := m.stateKey(msg.Data.summary, msg.Data.services)
+		tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(msg.Data.services), func() {
+			m.summary = msg.Data.summary
+			m.services = msg.Data.services
+			m.hasData = msg.Data.summary.ServiceCount > 0
+		})
 
 	case detailMsg:
 		if msg.err == nil {
@@ -133,13 +120,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 func (m *Model) fetchData() tea.Cmd {
 	db := m.db
 	scope := m.scope
-	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
-		defer cancel()
+	return tabpoll.Fetch(dbTimeout, func(ctx context.Context) (fetchedData, error) {
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		if err != nil {
 			scope.Error("get summary", "err", err)
-			return dataMsg{err: err}
+			return fetchedData{}, err
 		}
 
 		services, err := db.ServiceStatuses().ListEnabledServiceStatuses(ctx, maxServices)
@@ -148,8 +133,8 @@ func (m *Model) fetchData() tea.Cmd {
 			services = nil
 		}
 
-		return dataMsg{summary: summary, services: services}
-	}
+		return fetchedData{summary: summary, services: services}, nil
+	})
 }
 
 // fetchDetail returns a Cmd that queries log event detail off the event loop.
@@ -170,43 +155,7 @@ func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
 
 // HandleKeyPress handles keyboard navigation in the expanded drawer view.
 func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
-	if !m.hasData || len(m.services) == 0 {
-		return nil
-	}
-
-	// Detail mode: navigate log events or go back.
-	if m.detail != nil {
-		switch {
-		case key.Matches(msg, keymap.DrawerBack):
-			m.detail = nil
-		case key.Matches(msg, keymap.DrawerUp):
-			if m.detail.cursor > 0 {
-				m.detail.cursor--
-			}
-		case key.Matches(msg, keymap.DrawerDown):
-			if m.detail.cursor < len(m.detail.logEvents)-1 {
-				m.detail.cursor++
-			}
-		case key.Matches(msg, keymap.DrawerSelect):
-			return m.detail.Prompt()
-		}
-		return nil
-	}
-
-	// Service list mode.
-	switch {
-	case key.Matches(msg, keymap.DrawerUp):
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case key.Matches(msg, keymap.DrawerDown):
-		if m.cursor < len(m.services)-1 {
-			m.cursor++
-		}
-	case key.Matches(msg, keymap.DrawerSelect):
-		return m.fetchDetail(m.services[m.cursor])
-	}
-	return nil
+	return m.navController().HandleKeyPress(msg)
 }
 
 // InDetail returns true when the detail sub-view is active.
@@ -217,6 +166,47 @@ func (m *Model) InDetail() bool {
 // CloseDetail exits the detail sub-view, returning to the service list.
 func (m *Model) CloseDetail() {
 	m.detail = nil
+}
+
+func (m *Model) navController() listdetail.Controller {
+	return listdetail.Controller{
+		HasList: func() bool { return m.hasData && len(m.services) > 0 },
+		IsDetail: func() bool {
+			return m.detail != nil
+		},
+		CloseDetail: func() { m.detail = nil },
+		GetListCursor: func() int {
+			return m.cursor
+		},
+		SetListCursor: func(v int) { m.cursor = v },
+		ListLen:       func() int { return len(m.services) },
+		OnListSelect: func(index int) tea.Cmd {
+			return m.fetchDetail(m.services[index])
+		},
+		GetDetailCursor: func() int {
+			if m.detail == nil {
+				return 0
+			}
+			return m.detail.cursor
+		},
+		SetDetailCursor: func(v int) {
+			if m.detail != nil {
+				m.detail.cursor = v
+			}
+		},
+		DetailLen: func() int {
+			if m.detail == nil {
+				return 0
+			}
+			return len(m.detail.logEvents)
+		},
+		OnDetailSelect: func() tea.Cmd {
+			if m.detail == nil {
+				return nil
+			}
+			return m.detail.Prompt()
+		},
+	}
 }
 
 // stateKey builds a string key for change detection.

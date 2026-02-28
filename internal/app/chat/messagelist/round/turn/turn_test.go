@@ -65,8 +65,8 @@ func TestHandleStreamUpdate(t *testing.T) {
 		if m.state != StateAwaitingToolResults {
 			t.Errorf("expected StateAwaitingToolResults, got %d", m.state)
 		}
-		if m.pendingTools != 1 {
-			t.Errorf("expected 1 pending tool, got %d", m.pendingTools)
+		if m.toolTracker.pendingTools != 1 {
+			t.Errorf("expected 1 pending tool, got %d", m.toolTracker.pendingTools)
 		}
 	})
 
@@ -76,7 +76,7 @@ func TestHandleStreamUpdate(t *testing.T) {
 		m.state = StateStreaming
 		m.assistantMessage.SetID("asst-1")
 		// Tool completed during streaming, before stream finished
-		m.toolResults = []tools.Result{{ToolUseID: "tool-1"}}
+		m.toolTracker.results = []tools.Result{{ToolUseID: "tool-1"}}
 
 		m.handleStreamUpdate(streamUpdate{
 			message: &domain.Message{
@@ -223,8 +223,8 @@ func TestHandleToolCompleted(t *testing.T) {
 
 		m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
 
-		if len(m.toolResults) != 1 {
-			t.Errorf("expected 1 collected result, got %d", len(m.toolResults))
+		if len(m.toolTracker.results) != 1 {
+			t.Errorf("expected 1 collected result, got %d", len(m.toolTracker.results))
 		}
 		// Should not change state — still streaming
 		if m.state != StateStreaming {
@@ -236,17 +236,17 @@ func TestHandleToolCompleted(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.persisted = true
-		m.pendingTools = 2
-		m.toolResults = []tools.Result{{ToolUseID: "tool-1"}}
+		m.toolTracker.persisted = true
+		m.toolTracker.pendingTools = 2
+		m.toolTracker.results = []tools.Result{{ToolUseID: "tool-1"}}
 
 		cmd := m.handleToolCompleted("tool-2", tools.Result{ToolUseID: "tool-2"})
 
 		if m.state != StateComplete {
 			t.Errorf("expected StateComplete when all tools done, got %d", m.state)
 		}
-		if len(m.toolResults) != 2 {
-			t.Errorf("expected 2 results, got %d", len(m.toolResults))
+		if len(m.toolTracker.results) != 2 {
+			t.Errorf("expected 2 results, got %d", len(m.toolTracker.results))
 		}
 		if cmd == nil {
 			t.Error("expected non-nil cmd (fireToolResults)")
@@ -257,7 +257,7 @@ func TestHandleToolCompleted(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.pendingTools = 2
+		m.toolTracker.pendingTools = 2
 
 		m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
 
@@ -270,8 +270,8 @@ func TestHandleToolCompleted(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.persisted = false
-		m.pendingTools = 1
+		m.toolTracker.persisted = false
+		m.toolTracker.pendingTools = 1
 
 		cmd := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
 
@@ -287,16 +287,16 @@ func TestHandleToolCompleted(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.pendingTools = 1
-		m.pendingToolIDs = map[string]bool{"tool-1": true}
+		m.toolTracker.pendingTools = 1
+		m.toolTracker.pendingToolIDs = map[string]bool{"tool-1": true}
 
 		m.handleToolCompleted("tool-x", tools.Result{ToolUseID: "tool-x"})
 
 		if got := m.protocolViolationCount; got != 1 {
 			t.Fatalf("protocolViolationCount = %d, want 1", got)
 		}
-		if len(m.toolResults) != 0 {
-			t.Fatalf("toolResults len = %d, want 0", len(m.toolResults))
+		if len(m.toolTracker.results) != 0 {
+			t.Fatalf("toolResults len = %d, want 0", len(m.toolTracker.results))
 		}
 	})
 }
@@ -324,14 +324,14 @@ func TestInterleavedToolUseFlow(t *testing.T) {
 	if m.state != StateAwaitingToolResults {
 		t.Fatalf("expected StateAwaitingToolResults, got %d", m.state)
 	}
-	if m.pendingTools != 2 {
-		t.Fatalf("expected 2 pending tools, got %d", m.pendingTools)
+	if m.toolTracker.pendingTools != 2 {
+		t.Fatalf("expected 2 pending tools, got %d", m.toolTracker.pendingTools)
 	}
 
 	// Unknown tool result is ignored once pending IDs are fixed.
 	m.handleToolCompleted("tool-c", tools.Result{ToolUseID: "tool-c"})
-	if len(m.toolResults) != 0 {
-		t.Fatalf("expected 0 collected results after unknown tool, got %d", len(m.toolResults))
+	if len(m.toolTracker.results) != 0 {
+		t.Fatalf("expected 0 collected results after unknown tool, got %d", len(m.toolTracker.results))
 	}
 
 	// Interleaved completions should only complete once all known tools are done.
@@ -352,14 +352,14 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateComplete
-		m.pendingTools = 1
-		m.toolResults = []tools.Result{{ToolUseID: "tool-1"}}
-		m.persisted = false
+		m.toolTracker.pendingTools = 1
+		m.toolTracker.results = []tools.Result{{ToolUseID: "tool-1"}}
+		m.toolTracker.persisted = false
 
 		// Simulate assistantPersisted arriving
 		cmd := m.Update(assistantPersisted{turnID: m.userMessage.ID(), messageID: "asst-1"})
 
-		if !m.persisted {
+		if !m.toolTracker.persisted {
 			t.Error("expected persisted = true")
 		}
 		if cmd == nil {
@@ -371,8 +371,8 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.persisted = true
-		m.pendingTools = 1
+		m.toolTracker.persisted = true
+		m.toolTracker.pendingTools = 1
 
 		cmd := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
 
@@ -385,11 +385,11 @@ func TestPersistBeforeFireToolResults(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateComplete
-		m.pendingTools = 0
+		m.toolTracker.pendingTools = 0
 
 		cmd := m.Update(assistantPersisted{turnID: m.userMessage.ID(), messageID: "asst-1"})
 
-		if !m.persisted {
+		if !m.toolTracker.persisted {
 			t.Error("expected persisted = true")
 		}
 		if cmd != nil {
@@ -405,8 +405,8 @@ func TestFireToolResultsOnlyOnce(t *testing.T) {
 		t.Parallel()
 		m := newTestTurn(t)
 		m.state = StateAwaitingToolResults
-		m.persisted = true
-		m.pendingTools = 1
+		m.toolTracker.persisted = true
+		m.toolTracker.pendingTools = 1
 
 		cmd1 := m.handleToolCompleted("tool-1", tools.Result{ToolUseID: "tool-1"})
 		if cmd1 == nil {
@@ -449,7 +449,7 @@ func TestUpdate_TurnScopedRouting(t *testing.T) {
 		if got := m.protocolViolationCount; got != 0 {
 			t.Fatalf("protocolViolationCount = %d, want 0", got)
 		}
-		if m.persisted {
+		if m.toolTracker.persisted {
 			t.Fatal("persisted should remain false for mismatched turn")
 		}
 	})

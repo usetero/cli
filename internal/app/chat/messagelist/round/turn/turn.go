@@ -47,12 +47,8 @@ type Model struct {
 	width  int
 	stream *streamState
 
-	// Tool result collection
-	pendingTools     int
-	pendingToolIDs   map[string]bool // tool_use IDs belonging to this turn
-	toolResults      []tools.Result
-	persisted        bool // true after assistantMessage is written to DB
-	firedToolResults bool // true after fireToolResults has been called
+	// Tool result lifecycle (pending IDs/results/persisted/fired gate).
+	toolTracker toolResultTracker
 
 	// Protocol guard telemetry (incremented on dropped/malformed lifecycle events).
 	protocolViolationCount int
@@ -163,8 +159,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if msg.messageID != "" {
 			m.assistantMessage.SetID(msg.messageID)
 		}
-		m.persisted = true
-		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
+		m.toolTracker.markPersisted()
+		if m.toolTracker.shouldFire(m.state) {
 			return m.fireToolResults()
 		}
 		return nil
@@ -180,29 +176,29 @@ func (m *Model) handleToolCompleted(toolUseID string, result tools.Result) tea.C
 	// Ignore tools that don't belong to this turn.
 	// Before pendingToolIDs is set (during streaming), accept all tools —
 	// they'll be validated once the stream completes and IDs are known.
-	if m.pendingToolIDs != nil && !m.pendingToolIDs[toolUseID] {
+	if !m.toolTracker.accepts(toolUseID) {
 		m.reportProtocolViolation(
 			"tool_completed_unknown_tool_use_id",
 			"tool_use_id", toolUseID,
-			"pending", m.pendingTools,
-			"collected", len(m.toolResults),
+			"pending", m.toolTracker.pendingCount(),
+			"collected", m.toolTracker.collectedCount(),
 		)
 		return nil
 	}
 
 	// Collect results during streaming or awaiting - tools may complete before StreamCompleted
-	m.toolResults = append(m.toolResults, result)
-	m.scope.Info("tool completed", "tool_use_id", toolUseID, "collected", len(m.toolResults), "pending", m.pendingTools)
+	m.toolTracker.collect(result)
+	m.scope.Info("tool completed", "tool_use_id", toolUseID, "collected", m.toolTracker.collectedCount(), "pending", m.toolTracker.pendingCount())
 
 	// Only fire results once we're awaiting and have all of them
-	next := reduceOnToolCompleted(m.state, len(m.toolResults), m.pendingTools)
+	next := reduceOnToolCompleted(m.state, m.toolTracker.collectedCount(), m.toolTracker.pendingCount())
 	if next == m.state {
 		return nil
 	}
 	m.state = next
 	if m.state == StateComplete {
 		m.scope.Info("all tools completed")
-		if shouldFireToolResults(m.state, m.persisted, len(m.toolResults), m.pendingTools) {
+		if m.toolTracker.shouldFire(m.state) {
 			return m.fireToolResults()
 		}
 		return nil
@@ -387,14 +383,14 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		}
 
 		if update.message.StopReason == "tool_use" {
-			m.pendingTools, m.pendingToolIDs = collectToolUseIDs(update.message.Content)
-			m.scope.Info("awaiting tool results", "pending", m.pendingTools, "already_collected", len(m.toolResults))
-			m.state = reduceOnStreamDone(update.message.StopReason, len(m.toolResults), m.pendingTools)
+			m.toolTracker.setPendingFromContent(update.message.Content)
+			m.scope.Info("awaiting tool results", "pending", m.toolTracker.pendingCount(), "already_collected", m.toolTracker.collectedCount())
+			m.state = reduceOnStreamDone(update.message.StopReason, m.toolTracker.collectedCount(), m.toolTracker.pendingCount())
 			if m.state == StateComplete {
 				m.scope.Info("all tools already completed")
 			}
 		} else {
-			m.state = reduceOnStreamDone(update.message.StopReason, len(m.toolResults), m.pendingTools)
+			m.state = reduceOnStreamDone(update.message.StopReason, m.toolTracker.collectedCount(), m.toolTracker.pendingCount())
 		}
 
 		// Fire StreamCompleted and persist
@@ -496,19 +492,9 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 // fireToolResults fires ToolResultsReady for the round to handle.
 // Guarded by firedToolResults to ensure it can only fire once per turn.
 func (m *Model) fireToolResults() tea.Cmd {
-	if m.firedToolResults {
-		m.scope.Warn("fireToolResults called twice, ignoring")
-		return nil
-	}
-	m.firedToolResults = true
-	turnID := m.userMessage.ID()
-	results := m.toolResults
-	return func() tea.Msg {
-		return msgs.ToolResultsReady{
-			TurnID:  turnID,
-			Results: results,
-		}
-	}
+	return m.toolTracker.fire(m.userMessage.ID(), func(message string) {
+		m.scope.Warn(message)
+	})
 }
 
 // collectToolUseIDs returns the count and set of tool_use IDs in content.
