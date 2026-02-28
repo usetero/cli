@@ -12,7 +12,7 @@ func (m *Model) rewindGateFor(target Gate) Gate {
 	rewind := bootstrap.RewindGate(
 		target,
 		def.requirement,
-		m.toCoreState(),
+		m.state,
 	)
 	return rewind
 }

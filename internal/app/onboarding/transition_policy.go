@@ -30,8 +30,9 @@ func (m *Model) transitionOutcomeFor(msg tea.Msg) (TransitionOutcome, bool) {
 			slog.String("error", preflight.State.Error))
 	}
 
-	transition := bootstrap.ApplyEvent(m.toCoreState(), event)
-	m.applyCoreState(transition.State)
+	transition := bootstrap.ApplyEvent(m.state, event)
+	m.state = transition.State
+	m.syncServicesToState()
 
 	switch transition.Kind {
 	case bootstrap.TransitionAdvance:

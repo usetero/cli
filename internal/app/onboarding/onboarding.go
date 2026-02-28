@@ -8,6 +8,7 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	iauth "github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
@@ -27,7 +28,7 @@ type Model struct {
 	scope     log.Scope
 
 	// Accumulated state from step completions
-	state onboardingState
+	state bootstrap.State
 
 	// Current step
 	gate        Gate
