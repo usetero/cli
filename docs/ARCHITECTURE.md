@@ -33,7 +33,7 @@ For Bubble Tea in `internal/app`, messages are contracts and must be scoped.
 1. Parent may broadcast messages to children, but children must only handle messages they own.
 2. Periodic/timer messages must carry a source key (feature/tab/component) and handlers must filter by source.
 3. Cross-feature messages live in `internal/app/msgs`.
-4. Feature-local messages live in `internal/app/<feature>/msgs` (or unexported local types when strictly internal).
+4. Feature-local messages live in `internal/app/<feature>/msgs` (or unexported local types when strictly internal), except onboarding bootstrap contracts which live in `internal/core/bootstrap`.
 5. Avoid generic shared message types without source identity.
 
 ## Chat Architecture
