@@ -7,23 +7,14 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/google/uuid"
 
 	"github.com/usetero/cli/internal/api"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/input"
 )
-
-// accountCreatedMsg is sent when account creation completes.
-type accountCreatedMsg struct {
-	datadogAccountID domain.DatadogAccountID
-	err              error
-}
 
 // AppKeyModel handles Datadog Application key entry and account creation.
 type AppKeyModel struct {
@@ -85,82 +76,6 @@ func (m *AppKeyModel) Init() tea.Cmd {
 	return m.input.Focus()
 }
 
-// Update handles messages.
-func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
-	switch msg := msg.(type) {
-	case accountCreatedMsg:
-		m.creating = false
-		if msg.err != nil {
-			m.scope.Error("failed to create datadog account", "error", msg.err)
-			m.err = msg.err
-			return appmsg.ErrorCmd("Failed to create Datadog account", msg.err, false)
-		}
-		m.scope.Info("datadog account created", "id", msg.datadogAccountID)
-		ddAccountID := msg.datadogAccountID
-		return func() tea.Msg {
-			return msgs.DatadogAccountCreated{DatadogAccountID: ddAccountID}
-		}
-
-	case tea.KeyPressMsg:
-		if m.creating {
-			return nil
-		}
-		switch msg.String() {
-		case "enter":
-			appKey := m.input.Value()
-			if appKey == "" {
-				return nil
-			}
-			m.creating = true
-			m.err = nil
-			m.scope.Info("creating datadog account")
-			return m.createAccount(appKey)
-		}
-	}
-
-	return m.input.Update(msg)
-}
-
-func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
-	return func() tea.Msg {
-		id := uuid.New()
-		ddAccount, err := m.services.DatadogAccounts.CreateAccount(m.ctx, api.CreateDatadogAccountInput{
-			ID:        id,
-			AccountID: m.account.ID,
-			Name:      m.account.Name,
-			Site:      m.site.String(),
-			APIKey:    m.apiKey,
-			AppKey:    appKey,
-		})
-		if err != nil {
-			return accountCreatedMsg{err: err}
-		}
-		return accountCreatedMsg{datadogAccountID: ddAccount.ID}
-	}
-}
-
-// View renders the App key entry UI.
-func (m *AppKeyModel) View() string {
-	s := m.theme.Styles
-
-	title := s.Title.Render("Enter your Datadog Application Key")
-	subtitle := s.Help.Render("You can find this in Datadog under Organization Settings → Application Keys")
-
-	var status string
-	if m.creating {
-		status = s.Help.Render("Connecting to Datadog...")
-	} else if m.err != nil {
-		status = s.Error.Render(appKeyErrorMessage(m.err))
-	}
-
-	parts := []string{title, subtitle, "", m.input.View()}
-	if status != "" {
-		parts = append(parts, "", status)
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
-}
-
 // SetSize updates dimensions.
 func (m *AppKeyModel) SetSize(width, height int) {
 	m.width = width
@@ -202,4 +117,22 @@ func appKeyErrorMessage(err error) string {
 	}
 
 	return msg
+}
+
+func (m *AppKeyModel) createAccount(appKey string) tea.Cmd {
+	return func() tea.Msg {
+		id := uuid.New()
+		ddAccount, err := m.services.DatadogAccounts.CreateAccount(m.ctx, api.CreateDatadogAccountInput{
+			ID:        id,
+			AccountID: m.account.ID,
+			Name:      m.account.Name,
+			Site:      m.site.String(),
+			APIKey:    m.apiKey,
+			AppKey:    appKey,
+		})
+		if err != nil {
+			return accountCreatedMsg{err: err}
+		}
+		return accountCreatedMsg{datadogAccountID: ddAccount.ID}
+	}
 }
