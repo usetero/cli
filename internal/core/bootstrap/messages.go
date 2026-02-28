@@ -5,6 +5,11 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
+// Message is a typed onboarding/bootstrap message contract.
+type Message interface {
+	bootstrapMessage()
+}
+
 type Authenticated struct {
 	User auth.User
 }
@@ -95,3 +100,23 @@ type PreflightState struct {
 type PreflightResolved struct {
 	State PreflightState
 }
+
+func (Authenticated) bootstrapMessage()         {}
+func (RoleSelected) bootstrapMessage()          {}
+func (OrgSelected) bootstrapMessage()           {}
+func (NoOrgs) bootstrapMessage()                {}
+func (OrgCreated) bootstrapMessage()            {}
+func (AccountSelected) bootstrapMessage()       {}
+func (NoAccounts) bootstrapMessage()            {}
+func (AccountCreated) bootstrapMessage()        {}
+func (RuntimeReady) bootstrapMessage()          {}
+func (DatadogReady) bootstrapMessage()          {}
+func (DatadogNeeded) bootstrapMessage()         {}
+func (DatadogRegionSelected) bootstrapMessage() {}
+func (DatadogAPIKeyEntered) bootstrapMessage()  {}
+func (DatadogAccountCreated) bootstrapMessage() {}
+func (DatadogDiscoveryComplete) bootstrapMessage() {
+}
+func (WorkspaceSelected) bootstrapMessage() {}
+func (SyncComplete) bootstrapMessage()      {}
+func (PreflightResolved) bootstrapMessage() {}

@@ -11,6 +11,7 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	m.state.DDSite = "US1"
 	m.state.DDAPIKey = "api-key"
 	m.state.DDAccount = "dd-1"
+	m.state.Workspace = ptrWorkspace("ws-1")
 
 	expected := []Gate{
 		GatePreflight,
@@ -31,9 +32,9 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	}
 
 	for _, gate := range expected {
-		step, ok := m.newStepForGate(gate)
-		if !ok {
-			t.Fatalf("gate %s is unexpectedly unsupported", gate)
+		step, err := m.newStepForGate(gate)
+		if err != nil {
+			t.Fatalf("gate %s is unexpectedly unsupported: %v", gate, err)
 		}
 		if step == nil {
 			t.Fatalf("gate %s produced nil step", gate)
@@ -41,13 +42,13 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	}
 }
 
-func TestNewStepForGateUnsupportedReturnsNotOK(t *testing.T) {
+func TestNewStepForGateUnsupportedReturnsError(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	step, ok := m.newStepForGate(Gate("unsupported_gate"))
-	if ok {
-		t.Fatal("expected unsupported gate to return ok=false")
+	step, err := m.newStepForGate(Gate("unsupported_gate"))
+	if err == nil {
+		t.Fatal("expected unsupported gate to return error")
 	}
 	if step != nil {
 		t.Fatalf("expected nil step for unsupported gate, got %T", step)

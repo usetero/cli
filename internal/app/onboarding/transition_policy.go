@@ -10,7 +10,12 @@ import (
 
 // transitionCmdFor maps onboarding messages to deterministic state transitions.
 func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
-	event, ok := bootstrap.EventFromMessage(msg)
+	bootstrapMsg, ok := msg.(bootstrap.Message)
+	if !ok {
+		return nil, false
+	}
+
+	event, ok := bootstrap.EventFromMessage(bootstrapMsg)
 	if !ok {
 		return nil, false
 	}

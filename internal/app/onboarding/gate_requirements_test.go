@@ -37,3 +37,15 @@ func TestRewindGateFor(t *testing.T) {
 		})
 	}
 }
+
+func TestNewStepForGateValidatesRequiredState(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	m.state.Org = ptrOrg("org-1")
+	m.state.Account = ptrAccount("acc-1")
+	_, err := m.newStepForGate(GateDatadogAPIKey)
+	if err == nil {
+		t.Fatal("expected missing datadog site error")
+	}
+}

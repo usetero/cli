@@ -11,7 +11,7 @@ func TestEventFromMessage(t *testing.T) {
 
 	tests := []struct {
 		name string
-		msg  any
+		msg  Message
 		kind EventKind
 	}{
 		{name: "authenticated", msg: Authenticated{}, kind: EventAuthenticated},
@@ -63,11 +63,12 @@ func TestEventFromMessagePreflight(t *testing.T) {
 	}
 }
 
-func TestEventFromMessageUnknownMessage(t *testing.T) {
+func TestEventFromMessageNonTransitionMessage(t *testing.T) {
 	t.Parallel()
 
-	_, ok := EventFromMessage(struct{}{})
+	var msg Message
+	_, ok := EventFromMessage(msg)
 	if ok {
-		t.Fatal("expected unknown message to be ignored")
+		t.Fatal("expected non-transition message to be ignored")
 	}
 }

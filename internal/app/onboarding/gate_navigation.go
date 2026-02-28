@@ -4,6 +4,8 @@ import (
 	"log/slog"
 
 	tea "charm.land/bubbletea/v2"
+
+	appmsg "github.com/usetero/cli/internal/app/msgs"
 )
 
 // setStep sets the current step and initializes it.
@@ -24,10 +26,21 @@ func (m *Model) goToGate(gate Gate, trigger string) tea.Cmd {
 }
 
 func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
-	step, ok := m.newStepForGate(gate)
-	if !ok {
-		m.scope.Error("unsupported onboarding gate", slog.String("gate", gate.String()))
-		return nil
+	step, err := m.newStepForGate(gate)
+	if err != nil {
+		m.scope.Error("failed to build onboarding gate",
+			slog.String("gate", gate.String()),
+			slog.String("trigger", trigger),
+			slog.String("error", err.Error()),
+		)
+		if gate == GatePreflight {
+			return appmsg.ErrorCmd("Onboarding setup failed. Please restart.", err, true)
+		}
+		recovery := m.runGate(GatePreflight, "gate_recovery")
+		return tea.Batch(
+			appmsg.ErrorCmd("Onboarding state changed. Rechecking setup.", err, false),
+			recovery,
+		)
 	}
 	m.enterGate(gate, trigger)
 	return m.setStep(step)

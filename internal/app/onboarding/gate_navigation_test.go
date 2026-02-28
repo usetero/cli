@@ -7,11 +7,15 @@ func TestRunGateUnsupportedDoesNotSetStep(t *testing.T) {
 
 	m := newTestModel(t)
 	cmd := m.runGate(Gate("unsupported_gate"), "test")
-	if cmd != nil {
-		t.Fatal("expected nil command for unsupported gate")
+	if cmd == nil {
+		t.Fatal("expected recovery command for unsupported gate")
 	}
 	if m.step != nil {
-		t.Fatalf("expected step to remain nil, got %T", m.step)
+		if m.gate != GatePreflight {
+			t.Fatalf("gate = %s, want %s", m.gate, GatePreflight)
+		}
+	} else {
+		t.Fatal("expected recovery step to be set")
 	}
 }
 

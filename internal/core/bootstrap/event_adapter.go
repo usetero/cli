@@ -1,7 +1,7 @@
 package bootstrap
 
 // EventFromMessage adapts onboarding message contracts to canonical events.
-func EventFromMessage(msg any) (Event, bool) {
+func EventFromMessage(msg Message) (Event, bool) {
 	switch msg := msg.(type) {
 	case PreflightResolved:
 		return Event{
