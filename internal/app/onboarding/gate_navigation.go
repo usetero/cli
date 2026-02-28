@@ -22,3 +22,8 @@ func (m *Model) goToGate(gate Gate) tea.Cmd {
 	}
 	return m.runGate(gate)
 }
+
+func (m *Model) runGate(gate Gate) tea.Cmd {
+	def := m.definitionForGate(gate)
+	return m.setStep(def.newStep(m))
+}

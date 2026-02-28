@@ -17,6 +17,8 @@ type gateDefinition struct {
 	display gateDisplayPolicy
 }
 
+var gateDefinitions = defaultGateDefinitions()
+
 func gateDef(newStep func(m *Model) Step, opts ...func(*gateDefinition)) gateDefinition {
 	def := gateDefinition{
 		newStep: newStep,
@@ -34,7 +36,7 @@ func withDisplay(display gateDisplayPolicy) func(*gateDefinition) {
 }
 
 func (m *Model) definitionForGate(gate Gate) gateDefinition {
-	if def, ok := m.definitions[gate]; ok {
+	if def, ok := gateDefinitions[gate]; ok {
 		return def
 	}
 	panic("unsupported onboarding gate: " + gate.String())

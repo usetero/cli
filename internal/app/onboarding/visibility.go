@@ -7,10 +7,7 @@ type gateDisplayPolicy struct {
 }
 
 func (m *Model) displayPolicyForGate(gate Gate) gateDisplayPolicy {
-	if def, ok := m.definitions[gate]; ok {
-		return def.display
-	}
-	return gateDisplayPolicy{hidden: false}
+	return m.definitionForGate(gate).display
 }
 
 // VisibilityProvider is an optional step contract for transient step rendering.

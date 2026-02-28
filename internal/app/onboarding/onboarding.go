@@ -31,11 +31,10 @@ type Model struct {
 	state bootstrap.State
 
 	// Current step
-	gate        Gate
-	step        Step
-	definitions map[Gate]gateDefinition
-	width       int
-	height      int
+	gate   Gate
+	step   Step
+	width  int
+	height int
 }
 
 // New creates a new onboarding model.
@@ -68,15 +67,14 @@ func New(
 	scope = scope.Child("onboarding")
 
 	return &Model{
-		ctx:         ctx,
-		theme:       theme,
-		services:    services,
-		userPrefs:   userPrefs,
-		orgPrefs:    orgPrefs,
-		auth:        authService,
-		syncer:      syncer,
-		scope:       scope,
-		definitions: defaultGateDefinitions(),
+		ctx:       ctx,
+		theme:     theme,
+		services:  services,
+		userPrefs: userPrefs,
+		orgPrefs:  orgPrefs,
+		auth:      authService,
+		syncer:    syncer,
+		scope:     scope,
 	}
 }
 
