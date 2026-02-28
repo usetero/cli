@@ -9,12 +9,11 @@ import (
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
-// transitionOutcomeFor is the single transition policy entrypoint.
-// It maps onboarding messages to the next gate and state mutations.
-func (m *Model) transitionOutcomeFor(msg tea.Msg) (TransitionOutcome, bool) {
+// transitionCmdFor maps onboarding messages to deterministic state transitions.
+func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
 	event, ok := bootstrapEventFor(msg)
 	if !ok {
-		return noop(), false
+		return nil, false
 	}
 
 	if preflight, ok := msg.(onboardingmsg.PreflightResolved); ok {
@@ -36,26 +35,27 @@ func (m *Model) transitionOutcomeFor(msg tea.Msg) (TransitionOutcome, bool) {
 
 	switch transition.Kind {
 	case bootstrap.TransitionAdvance:
+		nav := m.goToGate(transition.Next)
 		if event.Kind == bootstrap.EventPreflightResolved {
 			m.scope.Info("preflight decision",
 				slog.String("outcome", string(event.Preflight.Outcome)),
 				slog.String("next_gate", transition.Next.String()))
 		}
-		return advance(transition.Next), true
+		return nav, true
 	case bootstrap.TransitionComplete:
 		m.scope.Info("onboarding complete",
 			slog.String("org_id", transition.Completion.Org.ID.String()),
 			slog.String("account_id", transition.Completion.Account.ID.String()),
 			slog.String("workspace_id", string(transition.Completion.Workspace.ID)),
 		)
-		return advanceWith("", func() tea.Msg {
+		return func() tea.Msg {
 			return onboardingmsg.OnboardingComplete{
 				User:      transition.Completion.User,
 				Org:       transition.Completion.Org,
 				Account:   transition.Completion.Account,
 				Workspace: transition.Completion.Workspace,
 			}
-		}), true
+		}, true
 	case bootstrap.TransitionNoop:
 		if event.Kind == bootstrap.EventSyncComplete {
 			m.scope.Error("sync completed without required onboarding state",
@@ -65,8 +65,8 @@ func (m *Model) transitionOutcomeFor(msg tea.Msg) (TransitionOutcome, bool) {
 				slog.Bool("has_workspace", m.state.Workspace != nil),
 			)
 		}
-		return noop(), true
+		return nil, true
 	default:
-		return noop(), true
+		return nil, true
 	}
 }
