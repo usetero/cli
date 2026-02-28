@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 func TestViewDoesNotHideByGateAlone(t *testing.T) {
@@ -15,7 +16,7 @@ func TestViewDoesNotHideByGateAlone(t *testing.T) {
 
 	m := newTestModel(t)
 	m.SetSize(80, 20)
-	m.gate = GateRuntimeInit
+	m.gate = bootstrap.GateRuntimeInit
 	m.step = fixedTestStep{view: "runtime detail should be visible"}
 
 	view := m.View()
@@ -29,7 +30,7 @@ func TestViewUsesHiddenStepStatus(t *testing.T) {
 
 	m := newTestModel(t)
 	m.SetSize(80, 20)
-	m.gate = GateRoleSelect // visible by default, hidden should come from provider
+	m.gate = bootstrap.GateRoleSelect // visible by default, hidden should come from provider
 	m.step = hiddenTestStep{
 		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 		hidden:        true,
@@ -53,7 +54,7 @@ func TestViewUsesOverriddenEmbeddedStatus(t *testing.T) {
 
 	m := newTestModel(t)
 	m.SetSize(80, 20)
-	m.gate = GateDatadogCheck
+	m.gate = bootstrap.GateDatadogCheck
 	m.step = hiddenStatusTestStep{
 		hiddenTestStep: hiddenTestStep{
 			fixedTestStep: fixedTestStep{view: "step view should be hidden"},
@@ -86,7 +87,7 @@ func TestViewHiddenStatusNeverFallsBackToGenericTitle(t *testing.T) {
 
 	m := newTestModel(t)
 	m.SetSize(80, 20)
-	m.gate = GateRuntimeInit
+	m.gate = bootstrap.GateRuntimeInit
 	m.step = hiddenTestStep{
 		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 		hidden:        true,

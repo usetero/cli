@@ -16,40 +16,46 @@ import (
 )
 
 func (m *Model) newStepForGate(gate Gate) (Step, error) {
+	if m.gateBuildHook != nil {
+		if err := m.gateBuildHook(gate); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := m.validateGateState(gate); err != nil {
 		return nil, err
 	}
 
 	switch gate {
-	case GatePreflight:
+	case bootstrap.GatePreflight:
 		return preflight.New(m.ctx, m.theme, m.services, m.auth, m.userPrefs, m.orgPrefs, m.scope), nil
-	case GateAuthenticate:
+	case bootstrap.GateAuthenticate:
 		return auth.NewAuthenticate(m.ctx, m.theme, m.auth, m.scope), nil
-	case GateRoleSelect:
+	case bootstrap.GateRoleSelect:
 		return role.New(m.theme, m.userPrefs, m.scope), nil
-	case GateOrgSelect:
+	case bootstrap.GateOrgSelect:
 		return organizations.NewSelect(m.ctx, m.theme, m.services, m.userPrefs, m.auth, m.scope), nil
-	case GateOrgCreate:
+	case bootstrap.GateOrgCreate:
 		return organizations.NewCreate(m.ctx, m.theme, m.services, m.userPrefs, m.scope), nil
-	case GateAccountSelect:
+	case bootstrap.GateAccountSelect:
 		return accounts.NewSelect(m.ctx, m.theme, *m.state.Org, m.services, m.orgPrefs, m.scope), nil
-	case GateAccountCreate:
+	case bootstrap.GateAccountCreate:
 		return accounts.NewCreate(m.ctx, m.theme, *m.state.Org, m.services, m.orgPrefs, m.scope), nil
-	case GateRuntimeInit:
+	case bootstrap.GateRuntimeInit:
 		return runtimeinit.New(m.theme, *m.state.Org, *m.state.Account, m.scope), nil
-	case GateDatadogCheck:
+	case bootstrap.GateDatadogCheck:
 		return datadog.NewCheck(m.ctx, m.theme, *m.state.Account, m.services, m.scope), nil
-	case GateDatadogRegion:
+	case bootstrap.GateDatadogRegion:
 		return datadog.NewRegion(m.theme, m.scope), nil
-	case GateDatadogAPIKey:
+	case bootstrap.GateDatadogAPIKey:
 		return datadog.NewAPIKey(m.ctx, m.theme, *m.state.Account, m.state.DDSite, m.services, m.scope), nil
-	case GateDatadogAppKey:
+	case bootstrap.GateDatadogAppKey:
 		return datadog.NewAppKey(m.ctx, m.theme, *m.state.Account, m.state.DDSite, m.state.DDAPIKey, m.services, m.scope), nil
-	case GateDatadogDiscovery:
+	case bootstrap.GateDatadogDiscovery:
 		return datadog.NewDiscovery(m.ctx, m.theme, m.state.DDAccount, m.services, m.scope), nil
-	case GateWorkspaceSelect:
+	case bootstrap.GateWorkspaceSelect:
 		return workspaces.NewSelect(m.ctx, m.theme, *m.state.Account, m.services, m.orgPrefs, m.scope), nil
-	case GateSync:
+	case bootstrap.GateSync:
 		return sync.New(m.theme, m.syncer, m.scope), nil
 	default:
 		return nil, fmt.Errorf("unsupported gate %q", gate)

@@ -29,14 +29,14 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			state: bootstrap.PreflightState{
 				HasValidAuth: false,
 			},
-			wantGate: GateAuthenticate,
+			wantGate: bootstrap.GateAuthenticate,
 		},
 		{
 			name: "missing role routes to role select",
 			state: bootstrap.PreflightState{
 				HasValidAuth: true,
 			},
-			wantGate: GateRoleSelect,
+			wantGate: bootstrap.GateRoleSelect,
 		},
 		{
 			name: "missing org routes to org select",
@@ -44,7 +44,7 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 				HasValidAuth: true,
 				Role:         bootstrap.RolePlatform,
 			},
-			wantGate: GateOrgSelect,
+			wantGate: bootstrap.GateOrgSelect,
 		},
 		{
 			name: "resolved org only routes to account select",
@@ -53,7 +53,7 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 				Role:         bootstrap.RolePlatform,
 				Org:          ptrOrg("org-1"),
 			},
-			wantGate: GateAccountSelect,
+			wantGate: bootstrap.GateAccountSelect,
 		},
 		{
 			name: "resolved account routes to runtime init",
@@ -63,7 +63,7 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 				Org:          ptrOrg("org-1"),
 				Account:      ptrAccount("acc-1"),
 			},
-			wantGate: GateRuntimeInit,
+			wantGate: bootstrap.GateRuntimeInit,
 		},
 		{
 			name: "failed preflight routes to authenticate even with valid auth",
@@ -74,7 +74,7 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 				Org:          ptrOrg("org-1"),
 				Account:      ptrAccount("acc-1"),
 			},
-			wantGate: GateAuthenticate,
+			wantGate: bootstrap.GateAuthenticate,
 		},
 	}
 
@@ -89,7 +89,7 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 			if m.gate != tc.wantGate {
 				t.Fatalf("gate = %s, want %s", m.gate, tc.wantGate)
 			}
-			if tc.wantGate == GateRuntimeInit {
+			if tc.wantGate == bootstrap.GateRuntimeInit {
 				msg := cmd()
 				if _, ok := msg.(bootstrap.EnsureRuntime); !ok {
 					t.Fatalf("runtime init should emit EnsureRuntime, got %T", msg)
@@ -107,9 +107,9 @@ func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 		msg      any
 		wantGate Gate
 	}{
-		{name: "datadog ready goes to workspace select", msg: bootstrap.DatadogReady{}, wantGate: GateWorkspaceSelect},
-		{name: "datadog needed goes to region", msg: bootstrap.DatadogNeeded{}, wantGate: GateDatadogRegion},
-		{name: "discovery complete goes to workspace select", msg: bootstrap.DatadogDiscoveryComplete{}, wantGate: GateWorkspaceSelect},
+		{name: "datadog ready goes to workspace select", msg: bootstrap.DatadogReady{}, wantGate: bootstrap.GateWorkspaceSelect},
+		{name: "datadog needed goes to region", msg: bootstrap.DatadogNeeded{}, wantGate: bootstrap.GateDatadogRegion},
+		{name: "discovery complete goes to workspace select", msg: bootstrap.DatadogDiscoveryComplete{}, wantGate: bootstrap.GateWorkspaceSelect},
 	}
 
 	for _, tc := range tests {
@@ -137,8 +137,8 @@ func TestHandleTransitionWorkspaceSelectedSetsState(t *testing.T) {
 	if cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: workspace}); cmd == nil {
 		t.Fatal("expected transition command")
 	}
-	if m.gate != GateSync {
-		t.Fatalf("gate = %s, want %s", m.gate, GateSync)
+	if m.gate != bootstrap.GateSync {
+		t.Fatalf("gate = %s, want %s", m.gate, bootstrap.GateSync)
 	}
 	if m.state.Workspace == nil || m.state.Workspace.ID != workspace.ID {
 		t.Fatalf("workspace state not set correctly: %+v", m.state.Workspace)
@@ -152,21 +152,21 @@ func TestHandleTransitionDatadogState(t *testing.T) {
 	m.state.Org = ptrOrg("org-1")
 	m.state.Account = ptrAccount("acc-1")
 
-	if _ = m.handleTransition(bootstrap.DatadogRegionSelected{Site: "US1"}); m.gate != GateDatadogAPIKey {
+	if _ = m.handleTransition(bootstrap.DatadogRegionSelected{Site: "US1"}); m.gate != bootstrap.GateDatadogAPIKey {
 		t.Fatalf("expected datadog region to route to api key gate")
 	}
 	if m.state.DDSite != "US1" {
 		t.Fatalf("ddSite = %s, want US1", m.state.DDSite)
 	}
 
-	if _ = m.handleTransition(bootstrap.DatadogAPIKeyEntered{APIKey: "api-key"}); m.gate != GateDatadogAppKey {
+	if _ = m.handleTransition(bootstrap.DatadogAPIKeyEntered{APIKey: "api-key"}); m.gate != bootstrap.GateDatadogAppKey {
 		t.Fatalf("expected api key entered to route to app key gate")
 	}
 	if m.state.DDAPIKey != "api-key" {
 		t.Fatalf("ddAPIKey = %q, want %q", m.state.DDAPIKey, "api-key")
 	}
 
-	if _ = m.handleTransition(bootstrap.DatadogAccountCreated{DatadogAccountID: "dd-1"}); m.gate != GateDatadogDiscovery {
+	if _ = m.handleTransition(bootstrap.DatadogAccountCreated{DatadogAccountID: "dd-1"}); m.gate != bootstrap.GateDatadogDiscovery {
 		t.Fatalf("expected account created to route to discovery gate")
 	}
 	if m.state.DDAccount != "dd-1" {
@@ -181,7 +181,7 @@ func TestHandleTransitionRuntimeReady(t *testing.T) {
 	org := ptrOrg("org-1")
 	account := ptrAccount("acc-1")
 
-	if _ = m.handleTransition(bootstrap.RuntimeReady{Org: *org, Account: *account}); m.gate != GateDatadogCheck {
+	if _ = m.handleTransition(bootstrap.RuntimeReady{Org: *org, Account: *account}); m.gate != bootstrap.GateDatadogCheck {
 		t.Fatalf("expected runtime ready to route to datadog check")
 	}
 	if m.state.Org == nil || m.state.Org.ID != org.ID {

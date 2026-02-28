@@ -8,8 +8,8 @@ import (
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
-// transitionCmdFor maps onboarding messages to deterministic state transitions.
-func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
+// commandForBootstrapMessage maps bootstrap messages to deterministic transitions.
+func (m *Model) commandForBootstrapMessage(msg tea.Msg) (tea.Cmd, bool) {
 	bootstrapMsg, ok := msg.(bootstrap.Message)
 	if !ok {
 		return nil, false

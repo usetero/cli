@@ -54,7 +54,8 @@ Two design details matter here:
 
 - Gate rewinding is explicit. If prerequisites for a requested gate are missing,
   `rewindGateFor` moves back to the earliest valid gate.
-- Unsupported gates are handled safely (logged + no-op), not by panic.
+- Gate construction failures are handled safely (logged + recovery to preflight),
+  not by panic.
 
 ## Step contract and visibility behavior
 
@@ -89,6 +90,6 @@ The architecture depends on these rules staying true:
 2. Step components emit facts, not routing commands.
 3. `Update`/`View` paths do not perform blocking I/O.
 4. Bootstrap state is local to onboarding until completion handoff.
-5. Gate navigation is safe under missing prerequisites (rewind) and unsupported gates (log/no-op).
+5. Gate navigation is safe under missing prerequisites (rewind) and gate build failures (recover to preflight + user feedback).
 
 If you keep those intact, onboarding stays predictable even as step UIs evolve.

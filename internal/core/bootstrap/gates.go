@@ -4,6 +4,7 @@ package bootstrap
 type Gate string
 
 const (
+	GatePreflight        Gate = "preflight"
 	GateAuthenticate     Gate = "authenticate"
 	GateRoleSelect       Gate = "role_select"
 	GateOrgSelect        Gate = "org_select"

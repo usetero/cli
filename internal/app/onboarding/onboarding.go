@@ -37,6 +37,9 @@ type Model struct {
 	step          Step
 	width         int
 	height        int
+
+	// Optional test hook for forcing gate build failures in integration tests.
+	gateBuildHook func(Gate) error
 }
 
 // New creates a new onboarding model.
@@ -89,7 +92,7 @@ func (m *Model) SetOrgPreferences(prefs preferences.OrgPreferences) {
 // Init starts the onboarding flow with preflight resolution.
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("onboarding started")
-	return m.goToGate(GatePreflight, "init")
+	return m.goToGate(bootstrap.GatePreflight, "init")
 }
 
 // StartFromOrgSelect starts the onboarding flow at the organization selection
@@ -98,5 +101,17 @@ func (m *Model) Init() tea.Cmd {
 // for selection instead of auto-selecting.
 func (m *Model) StartFromOrgSelect() tea.Cmd {
 	m.scope.Info("onboarding started from org select")
-	return m.goToGate(GateOrgSelect, "start_from_org_select")
+	return m.goToGate(bootstrap.GateOrgSelect, "start_from_org_select")
+}
+
+// TestingCurrentGate returns the active onboarding gate.
+// For test assertions only.
+func (m *Model) TestingCurrentGate() Gate {
+	return m.gate
+}
+
+// SetTestingGateBuildHook injects a gate build failure hook.
+// For tests only.
+func (m *Model) SetTestingGateBuildHook(hook func(Gate) error) {
+	m.gateBuildHook = hook
 }

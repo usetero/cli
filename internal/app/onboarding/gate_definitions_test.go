@@ -1,6 +1,10 @@
 package onboarding
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/usetero/cli/internal/core/bootstrap"
+)
 
 func TestNewStepForGateCoverage(t *testing.T) {
 	t.Parallel()
@@ -14,21 +18,21 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	m.state.Workspace = ptrWorkspace("ws-1")
 
 	expected := []Gate{
-		GatePreflight,
-		GateAuthenticate,
-		GateRoleSelect,
-		GateOrgSelect,
-		GateOrgCreate,
-		GateAccountSelect,
-		GateAccountCreate,
-		GateRuntimeInit,
-		GateDatadogCheck,
-		GateDatadogRegion,
-		GateDatadogAPIKey,
-		GateDatadogAppKey,
-		GateDatadogDiscovery,
-		GateWorkspaceSelect,
-		GateSync,
+		bootstrap.GatePreflight,
+		bootstrap.GateAuthenticate,
+		bootstrap.GateRoleSelect,
+		bootstrap.GateOrgSelect,
+		bootstrap.GateOrgCreate,
+		bootstrap.GateAccountSelect,
+		bootstrap.GateAccountCreate,
+		bootstrap.GateRuntimeInit,
+		bootstrap.GateDatadogCheck,
+		bootstrap.GateDatadogRegion,
+		bootstrap.GateDatadogAPIKey,
+		bootstrap.GateDatadogAppKey,
+		bootstrap.GateDatadogDiscovery,
+		bootstrap.GateWorkspaceSelect,
+		bootstrap.GateSync,
 	}
 
 	for _, gate := range expected {
