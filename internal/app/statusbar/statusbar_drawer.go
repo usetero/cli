@@ -37,6 +37,15 @@ func (m *Model) IsDrawerOpen() bool {
 	return m.drawerOpen
 }
 
+// ActiveTabLabel returns the active drawer tab label.
+func (m *Model) ActiveTabLabel() string {
+	tab := m.activeTabModel()
+	if tab == nil {
+		return ""
+	}
+	return tab.Label()
+}
+
 // HandleKeyPress forwards key events to the active tab's key handler.
 func (m *Model) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 	tab := m.activeTabModel()

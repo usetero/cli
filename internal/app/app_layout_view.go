@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -84,6 +86,9 @@ func (m *Model) updateKeyBar() {
 
 // View renders the app.
 func (m *Model) View() tea.View {
+	start := time.Now()
+	defer m.logSlowRender(start)
+
 	colors := m.theme
 
 	// Show message if window is too small

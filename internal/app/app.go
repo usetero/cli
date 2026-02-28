@@ -4,6 +4,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -183,6 +184,9 @@ func (m *Model) checkForUpdate() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	start := time.Now()
+	defer m.logSlowUpdate(start, msg)
+
 	if cmd, handled := m.handleGlobalMessage(msg); handled {
 		return m, cmd
 	}
