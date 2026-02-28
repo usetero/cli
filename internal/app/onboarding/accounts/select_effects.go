@@ -3,7 +3,7 @@ package accounts
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -27,6 +27,6 @@ func (m *SelectModel) emitSelected(acc domain.Account) tea.Cmd {
 	org := m.org
 	m.scope.Info("account selected", "id", acc.ID, "name", acc.Name)
 	return func() tea.Msg {
-		return msgs.AccountSelected{Org: org, Account: acc}
+		return bootstrap.AccountSelected{Org: org, Account: acc}
 	}
 }

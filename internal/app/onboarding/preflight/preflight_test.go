@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -61,12 +61,12 @@ func TestPreflightOutcomeForError(t *testing.T) {
 	t.Parallel()
 
 	outcome, _ := preflightOutcomeForError(context.DeadlineExceeded)
-	if outcome != msgs.PreflightOutcomeFailed {
+	if outcome != bootstrap.PreflightOutcomeFailed {
 		t.Fatalf("expected failed outcome for deadline exceeded, got %v", outcome)
 	}
 
 	outcome, _ = preflightOutcomeForError(errors.New("boom"))
-	if outcome != msgs.PreflightOutcomeInconclusive {
+	if outcome != bootstrap.PreflightOutcomeInconclusive {
 		t.Fatalf("expected inconclusive outcome for generic error, got %v", outcome)
 	}
 }

@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
@@ -31,7 +31,7 @@ func New(theme styles.Theme, org domain.Organization, account domain.Account, sc
 func (m *Model) Init() tea.Cmd {
 	m.scope.Debug("requesting runtime initialization", "account_id", m.account.ID.String())
 	return func() tea.Msg {
-		return msgs.EnsureRuntime{Org: m.org, Account: m.account}
+		return bootstrap.EnsureRuntime{Org: m.org, Account: m.account}
 	}
 }
 

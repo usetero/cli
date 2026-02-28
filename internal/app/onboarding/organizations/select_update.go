@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -22,7 +22,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 		}
 		org := *m.selectedOrg
 		m.scope.Info("organization selected", "id", org.ID, "name", org.Name)
-		return func() tea.Msg { return msgs.OrgSelected{Org: org} }
+		return func() tea.Msg { return bootstrap.OrgSelected{Org: org} }
 
 	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
@@ -51,7 +51,7 @@ func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 
 	if len(m.orgs) == 0 {
 		m.scope.Debug("no organizations found")
-		return func() tea.Msg { return msgs.NoOrgs{} }
+		return func() tea.Msg { return bootstrap.NoOrgs{} }
 	}
 
 	if prefOrg := findOrgByID(m.orgs, m.prefs.GetActiveOrgID()); prefOrg != nil {
@@ -82,7 +82,7 @@ func (m *SelectModel) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 			}
 		}
 	case "n":
-		return func() tea.Msg { return msgs.NoOrgs{} }
+		return func() tea.Msg { return bootstrap.NoOrgs{} }
 	case "r":
 		if m.list.HasError() {
 			m.scope.Debug("retrying organization load")

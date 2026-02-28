@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -20,7 +20,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		_ = m.prefs.SetActiveOrgID(msg.result.Organization.ID)
 		org := *msg.result.Organization
 		m.scope.Info("organization created", "id", org.ID, "name", org.Name)
-		return func() tea.Msg { return msgs.OrgCreated{Org: org} }
+		return func() tea.Msg { return bootstrap.OrgCreated{Org: org} }
 
 	case tea.KeyPressMsg:
 		if m.creating {

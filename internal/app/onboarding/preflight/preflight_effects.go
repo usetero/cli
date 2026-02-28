@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -77,9 +77,9 @@ func resolveAccount(accounts []domain.Account, defaultAccountID domain.AccountID
 	return nil
 }
 
-func preflightOutcomeForError(err error) (msgs.PreflightOutcome, string) {
+func preflightOutcomeForError(err error) (bootstrap.PreflightOutcome, string) {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return msgs.PreflightOutcomeFailed, err.Error()
+		return bootstrap.PreflightOutcomeFailed, err.Error()
 	}
-	return msgs.PreflightOutcomeInconclusive, err.Error()
+	return bootstrap.PreflightOutcomeInconclusive, err.Error()
 }

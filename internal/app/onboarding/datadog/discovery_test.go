@@ -6,7 +6,7 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/api/apitest"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
@@ -78,7 +78,7 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("expected ready status to emit completion message")
 	}
-	if _, ok := cmd().(msgs.DatadogDiscoveryComplete); !ok {
+	if _, ok := cmd().(bootstrap.DatadogDiscoveryComplete); !ok {
 		t.Fatalf("expected DatadogDiscoveryComplete message")
 	}
 }

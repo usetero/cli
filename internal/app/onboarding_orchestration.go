@@ -8,25 +8,25 @@ import (
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
-	case onboardingmsg.OrgSelected:
+	case bootstrap.OrgSelected:
 		return tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg)), true
 
-	case onboardingmsg.OrgCreated:
+	case bootstrap.OrgCreated:
 		return tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg)), true
 
-	case onboardingmsg.AccountSelected:
+	case bootstrap.AccountSelected:
 		// Forward to onboarding orchestrator; runtime init happens at EnsureRuntime gate.
 		if m.onboarding != nil {
 			return m.onboarding.Update(msg), true
 		}
 		return nil, true
 
-	case onboardingmsg.EnsureRuntime:
+	case bootstrap.EnsureRuntime:
 		m.scope.Info("ensuring runtime", "account_id", msg.Account.ID.String())
 		start := time.Now()
 		catalogCmd, err := m.ensureRuntime(msg.Account.ID.String())
@@ -38,12 +38,12 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		if m.onboarding != nil {
 			return tea.Batch(
 				catalogCmd,
-				func() tea.Msg { return onboardingmsg.RuntimeReady(msg) },
+				func() tea.Msg { return bootstrap.RuntimeReady(msg) },
 			), true
 		}
 		return catalogCmd, true
 
-	case onboardingmsg.OnboardingComplete:
+	case bootstrap.OnboardingComplete:
 		m.state = stateChat
 		m.user = msg.User
 		m.account = msg.Account

@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
@@ -15,7 +15,7 @@ func TestInitUsesSavedRolePreference(t *testing.T) {
 	t.Parallel()
 
 	prefs := preferencestest.NewMockUserPreferences()
-	prefs.GetRoleFunc = func() string { return msgs.RoleEngineer }
+	prefs.GetRoleFunc = func() string { return bootstrap.RoleEngineer }
 	m := New(styles.NewTheme(true), prefs, logtest.NewScope(t))
 
 	cmd := m.Init()
@@ -27,7 +27,7 @@ func TestInitUsesSavedRolePreference(t *testing.T) {
 	if updateCmd == nil {
 		t.Fatal("expected saved role to emit RoleSelected")
 	}
-	if selected, ok := updateCmd().(msgs.RoleSelected); !ok || selected.Role != msgs.RoleEngineer {
+	if selected, ok := updateCmd().(bootstrap.RoleSelected); !ok || selected.Role != bootstrap.RoleEngineer {
 		t.Fatalf("expected RoleSelected(engineer), got %#v", selected)
 	}
 }
@@ -51,14 +51,14 @@ func TestEnterSelectsRoleAndPersistsPreference(t *testing.T) {
 	}
 
 	msg := cmd()
-	selected, ok := msg.(msgs.RoleSelected)
+	selected, ok := msg.(bootstrap.RoleSelected)
 	if !ok {
 		t.Fatalf("expected RoleSelected message, got %T", msg)
 	}
-	if selected.Role != msgs.RoleEngineer {
+	if selected.Role != bootstrap.RoleEngineer {
 		t.Fatalf("expected engineer role, got %q", selected.Role)
 	}
-	if saved != msgs.RoleEngineer {
+	if saved != bootstrap.RoleEngineer {
 		t.Fatalf("expected prefs to persist engineer role, got %q", saved)
 	}
 }

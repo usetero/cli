@@ -5,7 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -43,7 +43,7 @@ func (m *DiscoveryModel) handleStatus(msg statusMsg) tea.Cmd {
 
 	if msg.status.ReadyForUse {
 		m.scope.Info("datadog discovery complete", "services", msg.status.ServiceCount)
-		return func() tea.Msg { return msgs.DatadogDiscoveryComplete{} }
+		return func() tea.Msg { return bootstrap.DatadogDiscoveryComplete{} }
 	}
 	return m.schedulePoll()
 }

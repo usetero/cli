@@ -4,7 +4,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -25,7 +25,7 @@ func (m *RegionModel) Update(msg tea.Msg) tea.Cmd {
 			site := domain.DatadogRegions[m.selected].Site
 			m.scope.Info("datadog region selected", "site", site)
 			return func() tea.Msg {
-				return msgs.DatadogRegionSelected{Site: site}
+				return bootstrap.DatadogRegionSelected{Site: site}
 			}
 		}
 	}

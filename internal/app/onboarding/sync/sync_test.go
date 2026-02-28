@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
@@ -23,7 +23,7 @@ func TestInitEmitsSyncCompleteWhenReady(t *testing.T) {
 		t.Fatal("expected non-nil init cmd")
 	}
 	msg := cmd()
-	if _, ok := msg.(onboardingmsg.SyncComplete); !ok {
+	if _, ok := msg.(bootstrap.SyncComplete); !ok {
 		t.Fatalf("expected SyncComplete message, got %T", msg)
 	}
 }
@@ -39,7 +39,7 @@ func TestUpdateEmitsSyncCompleteOnReadyState(t *testing.T) {
 		t.Fatal("expected non-nil command on ready state")
 	}
 	msg := cmd()
-	if _, ok := msg.(onboardingmsg.SyncComplete); !ok {
+	if _, ok := msg.(bootstrap.SyncComplete); !ok {
 		t.Fatalf("expected SyncComplete message, got %T", msg)
 	}
 }

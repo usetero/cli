@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -38,7 +38,7 @@ func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if len(m.accounts) == 0 {
 		m.scope.Debug("no accounts found")
 		org := m.org
-		return func() tea.Msg { return msgs.NoAccounts{Org: org} }
+		return func() tea.Msg { return bootstrap.NoAccounts{Org: org} }
 	}
 
 	if prefAccount := findAccountByID(m.accounts, m.prefs.GetDefaultAccountID()); prefAccount != nil {
@@ -71,7 +71,7 @@ func (m *SelectModel) handleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 		}
 	case "n":
 		org := m.org
-		return func() tea.Msg { return msgs.NoAccounts{Org: org} }
+		return func() tea.Msg { return bootstrap.NoAccounts{Org: org} }
 	case "r":
 		if m.list.HasError() {
 			m.scope.Debug("retrying account load")

@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -31,8 +31,8 @@ func (m *CheckModel) handleCheckResult(msg checkResultMsg) tea.Cmd {
 	}
 	if msg.hasDatadog {
 		m.scope.Info("datadog configured")
-		return func() tea.Msg { return msgs.DatadogReady{} }
+		return func() tea.Msg { return bootstrap.DatadogReady{} }
 	}
 	m.scope.Info("datadog setup required")
-	return func() tea.Msg { return msgs.DatadogNeeded{} }
+	return func() tea.Msg { return bootstrap.DatadogNeeded{} }
 }

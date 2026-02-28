@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -25,7 +25,7 @@ func (m *APIKeyModel) Update(msg tea.Msg) tea.Cmd {
 		m.scope.Info("api key validated")
 		apiKey := m.input.Value()
 		return func() tea.Msg {
-			return msgs.DatadogAPIKeyEntered{APIKey: apiKey}
+			return bootstrap.DatadogAPIKeyEntered{APIKey: apiKey}
 		}
 
 	case tea.KeyPressMsg:

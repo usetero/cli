@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/browser"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -59,7 +59,7 @@ func (m *AuthenticateModel) handleAuthComplete(msg authCompleteMsg) tea.Cmd {
 	m.state = stateComplete
 	m.scope.Info("user authenticated", "user_id", msg.result.User.ID)
 	return func() tea.Msg {
-		return msgs.Authenticated{User: msg.result.User}
+		return bootstrap.Authenticated{User: msg.result.User}
 	}
 }
 

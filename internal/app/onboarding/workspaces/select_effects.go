@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -29,6 +29,6 @@ func (m *SelectModel) loadWorkspaces() tea.Cmd {
 
 func (m *SelectModel) emitSelected(ws domain.Workspace) tea.Cmd {
 	return func() tea.Msg {
-		return msgs.WorkspaceSelected{Workspace: ws}
+		return bootstrap.WorkspaceSelected{Workspace: ws}
 	}
 }

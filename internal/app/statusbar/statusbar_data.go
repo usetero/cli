@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -40,11 +40,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 func (m *Model) ingestStatusMessages(msg tea.Msg) {
 	switch msg := msg.(type) {
-	case onboardingmsg.OrgSelected:
+	case bootstrap.OrgSelected:
 		m.org = msg.Org.Name
-	case onboardingmsg.OrgCreated:
+	case bootstrap.OrgCreated:
 		m.org = msg.Org.Name
-	case onboardingmsg.WorkspaceSelected:
+	case bootstrap.WorkspaceSelected:
 		m.workspace = msg.Workspace.Name
 	case workspaceCountMsg:
 		if msg.err != nil {

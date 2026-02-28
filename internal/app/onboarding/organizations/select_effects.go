@@ -3,7 +3,7 @@ package organizations
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/loader"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
@@ -41,5 +41,5 @@ func (m *SelectModel) selectOrg(org domain.Organization) tea.Cmd {
 	}
 
 	m.scope.Info("organization selected", "id", org.ID, "name", org.Name)
-	return func() tea.Msg { return msgs.OrgSelected{Org: org} }
+	return func() tea.Msg { return bootstrap.OrgSelected{Org: org} }
 }

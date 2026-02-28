@@ -5,18 +5,17 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // transitionCmdFor maps onboarding messages to deterministic state transitions.
 func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
-	event, ok := bootstrapEventFor(msg)
+	event, ok := bootstrap.EventFromMessage(msg)
 	if !ok {
 		return nil, false
 	}
 
-	if preflight, ok := msg.(onboardingmsg.PreflightResolved); ok {
+	if preflight, ok := msg.(bootstrap.PreflightResolved); ok {
 		m.scope.Debug("preflight complete",
 			slog.String("outcome", string(preflight.State.Outcome)),
 			slog.Bool("has_valid_auth", preflight.State.HasValidAuth),
@@ -49,7 +48,7 @@ func (m *Model) transitionCmdFor(msg tea.Msg) (tea.Cmd, bool) {
 			slog.String("workspace_id", string(transition.Completion.Workspace.ID)),
 		)
 		return func() tea.Msg {
-			return onboardingmsg.OnboardingComplete{
+			return bootstrap.OnboardingComplete{
 				User:      transition.Completion.User,
 				Org:       transition.Completion.Org,
 				Account:   transition.Completion.Account,

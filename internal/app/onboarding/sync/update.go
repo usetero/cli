@@ -5,7 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/powersync"
 )
 
@@ -15,7 +15,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case appmsg.SyncStateChanged:
 		if _, ok := msg.State.(*powersync.Ready); ok {
 			m.scope.Info("sync completed")
-			return func() tea.Msg { return msgs.SyncComplete{} }
+			return func() tea.Msg { return bootstrap.SyncComplete{} }
 		}
 		return nil
 

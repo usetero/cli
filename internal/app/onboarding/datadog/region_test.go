@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
@@ -21,7 +21,7 @@ func TestRegionEnterEmitsSelectedSite(t *testing.T) {
 	}
 
 	msg := cmd()
-	selected, ok := msg.(msgs.DatadogRegionSelected)
+	selected, ok := msg.(bootstrap.DatadogRegionSelected)
 	if !ok {
 		t.Fatalf("expected DatadogRegionSelected, got %T", msg)
 	}
@@ -41,7 +41,7 @@ func TestRegionNavigationChangesSelection(t *testing.T) {
 		t.Fatal("expected selection command")
 	}
 	msg := cmd()
-	selected, ok := msg.(msgs.DatadogRegionSelected)
+	selected, ok := msg.(bootstrap.DatadogRegionSelected)
 	if !ok {
 		t.Fatalf("expected DatadogRegionSelected, got %T", msg)
 	}

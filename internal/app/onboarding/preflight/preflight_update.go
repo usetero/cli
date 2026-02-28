@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -74,6 +74,6 @@ func (m *Model) handleResult(msg resultMsg) tea.Cmd {
 		"error", msg.state.Error,
 		"elapsed_ms", elapsed.Milliseconds())
 	return func() tea.Msg {
-		return msgs.PreflightResolved{State: msg.state}
+		return bootstrap.PreflightResolved{State: msg.state}
 	}
 }

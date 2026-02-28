@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
@@ -50,7 +50,7 @@ func New(theme styles.Theme, syncer powersync.Syncer, scope log.Scope) *Model {
 func (m *Model) Init() tea.Cmd {
 	if m.syncer.IsReady() {
 		m.scope.Info("sync already complete")
-		return func() tea.Msg { return msgs.SyncComplete{} }
+		return func() tea.Msg { return bootstrap.SyncComplete{} }
 	}
 	m.scope.Debug("waiting for sync")
 	return m.spinner.Tick

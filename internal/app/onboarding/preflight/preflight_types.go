@@ -1,12 +1,12 @@
 package preflight
 
 import (
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
 
 type resultMsg struct {
-	state msgs.PreflightState
+	state bootstrap.PreflightState
 }
 
 type authCheckedMsg struct {

@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/msgs"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
 // Update handles messages.
@@ -20,7 +20,7 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 		m.scope.Info("datadog account created", "id", msg.datadogAccountID)
 		ddAccountID := msg.datadogAccountID
 		return func() tea.Msg {
-			return msgs.DatadogAccountCreated{DatadogAccountID: ddAccountID}
+			return bootstrap.DatadogAccountCreated{DatadogAccountID: ddAccountID}
 		}
 
 	case tea.KeyPressMsg:

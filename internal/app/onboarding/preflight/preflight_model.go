@@ -11,8 +11,8 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
@@ -27,7 +27,7 @@ type Model struct {
 	userPref preferences.UserPreferences
 	orgPref  preferences.OrgPreferences
 	scope    log.Scope
-	state    msgs.PreflightState
+	state    bootstrap.PreflightState
 	stage    stage
 	spinner  spinner.Model
 	started  time.Time
@@ -74,8 +74,8 @@ func New(
 
 func (m *Model) Init() tea.Cmd {
 	m.started = time.Now()
-	m.state = msgs.PreflightState{
-		Outcome:            msgs.PreflightOutcomeResolved,
+	m.state = bootstrap.PreflightState{
+		Outcome:            bootstrap.PreflightOutcomeResolved,
 		Role:               m.userPref.GetRole(),
 		ActiveOrgID:        m.userPref.GetActiveOrgID(),
 		DefaultAccountID:   m.orgPref.GetDefaultAccountID(),

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/api/apitest"
-	"github.com/usetero/cli/internal/app/onboarding/msgs"
+	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
@@ -26,7 +26,7 @@ func TestCheckHasDatadogEmitsReady(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected command")
 	}
-	if _, ok := cmd().(msgs.DatadogReady); !ok {
+	if _, ok := cmd().(bootstrap.DatadogReady); !ok {
 		t.Fatalf("expected DatadogReady message")
 	}
 }
@@ -45,7 +45,7 @@ func TestCheckNoDatadogEmitsNeeded(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected command")
 	}
-	if _, ok := cmd().(msgs.DatadogNeeded); !ok {
+	if _, ok := cmd().(bootstrap.DatadogNeeded); !ok {
 		t.Fatalf("expected DatadogNeeded message")
 	}
 }
