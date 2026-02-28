@@ -2,29 +2,7 @@ package chat
 
 import (
 	"fmt"
-
-	"github.com/usetero/cli/internal/domain"
 )
-
-type StreamStatus string
-
-const (
-	StreamStatusStreaming StreamStatus = "streaming"
-	StreamStatusCompleted StreamStatus = "completed"
-	StreamStatusToolUse   StreamStatus = "tool_use"
-	StreamStatusAborted   StreamStatus = "aborted"
-)
-
-type StreamSnapshot struct {
-	ConversationID string
-	TurnID         string
-	Seq            int
-	Status         StreamStatus
-	AbortReason    string
-	Done           bool
-	Message        *domain.Message
-	Metadata       *StreamMetadata
-}
 
 type reducer struct {
 	acc            *accumulator
