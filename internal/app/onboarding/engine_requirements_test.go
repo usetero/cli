@@ -25,7 +25,9 @@ func TestRewindGateFor(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := rewindGateFor(tc.target, tc.state)
+			m := newTestModel(t)
+			m.state = tc.state
+			got := m.rewindGateFor(tc.target)
 			if got != tc.want {
 				t.Fatalf("rewindGateFor(%s) = %s, want %s", tc.target, got, tc.want)
 			}

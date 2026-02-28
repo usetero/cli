@@ -4,8 +4,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -13,11 +11,9 @@ import (
 
 	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app/chat"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/keybar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
-	onboardingmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
@@ -191,203 +187,19 @@ func (m *Model) checkForUpdate() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case quitConfirmed:
-		m.shutdown()
-		return m, tea.Quit
-	case quitCanceled:
-		m.quitDlg = nil
-		return m, nil
-	case palette.OpenMsg:
-		return m, m.openPalette()
-	case palette.CloseMsg:
-		m.palette = nil
-		return m, nil
-	case appmsg.SetTheme:
-		return m, m.setTheme(msg.Theme)
+	if cmd, handled := m.handleGlobalMessage(msg); handled {
+		return m, cmd
 	}
 
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.updateLayout()
-		return m, nil
-
-	case tea.KeyPressMsg:
-		// ctrl+c always quits immediately, regardless of overlays
-		if key.Matches(msg, keymap.Quit) {
-			m.shutdown()
-			return m, tea.Quit
-		}
-
-		// When quit dialog is open, forward keys to it and consume
-		if m.quitDlg != nil {
-			return m, m.quitDlg.Update(msg)
-		}
-
-		// When palette is open, forward keys to it and consume
-		if m.palette != nil {
-			return m, m.palette.Update(msg)
-		}
-
-		if key.Matches(msg, keymap.Exit) {
-			if m.statusBar.IsDrawerOpen() {
-				// Let the active tab handle esc first (e.g. back from detail view).
-				if m.statusBar.HandleEsc() {
-					return m, nil
-				}
-				m.statusBar.CloseDrawer()
-				return m, nil
-			}
-			// Esc cancels the active round first; only show dialog if nothing to cancel
-			if m.chat != nil && m.chat.CancelActiveRound() {
-				return m, nil
-			}
-			m.quitDlg = newQuitDialog(m.theme)
-			return m, nil
-		}
-
-		if key.Matches(msg, keymap.Details) {
-			m.statusBar.ToggleDrawer()
-			return m, nil
-		}
-
-		if m.statusBar.IsDrawerOpen() {
-			if key.Matches(msg, keymap.Tab) {
-				m.statusBar.NextTab()
-				return m, nil
-			}
-			// Forward to active tab for navigation (up/down/enter).
-			cmd := m.statusBar.HandleKeyPress(msg)
-			return m, cmd
-		}
-
-	case tea.MouseClickMsg:
-		if m.statusBar.IsDrawerOpen() {
-			m.statusBar.CloseDrawer()
-		}
-
-	case appmsg.DrawerPrompt:
-		// A drawer tab wants to submit a prompt to the chat.
-		m.statusBar.CloseDrawer()
-		return m, func() tea.Msg { return msgs.UserSubmittedInput{Text: msg.Text} }
-
-	case msgs.UserSubmittedInput:
-		// Intercept "exit" and "quit" commands
-		text := strings.TrimSpace(msg.Text)
-		if strings.EqualFold(text, "exit") || strings.EqualFold(text, "quit") {
-			m.quitDlg = newQuitDialog(m.theme)
-			return m, nil
-		}
-
-	case onboardingmsg.OrgSelected:
-		return m, tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg))
-
-	case onboardingmsg.OrgCreated:
-		return m, tea.Batch(m.statusBar.Update(msg), m.activateOrg(msg.Org.ID, msg))
-
-	case onboardingmsg.AccountSelected:
-		// Forward to onboarding engine; runtime init happens at EnsureRuntime gate.
-		if m.onboarding != nil {
-			return m, m.onboarding.Update(msg)
-		}
-		return m, nil
-
-	case onboardingmsg.EnsureRuntime:
-		m.scope.Info("ensuring runtime", "account_id", msg.Account.ID.String())
-		start := time.Now()
-		catalogCmd, err := m.ensureRuntime(msg.Account.ID.String())
-		if err != nil {
-			m.scope.Error("failed to ensure runtime", "error", err)
-			return m, appmsg.ErrorCmd("Failed to initialize account runtime", err, true)
-		}
-		m.scope.Info("runtime ensured", "account_id", msg.Account.ID.String(), "elapsed_ms", time.Since(start).Milliseconds())
-		if m.onboarding != nil {
-			return m, tea.Batch(
-				catalogCmd,
-				func() tea.Msg { return onboardingmsg.RuntimeReady{Org: msg.Org, Account: msg.Account} },
-			)
-		}
-		return m, catalogCmd
-
-	case onboardingmsg.OnboardingComplete:
-		m.state = stateChat
-		m.user = msg.User
-		m.account = msg.Account
-		m.workspace = msg.Workspace
-		m.scope.Info("onboarding complete",
-			"org", msg.Org.Name,
-			"account", msg.Account.Name,
-			"workspace", msg.Workspace.Name,
-		)
-
-		// Create chat model (sizing happens via updateLayout)
-		m.chat = m.newChat()
-
-		// Size the new chat component
-		m.updateLayout()
-
-		return m, m.chat.Init()
-
-	case msgs.StreamCompleted:
-		if msg.Title != "" && m.db != nil && m.chat != nil {
-			m.statusBar.SetTitle(msg.Title)
-			m.windowTitle = "Tero: " + msg.Title
-			db := m.db
-			conversationID := m.chat.ConversationID()
-			title := msg.Title
-			scope := m.scope
-			ctx := m.ctx
-			// Persist title in background using immutable captured values.
-			go func() {
-				writeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-				defer cancel()
-				if err := db.Conversations().UpdateTitle(writeCtx, conversationID, title); err != nil {
-					scope.Error("failed to update conversation title", "error", err)
-				}
-			}()
-		}
-		// Update context window usage in statusbar
-		if msg.InputTokens > 0 && msg.ContextWindow > 0 {
-			pct := (msg.InputTokens*100 + msg.ContextWindow - 1) / msg.ContextWindow // round up
-			m.statusBar.SetContextPercent(pct)
-		}
+	if cmd, handled := m.handleInteractionMessage(msg); handled {
+		return m, cmd
 	}
 
-	// Forward to app-level chrome and current page
-	var cmds []tea.Cmd
-
-	// Palette needs non-key messages (e.g. blink ticks) when open
-	if m.palette != nil {
-		cmds = append(cmds, m.palette.Update(msg))
+	if cmd, handled := m.handleOnboardingMessage(msg); handled {
+		return m, cmd
 	}
-
-	// Status bar listens to all messages
-	if cmd := m.statusBar.Update(msg); cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-
-	// Toast listens to all messages
-	if cmd := m.toast.Update(msg); cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-
-	switch m.state {
-	case stateOnboarding:
-		if m.onboarding != nil {
-			cmds = append(cmds, m.onboarding.Update(msg))
-		}
-	case stateChat:
-		if m.chat != nil {
-			cmds = append(cmds, m.chat.Update(msg))
-		}
-	}
-
-	// Update keybar after page updates (bindings may have changed)
-	m.updateKeyBar()
-
-	return m, tea.Batch(cmds...)
+	m.handleStreamCompleted(msg)
+	return m, m.updateChildren(msg)
 }
 
 // updateLayout propagates sizes to children based on current dimensions.

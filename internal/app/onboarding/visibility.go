@@ -6,13 +6,9 @@ type gateDisplayPolicy struct {
 	status string
 }
 
-var gateDisplayPolicies = map[Gate]gateDisplayPolicy{
-	GateRuntimeInit: {hidden: true, status: "Initializing account runtime..."},
-}
-
-func displayPolicyForGate(gate Gate) gateDisplayPolicy {
-	if p, ok := gateDisplayPolicies[gate]; ok {
-		return p
+func (m *Model) displayPolicyForGate(gate Gate) gateDisplayPolicy {
+	if def, ok := m.definitions[gate]; ok {
+		return def.display
 	}
 	return gateDisplayPolicy{hidden: false}
 }

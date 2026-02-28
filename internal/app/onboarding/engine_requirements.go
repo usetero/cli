@@ -9,40 +9,29 @@ type gateRequirement struct {
 	needsWorkspace bool
 }
 
-var gateRequirements = map[Gate]gateRequirement{
-	GateAccountSelect:    {needsOrg: true},
-	GateAccountCreate:    {needsOrg: true},
-	GateRuntimeInit:      {needsOrg: true, needsAccount: true},
-	GateDatadogCheck:     {needsOrg: true, needsAccount: true},
-	GateDatadogAPIKey:    {needsOrg: true, needsAccount: true, needsDDSite: true},
-	GateDatadogAppKey:    {needsOrg: true, needsAccount: true, needsDDSite: true, needsDDAPIKey: true},
-	GateDatadogDiscovery: {needsOrg: true, needsAccount: true, needsDDAccount: true},
-	GateWorkspaceSelect:  {needsOrg: true, needsAccount: true},
-	GateSync:             {needsOrg: true, needsAccount: true, needsWorkspace: true},
-}
-
-func rewindGateFor(target Gate, state engineState) Gate {
-	req, ok := gateRequirements[target]
+func (m *Model) rewindGateFor(target Gate) Gate {
+	def, ok := m.definitions[target]
 	if !ok {
 		return target
 	}
+	req := def.requirement
 
-	if req.needsOrg && state.org == nil {
+	if req.needsOrg && m.state.org == nil {
 		return GateOrgSelect
 	}
-	if req.needsAccount && state.account == nil {
+	if req.needsAccount && m.state.account == nil {
 		return GateAccountSelect
 	}
-	if req.needsDDSite && state.ddSite == "" {
+	if req.needsDDSite && m.state.ddSite == "" {
 		return GateDatadogRegion
 	}
-	if req.needsDDAPIKey && state.ddAPIKey == "" {
+	if req.needsDDAPIKey && m.state.ddAPIKey == "" {
 		return GateDatadogAPIKey
 	}
-	if req.needsDDAccount && state.ddAccount == "" {
+	if req.needsDDAccount && m.state.ddAccount == "" {
 		return GateDatadogCheck
 	}
-	if req.needsWorkspace && state.workspace == nil {
+	if req.needsWorkspace && m.state.workspace == nil {
 		return GateWorkspaceSelect
 	}
 	return target

@@ -32,10 +32,11 @@ type Model struct {
 	state engineState
 
 	// Current step
-	gate   Gate
-	step   Step
-	width  int
-	height int
+	gate        Gate
+	step        Step
+	definitions map[Gate]gateDefinition
+	width       int
+	height      int
 }
 
 // New creates a new onboarding model.
@@ -68,14 +69,15 @@ func New(
 	scope = scope.Child("onboarding")
 
 	return &Model{
-		ctx:       ctx,
-		theme:     theme,
-		services:  services,
-		userPrefs: userPrefs,
-		orgPrefs:  orgPrefs,
-		auth:      authService,
-		syncer:    syncer,
-		scope:     scope,
+		ctx:         ctx,
+		theme:       theme,
+		services:    services,
+		userPrefs:   userPrefs,
+		orgPrefs:    orgPrefs,
+		auth:        authService,
+		syncer:      syncer,
+		scope:       scope,
+		definitions: defaultGateDefinitions(),
 	}
 }
 
@@ -130,7 +132,7 @@ func (m *Model) View() string {
 	}
 
 	view := m.step.View()
-	policy := displayPolicyForGate(m.gate)
+	policy := m.displayPolicyForGate(m.gate)
 	if policy.hidden {
 		view = m.hiddenStepView(policy.status)
 	}
