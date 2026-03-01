@@ -49,6 +49,13 @@ orchestrate that truth, not redefine it.
 - [operations/testing.md](operations/testing.md)
 - [specs/chat-test-audit.md](specs/chat-test-audit.md)
 
+### I am changing status bar tabs or drawer behavior
+
+- [domains/statusbar.md](domains/statusbar.md)
+- [interfaces/tui.md](interfaces/tui.md)
+- [operations/testing.md](operations/testing.md)
+- [operations/debugging.md](operations/debugging.md)
+
 ### I am adding or modifying a CLI command
 
 - [interfaces/cli.md](interfaces/cli.md)

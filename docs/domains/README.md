@@ -14,6 +14,9 @@ ownership and deterministic gate contracts.
 [chat.md](chat.md) explains the split between stream protocol correctness and
 UI orchestration semantics.
 
+[statusbar.md](statusbar.md) explains status bar ownership, non-blocking update
+contracts, and tab interaction boundaries.
+
 As new high-risk product areas appear, they should get a domain page only when
 there is a real invariant set worth protecting. This section is not meant to
 mirror the entire package tree.
