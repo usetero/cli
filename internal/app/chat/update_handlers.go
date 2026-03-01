@@ -48,11 +48,11 @@ func (m *Model) fetchEmptyStateSummary() tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
-		return emptyStateSummaryMsg{summary: summary, err: err}
+		return emptyStateSummaryLoadedMsg{summary: summary, err: err}
 	}
 }
 
-func (m *Model) handleEmptyStateSummary(msg emptyStateSummaryMsg) {
+func (m *Model) handleEmptyStateSummary(msg emptyStateSummaryLoadedMsg) {
 	if msg.err != nil {
 		return
 	}

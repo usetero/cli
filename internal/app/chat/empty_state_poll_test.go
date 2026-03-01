@@ -38,7 +38,7 @@ func TestEmptyStatePollDoesNotMutateSynchronously(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(emptyStatePollMsg{})
+	cmd := m.Update(emptyStatePollTickMsg{})
 	if cmd == nil {
 		t.Fatalf("expected poll update to return command")
 	}
@@ -67,8 +67,8 @@ func TestEmptyStateSummaryMessageUpdatesState(t *testing.T) {
 	)
 
 	msg := m.fetchEmptyStateSummary()()
-	if _, ok := msg.(emptyStateSummaryMsg); !ok {
-		t.Fatalf("expected emptyStateSummaryMsg, got %T", msg)
+	if _, ok := msg.(emptyStateSummaryLoadedMsg); !ok {
+		t.Fatalf("expected emptyStateSummaryLoadedMsg, got %T", msg)
 	}
 
 	m.Update(msg)

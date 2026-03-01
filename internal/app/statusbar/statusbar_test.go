@@ -24,9 +24,9 @@ func TestFetchWorkspaceCountAndUpdate(t *testing.T) {
 
 	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
 	msg := m.fetchWorkspaceCount(db)()
-	countMsg, ok := msg.(workspaceCountMsg)
+	countMsg, ok := msg.(workspaceCountLoadedMsg)
 	if !ok {
-		t.Fatalf("expected workspaceCountMsg, got %T", msg)
+		t.Fatalf("expected workspaceCountLoadedMsg, got %T", msg)
 	}
 	if countMsg.err != nil {
 		t.Fatalf("unexpected fetch error: %v", countMsg.err)
@@ -50,9 +50,9 @@ func TestFetchWorkspaceCountReturnsErrorWhenTableMissing(t *testing.T) {
 	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
 
 	msg := m.fetchWorkspaceCount(db)()
-	countMsg, ok := msg.(workspaceCountMsg)
+	countMsg, ok := msg.(workspaceCountLoadedMsg)
 	if !ok {
-		t.Fatalf("expected workspaceCountMsg, got %T", msg)
+		t.Fatalf("expected workspaceCountLoadedMsg, got %T", msg)
 	}
 	if countMsg.err == nil {
 		t.Fatalf("expected error when workspaces table is missing")

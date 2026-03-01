@@ -17,7 +17,7 @@ import (
 const diag = "╱"
 const workspaceCountTimeout = 2 * time.Second
 
-type workspaceCountMsg struct {
+type workspaceCountLoadedMsg struct {
 	count int64
 	err   error
 }

@@ -24,10 +24,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, res.cmd)
 		}
 
-	case emptyStatePollMsg:
+	case emptyStatePollTickMsg:
 		return m.handleEmptyStatePoll()
 
-	case emptyStateSummaryMsg:
+	case emptyStateSummaryLoadedMsg:
 		m.handleEmptyStateSummary(msg)
 		return nil
 

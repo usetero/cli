@@ -75,11 +75,11 @@ type Model struct {
 	toolRegistry *tools.Registry
 }
 
-// emptyStatePollMsg triggers a policy summary fetch for the empty state.
-type emptyStatePollMsg struct{}
+// emptyStatePollTickMsg triggers a policy summary fetch for the empty state.
+type emptyStatePollTickMsg struct{}
 
-// emptyStateSummaryMsg carries an async empty-state summary fetch result.
-type emptyStateSummaryMsg struct {
+// emptyStateSummaryLoadedMsg carries an async empty-state summary fetch result.
+type emptyStateSummaryLoadedMsg struct {
 	summary domain.AccountSummary
 	err     error
 }
@@ -121,6 +121,6 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) pollEmptyState() tea.Cmd {
 	return tea.Tick(2*time.Second, func(time.Time) tea.Msg {
-		return emptyStatePollMsg{}
+		return emptyStatePollTickMsg{}
 	})
 }

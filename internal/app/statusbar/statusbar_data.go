@@ -46,7 +46,7 @@ func (m *Model) ingestStatusMessages(msg tea.Msg) {
 		m.org = msg.Org.Name
 	case bootstrap.WorkspaceSelected:
 		m.workspace = msg.Workspace.Name
-	case workspaceCountMsg:
+	case workspaceCountLoadedMsg:
 		if msg.err != nil {
 			m.scope.Error("scan workspace count", "err", msg.err)
 			break
@@ -63,9 +63,9 @@ func (m *Model) fetchWorkspaceCount(db sqlite.DB) tea.Cmd {
 		var count int64
 		row := db.QueryRow(ctx, "SELECT COUNT(*) FROM workspaces")
 		if err := row.Scan(&count); err != nil {
-			return workspaceCountMsg{err: err}
+			return workspaceCountLoadedMsg{err: err}
 		}
-		return workspaceCountMsg{count: count}
+		return workspaceCountLoadedMsg{count: count}
 	}
 }
 
