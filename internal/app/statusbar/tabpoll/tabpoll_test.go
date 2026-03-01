@@ -1,6 +1,7 @@
 package tabpoll
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -170,5 +171,43 @@ func TestTickEmitsSource(t *testing.T) {
 	}
 	if poll.Source != "quality" {
 		t.Fatalf("expected source quality, got %q", poll.Source)
+	}
+}
+
+func TestFetchDetail_MapsSuccess(t *testing.T) {
+	t.Parallel()
+
+	cmd := FetchDetail(
+		time.Millisecond,
+		func(_ context.Context) (string, error) { return "detail", nil },
+		func(data string, err error) tea.Msg {
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			return data
+		},
+	)
+
+	if got := cmd(); got != "detail" {
+		t.Fatalf("expected detail, got %v", got)
+	}
+}
+
+func TestFetchDetail_MapsError(t *testing.T) {
+	t.Parallel()
+
+	cmd := FetchDetail(
+		time.Millisecond,
+		func(_ context.Context) (string, error) { return "", errors.New("boom") },
+		func(_ string, err error) tea.Msg {
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			return "error"
+		},
+	)
+
+	if got := cmd(); got != "error" {
+		t.Fatalf("expected error marker, got %v", got)
 	}
 }

@@ -6,6 +6,24 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 )
 
+// TabModel is the base contract every status bar tab model must satisfy.
+type TabModel interface {
+	SetDB(db sqlite.DB) tea.Cmd
+	Init() tea.Cmd
+	Update(msg tea.Msg) tea.Cmd
+	HasData() bool
+	CompactView() string
+	ExpandedView(width, height int) string
+}
+
+// InteractiveTabModel extends TabModel with drawer interaction behavior.
+type InteractiveTabModel interface {
+	TabModel
+	InDetail() bool
+	CloseDetail()
+	HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd
+}
+
 type drawerTab interface {
 	Label() string
 	SetDB(db sqlite.DB) tea.Cmd
@@ -20,119 +38,62 @@ type drawerTab interface {
 	HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd
 }
 
-type drawerTabAdapter struct {
-	label       string
-	setDB       func(db sqlite.DB) tea.Cmd
-	init        func() tea.Cmd
-	update      func(msg tea.Msg) tea.Cmd
-	hasData     func() bool
-	compactView func() string
-	expanded    func(width, height int) string
-	interactive bool
-	inDetail    func() bool
-	closeDetail func()
-	handleKey   func(msg tea.KeyPressMsg) tea.Cmd
+type tab struct {
+	label string
+	model TabModel
+}
+
+func newTab(label string, model TabModel) drawerTab {
+	return tab{label: label, model: model}
+}
+
+func (t tab) Label() string { return t.label }
+
+func (t tab) SetDB(db sqlite.DB) tea.Cmd { return t.model.SetDB(db) }
+
+func (t tab) Init() tea.Cmd { return t.model.Init() }
+
+func (t tab) Update(msg tea.Msg) tea.Cmd { return t.model.Update(msg) }
+
+func (t tab) HasData() bool { return t.model.HasData() }
+
+func (t tab) CompactView() string { return t.model.CompactView() }
+
+func (t tab) ExpandedView(width, height int) string { return t.model.ExpandedView(width, height) }
+
+func (t tab) Interactive() bool {
+	_, ok := t.model.(InteractiveTabModel)
+	return ok
+}
+
+func (t tab) InDetail() bool {
+	interactive, ok := t.model.(InteractiveTabModel)
+	if !ok {
+		return false
+	}
+	return interactive.InDetail()
+}
+
+func (t tab) CloseDetail() {
+	if interactive, ok := t.model.(InteractiveTabModel); ok {
+		interactive.CloseDetail()
+	}
+}
+
+func (t tab) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
+	interactive, ok := t.model.(InteractiveTabModel)
+	if !ok {
+		return nil
+	}
+	return interactive.HandleKeyPress(msg)
 }
 
 func (m *Model) buildTabs() []drawerTab {
 	return []drawerTab{
-		drawerTabAdapter{
-			label:       tabLabels[TabWaste],
-			setDB:       m.wasteStatus.SetDB,
-			init:        m.wasteStatus.Init,
-			update:      m.wasteStatus.Update,
-			hasData:     m.wasteStatus.HasData,
-			compactView: m.wasteStatus.CompactView,
-			expanded:    m.wasteStatus.ExpandedView,
-			interactive: true,
-			inDetail:    m.wasteStatus.InDetail,
-			closeDetail: m.wasteStatus.CloseDetail,
-			handleKey:   m.wasteStatus.HandleKeyPress,
-		},
-		drawerTabAdapter{
-			label:       tabLabels[TabQuality],
-			setDB:       m.qualityStatus.SetDB,
-			init:        m.qualityStatus.Init,
-			update:      m.qualityStatus.Update,
-			hasData:     m.qualityStatus.HasData,
-			compactView: m.qualityStatus.CompactView,
-			expanded:    m.qualityStatus.ExpandedView,
-			interactive: true,
-			inDetail:    m.qualityStatus.InDetail,
-			closeDetail: m.qualityStatus.CloseDetail,
-			handleKey:   m.qualityStatus.HandleKeyPress,
-		},
-		drawerTabAdapter{
-			label:       tabLabels[TabCompliance],
-			setDB:       m.complianceStatus.SetDB,
-			init:        m.complianceStatus.Init,
-			update:      m.complianceStatus.Update,
-			hasData:     m.complianceStatus.HasData,
-			compactView: m.complianceStatus.CompactView,
-			expanded:    m.complianceStatus.ExpandedView,
-			interactive: true,
-			inDetail:    m.complianceStatus.InDetail,
-			closeDetail: m.complianceStatus.CloseDetail,
-			handleKey:   m.complianceStatus.HandleKeyPress,
-		},
-		drawerTabAdapter{
-			label:       tabLabels[TabServices],
-			setDB:       m.servicesStatus.SetDB,
-			init:        m.servicesStatus.Init,
-			update:      m.servicesStatus.Update,
-			hasData:     m.servicesStatus.HasData,
-			compactView: m.servicesStatus.CompactView,
-			expanded:    m.servicesStatus.ExpandedView,
-			interactive: true,
-			inDetail:    m.servicesStatus.InDetail,
-			closeDetail: m.servicesStatus.CloseDetail,
-			handleKey:   m.servicesStatus.HandleKeyPress,
-		},
-		drawerTabAdapter{
-			label:       tabLabels[TabSync],
-			setDB:       m.syncStatus.SetDB,
-			init:        m.syncStatus.Init,
-			update:      m.syncStatus.Update,
-			hasData:     m.syncStatus.HasData,
-			compactView: m.syncStatus.CompactView,
-			expanded:    m.syncStatus.ExpandedView,
-			interactive: false,
-		},
+		newTab(tabLabels[TabWaste], m.wasteStatus),
+		newTab(tabLabels[TabQuality], m.qualityStatus),
+		newTab(tabLabels[TabCompliance], m.complianceStatus),
+		newTab(tabLabels[TabServices], m.servicesStatus),
+		newTab(tabLabels[TabSync], m.syncStatus),
 	}
-}
-
-func (t drawerTabAdapter) Label() string { return t.label }
-
-func (t drawerTabAdapter) SetDB(db sqlite.DB) tea.Cmd { return t.setDB(db) }
-
-func (t drawerTabAdapter) Init() tea.Cmd { return t.init() }
-
-func (t drawerTabAdapter) Update(msg tea.Msg) tea.Cmd { return t.update(msg) }
-
-func (t drawerTabAdapter) HasData() bool { return t.hasData() }
-
-func (t drawerTabAdapter) CompactView() string { return t.compactView() }
-
-func (t drawerTabAdapter) ExpandedView(width, height int) string { return t.expanded(width, height) }
-
-func (t drawerTabAdapter) Interactive() bool { return t.interactive }
-
-func (t drawerTabAdapter) InDetail() bool {
-	if t.inDetail == nil {
-		return false
-	}
-	return t.inDetail()
-}
-
-func (t drawerTabAdapter) CloseDetail() {
-	if t.closeDetail != nil {
-		t.closeDetail()
-	}
-}
-
-func (t drawerTabAdapter) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
-	if t.handleKey == nil {
-		return nil
-	}
-	return t.handleKey(msg)
 }

@@ -24,6 +24,10 @@ type detail struct {
 	cursor    int
 }
 
+func (d *detail) Len() int        { return len(d.logEvents) }
+func (d *detail) Cursor() int     { return d.cursor }
+func (d *detail) SetCursor(v int) { d.cursor = v }
+
 // newDetail creates a detail view for the given service and pre-fetched log events.
 func newDetail(theme styles.Theme, service domain.ServiceStatus, logEvents []domain.LogEventStatus) *detail {
 	return &detail{

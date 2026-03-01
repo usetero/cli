@@ -143,16 +143,19 @@ func (m *Model) fetchData() tea.Cmd {
 func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
-	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
-		defer cancel()
+	return tabpoll.FetchDetail(dbTimeout, func(ctx context.Context) ([]domain.WastePolicy, error) {
 		policies, err := db.LogEventPolicyStatuses().ListTopPendingPoliciesByCategory(ctx, cat.Category, 25)
 		if err != nil {
 			scope.Error("list top pending policies", "category", cat.Category, "err", err)
+			return nil, err
+		}
+		return policies, nil
+	}, func(policies []domain.WastePolicy, err error) tea.Msg {
+		if err != nil {
 			return detailMsg{err: err}
 		}
 		return detailMsg{cat: cat, policies: policies}
-	}
+	})
 }
 
 // stateKey builds a string key for change detection.
@@ -198,48 +201,21 @@ func (m *Model) CloseDetail() {
 }
 
 func (m *Model) navController() listdetail.Controller {
-	return listdetail.Controller{
-		HasList: func() bool { return m.hasData && len(m.categories) > 0 },
-		IsDetail: func() bool {
-			return m.detail != nil
-		},
-		CloseDetail: func() { m.detail = nil },
-		GetListCursor: func() int {
-			return m.cursor
-		},
-		SetListCursor: func(v int) { m.cursor = v },
-		ListLen:       func() int { return len(m.categories) },
-		OnListSelect: func(index int) tea.Cmd {
+	return listdetail.New(
+		func() bool { return m.hasData && len(m.categories) > 0 },
+		func() int { return m.cursor },
+		func(v int) { m.cursor = v },
+		func() int { return len(m.categories) },
+		func(index int) tea.Cmd {
 			cat := m.categories[index]
 			if cat.PendingCount == 0 {
 				return nil
 			}
 			return m.fetchDetail(cat)
 		},
-		GetDetailCursor: func() int {
-			if m.detail == nil {
-				return 0
-			}
-			return m.detail.cursor
-		},
-		SetDetailCursor: func(v int) {
-			if m.detail != nil {
-				m.detail.cursor = v
-			}
-		},
-		DetailLen: func() int {
-			if m.detail == nil {
-				return 0
-			}
-			return len(m.detail.policies)
-		},
-		OnDetailSelect: func() tea.Cmd {
-			if m.detail == nil {
-				return nil
-			}
-			return m.detail.Prompt()
-		},
-	}
+		func() listdetail.Detail { return m.detail },
+		func() { m.detail = nil },
+	)
 }
 
 // CompactView renders the policy status for the statusbar.

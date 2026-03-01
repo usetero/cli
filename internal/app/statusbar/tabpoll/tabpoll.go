@@ -37,6 +37,16 @@ func Fetch[T any](timeout time.Duration, fetch func(ctx context.Context) (T, err
 	}
 }
 
+// FetchDetail executes a typed detail fetch with a timeout and maps result+error into a tea.Msg.
+func FetchDetail[T any](timeout time.Duration, fetch func(ctx context.Context) (T, error), mapMsg func(data T, err error) tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := sqlite.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		data, err := fetch(ctx)
+		return mapMsg(data, err)
+	}
+}
+
 // ApplyIfChanged applies an update only when the state key changes and clamps cursor.
 func ApplyIfChanged(lastState *string, nextState string, cursor *int, length int, apply func()) bool {
 	if *lastState == nextState {

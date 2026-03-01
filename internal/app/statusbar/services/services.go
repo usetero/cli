@@ -180,44 +180,17 @@ func (m *Model) CloseDetail() {
 }
 
 func (m *Model) navController() listdetail.Controller {
-	return listdetail.Controller{
-		HasList: func() bool { return m.hasData && len(m.services) > 0 },
-		IsDetail: func() bool {
-			return m.detail != nil
-		},
-		CloseDetail: func() { m.detail = nil },
-		GetListCursor: func() int {
-			return m.cursor
-		},
-		SetListCursor: func(v int) { m.cursor = v },
-		ListLen:       func() int { return len(m.services) },
-		OnListSelect: func(index int) tea.Cmd {
+	return listdetail.New(
+		func() bool { return m.hasData && len(m.services) > 0 },
+		func() int { return m.cursor },
+		func(v int) { m.cursor = v },
+		func() int { return len(m.services) },
+		func(index int) tea.Cmd {
 			return m.fetchDetail(m.services[index])
 		},
-		GetDetailCursor: func() int {
-			if m.detail == nil {
-				return 0
-			}
-			return m.detail.cursor
-		},
-		SetDetailCursor: func(v int) {
-			if m.detail != nil {
-				m.detail.cursor = v
-			}
-		},
-		DetailLen: func() int {
-			if m.detail == nil {
-				return 0
-			}
-			return len(m.detail.logEvents)
-		},
-		OnDetailSelect: func() tea.Cmd {
-			if m.detail == nil {
-				return nil
-			}
-			return m.detail.Prompt()
-		},
-	}
+		func() listdetail.Detail { return m.detail },
+		func() { m.detail = nil },
+	)
 }
 
 // stateKey builds a string key for change detection.

@@ -22,6 +22,10 @@ type detail struct {
 	cursor   int
 }
 
+func (d *detail) Len() int        { return len(d.policies) }
+func (d *detail) Cursor() int     { return d.cursor }
+func (d *detail) SetCursor(v int) { d.cursor = v }
+
 // newDetail creates a detail view for the given category and pre-fetched policies.
 func newDetail(theme styles.Theme, category domain.PolicyCategoryStatus, policies []domain.CompliancePolicy) *detail {
 	return &detail{
