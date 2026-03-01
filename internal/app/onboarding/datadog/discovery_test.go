@@ -33,8 +33,8 @@ func TestDiscoveryPollTickSchedulesAsyncFetch(t *testing.T) {
 	}
 
 	msg := cmd()
-	if _, ok := msg.(discoveryStatusMsg); !ok {
-		t.Fatalf("expected discoveryStatusMsg from async fetch, got %T", msg)
+	if _, ok := msg.(discoveryStatusLoadedMsg); !ok {
+		t.Fatalf("expected discoveryStatusLoadedMsg from async fetch, got %T", msg)
 	}
 	if callCount != 1 {
 		t.Fatalf("expected one network call after fetch command execution, got %d", callCount)
@@ -52,7 +52,7 @@ func TestDiscoveryStatusSchedulesTimerTick(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(discoveryStatusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: false}})
+	cmd := m.Update(discoveryStatusLoadedMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: false}})
 	if cmd == nil {
 		t.Fatalf("expected non-ready status to schedule timer")
 	}
@@ -74,7 +74,7 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(discoveryStatusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: true}})
+	cmd := m.Update(discoveryStatusLoadedMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: true}})
 	if cmd == nil {
 		t.Fatalf("expected ready status to emit completion message")
 	}

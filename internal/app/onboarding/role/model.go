@@ -36,7 +36,7 @@ func New(theme styles.Theme, prefs preferences.UserPreferences, scope log.Scope)
 // Init checks for a saved role preference.
 func (m *Model) Init() tea.Cmd {
 	return func() tea.Msg {
-		return savedRoleMsg{role: m.prefs.GetRole()}
+		return savedRoleLoadedMsg{role: m.prefs.GetRole()}
 	}
 }
 

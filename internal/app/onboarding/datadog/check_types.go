@@ -1,7 +1,7 @@
 package datadog
 
-// datadogCheckResultMsg is sent when datadog check completes.
-type datadogCheckResultMsg struct {
+// datadogCheckCompletedMsg is sent when datadog check completes.
+type datadogCheckCompletedMsg struct {
 	hasDatadog bool
 	err        error
 }

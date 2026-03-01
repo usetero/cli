@@ -21,14 +21,14 @@ const (
 	maxPollInterval     = 2 * time.Second
 )
 
-// deviceAuthMsg is sent when device auth flow starts.
-type deviceAuthMsg struct {
+// deviceAuthStartedMsg is sent when device auth flow starts.
+type deviceAuthStartedMsg struct {
 	deviceAuth *auth.DeviceAuth
 	err        error
 }
 
-// authCompleteMsg is sent when auth completes.
-type authCompleteMsg struct {
+// authCompletedMsg is sent when auth completes.
+type authCompletedMsg struct {
 	result *auth.Result
 	err    error
 }

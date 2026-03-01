@@ -6,8 +6,8 @@ func (m *CheckModel) checkDatadog() tea.Cmd {
 	return func() tea.Msg {
 		hasDatadog, err := m.services.DatadogAccounts.HasAccount(m.ctx, m.account.ID)
 		if err != nil {
-			return datadogCheckResultMsg{err: err}
+			return datadogCheckCompletedMsg{err: err}
 		}
-		return datadogCheckResultMsg{hasDatadog: hasDatadog}
+		return datadogCheckCompletedMsg{hasDatadog: hasDatadog}
 	}
 }

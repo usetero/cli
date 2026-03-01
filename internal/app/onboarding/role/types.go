@@ -2,8 +2,8 @@ package role
 
 import "charm.land/bubbles/v2/key"
 
-// savedRoleMsg is sent when checking for a saved role.
-type savedRoleMsg struct {
+// savedRoleLoadedMsg is sent when checking for a saved role.
+type savedRoleLoadedMsg struct {
 	role string
 }
 

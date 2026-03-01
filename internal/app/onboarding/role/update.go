@@ -10,7 +10,7 @@ import (
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case savedRoleMsg:
+	case savedRoleLoadedMsg:
 		if msg.role == bootstrap.RolePlatform || msg.role == bootstrap.RoleEngineer {
 			m.scope.Debug("using saved role preference", "role", msg.role)
 			return func() tea.Msg {

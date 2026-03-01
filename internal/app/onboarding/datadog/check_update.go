@@ -10,7 +10,7 @@ import (
 // Update handles messages.
 func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case datadogCheckResultMsg:
+	case datadogCheckCompletedMsg:
 		return m.handleCheckResult(msg)
 
 	case tea.KeyPressMsg:
@@ -23,7 +23,7 @@ func (m *CheckModel) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-func (m *CheckModel) handleCheckResult(msg datadogCheckResultMsg) tea.Cmd {
+func (m *CheckModel) handleCheckResult(msg datadogCheckCompletedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("datadog check failed", "error", msg.err)
 		m.err = msg.err

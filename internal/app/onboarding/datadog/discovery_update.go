@@ -14,7 +14,7 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	case discoveryPollTickMsg:
 		return m.pollStatus()
 
-	case discoveryStatusMsg:
+	case discoveryStatusLoadedMsg:
 		return m.handleStatus(msg)
 
 	case spinner.TickMsg:
@@ -33,7 +33,7 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	return m.progress.Update(msg)
 }
 
-func (m *DiscoveryModel) handleStatus(msg discoveryStatusMsg) tea.Cmd {
+func (m *DiscoveryModel) handleStatus(msg discoveryStatusLoadedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("discovery status check failed", "error", msg.err)
 		m.err = msg.err

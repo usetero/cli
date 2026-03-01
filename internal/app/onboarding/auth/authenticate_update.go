@@ -13,9 +13,9 @@ import (
 // Update handles messages.
 func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case deviceAuthMsg:
+	case deviceAuthStartedMsg:
 		return m.handleDeviceAuth(msg)
-	case authCompleteMsg:
+	case authCompletedMsg:
 		return m.handleAuthComplete(msg)
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -27,7 +27,7 @@ func (m *AuthenticateModel) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-func (m *AuthenticateModel) handleDeviceAuth(msg deviceAuthMsg) tea.Cmd {
+func (m *AuthenticateModel) handleDeviceAuth(msg deviceAuthStartedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("device auth failed", "error", msg.err)
 		m.err = msg.err
@@ -48,7 +48,7 @@ func (m *AuthenticateModel) handleDeviceAuth(msg deviceAuthMsg) tea.Cmd {
 	return m.pollForAuth()
 }
 
-func (m *AuthenticateModel) handleAuthComplete(msg authCompleteMsg) tea.Cmd {
+func (m *AuthenticateModel) handleAuthComplete(msg authCompletedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("authentication failed", "error", msg.err)
 		m.err = msg.err

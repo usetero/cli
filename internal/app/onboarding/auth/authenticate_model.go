@@ -66,7 +66,7 @@ func (m *AuthenticateModel) startDeviceAuth() tea.Cmd {
 		defer cancel()
 
 		deviceAuth, err := m.auth.StartDeviceAuth(ctx)
-		return deviceAuthMsg{deviceAuth: deviceAuth, err: err}
+		return deviceAuthStartedMsg{deviceAuth: deviceAuth, err: err}
 	}
 }
 
@@ -75,7 +75,7 @@ func (m *AuthenticateModel) pollForAuth() tea.Cmd {
 		interval := authPollInterval(m.device.Interval)
 		m.scope.Debug("starting auth polling", "provider_interval_seconds", m.device.Interval, "poll_interval", interval)
 		result, err := m.auth.WaitForAuth(m.ctx, m.device.DeviceCode, interval)
-		return authCompleteMsg{result: result, err: err}
+		return authCompletedMsg{result: result, err: err}
 	}
 }
 

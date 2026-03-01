@@ -11,8 +11,8 @@ const discoveryPollInterval = 500 * time.Millisecond
 // discoveryPollTickMsg schedules the next async discovery status fetch.
 type discoveryPollTickMsg struct{}
 
-// discoveryStatusMsg carries async discovery status fetch results.
-type discoveryStatusMsg struct {
+// discoveryStatusLoadedMsg carries async discovery status fetch results.
+type discoveryStatusLoadedMsg struct {
 	status *graphql.DatadogAccountStatus
 	err    error
 }
