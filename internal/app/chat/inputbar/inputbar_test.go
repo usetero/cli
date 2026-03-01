@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	msgs "github.com/usetero/cli/internal/app/chat/events"
-	"github.com/usetero/cli/internal/app/palette"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -62,8 +62,8 @@ func TestUpdate_Palette(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected palette open cmd")
 	}
-	if _, ok := cmd().(palette.OpenMsg); !ok {
-		t.Fatalf("expected palette.OpenMsg, got %T", cmd())
+	if _, ok := cmd().(appevents.PaletteOpenRequested); !ok {
+		t.Fatalf("expected appevents.PaletteOpenRequested, got %T", cmd())
 	}
 }
 

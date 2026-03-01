@@ -3,6 +3,8 @@ package palette
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
+	appevents "github.com/usetero/cli/internal/app/events"
 )
 
 // Update handles key events. The caller must only forward events when the palette is open.
@@ -16,7 +18,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				m.popLevel()
 				return nil
 			}
-			return func() tea.Msg { return CloseMsg{} }
+			return func() tea.Msg { return appevents.PaletteCloseRequested{} }
 
 		case key.Matches(msg, selectKey):
 			if len(m.matches) > 0 {
@@ -27,7 +29,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 					return nil
 				}
 				return tea.Sequence(
-					func() tea.Msg { return CloseMsg{} },
+					func() tea.Msg { return appevents.PaletteCloseRequested{} },
 					cmd.Handler(),
 				)
 			}

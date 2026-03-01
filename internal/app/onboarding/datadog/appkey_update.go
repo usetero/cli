@@ -10,7 +10,7 @@ import (
 // Update handles messages.
 func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case accountCreatedMsg:
+	case datadogAccountCreatedMsg:
 		m.creating = false
 		if msg.err != nil {
 			m.scope.Error("failed to create datadog account", "error", msg.err)
@@ -35,7 +35,7 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 			m.creating = true
 			m.err = nil
 			m.scope.Info("creating datadog account")
-			return m.createAccount(appKey)
+			return m.createDatadogAccount(appKey)
 		}
 	}
 

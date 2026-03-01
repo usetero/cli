@@ -11,7 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	msgs "github.com/usetero/cli/internal/app/chat/events"
-	"github.com/usetero/cli/internal/app/palette"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -125,7 +125,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 		// "/" on empty input opens the command palette
 		if key.Matches(msg, keymap.Palette) && m.textarea.Value() == "" {
-			return func() tea.Msg { return palette.OpenMsg{} }
+			return func() tea.Msg { return appevents.PaletteOpenRequested{} }
 		}
 
 		// Newline - consume, don't forward to textarea

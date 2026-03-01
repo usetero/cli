@@ -16,12 +16,6 @@ type Command struct {
 	Children []Command      // Sub-commands (selecting drills down)
 }
 
-// OpenMsg requests the palette to open.
-type OpenMsg struct{}
-
-// CloseMsg is sent when the palette closes itself.
-type CloseMsg struct{}
-
 // Key bindings.
 var (
 	selectKey = key.NewBinding(key.WithKeys("enter"))

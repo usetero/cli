@@ -8,7 +8,6 @@ import (
 
 	msgs "github.com/usetero/cli/internal/app/chat/events"
 	appevents "github.com/usetero/cli/internal/app/events"
-	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
@@ -20,9 +19,9 @@ func (m *Model) handleGlobalMessage(msg tea.Msg) (tea.Cmd, bool) {
 	case quitCanceled:
 		m.quitDlg = nil
 		return nil, true
-	case palette.OpenMsg:
+	case appevents.PaletteOpenRequested:
 		return m.openPalette(), true
-	case palette.CloseMsg:
+	case appevents.PaletteCloseRequested:
 		m.palette = nil
 		return nil, true
 	case appevents.SetTheme:
