@@ -1,13 +1,20 @@
 package usecase
 
-import (
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
-)
-
-func ClassifyStreamError(err error) string {
-	return string(chatclient.ClassifyStreamError(err))
+type StreamErrorMapper interface {
+	Classify(err error) string
+	UserFacing(err error) string
 }
 
-func UserFacingStreamError(err error) string {
-	return chatclient.UserFacingStreamError(err)
+func ClassifyStreamError(mapper StreamErrorMapper, err error) string {
+	if mapper == nil {
+		return "unknown"
+	}
+	return mapper.Classify(err)
+}
+
+func UserFacingStreamError(mapper StreamErrorMapper, err error) string {
+	if mapper == nil {
+		return "Chat stream failed. Please try again."
+	}
+	return mapper.UserFacing(err)
 }

@@ -116,6 +116,7 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 		input,
 		m.width,
 		m.streamRunner,
+		m.streamErrorMapper,
 		m.assistantPersister,
 		m.toolRegistry,
 		m.scope,

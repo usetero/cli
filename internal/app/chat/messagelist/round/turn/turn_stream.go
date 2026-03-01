@@ -50,7 +50,7 @@ func (m *Model) handleStreamUpdate(update streamUpdate) tea.Cmd {
 		if m.stream != nil && m.stream.done {
 			return nil
 		}
-		m.scope.Error("stream error", "class", usecase.ClassifyStreamError(update.err), "error", update.err)
+		m.scope.Error("stream error", "class", usecase.ClassifyStreamError(m.streamErrorMapper, update.err), "error", update.err)
 		m.assistantMessage.Cancel()
 		m.state = StateComplete
 		turnID := m.userMessage.ID()

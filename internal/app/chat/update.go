@@ -53,7 +53,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
-	m.scope.Warn("stream failed", "class", usecase.ClassifyStreamError(msg.Err), "error", msg.Err)
+	m.scope.Warn("stream failed", "class", usecase.ClassifyStreamError(m.runtimeDeps.StreamErrorMapper, msg.Err), "error", msg.Err)
 
 	// Forward to round so it transitions to StateFailed.
 	cmds := []tea.Cmd{m.messageList.Update(msg)}
@@ -87,7 +87,7 @@ func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
 	}
 
 	cmds = append(cmds, m.inputBar.Update(msg))
-	cmds = append(cmds, appmsg.ErrorCmd(usecase.UserFacingStreamError(msg.Err), msg.Err, false))
+	cmds = append(cmds, appmsg.ErrorCmd(usecase.UserFacingStreamError(m.runtimeDeps.StreamErrorMapper, msg.Err), msg.Err, false))
 	return tea.Batch(cmds...)
 }
 

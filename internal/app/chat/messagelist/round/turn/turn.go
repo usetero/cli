@@ -52,6 +52,7 @@ type Model struct {
 	protocolViolationCount int
 
 	streamRunner       usecase.StreamRunner
+	streamErrorMapper  usecase.StreamErrorMapper
 	assistantPersister usecase.AssistantPersister
 	toolRegistry       *chattools.Registry
 }
@@ -97,6 +98,7 @@ func New(
 	input msgs.UserSubmittedInput,
 	width int,
 	streamRunner usecase.StreamRunner,
+	streamErrorMapper usecase.StreamErrorMapper,
 	assistantPersister usecase.AssistantPersister,
 	toolRegistry *chattools.Registry,
 	scope log.Scope,
@@ -112,6 +114,7 @@ func New(
 		state:              StateIdle,
 		width:              width,
 		streamRunner:       streamRunner,
+		streamErrorMapper:  streamErrorMapper,
 		assistantPersister: assistantPersister,
 		toolRegistry:       toolRegistry,
 	}

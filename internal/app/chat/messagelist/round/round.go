@@ -56,6 +56,7 @@ type Model struct {
 	endTime   time.Time
 
 	streamRunner       usecase.StreamRunner
+	streamErrorMapper  usecase.StreamErrorMapper
 	assistantPersister usecase.AssistantPersister
 	toolLoop           usecase.ToolLoop
 	toolRegistry       *chattools.Registry
@@ -75,6 +76,7 @@ func New(
 ) *Model {
 	scope = scope.Child("round")
 	streamRunner := runtimeDeps.StreamRunner
+	streamErrorMapper := runtimeDeps.StreamErrorMapper
 	assistantPersister := runtimeDeps.AssistantPersister
 
 	// Create first turn with user's explicit input
@@ -86,6 +88,7 @@ func New(
 		input,
 		width,
 		streamRunner,
+		streamErrorMapper,
 		assistantPersister,
 		toolRegistry,
 		scope,
@@ -103,6 +106,7 @@ func New(
 		width:              width,
 		startTime:          time.Now(),
 		streamRunner:       runtimeDeps.StreamRunner,
+		streamErrorMapper:  runtimeDeps.StreamErrorMapper,
 		assistantPersister: runtimeDeps.AssistantPersister,
 		toolLoop:           runtimeDeps.ToolLoop,
 		toolRegistry:       toolRegistry,
