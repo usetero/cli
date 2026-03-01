@@ -58,6 +58,14 @@ if multiple top-level components need to understand a message, define it in
 
 This prevents accidental coupling and keeps message ownership obvious.
 
+Message naming conventions:
+
+- cross-feature shell intents in `internal/app/events`: `XRequested`
+  (`PaletteOpenRequested`, `PaletteCloseRequested`),
+- local async completions: `XCompletedMsg` / `XFailedMsg` where split is useful,
+- local periodic triggers: `XTickMsg` or `XPollMsg`,
+- generic `resultMsg` only when the package has a single async workflow.
+
 ## Shared helper placement and naming
 
 Use a three-level placement rule for UI helpers:
