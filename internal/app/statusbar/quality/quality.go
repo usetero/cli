@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/statusbar/listdetail"
+	"github.com/usetero/cli/internal/app/statusbar/policytab"
 	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
 	"github.com/usetero/cli/internal/app/statusbar/viewkit"
 	"github.com/usetero/cli/internal/domain"
@@ -24,9 +25,8 @@ import (
 )
 
 const (
-	pollInterval = 2 * time.Second
-	dbTimeout    = 2 * time.Second
-	pollSource   = "quality"
+	dbTimeout  = 2 * time.Second
+	pollSource = "quality"
 )
 
 type fetchedData struct {
@@ -45,16 +45,12 @@ type detailMsg struct {
 type Model struct {
 	theme styles.Theme
 	scope log.Scope
-	db    sqlite.DB
+	core  policytab.Base
 
 	summary    domain.AccountSummary
 	categories []domain.PolicyCategoryStatus
-	hasData    bool
-	lastState  string
-	fetching   bool
 
 	// Drawer navigation
-	cursor int     // selected row in category list
 	detail *detail // non-nil when viewing a single category's policies
 }
 
@@ -63,42 +59,31 @@ func New(theme styles.Theme, scope log.Scope) *Model {
 	return &Model{
 		theme: theme,
 		scope: scope.Child("quality"),
+		core:  policytab.New(pollSource),
 	}
 }
 
 // SetDB sets the database and starts polling.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	m.db = db
-	return m.poll()
+	return m.core.SetDB(db)
 }
 
 // Init starts polling.
 func (m *Model) Init() tea.Cmd {
-	if m.db == nil {
-		return nil
-	}
-	return m.poll()
-}
-
-func (m *Model) poll() tea.Cmd {
-	return tabpoll.Tick(pollSource, pollInterval)
+	return m.core.Init()
 }
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	if cmd, handled := tabpoll.UpdatePollCycle(
+	if cmd, handled := policytab.UpdatePoll(&m.core,
 		msg,
-		pollSource,
-		m.db != nil,
-		&m.fetching,
 		m.fetchData(),
-		m.poll(),
 		func(data fetchedData) {
 			key := m.stateKey(data.summary, data.categories)
-			tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(data.categories), func() {
+			m.core.ApplyIfChanged(key, len(data.categories), func() {
 				m.summary = data.summary
 				m.categories = data.categories
-				m.hasData = len(data.categories) > 0
+				m.core.SetHasData(len(data.categories) > 0)
 			})
 		},
 	); handled {
@@ -120,7 +105,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // fetchData returns a Cmd that queries quality data off the event loop.
 func (m *Model) fetchData() tea.Cmd {
-	db := m.db
+	db := m.core.DB()
 	scope := m.scope
 	return tabpoll.Fetch(dbTimeout, func(ctx context.Context) (fetchedData, error) {
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
@@ -139,7 +124,7 @@ func (m *Model) fetchData() tea.Cmd {
 
 // fetchDetail returns a Cmd that queries category detail off the event loop.
 func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
-	db := m.db
+	db := m.core.DB()
 	scope := m.scope
 	return tabpoll.FetchDetail(dbTimeout, func(ctx context.Context) ([]domain.WastePolicy, error) {
 		policies, err := db.LogEventPolicyStatuses().ListTopPendingPoliciesByCategory(ctx, cat.Category, 25)
@@ -170,7 +155,7 @@ func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCate
 
 // HasData returns true when quality data has been loaded.
 func (m *Model) HasData() bool {
-	return m.hasData
+	return m.core.HasData()
 }
 
 // HandleKeyPress handles keyboard navigation in the expanded drawer view.
@@ -189,10 +174,7 @@ func (m *Model) CloseDetail() {
 }
 
 func (m *Model) navController() listdetail.Controller {
-	return listdetail.New(
-		func() bool { return m.hasData && len(m.categories) > 0 },
-		func() int { return m.cursor },
-		func(v int) { m.cursor = v },
+	return m.core.NavController(
 		func() int { return len(m.categories) },
 		func(index int) tea.Cmd {
 			cat := m.categories[index]
@@ -208,7 +190,7 @@ func (m *Model) navController() listdetail.Controller {
 
 // CompactView renders the quality status for the statusbar.
 func (m *Model) CompactView() string {
-	if !m.hasData {
+	if !m.core.HasData() {
 		return ""
 	}
 
@@ -226,10 +208,10 @@ func (m *Model) CompactView() string {
 
 // ExpandedView renders the detailed quality status for the drawer.
 func (m *Model) ExpandedView(width, height int) string {
-	if !m.hasData {
+	if !m.core.HasData() {
 		return viewkit.RenderPolicyEmptyState(
 			m.theme,
-			m.db != nil,
+			m.core.DB() != nil,
 			m.summary,
 			"Enable services to start detecting quality issues.",
 			"No quality issues detected.",
@@ -318,7 +300,7 @@ func (m *Model) renderCategoryTable(width int) string {
 		}
 
 		name := c.Name()
-		if i == m.cursor {
+		if i == m.core.Cursor() {
 			name = accent.Render("▶ " + name)
 		} else {
 			name = dot + " " + name
@@ -390,8 +372,8 @@ func totalEstimatedCost(cats []domain.PolicyCategoryStatus) float64 {
 
 // cursorPrinciple returns the principle text for the currently selected category.
 func (m *Model) cursorPrinciple() string {
-	if m.cursor < len(m.categories) {
-		return m.categories[m.cursor].Principle
+	if m.core.Cursor() < len(m.categories) {
+		return m.categories[m.core.Cursor()].Principle
 	}
 	return ""
 }
