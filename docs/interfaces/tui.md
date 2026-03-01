@@ -51,7 +51,7 @@ see ambiguous focus or inconsistent overlay behavior.
 
 ## Message ownership expectations
 
-Shared contracts live in `internal/app/msgs` (for example sync state changes or
+Shared contracts live in `internal/app/events` (for example sync state changes or
 drawer prompt forwarding). Feature-local messages remain local unless there is
 a real cross-feature ownership need.
 

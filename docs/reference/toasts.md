@@ -18,7 +18,7 @@ Toasts should answer "what happened and what should I do next?" quickly.
 
 ## Message types and where they live
 
-Toast message contracts are defined in `internal/app/msgs`.
+Toast message contracts are defined in `internal/app/events`.
 The main types are `Error`, `Warning`, `Success`, and `Info`.
 
 These are emitted as commands and handled by the toast model in the root app

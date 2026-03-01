@@ -47,14 +47,14 @@ feature models trying to coordinate z-order with each other.
 
 ## Message contracts are explicit by scope
 
-Shared app-level messages live in `internal/app/msgs` (for example
+Shared app-level messages live in `internal/app/events` (for example
 `SyncStateChanged`, `DrawerPrompt`). Feature-local messages stay in their own
 feature packages.
 
 In practice, this gives you a clean rule of thumb:
 
 if multiple top-level components need to understand a message, define it in
-`internal/app/msgs`; otherwise keep it local.
+`internal/app/events`; otherwise keep it local.
 
 This prevents accidental coupling and keeps message ownership obvious.
 
