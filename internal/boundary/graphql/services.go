@@ -8,9 +8,9 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
-// APIServices aggregates all API services for easy dependency injection.
+// ServiceSet aggregates all API services for easy dependency injection.
 // This is the primary public interface for interacting with the Tero API.
-type APIServices struct {
+type ServiceSet struct {
 	client          Client
 	scope           log.Scope
 	Organizations   Organizations
@@ -23,25 +23,25 @@ type APIServices struct {
 	Policies        Policies
 }
 
-// NewServices creates APIServices with an internally-managed client.
+// NewServiceSet creates ServiceSet with an internally-managed client.
 // This is the preferred constructor for production use.
-func NewServices(endpoint string, authService auth.Auth, scope log.Scope) APIServices {
+func NewServiceSet(endpoint string, authService auth.Auth, scope log.Scope) ServiceSet {
 	c := NewClient(endpoint, authService)
-	return newAPIServices(c, scope)
+	return newServiceSet(c, scope)
 }
 
-// NewAPIServices creates all API services from the given client.
+// NewServiceSetFromClient creates all API services from the given client.
 // Use this constructor when you need to inject a mock client for testing.
-func NewAPIServices(client Client, scope log.Scope) APIServices {
-	return newAPIServices(client, scope)
+func NewServiceSetFromClient(client Client, scope log.Scope) ServiceSet {
+	return newServiceSet(client, scope)
 }
 
-func newAPIServices(client Client, scope log.Scope) APIServices {
-	return newAPIServicesWithScope(client, scope.Child("api"))
+func newServiceSet(client Client, scope log.Scope) ServiceSet {
+	return newServiceSetWithScope(client, scope.Child("api"))
 }
 
-func newAPIServicesWithScope(client Client, scope log.Scope) APIServices {
-	return APIServices{
+func newServiceSetWithScope(client Client, scope log.Scope) ServiceSet {
+	return ServiceSet{
 		client:          client,
 		scope:           scope,
 		Organizations:   NewOrganizationService(client, scope),
@@ -56,16 +56,16 @@ func newAPIServicesWithScope(client Client, scope log.Scope) APIServices {
 }
 
 // SetAccountID sets the account ID header for scoped requests.
-func (s APIServices) SetAccountID(accountID domain.AccountID) {
+func (s ServiceSet) SetAccountID(accountID domain.AccountID) {
 	s.client.SetAccountID(accountID)
 }
 
-// WithAccountID returns a new APIServices value scoped to accountID.
-func (s APIServices) WithAccountID(accountID domain.AccountID) APIServices {
-	return newAPIServicesWithScope(s.client.WithAccountID(accountID), s.scope)
+// WithAccountID returns a new ServiceSet value scoped to accountID.
+func (s ServiceSet) WithAccountID(accountID domain.AccountID) ServiceSet {
+	return newServiceSetWithScope(s.client.WithAccountID(accountID), s.scope)
 }
 
 // RawQuery executes an arbitrary GraphQL query (for debugging).
-func (s APIServices) RawQuery(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error) {
+func (s ServiceSet) RawQuery(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error) {
 	return s.client.RawQuery(ctx, query, variables)
 }

@@ -21,7 +21,7 @@ import (
 type SelectModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services graphql.APIServices
+	services graphql.ServiceSet
 	prefs    preferences.UserPreferences
 	auth     auth.Auth
 	scope    log.Scope
@@ -39,7 +39,7 @@ type SelectModel struct {
 func NewSelect(
 	ctx context.Context,
 	theme styles.Theme,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	prefs preferences.UserPreferences,
 	authService auth.Auth,
 	scope log.Scope,

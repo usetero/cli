@@ -61,7 +61,7 @@ func TestIntegration_Syncer(t *testing.T) {
 	t.Logf("Account ID from config: %s", accountID)
 
 	// Create API services
-	services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
+	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
 	services.SetAccountID(accountID)
 
 	// Validate account exists via API

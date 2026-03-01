@@ -274,7 +274,7 @@ func newTestModelWithClient(t *testing.T) (*Model, *apitest.MockClient) {
 
 	scope := logtest.NewScope(t)
 	client := apitest.NewMockClient()
-	services := graphql.NewAPIServices(client, scope)
+	services := graphql.NewServiceSetFromClient(client, scope)
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}

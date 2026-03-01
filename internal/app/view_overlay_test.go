@@ -73,7 +73,7 @@ func newViewTestModel(t *testing.T) *Model {
 
 	scope := logtest.NewScope(t)
 	client := apitest.NewMockClient()
-	services := graphql.NewAPIServices(client, scope)
+	services := graphql.NewServiceSetFromClient(client, scope)
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}

@@ -19,7 +19,7 @@ import (
 type AppKeyModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services graphql.APIServices
+	services graphql.ServiceSet
 	scope    log.Scope
 	account  domain.Account
 	site     domain.DatadogSite
@@ -39,7 +39,7 @@ func NewAppKey(
 	account domain.Account,
 	site domain.DatadogSite,
 	apiKey string,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	scope log.Scope,
 ) *AppKeyModel {
 	if ctx == nil {

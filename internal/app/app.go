@@ -62,7 +62,7 @@ type Model struct {
 	storage     sqlite.Storage
 	authService auth.Auth
 	syncer      powersync.Syncer
-	services    graphql.APIServices
+	services    graphql.ServiceSet
 	userPrefs   preferences.UserPreferences
 	orgPrefs    preferences.OrgPreferences
 
@@ -101,7 +101,7 @@ func New(
 	cfg *config.CLIConfig,
 	theme styles.Theme,
 	version string,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	authService auth.Auth,
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,

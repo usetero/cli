@@ -78,7 +78,7 @@ Just run 'tero' to start an interactive chat session.`,
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			// Create API services
-			services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
 
 			// Create storage for SQLite databases
 			storage := sqlite.NewStorageService(orgCfg)

@@ -18,7 +18,7 @@ import (
 type CheckModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services graphql.APIServices
+	services graphql.ServiceSet
 	scope    log.Scope
 	account  domain.Account
 	err      error
@@ -29,7 +29,7 @@ func NewCheck(
 	ctx context.Context,
 	theme styles.Theme,
 	account domain.Account,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	scope log.Scope,
 ) *CheckModel {
 	if ctx == nil {

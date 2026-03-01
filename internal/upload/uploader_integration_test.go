@@ -71,7 +71,7 @@ func TestIntegration_Upload(t *testing.T) {
 	t.Logf("Workspace ID: %s", workspaceID)
 
 	// Create API services
-	services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
+	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
 	services.SetAccountID(domain.AccountID(accountID))
 
 	// Create chat client

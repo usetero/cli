@@ -279,7 +279,7 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 }
 
 // getAPIServices creates authenticated API services
-func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (graphql.APIServices, error) {
+func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (graphql.ServiceSet, error) {
 	env := cliConfig.Environment()
 	tokenStore := keyring.New(env)
 	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
@@ -288,8 +288,8 @@ func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIC
 	// Verify we're authenticated
 	_, err := authService.GetAccessToken(ctx)
 	if err != nil {
-		return graphql.APIServices{}, fmt.Errorf("not authenticated: run 'tero auth login' first")
+		return graphql.ServiceSet{}, fmt.Errorf("not authenticated: run 'tero auth login' first")
 	}
 
-	return graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope), nil
+	return graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope), nil
 }

@@ -22,7 +22,7 @@ import (
 type Model struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services graphql.APIServices
+	services graphql.ServiceSet
 	auth     auth.Auth
 	userPref preferences.UserPreferences
 	orgPref  preferences.OrgPreferences
@@ -36,7 +36,7 @@ type Model struct {
 func New(
 	ctx context.Context,
 	theme styles.Theme,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	authService auth.Auth,
 	userPref preferences.UserPreferences,
 	orgPref preferences.OrgPreferences,

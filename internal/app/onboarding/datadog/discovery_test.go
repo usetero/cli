@@ -21,7 +21,7 @@ func TestDiscoveryPollTickSchedulesAsyncFetch(t *testing.T) {
 		callCount++
 		return &graphql.DatadogAccountStatus{}, nil
 	}
-	services := apitest.NewMockAPIServices(nil, nil, nil, mockDatadog)
+	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
 
 	m := NewDiscovery(context.Background(), styles.NewTheme(true), "dd-1", services, logtest.NewScope(t))
 	cmd := m.Update(pollTickMsg{})
@@ -48,7 +48,7 @@ func TestDiscoveryStatusSchedulesTimerTick(t *testing.T) {
 		context.Background(),
 		styles.NewTheme(true),
 		"dd-1",
-		apitest.NewMockAPIServices(nil, nil, nil, apitest.NewMockDatadogAccounts()),
+		apitest.NewMockServiceSet(nil, nil, nil, apitest.NewMockDatadogAccounts()),
 		logtest.NewScope(t),
 	)
 
@@ -70,7 +70,7 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 		context.Background(),
 		styles.NewTheme(true),
 		"dd-1",
-		apitest.NewMockAPIServices(nil, nil, nil, apitest.NewMockDatadogAccounts()),
+		apitest.NewMockServiceSet(nil, nil, nil, apitest.NewMockDatadogAccounts()),
 		logtest.NewScope(t),
 	)
 

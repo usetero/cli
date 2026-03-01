@@ -19,7 +19,7 @@ import (
 type DiscoveryModel struct {
 	ctx              context.Context
 	theme            styles.Theme
-	services         graphql.APIServices
+	services         graphql.ServiceSet
 	scope            log.Scope
 	datadogAccountID domain.DatadogAccountID
 
@@ -36,7 +36,7 @@ func NewDiscovery(
 	ctx context.Context,
 	theme styles.Theme,
 	datadogAccountID domain.DatadogAccountID,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	scope log.Scope,
 ) *DiscoveryModel {
 	if ctx == nil {

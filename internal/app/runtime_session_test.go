@@ -159,7 +159,7 @@ func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
 		cfg:         &config.CLIConfig{PowerSyncEndpoint: "https://powersync.example.com"},
 		db:          db,
 		syncer:      syncer,
-		services:    graphql.NewAPIServices(mockClient, scope),
+		services:    graphql.NewServiceSetFromClient(mockClient, scope),
 		authService: authService,
 	}
 

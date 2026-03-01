@@ -19,7 +19,7 @@ import (
 type CreateModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services graphql.APIServices
+	services graphql.ServiceSet
 	prefs    preferences.OrgPreferences
 	scope    log.Scope
 	org      domain.Organization
@@ -36,7 +36,7 @@ func NewCreate(
 	ctx context.Context,
 	theme styles.Theme,
 	org domain.Organization,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	prefs preferences.OrgPreferences,
 	scope log.Scope,
 ) *CreateModel {

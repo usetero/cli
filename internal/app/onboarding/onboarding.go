@@ -21,7 +21,7 @@ type Model struct {
 	// Dependencies available from start
 	ctx       context.Context
 	theme     styles.Theme
-	services  graphql.APIServices
+	services  graphql.ServiceSet
 	userPrefs preferences.UserPreferences
 	orgPrefs  preferences.OrgPreferences
 	auth      iauth.Auth
@@ -46,7 +46,7 @@ type Model struct {
 func New(
 	ctx context.Context,
 	theme styles.Theme,
-	services graphql.APIServices,
+	services graphql.ServiceSet,
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,
 	authService iauth.Auth,
