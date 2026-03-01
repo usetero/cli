@@ -1,15 +1,18 @@
 package accounts
 
-import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+import (
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
+)
 
-func (m *SelectModel) Hidden() bool { return false }
+func (m *SelectModel) Hidden() bool { return stepkit.AlwaysVisible() }
 
 func (m *SelectModel) Status() onbstatus.StepStatus {
-	return onbstatus.StepStatus{Title: "Select account", Details: "Select an account to continue."}
+	return stepkit.StaticStatus("Select account", "Select an account to continue.")
 }
 
-func (m *CreateModel) Hidden() bool { return false }
+func (m *CreateModel) Hidden() bool { return stepkit.AlwaysVisible() }
 
 func (m *CreateModel) Status() onbstatus.StepStatus {
-	return onbstatus.StepStatus{Title: "Create account", Details: "Create an account to continue."}
+	return stepkit.StaticStatus("Create account", "Create an account to continue.")
 }

@@ -1,9 +1,12 @@
 package auth
 
-import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+import (
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
+)
 
-func (m *AuthenticateModel) Hidden() bool { return false }
+func (m *AuthenticateModel) Hidden() bool { return stepkit.AlwaysVisible() }
 
 func (m *AuthenticateModel) Status() onbstatus.StepStatus {
-	return onbstatus.StepStatus{Title: "Sign in", Details: "Sign in to continue."}
+	return stepkit.StaticStatus("Sign in", "Sign in to continue.")
 }

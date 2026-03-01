@@ -1,9 +1,12 @@
 package preflight
 
-import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+import (
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
+)
 
-func (m *Model) Hidden() bool { return false }
+func (m *Model) Hidden() bool { return stepkit.AlwaysVisible() }
 
 func (m *Model) Status() onbstatus.StepStatus {
-	return onbstatus.StepStatus{Title: "Getting ready", Details: "Preparing your account..."}
+	return stepkit.StaticStatus("Getting ready", "Preparing your account...")
 }
