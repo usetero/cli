@@ -80,4 +80,3 @@ func strictUnmarshal(data []byte, out any) error {
 	}
 	return nil
 }
-

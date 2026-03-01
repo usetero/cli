@@ -66,4 +66,3 @@ func (m *StreamMachine) Message() *domain.Message {
 func (m *StreamMachine) Metadata() *StreamMetadata {
 	return m.red.metadata()
 }
-
