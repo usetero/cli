@@ -2,7 +2,7 @@ package turn
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/app/chat/msgs"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/domain/tools"
 )
 

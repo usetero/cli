@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/domain/tools"

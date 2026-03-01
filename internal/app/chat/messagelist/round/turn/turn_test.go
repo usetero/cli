@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/usetero/cli/internal/app/chat/msgs"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/domain/tools"

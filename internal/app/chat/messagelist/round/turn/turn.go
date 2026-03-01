@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/user"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"

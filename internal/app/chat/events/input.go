@@ -1,4 +1,4 @@
-package msgs
+package events
 
 import domaintools "github.com/usetero/cli/internal/domain/tools"
 

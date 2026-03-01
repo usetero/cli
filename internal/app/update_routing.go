@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/chat/msgs"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/tea/keymap"

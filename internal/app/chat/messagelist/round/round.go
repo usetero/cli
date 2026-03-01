@@ -4,8 +4,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	corechat "github.com/usetero/cli/internal/core/chat"

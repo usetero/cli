@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/styles"

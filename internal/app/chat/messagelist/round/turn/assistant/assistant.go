@@ -2,13 +2,13 @@ package assistant
 
 import (
 	tea "charm.land/bubbletea/v2"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/show"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/styles"
 )
 

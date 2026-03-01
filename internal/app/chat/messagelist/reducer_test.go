@@ -3,7 +3,7 @@ package messagelist
 import (
 	"testing"
 
-	"github.com/usetero/cli/internal/app/chat/msgs"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 )
 
 func TestReduceLifecycle(t *testing.T) {

@@ -2,8 +2,8 @@ package messagelist
 
 import (
 	tea "charm.land/bubbletea/v2"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 )
 

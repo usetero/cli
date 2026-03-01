@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 
 	tea "charm.land/bubbletea/v2"
+	msgs "github.com/usetero/cli/internal/app/chat/events"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
-	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log"
