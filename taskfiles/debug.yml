@@ -2,13 +2,6 @@ version: "3"
 
 vars:
   DEBUG_ENV: '{{.DEBUG_ENV | default "dev"}}'
-  ENV_PREFIX:
-    sh: |
-      if [ "{{.DEBUG_ENV}}" = "local" ]; then
-        echo ""
-      else
-        echo "doppler run -c {{.DEBUG_ENV}} --"
-      fi
 
 tasks:
   list:
@@ -44,7 +37,7 @@ tasks:
     desc: Run Tero in debug mode (defaults to TERO_ENV=dev)
     deps: [guard:non-prd]
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero {{.CLI_ARGS}}"
+      - "TERO_ENV={{.DEBUG_ENV}} ./scripts/with-env.sh go run ./cmd/tero {{.CLI_ARGS}}"
 
   ui:smoke:
     desc: Fast UI safety suite for app/update/render paths
@@ -118,7 +111,7 @@ tasks:
       MAX_BYTES: '{{.MAX_BYTES | default "26214400"}}'
     cmds:
       - |
-        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync capture --output {{.OUTPUT}} --duration {{.DURATION}} --max-bytes {{.MAX_BYTES}}"
+        CMD="TERO_ENV={{.DEBUG_ENV}} ./scripts/with-env.sh go run ./cmd/tero internal powersync capture --output {{.OUTPUT}} --duration {{.DURATION}} --max-bytes {{.MAX_BYTES}}"
         if [ -n "{{.ACCOUNT_ID}}" ]; then
           CMD="$CMD --account-id {{.ACCOUNT_ID}}"
         fi
@@ -133,7 +126,7 @@ tasks:
           echo "INPUT and OUTPUT are required"
           exit 1
         fi
-        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync sanitize-fixture --input {{.INPUT}} --output {{.OUTPUT}}"
+        CMD="TERO_ENV={{.DEBUG_ENV}} ./scripts/with-env.sh go run ./cmd/tero internal powersync sanitize-fixture --input {{.INPUT}} --output {{.OUTPUT}}"
         if [ -n "{{.MAX_LINES}}" ]; then
           CMD="$CMD --max-lines {{.MAX_LINES}}"
         fi

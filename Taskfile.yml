@@ -9,15 +9,6 @@ vars:
     sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"
   PARALLEL_COUNT:
     sh: echo $(({{.CPU_COUNT}} * 2))
-  TERO_ENV: '{{.TERO_ENV | default "local"}}'
-  # Wrap commands with doppler for non-local environments.
-  ENV_PREFIX:
-    sh: |
-      if [ "{{.TERO_ENV}}" = "local" ]; then
-        echo ""
-      else
-        echo "doppler run -c {{.TERO_ENV}} --"
-      fi
 
 tasks:
   # ===========================================================================
@@ -121,6 +112,16 @@ tasks:
     desc: Validate build
     cmds:
       - go vet ./...
+      - task: check:task-run-env
+
+  check:task-run-env:
+    desc: Validate task run env wiring for local and prd
+    cmds:
+      - |
+        RUN_CMD="$(TERO_ENV=prd task -n run 2>&1 | tail -n 1)"
+        echo "$RUN_CMD" | rg './scripts/with-env.sh go run ./cmd/tero' >/dev/null
+        rg 'env_name="\$\{TERO_ENV:-local\}"' ./scripts/with-env.sh >/dev/null
+        rg 'exec doppler run -c "\$env_name" -- "\$@"' ./scripts/with-env.sh >/dev/null
 
   # ===========================================================================
   # Testing
@@ -134,22 +135,22 @@ tasks:
   test:integration:
     desc: Run integration tests (TERO_ENV=dev|prd)
     cmds:
-      - '{{.ENV_PREFIX}} gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...'
+      - './scripts/with-env.sh gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...'
 
   test:correctness:
     desc: Run correctness tests (TERO_ENV=dev|prd)
     cmds:
-      - '{{.ENV_PREFIX}} gotestsum --format short-verbose -- -v -tags=correctness -run "^TestCorrectness_" ./...'
+      - './scripts/with-env.sh gotestsum --format short-verbose -- -v -tags=correctness -run "^TestCorrectness_" ./...'
 
   test:correctness:powersync-replay:
     desc: Run deterministic PowerSync fixture replay correctness test
     cmds:
       - |
         if [ -n "{{.FIXTURE}}" ]; then
-          TERO_POWERSYNC_FIXTURE_PATH="{{.FIXTURE}}" {{.ENV_PREFIX}} gotestsum --format short-verbose -- \
+          TERO_POWERSYNC_FIXTURE_PATH="{{.FIXTURE}}" ./scripts/with-env.sh gotestsum --format short-verbose -- \
             -v -tags=correctness -run "^TestCorrectness_PowerSync_ControllerFixtureReplayDeterministic$" ./internal/powersync/extension
         else
-          {{.ENV_PREFIX}} gotestsum --format short-verbose -- \
+          ./scripts/with-env.sh gotestsum --format short-verbose -- \
             -v -tags=correctness -run "^TestCorrectness_PowerSync_ControllerFixtureReplayDeterministic$" ./internal/powersync/extension
         fi
 
@@ -166,7 +167,7 @@ tasks:
   run:
     desc: Run tero (TERO_ENV=local|dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero {{.CLI_ARGS}}"
+      - "./scripts/with-env.sh go run ./cmd/tero {{.CLI_ARGS}}"
 
   dev:
     desc: Generate code and build
@@ -177,22 +178,22 @@ tasks:
   auth:login:
     desc: Login to Tero (TERO_ENV=local|dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero auth login"
+      - "./scripts/with-env.sh go run ./cmd/tero auth login"
 
   auth:token:
     desc: Print current access token (TERO_ENV=local|dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero auth token"
+      - "./scripts/with-env.sh go run ./cmd/tero auth token"
 
   auth:status:
     desc: Show auth status (TERO_ENV=local|dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero auth status"
+      - "./scripts/with-env.sh go run ./cmd/tero auth status"
 
   auth:switch:
     desc: Switch organization (TERO_ENV=local|dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/tero auth switch {{.CLI_ARGS}}"
+      - "./scripts/with-env.sh go run ./cmd/tero auth switch {{.CLI_ARGS}}"
 
   internal:powersync:capture:
     desc: Capture raw PowerSync stream to NDJSON (TERO_ENV=dev|prd)
@@ -202,7 +203,7 @@ tasks:
       MAX_BYTES: '{{.MAX_BYTES | default "26214400"}}'
     cmds:
       - |
-        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync capture --output {{.OUTPUT}} --duration {{.DURATION}} --max-bytes {{.MAX_BYTES}}"
+        CMD="./scripts/with-env.sh go run ./cmd/tero internal powersync capture --output {{.OUTPUT}} --duration {{.DURATION}} --max-bytes {{.MAX_BYTES}}"
         if [ -n "{{.ACCOUNT_ID}}" ]; then
           CMD="$CMD --account-id {{.ACCOUNT_ID}}"
         fi
@@ -216,7 +217,7 @@ tasks:
           echo "INPUT and OUTPUT are required"
           exit 1
         fi
-        CMD="{{.ENV_PREFIX}} go run ./cmd/tero internal powersync sanitize-fixture --input {{.INPUT}} --output {{.OUTPUT}}"
+        CMD="./scripts/with-env.sh go run ./cmd/tero internal powersync sanitize-fixture --input {{.INPUT}} --output {{.OUTPUT}}"
         if [ -n "{{.MAX_LINES}}" ]; then
           CMD="$CMD --max-lines {{.MAX_LINES}}"
         fi
@@ -229,12 +230,12 @@ tasks:
   admin:join-org:
     desc: Join a client organization (TERO_ENV=dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/admin join-org {{.CLI_ARGS}}"
+      - "./scripts/with-env.sh go run ./cmd/admin join-org {{.CLI_ARGS}}"
 
   admin:leave-org:
     desc: Leave a client organization (TERO_ENV=dev|prd)
     cmds:
-      - "{{.ENV_PREFIX}} go run ./cmd/admin leave-org {{.CLI_ARGS}}"
+      - "./scripts/with-env.sh go run ./cmd/admin leave-org {{.CLI_ARGS}}"
 
   # ===========================================================================
   # Dependencies

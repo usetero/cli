@@ -83,7 +83,7 @@ the sync stream.
 Multi-tenant correctness depends on scope discipline.
 
 The app derives scoped clients rather than mutating shared global state.
-You can see this in `APIServices.WithAccountID(...)` and chat
+You can see this in `ServiceSet.WithAccountID(...)` and chat
 `WithAccountID(...)` usage.
 
 On org/account switches, runtime is torn down, scope is cleared, and onboarding
