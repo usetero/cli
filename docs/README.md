@@ -34,6 +34,7 @@ orchestrate that truth, not redefine it.
 - [architecture/system-overview.md](architecture/system-overview.md)
 - [architecture/data-flow.md](architecture/data-flow.md)
 - [architecture/ui-architecture.md](architecture/ui-architecture.md)
+- [architecture/message-contracts.md](architecture/message-contracts.md)
 
 ### I am changing onboarding/bootstrap behavior
 

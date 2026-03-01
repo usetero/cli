@@ -54,6 +54,13 @@ For normal local validation:
 task do
 ```
 
+For architecture/lifecycle guardrails only:
+
+```bash
+task lint:naming
+task lint:architecture
+```
+
 For chat-focused work:
 
 ```bash

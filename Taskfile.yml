@@ -96,7 +96,7 @@ tasks:
 
   lint:
     desc: Run all linters
-    deps: [lint:go, lint:scripts, lint:naming]
+    deps: [lint:go, lint:scripts, lint:naming, lint:architecture]
 
   lint:go:
     desc: Run golangci-lint
@@ -109,9 +109,23 @@ tasks:
       - find scripts -type f -name "*.sh" -print0 | xargs -0 shellcheck
 
   lint:naming:
+    desc: Enforce UI message/event naming conventions
+    deps: [lint:naming:events, lint:naming:local]
+
+  lint:naming:events:
     desc: Enforce app event naming conventions
     cmds:
       - ./scripts/lint/check-event-naming.sh
+
+  lint:naming:local:
+    desc: Enforce local app message naming conventions
+    cmds:
+      - ./scripts/lint/check-local-msg-naming.sh
+
+  lint:architecture:
+    desc: Enforce Bubble Tea event-loop architecture guardrails
+    cmds:
+      - ./scripts/lint/check-event-loop-safety.sh
 
   check:
     desc: Validate build

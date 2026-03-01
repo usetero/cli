@@ -13,7 +13,8 @@ Read this section when you are:
 ## Suggested order
 
 Start with [system-overview.md](system-overview.md), then read
-[data-flow.md](data-flow.md), then [ui-architecture.md](ui-architecture.md).
+[data-flow.md](data-flow.md), then [ui-architecture.md](ui-architecture.md),
+then [message-contracts.md](message-contracts.md).
 
 That sequence mirrors how the system is built: first ownership boundaries, then
 truth and data flow, then runtime execution behavior in the UI layer.

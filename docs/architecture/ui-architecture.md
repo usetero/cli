@@ -66,7 +66,9 @@ Message naming conventions:
 - local periodic triggers: `XTickMsg` or `XPollMsg`,
 - generic `resultMsg` only when the package has a single async workflow.
 
-These app event suffix conventions are enforced by `task lint:naming`.
+These app event and local message conventions are enforced by
+`task lint:naming`. See [message-contracts.md](message-contracts.md) for the
+full contract.
 
 ## Shared helper placement and naming
 
@@ -124,3 +126,5 @@ UIs because a small synchronous regression can feel like a freeze.
 The architecture expectation is simple: never do blocking network/DB work in
 `Update` or `View`. If you follow that rule and keep message ownership narrow,
 the UI remains responsive under real workloads.
+
+This guardrail is enforced in `task lint:architecture`.
