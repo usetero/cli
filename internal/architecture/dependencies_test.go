@@ -191,9 +191,9 @@ func assertOnlyAllowedChatClientImports(t *testing.T, dir string, allowedRelPath
 					break
 				}
 			}
-			if !allowed {
-				t.Errorf("%s imports api/chatclient outside allowed boundary", path)
-			}
+				if !allowed {
+					t.Errorf("%s imports boundary/chat outside allowed boundary", path)
+				}
 		}
 		return nil
 	})
