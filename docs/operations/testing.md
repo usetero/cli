@@ -77,3 +77,17 @@ task test:correctness:powersync-replay
 
 Use these targeted workflows when debugging protocol/sync behavior that unit
 tests alone cannot validate.
+
+## CI model
+
+CI intentionally runs checks in parallel lanes instead of one monolithic
+`task do` step:
+
+- `lint`: `task lint` (includes architecture and naming guards),
+- `unit`: `task test`,
+- `gen-check`: regeneration drift check against committed snapshots,
+- `powersync-replay`: deterministic replay correctness check.
+
+Security checks run in a dedicated workflow with open-source scanners
+(`govulncheck` and `osv-scanner`) so they can evolve independently from the
+main PR gate.

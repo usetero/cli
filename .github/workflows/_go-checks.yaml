@@ -8,11 +8,16 @@ on:
         required: false
         default: ubuntu-latest
         type: string
+      run-powersync-replay:
+        description: Run PowerSync replay correctness check
+        required: false
+        default: true
+        type: boolean
 
 jobs:
-  quality:
+  lint:
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -23,15 +28,44 @@ jobs:
         with:
           cache: "true"
 
-      - name: Run quality gate (fmt, lint, unit tests)
-        run: task do
+      - name: Run lint checks
+        run: task lint
+
+  unit:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
+
+      - name: Run unit tests
+        run: task test
+
+  gen-check:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
 
       - name: Verify generated code is up to date (offline checks)
         run: |
           set -euo pipefail
 
           # Regenerate API client from committed schema snapshot.
-          (cd internal/api/gen && go run github.com/Khan/genqlient)
+          (cd internal/boundary/graphql/gen && go run github.com/Khan/genqlient)
 
           # Regenerate SQLite reflection/sqlc artifacts from embedded schema snapshot.
           go generate ./internal/sqlite
@@ -57,4 +91,21 @@ jobs:
           cache: "true"
 
       - name: Run PowerSync replay correctness test
+        if: ${{ inputs.run-powersync-replay }}
         run: task test:correctness:powersync-replay
+
+      - name: Skip PowerSync replay correctness test
+        if: ${{ !inputs.run-powersync-replay }}
+        run: echo "PowerSync replay correctness test disabled for this workflow call"
+
+  gate:
+    if: ${{ !failure() && !cancelled() }}
+    needs:
+      - lint
+      - unit
+      - gen-check
+      - powersync-replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: echo "Reusable Go checks passed"

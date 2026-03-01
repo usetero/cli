@@ -13,11 +13,3 @@ jobs:
   check:
     uses: ./.github/workflows/_go-checks.yaml
     secrets: inherit
-
-  gate:
-    needs: [check]
-    if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - run: echo "Push checks passed"
