@@ -80,7 +80,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		msg,
 		m.fetchData(),
 		func(data fetchedData) {
-			key := m.stateKey(data.summary, data.categories)
+			key := m.buildStateKey(data.summary, data.categories)
 			m.core.ApplyIfChanged(key, len(data.categories), func() {
 				m.summary = data.summary
 				m.categories = data.categories
@@ -142,8 +142,8 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 	})
 }
 
-// stateKey builds a string key for change detection.
-func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
+// buildStateKey builds a string key for change detection.
+func (m *Model) buildStateKey(summary domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
 	key := qualityStateKey{
 		Summary: qualitySummaryKey{
 			ServiceCount:   summary.ServiceCount,

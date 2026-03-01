@@ -92,32 +92,26 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	if cmd, handled := tabpoll.UpdatePollCycle(
+		msg,
+		pollSource,
+		m.db != nil,
+		&m.fetching,
+		m.fetchData(),
+		m.poll(),
+		func(data fetchedData) {
+			key := m.buildStateKey(data.summary, data.services)
+			tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(data.services), func() {
+				m.summary = data.summary
+				m.services = data.services
+				m.hasData = data.summary.ServiceCount > 0
+			})
+		},
+	); handled {
+		return cmd
+	}
+
 	switch msg := msg.(type) {
-	case tabpoll.PollMsg:
-		if msg.Source != pollSource {
-			return nil
-		}
-		if m.db == nil {
-			return nil
-		}
-		if m.fetching {
-			return m.poll()
-		}
-		m.fetching = true
-		return tea.Batch(m.fetchData(), m.poll())
-
-	case tabpoll.DataMsg[fetchedData]:
-		m.fetching = false
-		if msg.Err != nil {
-			return nil
-		}
-		key := m.stateKey(msg.Data.summary, msg.Data.services)
-		tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(msg.Data.services), func() {
-			m.summary = msg.Data.summary
-			m.services = msg.Data.services
-			m.hasData = msg.Data.summary.ServiceCount > 0
-		})
-
 	case detailMsg:
 		if msg.err == nil {
 			m.detail = newDetail(m.theme, msg.service, msg.logEvents)
@@ -152,16 +146,19 @@ func (m *Model) fetchData() tea.Cmd {
 func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
 	db := m.db
 	scope := m.scope
-	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(context.Background(), dbTimeout)
-		defer cancel()
+	return tabpoll.FetchDetail(dbTimeout, func(ctx context.Context) ([]domain.LogEventStatus, error) {
 		logEvents, err := db.LogEventStatuses().ListByService(ctx, svc.Name, 25)
 		if err != nil {
 			scope.Error("list log event statuses", "service", svc.Name, "err", err)
+			return nil, err
+		}
+		return logEvents, nil
+	}, func(logEvents []domain.LogEventStatus, err error) tea.Msg {
+		if err != nil {
 			return detailMsg{err: err}
 		}
 		return detailMsg{service: svc, logEvents: logEvents}
-	}
+	})
 }
 
 // HandleKeyPress handles keyboard navigation in the expanded drawer view.
@@ -193,8 +190,8 @@ func (m *Model) navController() listdetail.Controller {
 	)
 }
 
-// stateKey builds a string key for change detection.
-func (m *Model) stateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
+// buildStateKey builds a string key for change detection.
+func (m *Model) buildStateKey(s domain.AccountSummary, services []domain.ServiceStatus) string {
 	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%s:%v:%v:%d",
 		s.ReadyForUse, s.ServiceCount, s.ActiveServices,
 		s.EventCount, s.AnalyzedCount, s.OkServices,
