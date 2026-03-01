@@ -5,16 +5,25 @@ import (
 	"errors"
 	"testing"
 
-	chat "github.com/usetero/cli/internal/api/chatclient"
-	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
 
+type fakeGateway struct {
+	streamSnapshots func(ctx context.Context, req StreamRequest, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error)
+}
+
+func (f *fakeGateway) StreamSnapshots(ctx context.Context, req StreamRequest, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
+	if f.streamSnapshots != nil {
+		return f.streamSnapshots(ctx, req, onSnapshot)
+	}
+	return &corechat.StreamResult{}, nil
+}
+
 func TestChatStreamRunner_Start_ForwardsSnapshotsAndFinalResult(t *testing.T) {
 	t.Parallel()
 
-	reqs := make([]chat.Request, 0, 1)
+	reqs := make([]StreamRequest, 0, 1)
 	streamMsg := &domain.Message{ID: "asst-1", Role: domain.RoleAssistant}
 	finalResult := &corechat.StreamResult{
 		Message: streamMsg,
@@ -26,18 +35,18 @@ func TestChatStreamRunner_Start_ForwardsSnapshotsAndFinalResult(t *testing.T) {
 		},
 	}
 
-	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, req chat.Request, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
+	gateway := &fakeGateway{
+		streamSnapshots: func(_ context.Context, req StreamRequest, onSnapshot func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			reqs = append(reqs, req)
 			onSnapshot(corechat.StreamSnapshot{
-				ConversationID: req.ConversationID,
+				ConversationID: req.ConversationID.String(),
 				TurnID:         "turn-1",
 				Seq:            1,
 				Status:         corechat.StreamStatusStreaming,
 				Message:        streamMsg,
 			})
 			onSnapshot(corechat.StreamSnapshot{
-				ConversationID: req.ConversationID,
+				ConversationID: req.ConversationID.String(),
 				TurnID:         "turn-1",
 				Seq:            2,
 				Status:         corechat.StreamStatusCompleted,
@@ -49,7 +58,7 @@ func TestChatStreamRunner_Start_ForwardsSnapshotsAndFinalResult(t *testing.T) {
 		},
 	}
 
-	runner := NewChatStreamRunner(client)
+	runner := NewChatStreamRunner(gateway)
 	updates := runner.Start(context.Background(), StreamRequest{
 		ConversationID: "conv-1",
 		Messages:       []domain.Message{{ID: "user-1", Role: domain.RoleUser}},
@@ -85,13 +94,13 @@ func TestChatStreamRunner_Start_ForwardsSnapshotsAndFinalResult(t *testing.T) {
 func TestChatStreamRunner_Start_EmitsTerminalErrorUpdate(t *testing.T) {
 	t.Parallel()
 
-	client := &chattest.MockClient{
-		StreamSnapshotsFunc: func(_ context.Context, _ chat.Request, _ func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
+	gateway := &fakeGateway{
+		streamSnapshots: func(_ context.Context, _ StreamRequest, _ func(corechat.StreamSnapshot)) (*corechat.StreamResult, error) {
 			return nil, errors.New("network timeout")
 		},
 	}
 
-	runner := NewChatStreamRunner(client)
+	runner := NewChatStreamRunner(gateway)
 	updates := runner.Start(context.Background(), StreamRequest{ConversationID: "conv-1"})
 	var got []StreamUpdate
 	for u := range updates {

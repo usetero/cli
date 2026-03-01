@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -25,16 +24,16 @@ type StreamRunner interface {
 
 // ChatStreamRunner bridges chatclient snapshots into use-case updates.
 type ChatStreamRunner struct {
-	client chatclient.Client
+	gateway ChatGateway
 }
 
-func NewChatStreamRunner(client chatclient.Client) *ChatStreamRunner {
-	return &ChatStreamRunner{client: client}
+func NewChatStreamRunner(gateway ChatGateway) *ChatStreamRunner {
+	return &ChatStreamRunner{gateway: gateway}
 }
 
 func (r *ChatStreamRunner) Start(ctx context.Context, req StreamRequest) <-chan StreamUpdate {
 	updates := make(chan StreamUpdate, 10)
-	if r == nil || r.client == nil {
+	if r == nil || r.gateway == nil {
 		close(updates)
 		return updates
 	}
@@ -43,12 +42,7 @@ func (r *ChatStreamRunner) Start(ctx context.Context, req StreamRequest) <-chan 
 		defer close(updates)
 
 		var lastSnapshot *corechat.StreamSnapshot
-		wireReq := chatclient.Request{
-			ConversationID:  req.ConversationID.String(),
-			Messages:        req.Messages,
-			ContextEntities: req.ContextEntities,
-		}
-		result, err := r.client.StreamSnapshots(ctx, wireReq, func(s corechat.StreamSnapshot) {
+		result, err := r.gateway.StreamSnapshots(ctx, req, func(s corechat.StreamSnapshot) {
 			ss := s
 			lastSnapshot = &ss
 			if !s.Done {

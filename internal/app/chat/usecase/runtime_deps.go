@@ -13,8 +13,9 @@ type RuntimeDeps struct {
 }
 
 func NewRuntimeDeps(db sqlite.DB, client chatclient.Client) RuntimeDeps {
+	gateway := NewChatClientGateway(client)
 	return RuntimeDeps{
-		StreamRunner:       NewChatStreamRunner(client),
+		StreamRunner:       NewChatStreamRunner(gateway),
 		AssistantPersister: NewSQLiteAssistantPersister(db),
 		ToolLoop:           NewSQLiteToolLoop(db),
 	}
