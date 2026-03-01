@@ -35,10 +35,7 @@ func TestDependencyBoundaries(t *testing.T) {
 	assertNoForbiddenImportsExcept(t, chatRoot, []string{
 		"github.com/usetero/cli/internal/api/chatclient",
 	}, []string{
-		filepath.Join("internal", "app", "chat", "model.go"),
-		filepath.Join("internal", "app", "chat", "messagelist", "messagelist.go"),
 		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
-		filepath.Join("internal", "app", "chat", "messagelist", "round", "round.go"),
 		filepath.Join("internal", "app", "chat", "usecase"),
 	})
 }

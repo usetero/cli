@@ -4,7 +4,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/usecase"
@@ -12,7 +11,6 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/thinking"
 )
@@ -71,15 +69,13 @@ func New(
 	userMessageID domain.MessageID,
 	input msgs.UserSubmittedInput,
 	width int,
-	db sqlite.DB,
-	chatClient chatclient.Client,
+	runtimeDeps usecase.RuntimeDeps,
 	toolRegistry *chattools.Registry,
 	scope log.Scope,
 ) *Model {
 	scope = scope.Child("round")
-	streamRunner := usecase.NewChatStreamRunner(chatClient)
-	assistantPersister := usecase.NewSQLiteAssistantPersister(db)
-	toolLoop := usecase.NewSQLiteToolLoop(db)
+	streamRunner := runtimeDeps.StreamRunner
+	assistantPersister := runtimeDeps.AssistantPersister
 
 	// Create first turn with user's explicit input
 	firstTurn := turn.New(
@@ -106,9 +102,9 @@ func New(
 		state:              StateActive,
 		width:              width,
 		startTime:          time.Now(),
-		streamRunner:       streamRunner,
-		assistantPersister: assistantPersister,
-		toolLoop:           toolLoop,
+		streamRunner:       runtimeDeps.StreamRunner,
+		assistantPersister: runtimeDeps.AssistantPersister,
+		toolLoop:           runtimeDeps.ToolLoop,
 		toolRegistry:       toolRegistry,
 	}
 }

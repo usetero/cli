@@ -2,12 +2,11 @@ package messagelist
 
 import (
 	"charm.land/bubbles/v2/key"
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/viewport"
 )
@@ -88,16 +87,14 @@ type Model struct {
 	mouseDragY     int // current Y within block
 
 	// Dependencies
-	db           sqlite.DB
-	chatClient   chatclient.Client
+	runtimeDeps  usecase.RuntimeDeps
 	toolRegistry *tools.Registry
 }
 
 // New creates a new message list.
 func New(
 	theme styles.Theme,
-	db sqlite.DB,
-	chatClient chatclient.Client,
+	runtimeDeps usecase.RuntimeDeps,
 	toolRegistry *tools.Registry,
 	scope log.Scope,
 ) *Model {
@@ -109,8 +106,7 @@ func New(
 		vp:             viewport.New(),
 		mouseDownBlock: -1,
 		mouseDragBlock: -1,
-		db:             db,
-		chatClient:     chatClient,
+		runtimeDeps:    runtimeDeps,
 		toolRegistry:   toolRegistry,
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -18,7 +19,7 @@ func newTestRound(t *testing.T) *Model {
 	scope := logtest.NewScope(t)
 
 	input := msgs.UserSubmittedInput{Text: "hello"}
-	return New(theme, "conv-1", "acct-1", "user-1", input, 80, nil, nil, nil, scope)
+	return New(theme, "conv-1", "acct-1", "user-1", input, 80, usecase.RuntimeDeps{}, nil, scope)
 }
 
 func hasBlockKind(blocks []block.Block, kind block.Kind) bool {

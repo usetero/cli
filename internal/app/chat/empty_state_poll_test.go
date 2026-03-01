@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
@@ -32,7 +33,7 @@ func TestEmptyStatePollDoesNotMutateSynchronously(t *testing.T) {
 		domain.Workspace{ID: "ws-1"},
 		styles.NewTheme(true),
 		mockDB,
-		nil,
+		usecase.RuntimeDeps{},
 		nil,
 		logtest.NewScope(t),
 	)
@@ -60,7 +61,7 @@ func TestEmptyStateSummaryMessageUpdatesState(t *testing.T) {
 		domain.Workspace{ID: "ws-1"},
 		styles.NewTheme(true),
 		mockDB,
-		nil,
+		usecase.RuntimeDeps{},
 		nil,
 		logtest.NewScope(t),
 	)

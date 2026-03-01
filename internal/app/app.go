@@ -11,6 +11,7 @@ import (
 	"github.com/usetero/cli/internal/api"
 	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/app/keybar"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
@@ -70,6 +71,7 @@ type Model struct {
 	db            sqlite.DB
 	uploader      upload.Uploader
 	chatClient    chatclient.Client
+	runtimeDeps   usecase.RuntimeDeps
 	toolRegistry  *chattools.Registry
 	user          *auth.User
 	account       domain.Account
@@ -210,7 +212,7 @@ func (m *Model) newChat() *chat.Model {
 		m.workspace,
 		m.theme,
 		m.db,
-		m.chatClient,
+		m.runtimeDeps,
 		m.toolRegistry,
 		m.scope,
 	)

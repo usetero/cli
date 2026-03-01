@@ -6,6 +6,7 @@ import (
 
 	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"
@@ -20,8 +21,9 @@ func New(t *testing.T, width, height int) *messagelist.Model {
 	db := dbtest.OpenTestDB(t)
 	client := &chattest.MockClient{}
 	scope := logtest.NewScope(t)
+	runtimeDeps := usecase.NewRuntimeDeps(db, client)
 
-	m := messagelist.New(theme, db, client, nil, scope)
+	m := messagelist.New(theme, runtimeDeps, nil, scope)
 	m.SetSize(width, height)
 	return m
 }

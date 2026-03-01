@@ -6,9 +6,9 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/inputbar"
 	"github.com/usetero/cli/internal/app/chat/messagelist"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/auth"
 	corechat "github.com/usetero/cli/internal/core/chat"
@@ -71,7 +71,7 @@ type Model struct {
 
 	// Dependencies
 	db           sqlite.DB
-	chatClient   chatclient.Client
+	runtimeDeps  usecase.RuntimeDeps
 	toolRegistry *tools.Registry
 }
 
@@ -91,7 +91,7 @@ func New(
 	workspace domain.Workspace,
 	theme styles.Theme,
 	db sqlite.DB,
-	chatClient chatclient.Client,
+	runtimeDeps usecase.RuntimeDeps,
 	toolRegistry *tools.Registry,
 	scope log.Scope,
 ) *Model {
@@ -100,13 +100,13 @@ func New(
 	return &Model{
 		scope:        scope,
 		inputBar:     inputbar.New(user, theme, scope),
-		messageList:  messagelist.New(theme, db, chatClient, toolRegistry, scope),
+		messageList:  messagelist.New(theme, runtimeDeps, toolRegistry, scope),
 		user:         user,
 		account:      account,
 		workspace:    workspace,
 		theme:        theme,
 		db:           db,
-		chatClient:   chatClient,
+		runtimeDeps:  runtimeDeps,
 		toolRegistry: toolRegistry,
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/block"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -53,8 +54,9 @@ func newStreamingMessageList(t *testing.T) *Model {
 			select {}
 		},
 	}
+	runtimeDeps := usecase.NewRuntimeDeps(db, client)
 
-	m := New(theme, db, client, nil, scope)
+	m := New(theme, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)
 	return m
 }

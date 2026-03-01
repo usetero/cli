@@ -12,6 +12,7 @@ import (
 	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/api/chatclient/chattest"
 	"github.com/usetero/cli/internal/app/chat/msgs"
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
@@ -28,8 +29,9 @@ func newTestChat(t *testing.T, client chat.Client) *Model {
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 	db := dbtest.OpenTestDB(t)
+	runtimeDeps := usecase.NewRuntimeDeps(db, client)
 
-	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, db, client, nil, scope)
+	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, db, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)
 	return m
 }

@@ -3,6 +3,7 @@ package app
 import (
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/app/chat/usecase"
 	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
 	"github.com/usetero/cli/internal/app/statusbar"
@@ -78,6 +79,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.db = nil
 	m.uploader = nil
 	m.chatClient = nil
+	m.runtimeDeps = usecase.RuntimeDeps{}
 	m.toolRegistry = nil
 	m.chat = nil
 	m.services = m.services.WithAccountID("") // clear stale account scope

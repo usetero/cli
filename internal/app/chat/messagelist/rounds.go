@@ -72,8 +72,7 @@ func (m *Model) StartTurn(
 		userMessageID,
 		input,
 		m.contentWidth(),
-		m.db,
-		m.chatClient,
+		m.runtimeDeps,
 		m.toolRegistry,
 		m.scope,
 	)
