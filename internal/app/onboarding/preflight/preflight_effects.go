@@ -20,7 +20,7 @@ func (m *Model) checkAuth() tea.Cmd {
 				_ = m.auth.ClearTokens()
 			}
 		}
-		return preflightAuthCheckedMsg{hasValidAuth: hasValidAuth}
+		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth}
 	}
 }
 
@@ -41,7 +41,7 @@ func (m *Model) loadAccounts(orgID domain.OrganizationID) tea.Cmd {
 func (m *Model) emitResult() tea.Cmd {
 	m.stage = stageFinalizing
 	return func() tea.Msg {
-		return preflightResolvedMsg{state: m.state}
+		return preflightResolutionCompletedMsg{state: m.state}
 	}
 }
 

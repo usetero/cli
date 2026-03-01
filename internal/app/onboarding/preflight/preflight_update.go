@@ -11,13 +11,13 @@ import (
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case preflightAuthCheckedMsg:
+	case preflightAuthCheckCompletedMsg:
 		return m.handleAuthChecked(msg)
 	case preflightOrganizationsLoadedMsg:
 		return m.handleOrganizationsLoaded(msg)
 	case preflightAccountsLoadedMsg:
 		return m.handleAccountsLoaded(msg)
-	case preflightResolvedMsg:
+	case preflightResolutionCompletedMsg:
 		return m.handleResult(msg)
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -27,7 +27,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleAuthChecked(msg preflightAuthCheckedMsg) tea.Cmd {
+func (m *Model) handleAuthChecked(msg preflightAuthCheckCompletedMsg) tea.Cmd {
 	m.state.HasValidAuth = msg.hasValidAuth
 	if !m.state.HasValidAuth {
 		return m.emitResult()
@@ -60,7 +60,7 @@ func (m *Model) handleAccountsLoaded(msg preflightAccountsLoadedMsg) tea.Cmd {
 	return m.emitResult()
 }
 
-func (m *Model) handleResult(msg preflightResolvedMsg) tea.Cmd {
+func (m *Model) handleResult(msg preflightResolutionCompletedMsg) tea.Cmd {
 	elapsed := time.Since(m.started)
 	m.scope.Debug("preflight resolved",
 		"has_valid_auth", msg.state.HasValidAuth,

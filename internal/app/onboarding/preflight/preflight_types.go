@@ -5,11 +5,11 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-type preflightResolvedMsg struct {
+type preflightResolutionCompletedMsg struct {
 	state bootstrap.PreflightState
 }
 
-type preflightAuthCheckedMsg struct {
+type preflightAuthCheckCompletedMsg struct {
 	hasValidAuth bool
 }
 
