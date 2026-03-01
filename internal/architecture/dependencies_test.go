@@ -46,7 +46,7 @@ func TestDependencyBoundaries(t *testing.T) {
 		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
 		filepath.Join("internal", "app", "chat", "usecase"),
 	})
-	assertOnlyAllowedChatClientImports(t, chatRoot, []string{
+	assertOnlyAllowedChatBoundaryImports(t, chatRoot, []string{
 		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
 		filepath.Join("internal", "app", "chat", "usecase"),
 	})
@@ -154,7 +154,7 @@ func assertNoForbiddenImportsExcept(t *testing.T, dir string, forbiddenPrefixes 
 	}
 }
 
-func assertOnlyAllowedChatClientImports(t *testing.T, dir string, allowedRelPaths []string) {
+func assertOnlyAllowedChatBoundaryImports(t *testing.T, dir string, allowedRelPaths []string) {
 	t.Helper()
 
 	root, err := findModuleRoot(dir)

@@ -18,7 +18,7 @@ import (
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
-	chatclient "github.com/usetero/cli/internal/boundary/chat"
+	chatboundary "github.com/usetero/cli/internal/boundary/chat"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
@@ -70,7 +70,7 @@ type Model struct {
 	sessionCancel context.CancelFunc
 	db            sqlite.DB
 	uploader      upload.Uploader
-	chatClient    chatclient.Client
+	chatClient    chatboundary.Client
 	runtimeDeps   usecase.RuntimeDeps
 	toolRegistry  *chattools.Registry
 	user          *auth.User

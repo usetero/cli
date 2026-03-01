@@ -29,7 +29,7 @@ Keep dependency direction explicit:
 - `internal/app/chat/usecase` owns adapters to `internal/boundary/chat`.
 - `internal/core/chat` stays pure and does not import app/api packages.
 
-In practice: if you need `chatclient` in UI files, that is usually a boundary
+In practice: if you need `internal/boundary/chat` in UI files, that is usually a boundary
 leak. Add/extend a use-case contract instead.
 
 ## What this domain is trying to protect

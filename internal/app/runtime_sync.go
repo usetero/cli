@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
-	chatclient "github.com/usetero/cli/internal/boundary/chat"
+	chatboundary "github.com/usetero/cli/internal/boundary/chat"
 	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/upload"
@@ -99,7 +99,7 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 	)
 
 	// Create chat client with tool definitions
-	m.chatClient = chatclient.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
+	m.chatClient = chatboundary.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
 		WithAccountID(domain.AccountID(accountID))
 	m.runtimeDeps = usecase.NewRuntimeDeps(m.db, m.chatClient)
 
