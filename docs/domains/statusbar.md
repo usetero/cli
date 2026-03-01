@@ -80,6 +80,17 @@ easy to drift:
 The remaining logic in each tab should be domain-specific rendering and query
 selection only.
 
+## Naming contract
+
+To keep tabs consistent, use these names:
+
+- async message payloads: `...Msg` (for example `detailMsg`),
+- cache key builders: `buildStateKey(...)`,
+- rendering helpers: `render...` for tab-local view composition.
+
+When two tabs need the same lifecycle behavior, move it to `tabpoll`,
+`policytab`, or `viewkit` instead of introducing one-off names in each tab.
+
 ## Practical change checklist
 
 When changing status bar behavior:
