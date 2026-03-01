@@ -71,3 +71,4 @@ These contracts are enforced in `task lint` via:
 - `scripts/lint/check-event-naming.sh`
 - `scripts/lint/check-local-msg-naming.sh`
 - `scripts/lint/check-event-loop-safety.sh`
+- `scripts/lint/check-event-ownership.sh`

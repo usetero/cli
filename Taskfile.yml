@@ -124,8 +124,18 @@ tasks:
 
   lint:architecture:
     desc: Enforce Bubble Tea event-loop architecture guardrails
+    deps: [lint:architecture:event-loop, lint:architecture:ownership]
+    cmds: []
+
+  lint:architecture:event-loop:
+    desc: Enforce no blocking work in Update/View
     cmds:
       - ./scripts/lint/check-event-loop-safety.sh
+
+  lint:architecture:ownership:
+    desc: Enforce feature event package ownership boundaries
+    cmds:
+      - ./scripts/lint/check-event-ownership.sh
 
   check:
     desc: Validate build
