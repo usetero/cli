@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 
 	"github.com/usetero/cli/internal/domain"
@@ -76,12 +77,5 @@ func (m *CreateModel) SetSize(width, height int) {
 
 // ShortHelp returns the key bindings for the short help view.
 func (m *CreateModel) ShortHelp() []key.Binding {
-	if m.creating {
-		return nil
-	}
-	bindings := m.input.ShortHelp()
-	bindings = append(bindings,
-		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "create")),
-	)
-	return bindings
+	return stepkit.CreateInputShortHelp(m.creating, m.input.ShortHelp())
 }

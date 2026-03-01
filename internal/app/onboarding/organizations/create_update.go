@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appevents "github.com/usetero/cli/internal/app/events"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -23,14 +24,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		return func() tea.Msg { return bootstrap.OrgCreated{Org: org} }
 
 	case tea.KeyPressMsg:
-		if m.creating {
-			return nil
-		}
-		if msg.String() == "enter" {
-			name := m.input.Value()
-			if name == "" {
-				return nil
-			}
+		if name, ok := stepkit.ParseCreateSubmit(msg, m.creating, m.input.Value()); ok {
 			m.creating = true
 			m.err = nil
 			m.scope.Info("creating organization", "name", name)
