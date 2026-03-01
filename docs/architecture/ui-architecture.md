@@ -58,6 +58,31 @@ if multiple top-level components need to understand a message, define it in
 
 This prevents accidental coupling and keeps message ownership obvious.
 
+## Shared helper placement and naming
+
+Use a three-level placement rule for UI helpers:
+
+1. package-local first (default),
+2. feature-local shared kit second (for example `onboarding/stepkit`,
+   `statusbar/viewkit`),
+3. global shared (`internal/tea/...`) only for cross-feature primitives.
+
+This avoids both duplication drift and global helper sprawl.
+
+Promotion rule: only extract shared helpers when the behavior is reused,
+stable, and easier to reason about once centralized.
+
+Naming rules:
+
+- render helpers: `RenderX`
+- parse/mapping helpers: `ParseX`, `MapX`, `CastX`
+- state/reducer helpers: `ApplyX`, `ReduceX`
+- constructors: `NewX`
+
+Keep Bubble Tea async messages package-local by default (`...Msg`); only move a
+message to `internal/app/events` when multiple top-level app components need to
+handle it.
+
 ## Side effects stay in commands, not render/update hot paths
 
 The architecture assumes Bubble Tea’s separation of state and effects:
