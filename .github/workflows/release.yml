@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  attestations: write
   id-token: write
 
 concurrency:
@@ -94,6 +93,38 @@ jobs:
       TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag and ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$ ]] || {
+            echo "invalid release tag: ${TAG_NAME}"
+            exit 1
+          }
+          git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null || {
+            echo "tag ${TAG_NAME} does not exist in repository"
+            exit 1
+          }
+          git fetch origin master --force
+          TAG_COMMIT="$(git rev-list -n1 "${TAG_NAME}")"
+          git merge-base --is-ancestor "${TAG_COMMIT}" "origin/master" || {
+            echo "tag ${TAG_NAME} does not point to commit reachable from master"
+            exit 1
+          }
+
+      - name: Install cosign
+        run: |
+          set -euo pipefail
+          COSIGN_VERSION=v2.4.1
+          mkdir -p "$HOME/.local/bin"
+          curl --retry 5 --retry-all-errors --connect-timeout 10 --max-time 120 -sSfL \
+            "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
+            -o "$HOME/.local/bin/cosign"
+          chmod +x "$HOME/.local/bin/cosign"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
@@ -107,6 +138,33 @@ jobs:
           cat ./*.sha256 > checksums.txt
           rm ./*.sha256
 
+      - name: Sign checksums (keyless)
+        working-directory: artifacts
+        env:
+          COSIGN_YES: "true"
+        run: |
+          set -euo pipefail
+          COSIGN_CACHE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$COSIGN_CACHE_DIR"' EXIT
+          env XDG_CACHE_HOME="$COSIGN_CACHE_DIR" cosign sign-blob \
+            --output-signature checksums.txt.sig \
+            --output-certificate checksums.txt.pem \
+            checksums.txt \
+            --yes
+
+      - name: Verify checksums signature
+        working-directory: artifacts
+        run: |
+          set -euo pipefail
+          COSIGN_CACHE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$COSIGN_CACHE_DIR"' EXIT
+          env XDG_CACHE_HOME="$COSIGN_CACHE_DIR" cosign verify-blob \
+            --certificate checksums.txt.pem \
+            --signature checksums.txt.sig \
+            --certificate-identity-regexp '^https://github\.com/usetero/cli/\.github/workflows/release\.yml@refs/(tags/.*|heads/master)$' \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            checksums.txt
+
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,6 +173,8 @@ jobs:
           gh release upload "${TAG_NAME}" \
             artifacts/*.tar.gz \
             artifacts/checksums.txt \
+            artifacts/checksums.txt.sig \
+            artifacts/checksums.txt.pem \
             scripts/install.sh \
             --clobber
 
