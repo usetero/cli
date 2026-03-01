@@ -3,7 +3,7 @@ package datadog
 import (
 	"time"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 const discoveryPollInterval = 500 * time.Millisecond
@@ -13,6 +13,6 @@ type pollTickMsg struct{}
 
 // statusMsg carries async discovery status fetch results.
 type statusMsg struct {
-	status *api.DatadogAccountStatus
+	status *graphql.DatadogAccountStatus
 	err    error
 }

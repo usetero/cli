@@ -3,16 +3,16 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 )
 
-// MockPolicies is a mock implementation of api.Policies.
+// MockPolicies is a mock implementation of graphql.Policies.
 type MockPolicies struct {
 	ApprovePolicyFunc func(ctx context.Context, policyID string) error
 	DismissPolicyFunc func(ctx context.Context, policyID string) error
 }
 
-var _ api.Policies = (*MockPolicies)(nil)
+var _ graphql.Policies = (*MockPolicies)(nil)
 
 // NewMockPolicies creates a MockPolicies with sensible defaults.
 func NewMockPolicies() *MockPolicies {

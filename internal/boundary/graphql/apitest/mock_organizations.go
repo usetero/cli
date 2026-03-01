@@ -3,14 +3,14 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockOrganizations implements api.Organizations for testing.
+// MockOrganizations implements graphql.Organizations for testing.
 type MockOrganizations struct {
 	ListFunc   func(ctx context.Context) ([]domain.Organization, error)
-	CreateFunc func(ctx context.Context, input api.CreateOrganizationInput) (*api.OrganizationBootstrapResult, error)
+	CreateFunc func(ctx context.Context, input graphql.CreateOrganizationInput) (*graphql.OrganizationBootstrapResult, error)
 }
 
 // NewMockOrganizations creates a MockOrganizations with sensible defaults.
@@ -25,7 +25,7 @@ func (m *MockOrganizations) List(ctx context.Context) ([]domain.Organization, er
 	return nil, nil
 }
 
-func (m *MockOrganizations) Create(ctx context.Context, input api.CreateOrganizationInput) (*api.OrganizationBootstrapResult, error) {
+func (m *MockOrganizations) Create(ctx context.Context, input graphql.CreateOrganizationInput) (*graphql.OrganizationBootstrapResult, error) {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, input)
 	}

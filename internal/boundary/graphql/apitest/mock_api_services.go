@@ -3,17 +3,17 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockAPIServiceServices is a mock implementation of api.Services.
+// MockAPIServiceServices is a mock implementation of graphql.Services.
 type MockAPIServiceServices struct {
 	EnableServiceFunc  func(ctx context.Context, serviceID domain.ServiceID) error
 	DisableServiceFunc func(ctx context.Context, serviceID domain.ServiceID) error
 }
 
-var _ api.Services = (*MockAPIServiceServices)(nil)
+var _ graphql.Services = (*MockAPIServiceServices)(nil)
 
 // NewMockAPIServiceServices creates a MockAPIServiceServices with sensible defaults.
 func NewMockAPIServiceServices() *MockAPIServiceServices {

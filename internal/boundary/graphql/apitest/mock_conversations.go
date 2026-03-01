@@ -3,14 +3,14 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockConversations implements api.Conversations for testing.
+// MockConversations implements graphql.Conversations for testing.
 type MockConversations struct {
-	CreateFunc func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error)
-	UpdateFunc func(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error)
+	CreateFunc func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error)
+	UpdateFunc func(ctx context.Context, id domain.ConversationID, input graphql.UpdateConversationInput) (*domain.Conversation, error)
 	DeleteFunc func(ctx context.Context, id domain.ConversationID) error
 }
 
@@ -19,14 +19,14 @@ func NewMockConversations() *MockConversations {
 	return &MockConversations{}
 }
 
-func (m *MockConversations) Create(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+func (m *MockConversations) Create(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, input)
 	}
 	return nil, nil
 }
 
-func (m *MockConversations) Update(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error) {
+func (m *MockConversations) Update(ctx context.Context, id domain.ConversationID, input graphql.UpdateConversationInput) (*domain.Conversation, error) {
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(ctx, id, input)
 	}

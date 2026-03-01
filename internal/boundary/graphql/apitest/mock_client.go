@@ -3,15 +3,15 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockClient implements api.Client for testing.
+// MockClient implements graphql.Client for testing.
 type MockClient struct {
 	SetAccountIDFunc                        func(accountID domain.AccountID)
-	WithAccountIDFunc                       func(accountID domain.AccountID) api.Client
+	WithAccountIDFunc                       func(accountID domain.AccountID) graphql.Client
 	RawQueryFunc                            func(ctx context.Context, query string, variables map[string]interface{}) (map[string]interface{}, error)
 	ListOrganizationsFunc                   func(ctx context.Context) (*gen.ListOrganizationsResponse, error)
 	CreateOrganizationAndBootstrapFunc      func(ctx context.Context, input gen.CreateOrganizationInput) (*gen.CreateOrganizationAndBootstrapResponse, error)
@@ -43,7 +43,7 @@ func (m *MockClient) SetAccountID(accountID domain.AccountID) {
 	}
 }
 
-func (m *MockClient) WithAccountID(accountID domain.AccountID) api.Client {
+func (m *MockClient) WithAccountID(accountID domain.AccountID) graphql.Client {
 	if m.WithAccountIDFunc != nil {
 		return m.WithAccountIDFunc(accountID)
 	}

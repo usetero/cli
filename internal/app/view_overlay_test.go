@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/auth/authtest"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -73,7 +73,7 @@ func newViewTestModel(t *testing.T) *Model {
 
 	scope := logtest.NewScope(t)
 	client := apitest.NewMockClient()
-	services := api.NewAPIServices(client, scope)
+	services := graphql.NewAPIServices(client, scope)
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}
@@ -83,7 +83,7 @@ func newViewTestModel(t *testing.T) *Model {
 		context.Background(),
 		&config.CLIConfig{
 			Env:         "dev",
-			APIEndpoint: "https://api.example.com",
+			APIEndpoint: "https://graphql.example.com",
 		},
 		styles.NewTheme(true),
 		"dev",

@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
@@ -18,7 +18,7 @@ import (
 type APIKeyModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services api.APIServices
+	services graphql.APIServices
 	scope    log.Scope
 	account  domain.Account
 	site     domain.DatadogSite
@@ -36,7 +36,7 @@ func NewAPIKey(
 	theme styles.Theme,
 	account domain.Account,
 	site domain.DatadogSite,
-	services api.APIServices,
+	services graphql.APIServices,
 	scope log.Scope,
 ) *APIKeyModel {
 	if ctx == nil {

@@ -1,6 +1,6 @@
 package apitest
 
-import api "github.com/usetero/cli/internal/boundary/graphql"
+import graphql "github.com/usetero/cli/internal/boundary/graphql"
 
 // NewMockAPIServices creates an APIServices with mock implementations.
 // Pass nil for any service you don't need to mock.
@@ -9,8 +9,8 @@ func NewMockAPIServices(
 	accounts *MockAccounts,
 	workspaces *MockWorkspaces,
 	datadogAccounts *MockDatadogAccounts,
-) api.APIServices {
-	services := api.APIServices{}
+) graphql.APIServices {
+	services := graphql.APIServices{}
 
 	if organizations != nil {
 		services.Organizations = organizations

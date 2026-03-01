@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/app"
 	"github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
@@ -78,7 +78,7 @@ Just run 'tero' to start an interactive chat session.`,
 			authService := auth.NewService(workosClient, tokenStore, scope)
 
 			// Create API services
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 
 			// Create storage for SQLite databases
 			storage := sqlite.NewStorageService(orgCfg)

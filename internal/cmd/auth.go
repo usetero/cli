@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
@@ -102,7 +102,7 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Fetch organizations
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
@@ -170,7 +170,7 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Fetch organizations
-			services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				return fmt.Errorf("failed to fetch organizations: %w", err)
@@ -312,7 +312,7 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 				orgName := workosOrgID // fallback to ID
 				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
 				authService := auth.NewService(workosClient, tokenStore, scope)
-				services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
+				services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authService, scope)
 				if orgs, err := fetchOrganizations(cmd.Context(), services); err == nil {
 					for _, o := range orgs {
 						if o.WorkosID == domain.WorkosOrganizationID(workosOrgID) {
@@ -341,7 +341,7 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 }
 
 // fetchOrganizations fetches the list of organizations from the API
-func fetchOrganizations(ctx context.Context, services api.APIServices) ([]org, error) {
+func fetchOrganizations(ctx context.Context, services graphql.APIServices) ([]org, error) {
 	apiOrgs, err := services.Organizations.List(ctx)
 	if err != nil {
 		return nil, err

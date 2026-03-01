@@ -19,7 +19,7 @@ import (
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
 	chatclient "github.com/usetero/cli/internal/boundary/chat"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -62,7 +62,7 @@ type Model struct {
 	storage     sqlite.Storage
 	authService auth.Auth
 	syncer      powersync.Syncer
-	services    api.APIServices
+	services    graphql.APIServices
 	userPrefs   preferences.UserPreferences
 	orgPrefs    preferences.OrgPreferences
 
@@ -101,7 +101,7 @@ func New(
 	cfg *config.CLIConfig,
 	theme styles.Theme,
 	version string,
-	services api.APIServices,
+	services graphql.APIServices,
 	authService auth.Auth,
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,

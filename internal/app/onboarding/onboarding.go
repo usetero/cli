@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	iauth "github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
@@ -21,7 +21,7 @@ type Model struct {
 	// Dependencies available from start
 	ctx       context.Context
 	theme     styles.Theme
-	services  api.APIServices
+	services  graphql.APIServices
 	userPrefs preferences.UserPreferences
 	orgPrefs  preferences.OrgPreferences
 	auth      iauth.Auth
@@ -46,7 +46,7 @@ type Model struct {
 func New(
 	ctx context.Context,
 	theme styles.Theme,
-	services api.APIServices,
+	services graphql.APIServices,
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,
 	authService iauth.Auth,

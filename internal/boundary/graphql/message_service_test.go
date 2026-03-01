@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/domain"
@@ -26,7 +26,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",
@@ -73,7 +73,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",
@@ -113,7 +113,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",
@@ -165,7 +165,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",
@@ -193,7 +193,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",
@@ -248,7 +248,7 @@ func TestMessageService_CreateMessage(t *testing.T) {
 			},
 		}
 
-		svc := api.NewMessageService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewMessageService(mockClient, logtest.NewScope(t))
 
 		msg := &domain.Message{
 			ID:             "msg-123",

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
@@ -61,7 +61,7 @@ func TestIntegration_Syncer(t *testing.T) {
 	t.Logf("Account ID from config: %s", accountID)
 
 	// Create API services
-	services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
+	services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
 	services.SetAccountID(accountID)
 
 	// Validate account exists via API

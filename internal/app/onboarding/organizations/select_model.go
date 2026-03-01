@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -21,7 +21,7 @@ import (
 type SelectModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services api.APIServices
+	services graphql.APIServices
 	prefs    preferences.UserPreferences
 	auth     auth.Auth
 	scope    log.Scope
@@ -39,7 +39,7 @@ type SelectModel struct {
 func NewSelect(
 	ctx context.Context,
 	theme styles.Theme,
-	services api.APIServices,
+	services graphql.APIServices,
 	prefs preferences.UserPreferences,
 	authService auth.Auth,
 	scope log.Scope,

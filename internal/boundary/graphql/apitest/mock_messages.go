@@ -3,16 +3,16 @@ package apitest
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockMessages is a mock implementation of api.Messages.
+// MockMessages is a mock implementation of graphql.Messages.
 type MockMessages struct {
 	CreateMessageFunc func(ctx context.Context, msg *domain.Message) error
 }
 
-var _ api.Messages = (*MockMessages)(nil)
+var _ graphql.Messages = (*MockMessages)(nil)
 
 // NewMockMessages creates a MockMessages with sensible defaults.
 func NewMockMessages() *MockMessages {

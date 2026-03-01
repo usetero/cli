@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/domain"
@@ -37,7 +37,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
@@ -68,7 +68,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
@@ -91,7 +91,7 @@ func TestDatadogAccountService_HasAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		hasAccount, err := svc.HasAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
@@ -128,7 +128,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		account, err := svc.GetAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
@@ -167,7 +167,7 @@ func TestDatadogAccountService_GetAccount(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		account, err := svc.GetAccount(context.Background(), domain.AccountID("acc-1"))
 
 		if err != nil {
@@ -193,8 +193,8 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "api-key", Site: "US1"})
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), graphql.ValidateAPIKeyInput{APIKey: "api-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -221,8 +221,8 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), graphql.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -248,8 +248,8 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		valid, errMsg, err := svc.ValidateAPIKey(context.Background(), graphql.ValidateAPIKeyInput{APIKey: "bad-key", Site: "US1"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -270,8 +270,8 @@ func TestDatadogAccountService_ValidateAPIKey(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
-		_, _, err := svc.ValidateAPIKey(context.Background(), api.ValidateAPIKeyInput{APIKey: "key", Site: "US1"})
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		_, _, err := svc.ValidateAPIKey(context.Background(), graphql.ValidateAPIKeyInput{APIKey: "key", Site: "US1"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -311,7 +311,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		status, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err != nil {
@@ -320,8 +320,8 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		if status == nil {
 			t.Fatal("expected status, got nil")
 		}
-		if status.Health != api.DatadogAccountHealthOK {
-			t.Errorf("Health = %q, want %q", status.Health, api.DatadogAccountHealthOK)
+		if status.Health != graphql.DatadogAccountHealthOK {
+			t.Errorf("Health = %q, want %q", status.Health, graphql.DatadogAccountHealthOK)
 		}
 		if status.ServiceCount != 10 {
 			t.Errorf("ServiceCount = %d, want 10", status.ServiceCount)
@@ -352,7 +352,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		status, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err != nil {
@@ -371,7 +371,7 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 			},
 		}
 
-		svc := api.NewDatadogAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewDatadogAccountService(mockClient, logtest.NewScope(t))
 		_, err := svc.GetStatus(context.Background(), domain.DatadogAccountID("dd-123"))
 
 		if err == nil {

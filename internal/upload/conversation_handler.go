@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
@@ -18,11 +18,11 @@ import (
 
 // conversationHandler handles uploading conversations to the GraphQL API.
 type conversationHandler struct {
-	conversations api.Conversations
+	conversations graphql.Conversations
 	scope         log.Scope
 }
 
-func newConversationHandler(conversations api.Conversations, scope log.Scope) *conversationHandler {
+func newConversationHandler(conversations graphql.Conversations, scope log.Scope) *conversationHandler {
 	return &conversationHandler{
 		conversations: conversations,
 		scope:         scope.Child("conversations"),
@@ -55,14 +55,14 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 		return fmt.Errorf("invalid conversation ID %q: %w", entry.RowID, err)
 	}
 
-	_, err = h.conversations.Create(ctx, api.CreateConversationInput{
+	_, err = h.conversations.Create(ctx, graphql.CreateConversationInput{
 		ID:          id,
 		WorkspaceID: domain.WorkspaceID(workspaceID),
 		Title:       title,
 	})
 	if err != nil {
 		// Already exists is fine - the conversation is there, which is what we wanted
-		if errors.Is(err, api.ErrAlreadyExists) {
+		if errors.Is(err, graphql.ErrAlreadyExists) {
 			h.scope.Debug("conversation already exists, skipping", "id", entry.RowID)
 			return nil
 		}
@@ -74,7 +74,7 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 }
 
 func (h *conversationHandler) handlePatch(ctx context.Context, entry *db.CrudEntry) error {
-	var input api.UpdateConversationInput
+	var input graphql.UpdateConversationInput
 
 	if titleVal, ok := entry.Data["title"]; ok {
 		title, _ := titleVal.(string)
@@ -94,7 +94,7 @@ func (h *conversationHandler) handleDelete(ctx context.Context, entry *db.CrudEn
 	err := h.conversations.Delete(ctx, domain.ConversationID(entry.RowID))
 	if err != nil {
 		// Not found is fine - the conversation is gone, which is what we wanted
-		if errors.Is(err, api.ErrNotFound) {
+		if errors.Is(err, graphql.ErrNotFound) {
 			h.scope.Debug("conversation already deleted, skipping", "id", entry.RowID)
 			return nil
 		}

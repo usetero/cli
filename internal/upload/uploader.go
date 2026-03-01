@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/log"
 	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/powersync/db"
@@ -73,10 +73,10 @@ func New(
 	database sqlite.DB,
 	client psapi.Client,
 	tokenRefresher TokenRefresher,
-	conversations api.Conversations,
-	messages api.Messages,
-	services api.Services,
-	policies api.Policies,
+	conversations graphql.Conversations,
+	messages graphql.Messages,
+	services graphql.Services,
+	policies graphql.Policies,
 	scope log.Scope,
 	opts ...Option,
 ) Uploader {

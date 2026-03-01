@@ -6,7 +6,7 @@ import (
 
 	iauth "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/auth/authtest"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
@@ -274,7 +274,7 @@ func newTestModelWithClient(t *testing.T) (*Model, *apitest.MockClient) {
 
 	scope := logtest.NewScope(t)
 	client := apitest.NewMockClient()
-	services := api.NewAPIServices(client, scope)
+	services := graphql.NewAPIServices(client, scope)
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}

@@ -4,13 +4,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/google/uuid"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 func (m *CreateModel) createOrg(name string) tea.Cmd {
 	return func() tea.Msg {
 		id := uuid.New()
-		result, err := m.services.Organizations.Create(m.ctx, api.CreateOrganizationInput{
+		result, err := m.services.Organizations.Create(m.ctx, graphql.CreateOrganizationInput{
 			ID:   id,
 			Name: name,
 		})

@@ -9,7 +9,7 @@ import (
 
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/boundary/chat"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -71,7 +71,7 @@ func TestIntegration_Upload(t *testing.T) {
 	t.Logf("Workspace ID: %s", workspaceID)
 
 	// Create API services
-	services := api.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
+	services := graphql.NewServices(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
 	services.SetAccountID(domain.AccountID(accountID))
 
 	// Create chat client
@@ -79,7 +79,7 @@ func TestIntegration_Upload(t *testing.T) {
 	chatClient.SetAccountID(accountID)
 
 	// Create message service
-	messagesSvc := api.NewMessageService(chatClient, logger)
+	messagesSvc := graphql.NewMessageService(chatClient, logger)
 
 	t.Run("mutation round-trip maintains healthy database", func(t *testing.T) {
 		// Create fresh database with PowerSync

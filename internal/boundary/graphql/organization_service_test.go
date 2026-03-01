@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -37,7 +37,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewOrganizationService(mockClient, logtest.NewScope(t))
 		orgs, err := svc.List(context.Background())
 
 		if err != nil {
@@ -66,7 +66,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewOrganizationService(mockClient, logtest.NewScope(t))
 		orgs, err := svc.List(context.Background())
 
 		if err != nil {
@@ -85,7 +85,7 @@ func TestOrganizationService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewOrganizationService(mockClient, logtest.NewScope(t))
 		_, err := svc.List(context.Background())
 
 		if err == nil {
@@ -125,9 +125,9 @@ func TestOrganizationService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewOrganizationService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
-		result, err := svc.Create(context.Background(), api.CreateOrganizationInput{ID: testID, Name: "New Org"})
+		result, err := svc.Create(context.Background(), graphql.CreateOrganizationInput{ID: testID, Name: "New Org"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -157,8 +157,8 @@ func TestOrganizationService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewOrganizationService(mockClient, logtest.NewScope(t))
-		_, err := svc.Create(context.Background(), api.CreateOrganizationInput{ID: uuid.New(), Name: "Test"})
+		svc := graphql.NewOrganizationService(mockClient, logtest.NewScope(t))
+		_, err := svc.Create(context.Background(), graphql.CreateOrganizationInput{ID: uuid.New(), Name: "Test"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

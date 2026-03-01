@@ -11,7 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/auth"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -22,7 +22,7 @@ import (
 type Model struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services api.APIServices
+	services graphql.APIServices
 	auth     auth.Auth
 	userPref preferences.UserPreferences
 	orgPref  preferences.OrgPreferences
@@ -36,7 +36,7 @@ type Model struct {
 func New(
 	ctx context.Context,
 	theme styles.Theme,
-	services api.APIServices,
+	services graphql.APIServices,
 	authService auth.Auth,
 	userPref preferences.UserPreferences,
 	orgPref preferences.OrgPreferences,

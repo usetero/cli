@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -29,7 +29,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewAccountService(mockClient, logtest.NewScope(t))
 		accounts, err := svc.List(context.Background(), "org-123")
 
 		if err != nil {
@@ -58,7 +58,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewAccountService(mockClient, logtest.NewScope(t))
 		accounts, err := svc.List(context.Background(), "org-123")
 
 		if err != nil {
@@ -77,7 +77,7 @@ func TestAccountService_List(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewAccountService(mockClient, logtest.NewScope(t))
 		_, err := svc.List(context.Background(), "org-123")
 
 		if err == nil {
@@ -106,9 +106,9 @@ func TestAccountService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
+		svc := graphql.NewAccountService(mockClient, logtest.NewScope(t))
 		testID := uuid.New()
-		account, err := svc.Create(context.Background(), api.CreateAccountInput{ID: testID, OrganizationID: "org-123", Name: "New Account"})
+		account, err := svc.Create(context.Background(), graphql.CreateAccountInput{ID: testID, OrganizationID: "org-123", Name: "New Account"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -132,8 +132,8 @@ func TestAccountService_Create(t *testing.T) {
 			},
 		}
 
-		svc := api.NewAccountService(mockClient, logtest.NewScope(t))
-		_, err := svc.Create(context.Background(), api.CreateAccountInput{ID: uuid.New(), OrganizationID: "org-123", Name: "Test"})
+		svc := graphql.NewAccountService(mockClient, logtest.NewScope(t))
+		_, err := svc.Create(context.Background(), graphql.CreateAccountInput{ID: uuid.New(), OrganizationID: "org-123", Name: "Test"})
 
 		if err == nil {
 			t.Fatal("expected error, got nil")

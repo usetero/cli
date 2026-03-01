@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
@@ -19,13 +19,13 @@ import (
 type DiscoveryModel struct {
 	ctx              context.Context
 	theme            styles.Theme
-	services         api.APIServices
+	services         graphql.APIServices
 	scope            log.Scope
 	datadogAccountID domain.DatadogAccountID
 
 	spinner  spinner.Model
 	progress *progress.Model
-	status   *api.DatadogAccountStatus
+	status   *graphql.DatadogAccountStatus
 	err      error
 	width    int
 	height   int
@@ -36,7 +36,7 @@ func NewDiscovery(
 	ctx context.Context,
 	theme styles.Theme,
 	datadogAccountID domain.DatadogAccountID,
-	services api.APIServices,
+	services graphql.APIServices,
 	scope log.Scope,
 ) *DiscoveryModel {
 	if ctx == nil {

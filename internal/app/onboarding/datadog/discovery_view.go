@@ -5,7 +5,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 // View renders the discovery UI.
@@ -64,7 +64,7 @@ func (m *DiscoveryModel) View() string {
 
 func (m *DiscoveryModel) statusText() string {
 	switch m.status.Health {
-	case api.DatadogAccountHealthOK:
+	case graphql.DatadogAccountHealthOK:
 		return "Services healthy, analyzing log patterns..."
 	default:
 		return "Processing..."

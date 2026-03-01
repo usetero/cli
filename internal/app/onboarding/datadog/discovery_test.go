@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
@@ -17,9 +17,9 @@ func TestDiscoveryPollTickSchedulesAsyncFetch(t *testing.T) {
 
 	callCount := 0
 	mockDatadog := apitest.NewMockDatadogAccounts()
-	mockDatadog.GetStatusFunc = func(context.Context, domain.DatadogAccountID) (*api.DatadogAccountStatus, error) {
+	mockDatadog.GetStatusFunc = func(context.Context, domain.DatadogAccountID) (*graphql.DatadogAccountStatus, error) {
 		callCount++
-		return &api.DatadogAccountStatus{}, nil
+		return &graphql.DatadogAccountStatus{}, nil
 	}
 	services := apitest.NewMockAPIServices(nil, nil, nil, mockDatadog)
 
@@ -52,7 +52,7 @@ func TestDiscoveryStatusSchedulesTimerTick(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(statusMsg{status: &api.DatadogAccountStatus{ReadyForUse: false}})
+	cmd := m.Update(statusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: false}})
 	if cmd == nil {
 		t.Fatalf("expected non-ready status to schedule timer")
 	}
@@ -74,7 +74,7 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(statusMsg{status: &api.DatadogAccountStatus{ReadyForUse: true}})
+	cmd := m.Update(statusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: true}})
 	if cmd == nil {
 		t.Fatalf("expected ready status to emit completion message")
 	}

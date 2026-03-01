@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/auth/authtest"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
@@ -159,7 +159,7 @@ func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
 		cfg:         &config.CLIConfig{PowerSyncEndpoint: "https://powersync.example.com"},
 		db:          db,
 		syncer:      syncer,
-		services:    api.NewAPIServices(mockClient, scope),
+		services:    graphql.NewAPIServices(mockClient, scope),
 		authService: authService,
 	}
 

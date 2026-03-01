@@ -3,7 +3,7 @@ package upload
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
@@ -12,11 +12,11 @@ import (
 // serviceHandler handles uploading service mutations to the GraphQL API.
 // Services are server-owned — the client only patches them (e.g. enable/disable).
 type serviceHandler struct {
-	services api.Services
+	services graphql.Services
 	scope    log.Scope
 }
 
-func newServiceHandler(services api.Services, scope log.Scope) *serviceHandler {
+func newServiceHandler(services graphql.Services, scope log.Scope) *serviceHandler {
 	return &serviceHandler{
 		services: services,
 		scope:    scope.Child("services"),

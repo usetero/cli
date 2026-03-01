@@ -3,18 +3,18 @@ package upload
 import (
 	"context"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
 )
 
 // policyHandler handles uploading log event policy mutations to the GraphQL API.
 type policyHandler struct {
-	policies api.Policies
+	policies graphql.Policies
 	scope    log.Scope
 }
 
-func newPolicyHandler(policies api.Policies, scope log.Scope) *policyHandler {
+func newPolicyHandler(policies graphql.Policies, scope log.Scope) *policyHandler {
 	return &policyHandler{
 		policies: policies,
 		scope:    scope.Child("policies"),

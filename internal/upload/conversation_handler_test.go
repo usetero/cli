@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
@@ -32,7 +32,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		}
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
 				calledWith.id = input.ID
 				calledWith.workspaceID = input.WorkspaceID
 				calledWith.title = input.Title
@@ -71,7 +71,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -99,7 +99,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		}
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input graphql.UpdateConversationInput) (*domain.Conversation, error) {
 				calledWith.id = id
 				if input.Title != nil {
 					calledWith.title = *input.Title
@@ -135,7 +135,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input api.UpdateConversationInput) (*domain.Conversation, error) {
+			UpdateFunc: func(ctx context.Context, id domain.ConversationID, input graphql.UpdateConversationInput) (*domain.Conversation, error) {
 				return nil, errors.New("network error")
 			},
 		}
@@ -213,7 +213,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		mock := &apitest.MockConversations{
 			DeleteFunc: func(ctx context.Context, id domain.ConversationID) error {
 				// Service layer returns wrapped ErrNotFound
-				return fmt.Errorf("delete conversation %s: %w", id, api.ErrNotFound)
+				return fmt.Errorf("delete conversation %s: %w", id, graphql.ErrNotFound)
 			},
 		}
 
@@ -235,9 +235,9 @@ func TestConversationHandler_Handle(t *testing.T) {
 		t.Parallel()
 
 		mock := &apitest.MockConversations{
-			CreateFunc: func(ctx context.Context, input api.CreateConversationInput) (*domain.Conversation, error) {
+			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
 				// Service layer returns wrapped ErrAlreadyExists
-				return nil, fmt.Errorf("create conversation %s: %w", input.ID, api.ErrAlreadyExists)
+				return nil, fmt.Errorf("create conversation %s: %w", input.ID, graphql.ErrAlreadyExists)
 			},
 		}
 

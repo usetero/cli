@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
@@ -18,7 +18,7 @@ import (
 type CheckModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services api.APIServices
+	services graphql.APIServices
 	scope    log.Scope
 	account  domain.Account
 	err      error
@@ -29,7 +29,7 @@ func NewCheck(
 	ctx context.Context,
 	theme styles.Theme,
 	account domain.Account,
-	services api.APIServices,
+	services graphql.APIServices,
 	scope log.Scope,
 ) *CheckModel {
 	if ctx == nil {

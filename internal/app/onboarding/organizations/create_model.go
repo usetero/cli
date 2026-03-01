@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	api "github.com/usetero/cli/internal/boundary/graphql"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
@@ -18,7 +18,7 @@ import (
 type CreateModel struct {
 	ctx      context.Context
 	theme    styles.Theme
-	services api.APIServices
+	services graphql.APIServices
 	prefs    preferences.UserPreferences
 	scope    log.Scope
 
@@ -33,7 +33,7 @@ type CreateModel struct {
 func NewCreate(
 	ctx context.Context,
 	theme styles.Theme,
-	services api.APIServices,
+	services graphql.APIServices,
 	prefs preferences.UserPreferences,
 	scope log.Scope,
 ) *CreateModel {
