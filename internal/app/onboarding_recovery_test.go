@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -35,10 +35,10 @@ func TestOnboardingGateRecoverySurfacesToastAndReturnsToPreflight(t *testing.T) 
 	}
 
 	msgs := collectCmdMsgs(cmd)
-	var toast appmsg.Error
+	var toast appevents.Error
 	var found bool
 	for _, msg := range msgs {
-		if e, ok := msg.(appmsg.Error); ok {
+		if e, ok := msg.(appevents.Error); ok {
 			toast = e
 			found = true
 			break

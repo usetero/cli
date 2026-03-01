@@ -4,7 +4,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -37,7 +37,7 @@ func (m *DiscoveryModel) handleStatus(msg statusMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("discovery status check failed", "error", msg.err)
 		m.err = msg.err
-		return appmsg.ErrorCmd("Failed to check discovery status", msg.err, false)
+		return appevents.ErrorCmd("Failed to check discovery status", msg.err, false)
 	}
 	m.status = msg.status
 

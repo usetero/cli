@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/styles"
@@ -41,7 +41,7 @@ func (d *detail) Prompt() tea.Cmd {
 		"Pull up the %q policy for the %q log event in the %s service.",
 		d.category.Name(), p.LogEventName, p.ServiceName,
 	)
-	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
+	return func() tea.Msg { return appevents.DrawerPrompt{Text: text} }
 }
 
 // View renders the detail: a header with category summary, then a policy table.

@@ -1,4 +1,4 @@
-package msgs
+package events
 
 import (
 	tea "charm.land/bubbletea/v2"

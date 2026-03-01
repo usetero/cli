@@ -11,7 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
 	"github.com/usetero/cli/internal/app/chat/usecase"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/boundary/chat/chattest"
 	corechat "github.com/usetero/cli/internal/core/chat"
@@ -571,29 +571,29 @@ func messageRoles(messages []domain.Message) []string {
 	return roles
 }
 
-func extractErrorToast(cmd tea.Cmd) (appmsg.Error, bool) {
+func extractErrorToast(cmd tea.Cmd) (appevents.Error, bool) {
 	if cmd == nil {
-		return appmsg.Error{}, false
+		return appevents.Error{}, false
 	}
 	msg := cmd()
 	if msg == nil {
-		return appmsg.Error{}, false
+		return appevents.Error{}, false
 	}
-	if e, ok := msg.(appmsg.Error); ok {
+	if e, ok := msg.(appevents.Error); ok {
 		return e, true
 	}
 	batch, ok := msg.(tea.BatchMsg)
 	if !ok {
-		return appmsg.Error{}, false
+		return appevents.Error{}, false
 	}
 	for _, sub := range batch {
 		if sub == nil {
 			continue
 		}
 		subMsg := sub()
-		if e, ok := subMsg.(appmsg.Error); ok {
+		if e, ok := subMsg.(appevents.Error); ok {
 			return e, true
 		}
 	}
-	return appmsg.Error{}, false
+	return appevents.Error{}, false
 }

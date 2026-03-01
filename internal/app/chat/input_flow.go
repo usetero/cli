@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -42,7 +42,7 @@ func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 		)
 		if err != nil {
 			m.scope.Error("failed to create conversation", "error", err)
-			return appmsg.Error{Message: "Failed to create conversation", Err: err}
+			return appevents.Error{Message: "Failed to create conversation", Err: err}
 		}
 
 		return conversationCreated{
@@ -87,7 +87,7 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 		}
 		if err != nil {
 			m.scope.Error("failed to create user message", "error", err)
-			return appmsg.Error{Message: "Failed to save message", Err: err}
+			return appevents.Error{Message: "Failed to save message", Err: err}
 		}
 
 		if m.session == nil {

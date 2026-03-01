@@ -3,7 +3,7 @@ package accounts
 import (
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
@@ -24,7 +24,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if msg.Err != nil {
 		m.scope.Error("failed to load accounts", "error", msg.Err)
-		return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load accounts", msg.Err, false))
+		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load accounts", msg.Err, false))
 	}
 
 	m.accounts = make([]domain.Account, len(msg.Items))

@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -36,7 +36,7 @@ func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
 			slog.Bool("recovery", gate != bootstrap.GatePreflight),
 		)
 		if gate == bootstrap.GatePreflight {
-			return appmsg.ErrorCmd("Onboarding setup failed. Please restart.", err, true)
+			return appevents.ErrorCmd("Onboarding setup failed. Please restart.", err, true)
 		}
 		m.scope.Warn("recovering onboarding to preflight",
 			slog.String("failed_gate", gate.String()),
@@ -45,7 +45,7 @@ func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
 		)
 		recovery := m.runGate(bootstrap.GatePreflight, "gate_recovery")
 		return tea.Batch(
-			appmsg.ErrorCmd("Onboarding state changed. Rechecking setup.", err, false),
+			appevents.ErrorCmd("Onboarding state changed. Rechecking setup.", err, false),
 			recovery,
 		)
 	}

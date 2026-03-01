@@ -12,7 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/sqlite"
@@ -108,10 +108,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 		cmds := []tea.Cmd{m.poll()}
 		if stateChanged {
-			cmds = append(cmds, func() tea.Msg { return msgs.SyncStateChanged{State: currentState} })
+			cmds = append(cmds, func() tea.Msg { return appevents.SyncStateChanged{State: currentState} })
 
 			if errState, ok := currentState.(*powersync.Error); ok {
-				cmds = append(cmds, msgs.ErrorCmd("Sync error", errState.Err, true))
+				cmds = append(cmds, appevents.ErrorCmd("Sync error", errState.Err, true))
 			}
 		}
 

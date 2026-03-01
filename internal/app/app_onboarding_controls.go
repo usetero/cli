@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/chat/usecase"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/app/onboarding"
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/config"
@@ -41,7 +41,7 @@ func (m *Model) activateOrg(orgID domain.OrganizationID, msg tea.Msg) tea.Cmd {
 func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
 	if err := m.userPrefs.SetTheme(theme); err != nil {
 		m.scope.Error("failed to set theme", "error", err)
-		return appmsg.ErrorCmd("Failed to save theme", err, false)
+		return appevents.ErrorCmd("Failed to save theme", err, false)
 	}
 	label := "Auto"
 	switch theme {
@@ -52,7 +52,7 @@ func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
 	case preferences.ThemeLight:
 		label = "Light"
 	}
-	return appmsg.SuccessCmd("Theme set to " + label + ". Restart to apply.")
+	return appevents.SuccessCmd("Theme set to " + label + ". Restart to apply.")
 }
 
 // switchOrganization re-enters onboarding at org selection.

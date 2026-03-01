@@ -3,7 +3,7 @@ package messagelist
 import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 )
 
 func (m *Model) handleMouseClick(msg tea.MouseClickMsg) {
@@ -72,7 +72,7 @@ func (m *Model) handleMouseRelease(_ tea.MouseReleaseMsg) []tea.Cmd {
 			tea.SetClipboard(text),
 			func() tea.Msg {
 				_ = clipboard.WriteAll(text)
-				return appmsg.Success{Message: "Copied to clipboard"}
+				return appevents.Success{Message: "Copied to clipboard"}
 			},
 		}
 	case releaseActionClick:

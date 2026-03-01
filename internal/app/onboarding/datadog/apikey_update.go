@@ -3,7 +3,7 @@ package datadog
 import (
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -15,7 +15,7 @@ func (m *APIKeyModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("api key validation failed", "error", msg.err)
 			m.err = msg.err
-			return appmsg.ErrorCmd("Failed to validate API key", msg.err, false)
+			return appevents.ErrorCmd("Failed to validate API key", msg.err, false)
 		}
 		if !msg.valid {
 			m.scope.Info("api key invalid", "reason", msg.errorMsg)

@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
@@ -25,7 +25,7 @@ func (m *Model) handleGlobalMessage(msg tea.Msg) (tea.Cmd, bool) {
 	case palette.CloseMsg:
 		m.palette = nil
 		return nil, true
-	case appmsg.SetTheme:
+	case appevents.SetTheme:
 		return m.setTheme(msg.Theme), true
 	default:
 		return nil, false
@@ -47,7 +47,7 @@ func (m *Model) handleInteractionMessage(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		// Let downstream components observe mouse messages.
 		return nil, false
-	case appmsg.DrawerPrompt:
+	case appevents.DrawerPrompt:
 		m.statusBar.CloseDrawer()
 		return func() tea.Msg { return msgs.UserSubmittedInput{Text: msg.Text} }, true
 	case msgs.UserSubmittedInput:

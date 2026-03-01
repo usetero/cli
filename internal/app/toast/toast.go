@@ -8,7 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -64,13 +64,13 @@ func (m *Model) Height() int {
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case msgs.Error:
+	case appevents.Error:
 		return m.show(toast{typ: toastError, content: msg.Message, sticky: msg.Sticky})
-	case msgs.Warning:
+	case appevents.Warning:
 		return m.show(toast{typ: toastWarning, content: msg.Message, sticky: msg.Sticky})
-	case msgs.Success:
+	case appevents.Success:
 		return m.show(toast{typ: toastSuccess, content: msg.Message})
-	case msgs.Info:
+	case appevents.Info:
 		return m.show(toast{typ: toastInfo, content: msg.Message})
 	case clearMsg:
 		m.current = nil

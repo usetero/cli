@@ -1,4 +1,4 @@
-package msgs
+package events
 
 import "github.com/usetero/cli/internal/powersync"
 

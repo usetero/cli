@@ -3,7 +3,7 @@ package accounts
 import (
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -15,7 +15,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create account", "error", msg.err)
 			m.err = msg.err
-			return appmsg.ErrorCmd("Failed to create account", msg.err, false)
+			return appevents.ErrorCmd("Failed to create account", msg.err, false)
 		}
 		_ = m.prefs.SetDefaultAccountID(msg.account.ID)
 		org := m.org

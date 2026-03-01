@@ -3,7 +3,7 @@ package sync
 import (
 	"testing"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
@@ -34,7 +34,7 @@ func TestUpdateEmitsSyncCompleteOnReadyState(t *testing.T) {
 	syncer := powersynctest.NewMockSyncer()
 	m := New(styles.NewTheme(true), syncer, logtest.NewScope(t))
 
-	cmd := m.Update(appmsg.SyncStateChanged{State: powersync.NewReady()})
+	cmd := m.Update(appevents.SyncStateChanged{State: powersync.NewReady()})
 	if cmd == nil {
 		t.Fatal("expected non-nil command on ready state")
 	}
@@ -50,7 +50,7 @@ func TestUpdateIgnoresNonReadySyncState(t *testing.T) {
 	syncer := powersynctest.NewMockSyncer()
 	m := New(styles.NewTheme(true), syncer, logtest.NewScope(t))
 
-	cmd := m.Update(appmsg.SyncStateChanged{State: powersync.NewConnecting()})
+	cmd := m.Update(appevents.SyncStateChanged{State: powersync.NewConnecting()})
 	if cmd != nil {
 		t.Fatal("expected nil command for non-ready sync state")
 	}

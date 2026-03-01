@@ -11,8 +11,8 @@ import (
 	"github.com/usetero/cli/internal/app/chat"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/app/keybar"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
 	"github.com/usetero/cli/internal/app/onboarding"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/app/statusbar"
@@ -180,7 +180,7 @@ func (m *Model) checkForUpdate() tea.Cmd {
 		if result == nil {
 			return nil
 		}
-		return appmsg.Info{Message: fmt.Sprintf("Tero CLI update available: %s → %s", result.Current, result.Latest)}
+		return appevents.Info{Message: fmt.Sprintf("Tero CLI update available: %s → %s", result.Current, result.Latest)}
 	}
 }
 

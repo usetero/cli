@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/usetero/cli/internal/app/chat/msgs"
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -32,7 +32,7 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		catalogCmd, err := m.ensureRuntime(msg.Account.ID.String())
 		if err != nil {
 			m.scope.Error("failed to ensure runtime", "error", err)
-			return appmsg.ErrorCmd("Failed to initialize account runtime", err, true), true
+			return appevents.ErrorCmd("Failed to initialize account runtime", err, true), true
 		}
 		m.scope.Info("runtime ensured", "account_id", msg.Account.ID.String(), "elapsed_ms", time.Since(start).Milliseconds())
 		if m.onboarding != nil {

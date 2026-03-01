@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/styles"
@@ -41,7 +41,7 @@ func (d *detail) Prompt() tea.Cmd {
 	le := d.logEvents[d.cursor]
 	svc := d.service.Name
 	text := fmt.Sprintf("Tell me about the %q log event in the %s service.", le.Name, svc)
-	return func() tea.Msg { return appmsg.DrawerPrompt{Text: text} }
+	return func() tea.Msg { return appevents.DrawerPrompt{Text: text} }
 }
 
 // View renders the detail: a header with service summary, then a log event table.

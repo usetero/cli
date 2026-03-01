@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/msgs"
+	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -42,7 +42,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 
 func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if msg.Err != nil {
-		return tea.Batch(m.list.Update(msg), appmsg.ErrorCmd("Failed to load workspaces", msg.Err, false))
+		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load workspaces", msg.Err, false))
 	}
 	m.workspaces = make([]domain.Workspace, len(msg.Items))
 	for i, item := range msg.Items {
