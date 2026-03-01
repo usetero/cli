@@ -50,10 +50,12 @@ func (m *Model) startSync(accountID string) error {
 		m.db,
 		psClient,
 		m.authService,
-		m.services.Conversations,
-		m.services.Messages,
-		m.services.Services,
-		m.services.Policies,
+		upload.MutationDeps{
+			Conversations: m.services.Conversations,
+			Messages:      m.services.Messages,
+			Services:      m.services.Services,
+			Policies:      m.services.Policies,
+		},
 		scope,
 		upload.WithBatchCompletedHook(func(ctx context.Context) error {
 			return syncer.NotifyUploadCompleted(ctx)

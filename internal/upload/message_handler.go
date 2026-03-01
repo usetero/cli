@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 
-	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
@@ -31,12 +30,12 @@ import (
 
 // messageHandler persists messages to the control plane via GraphQL.
 type messageHandler struct {
-	messages graphql.Messages
+	messages messageMutations
 	db       sqlite.DB
 	scope    log.Scope
 }
 
-func newMessageHandler(messages graphql.Messages, db sqlite.DB, scope log.Scope) *messageHandler {
+func newMessageHandler(messages messageMutations, db sqlite.DB, scope log.Scope) *messageHandler {
 	return &messageHandler{
 		messages: messages,
 		db:       db,

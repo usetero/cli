@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync/db"
@@ -73,10 +72,7 @@ func New(
 	database sqlite.DB,
 	client psapi.Client,
 	tokenRefresher TokenRefresher,
-	conversations graphql.Conversations,
-	messages graphql.Messages,
-	services graphql.Services,
-	policies graphql.Policies,
+	mutations MutationDeps,
 	scope log.Scope,
 	opts ...Option,
 ) Uploader {
@@ -87,10 +83,10 @@ func New(
 		client:         client,
 		tokenRefresher: tokenRefresher,
 		handlers: map[sqlite.Table]Handler{
-			sqlite.TableConversations:    newConversationHandler(conversations, scope),
-			sqlite.TableMessages:         newMessageHandler(messages, database, scope),
-			sqlite.TableServices:         newServiceHandler(services, scope),
-			sqlite.TableLogEventPolicies: newPolicyHandler(policies, scope),
+			sqlite.TableConversations:    newConversationHandler(mutations.Conversations, scope),
+			sqlite.TableMessages:         newMessageHandler(mutations.Messages, database, scope),
+			sqlite.TableServices:         newServiceHandler(mutations.Services, scope),
+			sqlite.TableLogEventPolicies: newPolicyHandler(mutations.Policies, scope),
 		},
 		scope:        scope,
 		pollInterval: defaultPollInterval,

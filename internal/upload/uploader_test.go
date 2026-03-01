@@ -30,10 +30,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			apitest.NewMockConversations(),
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: apitest.NewMockConversations(),
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 		)
 
@@ -55,10 +57,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			apitest.NewMockConversations(),
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: apitest.NewMockConversations(),
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 		)
 
@@ -105,10 +109,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			conversations,
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: conversations,
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 		)
 
@@ -170,10 +176,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			conversations,
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: conversations,
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 			upload.WithBatchCompletedHook(func(context.Context) error {
 				select {
@@ -226,10 +234,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			conversations,
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: conversations,
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 			upload.WithBatchCompletedHook(func(context.Context) error {
 				return errors.New("hook failed")
@@ -274,10 +284,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			apitest.NewMockConversations(),
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: apitest.NewMockConversations(),
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 		)
 
@@ -340,10 +352,12 @@ func TestUploader_Run(t *testing.T) {
 			testDB,
 			psapitest.NewMockClient(),
 			powersynctest.NewMockTokenRefresher("token"),
-			conversations,
-			apitest.NewMockMessages(),
-			apitest.NewMockAPIServiceServices(),
-			apitest.NewMockPolicies(),
+			upload.MutationDeps{
+				Conversations: conversations,
+				Messages:      apitest.NewMockMessages(),
+				Services:      apitest.NewMockAPIServiceServices(),
+				Policies:      apitest.NewMockPolicies(),
+			},
 			logtest.NewScope(t),
 		)
 

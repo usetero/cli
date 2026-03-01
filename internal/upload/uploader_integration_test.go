@@ -122,7 +122,18 @@ func TestIntegration_Upload(t *testing.T) {
 
 		// Start upload loop
 		powersyncClient := powersync.NewClient(cliConfig.PowerSyncEndpoint)
-		uploader := upload.New(db, powersyncClient, authSvc, services.Conversations, messagesSvc, services.Services, services.Policies, logger)
+		uploader := upload.New(
+			db,
+			powersyncClient,
+			authSvc,
+			upload.MutationDeps{
+				Conversations: services.Conversations,
+				Messages:      messagesSvc,
+				Services:      services.Services,
+				Policies:      services.Policies,
+			},
+			logger,
+		)
 
 		uploadCtx, uploadCancel := context.WithCancel(ctx)
 		defer uploadCancel()
