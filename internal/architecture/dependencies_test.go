@@ -38,6 +38,10 @@ func TestDependencyBoundaries(t *testing.T) {
 		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
 		filepath.Join("internal", "app", "chat", "usecase"),
 	})
+	assertOnlyAllowedChatClientImports(t, chatRoot, []string{
+		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
+		filepath.Join("internal", "app", "chat", "usecase"),
+	})
 }
 
 func findModuleRoot(start string) (string, error) {
@@ -133,6 +137,58 @@ func assertNoForbiddenImportsExcept(t *testing.T, dir string, forbiddenPrefixes 
 				if !allowed {
 					t.Errorf("%s imports forbidden package %s", path, p)
 				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", dir, err)
+	}
+}
+
+func assertOnlyAllowedChatClientImports(t *testing.T, dir string, allowedRelPaths []string) {
+	t.Helper()
+
+	root, err := findModuleRoot(dir)
+	if err != nil {
+		t.Fatalf("find module root: %v", err)
+	}
+
+	fs := token.NewFileSet()
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		f, err := parser.ParseFile(fs, path, nil, parser.ImportsOnly)
+		if err != nil {
+			return err
+		}
+		for _, imp := range f.Imports {
+			p := strings.Trim(imp.Path.Value, `"`)
+			if !strings.HasPrefix(p, "github.com/usetero/cli/internal/api/chatclient") {
+				continue
+			}
+			allowed := false
+			for _, allow := range allowedRelPaths {
+				if rel == allow || strings.HasPrefix(rel, allow+string(filepath.Separator)) {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				t.Errorf("%s imports api/chatclient outside allowed boundary", path)
 			}
 		}
 		return nil

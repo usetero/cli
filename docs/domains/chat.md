@@ -21,6 +21,17 @@ persistence integration with the local DB.
 
 That split is the key domain boundary. If you keep it, chat stays testable.
 
+## Dependency rule
+
+Keep dependency direction explicit:
+
+- `internal/app/chat/*` depends on `internal/app/chat/usecase` contracts.
+- `internal/app/chat/usecase` owns adapters to `internal/api/chatclient`.
+- `internal/core/chat` stays pure and does not import app/api packages.
+
+In practice: if you need `chatclient` in UI files, that is usually a boundary
+leak. Add/extend a use-case contract instead.
+
 ## What this domain is trying to protect
 
 The expensive failures in chat are usually not visual; they are semantic:
