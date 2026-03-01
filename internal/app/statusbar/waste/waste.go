@@ -3,6 +3,7 @@ package waste
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -145,24 +146,85 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(s domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
-	key := fmt.Sprintf("%v:%d:%d:%d:%d:%d:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%d",
-		s.ReadyForUse, s.EventCount, s.AnalyzedCount, s.PendingPolicyCount,
-		s.ApprovedPolicyCount, s.DismissedPolicyCount,
-		s.EstimatedCostPerHour, s.EstimatedCostPerHourBytes, s.EstimatedCostPerHourVolume,
-		s.EstimatedVolumePerHour, s.EstimatedBytesPerHour,
-		s.ObservedCostBefore, s.ObservedCostAfter,
-		s.ObservedVolumeBefore, s.ObservedVolumeAfter,
-		s.TotalCostPerHour, s.TotalVolumePerHour,
-		s.TotalBytesPerHour, len(cats))
-
-	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%v:%v:%d:%d",
-			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
-			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
-			c.EventsWithVolumes, c.TotalEvents)
+	key := wasteStateKey{
+		Summary: wasteSummaryKey{
+			ReadyForUse:             s.ReadyForUse,
+			EventCount:              s.EventCount,
+			AnalyzedCount:           s.AnalyzedCount,
+			PendingPolicyCount:      s.PendingPolicyCount,
+			ApprovedPolicyCount:     s.ApprovedPolicyCount,
+			DismissedPolicyCount:    s.DismissedPolicyCount,
+			EstimatedCostPerHour:    s.EstimatedCostPerHour,
+			EstimatedCostPerHourB:   s.EstimatedCostPerHourBytes,
+			EstimatedCostPerHourVol: s.EstimatedCostPerHourVolume,
+			EstimatedVolumePerHour:  s.EstimatedVolumePerHour,
+			EstimatedBytesPerHour:   s.EstimatedBytesPerHour,
+			ObservedCostBefore:      s.ObservedCostBefore,
+			ObservedCostAfter:       s.ObservedCostAfter,
+			ObservedVolumeBefore:    s.ObservedVolumeBefore,
+			ObservedVolumeAfter:     s.ObservedVolumeAfter,
+			TotalCostPerHour:        s.TotalCostPerHour,
+			TotalVolumePerHour:      s.TotalVolumePerHour,
+			TotalBytesPerHour:       s.TotalBytesPerHour,
+		},
+		Categories: make([]wasteCategoryKey, 0, len(cats)),
 	}
+	for _, c := range cats {
+		key.Categories = append(key.Categories, wasteCategoryKey{
+			Category:               string(c.Category),
+			PendingCount:           c.PendingCount,
+			ApprovedCount:          c.ApprovedCount,
+			DismissedCount:         c.DismissedCount,
+			EstimatedVolumePerHour: c.EstimatedVolumePerHour,
+			EstimatedBytesPerHour:  c.EstimatedBytesPerHour,
+			EstimatedCostPerHour:   c.EstimatedCostPerHour,
+			EventsWithVolumes:      c.EventsWithVolumes,
+			TotalEvents:            c.TotalEvents,
+		})
+	}
+	data, err := json.Marshal(key)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
 
-	return key
+type wasteStateKey struct {
+	Summary    wasteSummaryKey    `json:"summary"`
+	Categories []wasteCategoryKey `json:"categories"`
+}
+
+type wasteSummaryKey struct {
+	ReadyForUse             bool     `json:"ready_for_use"`
+	EventCount              int64    `json:"event_count"`
+	AnalyzedCount           int64    `json:"analyzed_count"`
+	PendingPolicyCount      int64    `json:"pending_policy_count"`
+	ApprovedPolicyCount     int64    `json:"approved_policy_count"`
+	DismissedPolicyCount    int64    `json:"dismissed_policy_count"`
+	EstimatedCostPerHour    *float64 `json:"estimated_cost_per_hour"`
+	EstimatedCostPerHourB   *float64 `json:"estimated_cost_per_hour_bytes"`
+	EstimatedCostPerHourVol *float64 `json:"estimated_cost_per_hour_volume"`
+	EstimatedVolumePerHour  *float64 `json:"estimated_volume_per_hour"`
+	EstimatedBytesPerHour   *float64 `json:"estimated_bytes_per_hour"`
+	ObservedCostBefore      *float64 `json:"observed_cost_before"`
+	ObservedCostAfter       *float64 `json:"observed_cost_after"`
+	ObservedVolumeBefore    *float64 `json:"observed_volume_before"`
+	ObservedVolumeAfter     *float64 `json:"observed_volume_after"`
+	TotalCostPerHour        *float64 `json:"total_cost_per_hour"`
+	TotalVolumePerHour      *float64 `json:"total_volume_per_hour"`
+	TotalBytesPerHour       *float64 `json:"total_bytes_per_hour"`
+}
+
+type wasteCategoryKey struct {
+	Category               string   `json:"category"`
+	PendingCount           int64    `json:"pending_count"`
+	ApprovedCount          int64    `json:"approved_count"`
+	DismissedCount         int64    `json:"dismissed_count"`
+	EstimatedVolumePerHour *float64 `json:"estimated_volume_per_hour"`
+	EstimatedBytesPerHour  *float64 `json:"estimated_bytes_per_hour"`
+	EstimatedCostPerHour   *float64 `json:"estimated_cost_per_hour"`
+	EventsWithVolumes      int64    `json:"events_with_volumes"`
+	TotalEvents            int64    `json:"total_events"`
 }
 
 // HasData returns true when policy data has been loaded.

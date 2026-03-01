@@ -3,6 +3,7 @@ package quality
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -143,14 +144,53 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
-	key := fmt.Sprintf("%d:%d:%d", summary.ServiceCount, summary.ActiveServices, len(cats))
-	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%v:%v:%v:%d:%d",
-			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount,
-			c.EstimatedVolumePerHour, c.EstimatedBytesPerHour, c.EstimatedCostPerHour,
-			c.EventsWithVolumes, c.TotalEvents)
+	key := qualityStateKey{
+		Summary: qualitySummaryKey{
+			ServiceCount:   summary.ServiceCount,
+			ActiveServices: summary.ActiveServices,
+		},
+		Categories: make([]qualityCategoryKey, 0, len(cats)),
 	}
-	return key
+	for _, c := range cats {
+		key.Categories = append(key.Categories, qualityCategoryKey{
+			Category:               string(c.Category),
+			PendingCount:           c.PendingCount,
+			ApprovedCount:          c.ApprovedCount,
+			DismissedCount:         c.DismissedCount,
+			EstimatedVolumePerHour: c.EstimatedVolumePerHour,
+			EstimatedBytesPerHour:  c.EstimatedBytesPerHour,
+			EstimatedCostPerHour:   c.EstimatedCostPerHour,
+			EventsWithVolumes:      c.EventsWithVolumes,
+			TotalEvents:            c.TotalEvents,
+		})
+	}
+	data, err := json.Marshal(key)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+type qualityStateKey struct {
+	Summary    qualitySummaryKey    `json:"summary"`
+	Categories []qualityCategoryKey `json:"categories"`
+}
+
+type qualitySummaryKey struct {
+	ServiceCount   int64 `json:"service_count"`
+	ActiveServices int64 `json:"active_services"`
+}
+
+type qualityCategoryKey struct {
+	Category               string   `json:"category"`
+	PendingCount           int64    `json:"pending_count"`
+	ApprovedCount          int64    `json:"approved_count"`
+	DismissedCount         int64    `json:"dismissed_count"`
+	EstimatedVolumePerHour *float64 `json:"estimated_volume_per_hour"`
+	EstimatedBytesPerHour  *float64 `json:"estimated_bytes_per_hour"`
+	EstimatedCostPerHour   *float64 `json:"estimated_cost_per_hour"`
+	EventsWithVolumes      int64    `json:"events_with_volumes"`
+	TotalEvents            int64    `json:"total_events"`
 }
 
 // HasData returns true when quality data has been loaded.

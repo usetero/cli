@@ -3,6 +3,7 @@ package compliance
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -151,14 +152,45 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 
 // stateKey builds a string key for change detection.
 func (m *Model) stateKey(summary domain.AccountSummary, cats []domain.PolicyCategoryStatus) string {
-	key := fmt.Sprintf("%d:%d", summary.EventCount, summary.AnalyzedCount)
-
-	for _, c := range cats {
-		key += fmt.Sprintf("|%s:%d:%d:%d:%d",
-			c.Category, c.PendingCount, c.ApprovedCount, c.DismissedCount, c.ObservedCount)
+	key := complianceStateKey{
+		Summary: complianceSummaryKey{
+			EventCount:    summary.EventCount,
+			AnalyzedCount: summary.AnalyzedCount,
+		},
+		Categories: make([]complianceCategoryKey, 0, len(cats)),
 	}
+	for _, c := range cats {
+		key.Categories = append(key.Categories, complianceCategoryKey{
+			Category:       string(c.Category),
+			PendingCount:   c.PendingCount,
+			ApprovedCount:  c.ApprovedCount,
+			DismissedCount: c.DismissedCount,
+			ObservedCount:  c.ObservedCount,
+		})
+	}
+	data, err := json.Marshal(key)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
 
-	return key
+type complianceStateKey struct {
+	Summary    complianceSummaryKey    `json:"summary"`
+	Categories []complianceCategoryKey `json:"categories"`
+}
+
+type complianceSummaryKey struct {
+	EventCount    int64 `json:"event_count"`
+	AnalyzedCount int64 `json:"analyzed_count"`
+}
+
+type complianceCategoryKey struct {
+	Category       string `json:"category"`
+	PendingCount   int64  `json:"pending_count"`
+	ApprovedCount  int64  `json:"approved_count"`
+	DismissedCount int64  `json:"dismissed_count"`
+	ObservedCount  int64  `json:"observed_count"`
 }
 
 // HasData returns true when compliance policy data has been loaded.
