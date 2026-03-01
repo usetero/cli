@@ -55,7 +55,7 @@ tasks:
 
   generate:client:
     desc: Generate GraphQL client (requires control plane at localhost:18081)
-    dir: internal/api/gen
+    dir: internal/boundary/graphql/gen
     cmds:
       - npx get-graphql-schema http://localhost:18081/graphql > schema.graphql
       - go run github.com/Khan/genqlient

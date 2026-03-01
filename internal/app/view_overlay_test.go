@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/api/apitest"
 	"github.com/usetero/cli/internal/auth/authtest"
+	api "github.com/usetero/cli/internal/boundary/graphql"
+	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"

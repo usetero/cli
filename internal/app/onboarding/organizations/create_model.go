@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/api"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"

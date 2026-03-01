@@ -4,7 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/google/uuid"
 
-	"github.com/usetero/cli/internal/api"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 func (m *CreateModel) createOrg(name string) tea.Cmd {

@@ -8,8 +8,8 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/api"
 	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"

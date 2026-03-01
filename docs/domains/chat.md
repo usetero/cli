@@ -9,7 +9,7 @@ So the code is split intentionally.
 
 ## The two-layer model
 
-`internal/api/chatclient` is the protocol/transport adapter layer.
+`internal/boundary/chat` is the protocol/transport adapter layer.
 It owns stream wire contracts, parsing, and remote request/response handling.
 
 `internal/core/chat` is the pure chat lifecycle core (for example session/history
@@ -26,7 +26,7 @@ That split is the key domain boundary. If you keep it, chat stays testable.
 Keep dependency direction explicit:
 
 - `internal/app/chat/*` depends on `internal/app/chat/usecase` contracts.
-- `internal/app/chat/usecase` owns adapters to `internal/api/chatclient`.
+- `internal/app/chat/usecase` owns adapters to `internal/boundary/chat`.
 - `internal/core/chat` stays pure and does not import app/api packages.
 
 In practice: if you need `chatclient` in UI files, that is usually a boundary
@@ -46,7 +46,7 @@ These are domain invariants, not “nice to have” details.
 ## How to change chat safely
 
 When a change touches transport protocol behavior, start in
-`internal/api/chatclient`. When it touches pure lifecycle/state behavior, start
+`internal/boundary/chat`. When it touches pure lifecycle/state behavior, start
 in `internal/core/chat`. Then wire the result into `internal/app/chat` as
 message-driven orchestration.
 

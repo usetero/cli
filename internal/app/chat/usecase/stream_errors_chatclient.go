@@ -1,6 +1,6 @@
 package usecase
 
-import chatclient "github.com/usetero/cli/internal/api/chatclient"
+import chatclient "github.com/usetero/cli/internal/boundary/chat"
 
 type ChatClientStreamErrorMapper struct{}
 

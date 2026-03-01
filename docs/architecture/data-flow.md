@@ -26,7 +26,7 @@ For plain CLI commands, the flow is direct:
 
 parse input -> call API service -> render output.
 
-You can see this in `internal/cmd/*` and API adapters in `internal/api`.
+You can see this in `internal/cmd/*` and API adapters in `internal/boundary/graphql`.
 There is no local projection dependency for command correctness.
 
 ## Phase 2: onboarding bootstrap flow

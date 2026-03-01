@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/api/apitest"
 	iauth "github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/auth/authtest"
+	api "github.com/usetero/cli/internal/boundary/graphql"
+	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"

@@ -7,8 +7,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/api"
 	iauth "github.com/usetero/cli/internal/auth"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"

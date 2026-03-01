@@ -3,7 +3,7 @@ package datadog
 import (
 	"time"
 
-	"github.com/usetero/cli/internal/api"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 const discoveryPollInterval = 500 * time.Millisecond

@@ -1,6 +1,6 @@
 package organizations
 
-import "github.com/usetero/cli/internal/api"
+import api "github.com/usetero/cli/internal/boundary/graphql"
 
 // orgCreatedMsg is sent when org creation completes.
 type orgCreatedMsg struct {

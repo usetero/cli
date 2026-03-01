@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/usetero/cli/internal/api"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/log"
 	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/powersync/db"

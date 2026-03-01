@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
+	chatclient "github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/sqlite"
 )
 

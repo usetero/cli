@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/auth"
+	"github.com/usetero/cli/internal/boundary/chat"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log/logtest"

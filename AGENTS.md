@@ -56,9 +56,9 @@ Supporting docs:
 cmd/                 Wiring. Creates implementations, injects dependencies.
 internal/app/        TUI. Bubble Tea models, pages, onboarding, chat.
 internal/cmd/        CLI commands. Direct API calls.
-internal/api/chatclient/ Chat client. Streaming, accumulation.
+internal/boundary/chat/ Chat client. Streaming, accumulation.
 internal/core/chat/  Pure chat lifecycle/session policy.
-internal/api/        GraphQL client. Control plane CRUD.
+internal/boundary/graphql/        GraphQL client. Control plane CRUD.
 internal/sqlite/     Local database.
 internal/powersync/  Sync engine.
 internal/domain/     Shared types.

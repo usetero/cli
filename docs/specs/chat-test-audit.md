@@ -1,6 +1,6 @@
 # Chat Test Audit
 
-Scope: `internal/core/chat`, `internal/api/chatclient`, and `internal/app/chat`
+Scope: `internal/core/chat`, `internal/boundary/chat`, and `internal/app/chat`
 
 Date: 2026-02-26
 

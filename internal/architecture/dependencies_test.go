@@ -21,19 +21,23 @@ func TestDependencyBoundaries(t *testing.T) {
 		t.Fatalf("find module root: %v", err)
 	}
 
-	apiRoot := filepath.Join(root, "internal", "api")
+	graphqlRoot := filepath.Join(root, "internal", "boundary", "graphql")
+	chatBoundaryRoot := filepath.Join(root, "internal", "boundary", "chat")
 	coreRoot := filepath.Join(root, "internal", "core")
 	chatRoot := filepath.Join(root, "internal", "app", "chat")
 
-	assertNoForbiddenImports(t, apiRoot, []string{
+	assertNoForbiddenImports(t, graphqlRoot, []string{
+		"github.com/usetero/cli/internal/app/",
+	})
+	assertNoForbiddenImports(t, chatBoundaryRoot, []string{
 		"github.com/usetero/cli/internal/app/",
 	})
 	assertNoForbiddenImports(t, coreRoot, []string{
 		"github.com/usetero/cli/internal/app/",
-		"github.com/usetero/cli/internal/api/",
+		"github.com/usetero/cli/internal/boundary/graphql/",
 	})
 	assertNoForbiddenImportsExcept(t, chatRoot, []string{
-		"github.com/usetero/cli/internal/api/chatclient",
+		"github.com/usetero/cli/internal/boundary/chat",
 	}, []string{
 		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
 		filepath.Join("internal", "app", "chat", "usecase"),
@@ -177,7 +181,7 @@ func assertOnlyAllowedChatClientImports(t *testing.T, dir string, allowedRelPath
 		}
 		for _, imp := range f.Imports {
 			p := strings.Trim(imp.Path.Value, `"`)
-			if !strings.HasPrefix(p, "github.com/usetero/cli/internal/api/chatclient") {
+			if !strings.HasPrefix(p, "github.com/usetero/cli/internal/boundary/chat") {
 				continue
 			}
 			allowed := false

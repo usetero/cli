@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/usetero/cli/internal/api"
-	"github.com/usetero/cli/internal/api/apitest"
+	api "github.com/usetero/cli/internal/boundary/graphql"
+	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	psapitest "github.com/usetero/cli/internal/powersync/api/apitest"

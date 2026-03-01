@@ -77,8 +77,8 @@ linters:
         text: "ST1003"
         linters: [staticcheck]
 
-      # API test mocks match the client interface naming
-      - path: "internal/api/apitest/"
+      # GraphQL API test mocks match the client interface naming
+      - path: "internal/boundary/graphql/apitest/"
         text: "ST1003"
         linters: [staticcheck]
 

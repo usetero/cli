@@ -3,7 +3,7 @@ package datadog
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/api"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 func (m *APIKeyModel) validateAPIKey(apiKey string) tea.Cmd {

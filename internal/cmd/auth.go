@@ -11,8 +11,8 @@ import (
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/auth"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"

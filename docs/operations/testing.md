@@ -57,7 +57,7 @@ task do
 For chat-focused work:
 
 ```bash
-go test ./internal/core/chat ./internal/api/chatclient ./internal/app/chat/... -count=1
+go test ./internal/core/chat ./internal/boundary/chat ./internal/app/chat/... -count=1
 ```
 
 For explicit integration or correctness runs:

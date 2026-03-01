@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
+	chatclient "github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/domain"
 	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/upload"

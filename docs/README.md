@@ -72,7 +72,7 @@ Use these paths when docs and code should be read together:
 - `internal/app/onboarding/`: onboarding orchestrator and gate steps.
 - `internal/core/bootstrap/`: deterministic onboarding transition engine.
 - `internal/core/chat/`: pure chat lifecycle/session policy.
-- `internal/api/chatclient/`: chat streaming client/protocol adapters.
+- `internal/boundary/chat/`: chat streaming client/protocol adapters.
 - `internal/powersync/`: sync lifecycle and projection pipeline.
 
 ## Documentation Quality Bar

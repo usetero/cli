@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/usetero/cli/internal/api/chatclient"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
+	"github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/sqlite"
 )

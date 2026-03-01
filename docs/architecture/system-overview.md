@@ -50,7 +50,7 @@ The boundaries are deliberately simple:
 - `internal/app/` and feature subpackages render and coordinate UI state.
 - `internal/core/bootstrap/` owns deterministic onboarding transition policy.
 - `internal/core/chat/` owns pure chat lifecycle/session policy.
-- service/domain packages (`internal/api`, `internal/api/chatclient`,
+- service/domain packages (`internal/boundary/graphql`, `internal/boundary/chat`,
   `internal/auth`, `internal/domain`, `internal/preferences`) expose contracts
   and adapters.
 - data/sync packages (`internal/sqlite`, `internal/powersync`, `internal/upload`)

@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/api"
 	"github.com/usetero/cli/internal/app"
 	"github.com/usetero/cli/internal/auth"
+	api "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"

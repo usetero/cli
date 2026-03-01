@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	chatclient "github.com/usetero/cli/internal/api/chatclient"
+	chatclient "github.com/usetero/cli/internal/boundary/chat"
 	corechat "github.com/usetero/cli/internal/core/chat"
 )
 

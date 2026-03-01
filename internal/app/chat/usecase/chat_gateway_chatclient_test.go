@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	chat "github.com/usetero/cli/internal/api/chatclient"
-	"github.com/usetero/cli/internal/api/chatclient/chattest"
+	chat "github.com/usetero/cli/internal/boundary/chat"
+	"github.com/usetero/cli/internal/boundary/chat/chattest"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 )

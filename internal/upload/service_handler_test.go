@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/usetero/cli/internal/api/apitest"
+	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/db"
