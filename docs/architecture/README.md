@@ -21,7 +21,7 @@ truth and data flow, then runtime execution behavior in the UI layer.
 ## How to use architecture docs with code
 
 Use these pages to decide ownership first. Then open code under `cmd/`,
-`internal/app/`, `internal/core/`, `internal/boundary/graphql/`, and `internal/powersync/`
+`internal/app/`, `internal/core/`, `internal/boundary/graphql/`, `internal/boundary/chat/`, `internal/boundary/powersync/`, and `internal/powersync/`
 to implement inside that boundary.
 
 The goal is not to memorize diagrams. The goal is to make design decisions that

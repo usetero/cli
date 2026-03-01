@@ -1,5 +1,5 @@
 // Package api provides HTTP client access to the PowerSync service.
-package api
+package powersync
 
 import (
 	"bufio"

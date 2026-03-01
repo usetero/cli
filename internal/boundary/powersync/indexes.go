@@ -1,4 +1,4 @@
-package api
+package powersync
 
 // clientIndexes defines indexes for client-side query performance.
 // These are not part of the server schema — they optimize local SQLite queries.
