@@ -40,8 +40,8 @@ type fetchedData struct {
 	services []domain.ServiceStatus
 }
 
-// detailMsg carries the result of an async detail fetch.
-type detailMsg struct {
+// serviceDetailLoadedMsg carries the result of an async detail fetch.
+type serviceDetailLoadedMsg struct {
 	service   domain.ServiceStatus
 	logEvents []domain.LogEventStatus
 	err       error
@@ -112,7 +112,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case detailMsg:
+	case serviceDetailLoadedMsg:
 		if msg.err == nil {
 			m.detail = newDetail(m.theme, msg.service, msg.logEvents)
 		}
@@ -155,9 +155,9 @@ func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
 		return logEvents, nil
 	}, func(logEvents []domain.LogEventStatus, err error) tea.Msg {
 		if err != nil {
-			return detailMsg{err: err}
+			return serviceDetailLoadedMsg{err: err}
 		}
-		return detailMsg{service: svc, logEvents: logEvents}
+		return serviceDetailLoadedMsg{service: svc, logEvents: logEvents}
 	})
 }
 

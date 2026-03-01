@@ -35,8 +35,8 @@ type fetchedData struct {
 	categories []domain.PolicyCategoryStatus
 }
 
-// detailMsg carries the result of an async detail fetch.
-type detailMsg struct {
+// wasteDetailLoadedMsg carries the result of an async detail fetch.
+type wasteDetailLoadedMsg struct {
 	cat      domain.PolicyCategoryStatus
 	policies []domain.WastePolicy
 	err      error
@@ -92,7 +92,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case detailMsg:
+	case wasteDetailLoadedMsg:
 		if msg.err == nil {
 			m.detail = newDetail(m.theme, msg.cat, msg.policies)
 		}
@@ -138,9 +138,9 @@ func (m *Model) fetchDetail(cat domain.PolicyCategoryStatus) tea.Cmd {
 		return policies, nil
 	}, func(policies []domain.WastePolicy, err error) tea.Msg {
 		if err != nil {
-			return detailMsg{err: err}
+			return wasteDetailLoadedMsg{err: err}
 		}
-		return detailMsg{cat: cat, policies: policies}
+		return wasteDetailLoadedMsg{cat: cat, policies: policies}
 	})
 }
 
