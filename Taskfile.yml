@@ -157,14 +157,26 @@ tasks:
   # ===========================================================================
 
   test:
-    desc: Run unit tests
+    desc: Run unit and component tests
     cmds:
       - gotestsum --format short-verbose -- -race -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} -skip "^TestIntegration_|^TestCorrectness_" ./...
 
   test:integration:
-    desc: Run integration tests (TERO_ENV=dev|prd)
+    desc: Run hermetic integration tests (deterministic, no external services)
     cmds:
-      - './scripts/with-env.sh gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...'
+      - gotestsum --format short-verbose -- -race -tags=integration -run "^TestIntegration_" ./...
+
+  test:integration:live:
+    desc: Run live integration tests against non-production services (TERO_ENV=dev|prd)
+    cmds:
+      - './scripts/with-env.sh gotestsum --format short-verbose -- -race -tags=integration_live -run "^TestIntegrationLive_" ./...'
+
+  test:tags:compile:
+    desc: Compile all opt-in tagged tests (integration/live/correctness)
+    cmds:
+      - go test -tags=integration -run "^$" ./...
+      - go test -tags=integration_live -run "^$" ./...
+      - go test -tags=correctness -run "^$" ./...
 
   test:correctness:
     desc: Run correctness tests (TERO_ENV=dev|prd)
@@ -184,10 +196,17 @@ tasks:
         fi
 
   test:all:
-    desc: Run all tests (unit + integration)
+    desc: Run CI test suite (unit + hermetic integration + correctness replay)
     cmds:
       - task: test
       - task: test:integration
+      - task: test:correctness:powersync-replay
+
+  test:all:full:
+    desc: Run full test suite including live integration checks
+    cmds:
+      - task: test:all
+      - task: test:integration:live
 
   # ===========================================================================
   # Development helpers

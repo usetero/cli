@@ -71,8 +71,10 @@ For explicit integration or correctness runs:
 
 ```bash
 task test:integration
+task test:integration:live
 task test:correctness
 task test:correctness:powersync-replay
+task test:tags:compile
 ```
 
 Use these targeted workflows when debugging protocol/sync behavior that unit
@@ -85,8 +87,15 @@ CI intentionally runs checks in parallel lanes instead of one monolithic
 
 - `lint`: `task lint` (includes architecture and naming guards),
 - `unit`: `task test`,
+- `integration`: hermetic integration tests (`task test:integration`),
 - `gen-check`: regeneration drift check against committed snapshots,
 - `powersync-replay`: deterministic replay correctness check.
+- `tagged-compile`: compile guards for opt-in test tags (`task test:tags:compile`).
+
+Live integration tests are intentionally split into a separate lane:
+
+- `integration-live`: `task test:integration:live` against non-production envs
+  (nightly/manual), not required for every PR.
 
 Security checks run in a dedicated workflow with open-source scanners
 (`govulncheck` and `osv-scanner`) so they can evolve independently from the

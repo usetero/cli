@@ -1,6 +1,6 @@
-//go:build integration
+//go:build integration_live
 
-package powersync_test
+package powersynclive_test
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/auth"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
@@ -20,72 +19,60 @@ import (
 	"github.com/usetero/cli/internal/workos"
 )
 
-// Integration tests run against real PowerSync service.
+// Live integration tests run against non-production services.
 //
 // Prerequisites:
 //  1. task auth:login
 //  2. task run (complete onboarding to set default account)
-//  3. task test:integration
-
-func TestIntegration_Syncer(t *testing.T) {
+//  3. task test:integration:live
+func TestIntegrationLive_Syncer(t *testing.T) {
 	cliConfig := config.LoadCLIConfig()
 	logger := logtest.NewScope(t)
-
 	env := cliConfig.Environment()
 
 	t.Logf("Environment: %s", env)
 	t.Logf("API Endpoint: %s", cliConfig.APIEndpoint)
 	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
 
-	// Get auth service
 	storage := keyring.New(env)
 	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
-	// Verify we have valid credentials
 	if _, err := authSvc.GetAccessToken(context.Background()); err != nil {
-		t.Fatalf("Failed to get access token: %v (run: task auth:login)", err)
+		t.Fatalf("failed to get access token: %v (run: task auth:login)", err)
 	}
 
-	// Get account ID from preferences
 	orgCfg, err := config.LoadOrgPreferences(env, config.ActiveOrgID(env))
 	if err != nil {
-		t.Fatalf("Org preferences not found: %v (run: task run)", err)
+		t.Fatalf("org preferences not found: %v (run: task run)", err)
 	}
 	orgPrefs := preferences.NewOrgService(orgCfg, logger)
-	accountID := domain.AccountID(orgPrefs.GetDefaultAccountID())
+	accountID := orgPrefs.GetDefaultAccountID()
 	if accountID == "" {
-		t.Fatalf("No default account (run: task run)")
+		t.Fatalf("no default account (run: task run)")
 	}
 
-	t.Logf("Account ID from config: %s", accountID)
+	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger).WithAccountID(accountID)
 
-	// Create API services
-	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger)
-	services.SetAccountID(accountID)
-
-	// Validate account exists via API
 	account, err := services.Accounts.Get(context.Background(), accountID)
 	if err != nil {
-		t.Fatalf("Failed to fetch account: %v", err)
+		t.Fatalf("failed to fetch account: %v", err)
 	}
 	if account == nil {
-		t.Fatalf("Account %s not found", accountID)
+		t.Fatalf("account %s not found", accountID)
 	}
 
-	t.Run("connects and syncs data", func(t *testing.T) {
-		t.Logf("Endpoint: %s", cliConfig.PowerSyncEndpoint)
-		t.Logf("Account: %s (%s)", account.Name, account.ID)
+	t.Logf("Account: %s (%s)", account.Name, account.ID)
 
-		db := dbtest.OpenTestDB(t)
+	t.Run("connects and syncs data", func(t *testing.T) {
+		database := dbtest.OpenTestDB(t)
 		syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logtest.NewScope(t))
 
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()
 
-		// Wait for first sync to complete
 		firstSyncDone := make(chan struct{})
-		err := syncer.Start(ctx, db, accountID.String(), func() {
+		err := syncer.Start(ctx, database, accountID.String(), func() {
 			close(firstSyncDone)
 		})
 		if err != nil {
@@ -93,7 +80,6 @@ func TestIntegration_Syncer(t *testing.T) {
 		}
 		defer syncer.Stop()
 
-		// Wait for first sync with status logging
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -101,7 +87,7 @@ func TestIntegration_Syncer(t *testing.T) {
 		for {
 			select {
 			case <-firstSyncDone:
-				t.Logf("First sync completed")
+				t.Log("first sync completed")
 				goto done
 			case <-ticker.C:
 				state := syncer.State()
@@ -109,25 +95,25 @@ func TestIntegration_Syncer(t *testing.T) {
 				if summary != lastState {
 					t.Logf("State: %s", summary)
 					if errState, ok := state.(*powersync.Error); ok {
-						t.Fatalf("Sync error: %v", errState.Err)
+						t.Fatalf("sync error: %v", errState.Err)
 					}
 					lastState = summary
 				}
 			case <-ctx.Done():
-				t.Fatalf("Timeout waiting for first sync, last state: %s", summarizeState(syncer.State()))
+				t.Fatalf("timeout waiting for first sync, last state: %s", summarizeState(syncer.State()))
 			}
 		}
 	done:
 
-		// Verify data was synced
-		buckets, _ := countBuckets(db)
+		buckets, err := countBuckets(database)
+		if err != nil {
+			t.Fatalf("countBuckets() error = %v", err)
+		}
 		t.Logf("Synced %d buckets", buckets)
 
 		if buckets == 0 {
-			t.Fatal("No buckets synced - data not received from PowerSync")
+			t.Fatal("no buckets synced")
 		}
-
-		// Verify IsReady is true after sync
 		if !syncer.IsReady() {
 			t.Error("IsReady() should be true after first sync")
 		}

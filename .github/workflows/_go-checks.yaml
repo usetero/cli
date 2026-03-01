@@ -47,6 +47,22 @@ jobs:
       - name: Run unit tests
         run: task test
 
+  integration:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
+
+      - name: Run hermetic integration tests
+        run: task test:integration
+
   gen-check:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 15
@@ -98,13 +114,31 @@ jobs:
         if: ${{ !inputs.run-powersync-replay }}
         run: echo "PowerSync replay correctness test disabled for this workflow call"
 
+  tagged-compile:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
+        with:
+          cache: "true"
+
+      - name: Compile tagged test suites
+        run: task test:tags:compile
+
   gate:
     if: ${{ !failure() && !cancelled() }}
     needs:
       - lint
       - unit
+      - integration
       - gen-check
       - powersync-replay
+      - tagged-compile
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
