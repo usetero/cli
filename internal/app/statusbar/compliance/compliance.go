@@ -85,32 +85,26 @@ func (m *Model) poll() tea.Cmd {
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	if cmd, handled := tabpoll.UpdatePollCycle(
+		msg,
+		pollSource,
+		m.db != nil,
+		&m.fetching,
+		m.fetchData(),
+		m.poll(),
+		func(data fetchedData) {
+			key := m.stateKey(data.summary, data.categories)
+			tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(data.categories), func() {
+				m.summary = data.summary
+				m.categories = data.categories
+				m.hasData = len(data.categories) > 0
+			})
+		},
+	); handled {
+		return cmd
+	}
+
 	switch msg := msg.(type) {
-	case tabpoll.PollMsg:
-		if msg.Source != pollSource {
-			return nil
-		}
-		if m.db == nil {
-			return nil
-		}
-		if m.fetching {
-			return m.poll()
-		}
-		m.fetching = true
-		return tea.Batch(m.fetchData(), m.poll())
-
-	case tabpoll.DataMsg[fetchedData]:
-		m.fetching = false
-		if msg.Err != nil {
-			return nil
-		}
-		key := m.stateKey(msg.Data.summary, msg.Data.categories)
-		tabpoll.ApplyIfChanged(&m.lastState, key, &m.cursor, len(msg.Data.categories), func() {
-			m.summary = msg.Data.summary
-			m.categories = msg.Data.categories
-			m.hasData = len(msg.Data.categories) > 0
-		})
-
 	case detailMsg:
 		if msg.err == nil {
 			m.detail = newDetail(m.theme, msg.cat, msg.policies)

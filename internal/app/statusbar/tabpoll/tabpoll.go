@@ -49,3 +49,37 @@ func ApplyIfChanged(lastState *string, nextState string, cursor *int, length int
 	}
 	return true
 }
+
+// UpdatePollCycle handles the shared PollMsg/DataMsg fetch cycle used by status tabs.
+// It returns (cmd, handled). When handled is true, the caller should return cmd.
+func UpdatePollCycle[T any](
+	msg tea.Msg,
+	source string,
+	hasDB bool,
+	fetching *bool,
+	fetchData tea.Cmd,
+	poll tea.Cmd,
+	applyData func(data T),
+) (tea.Cmd, bool) {
+	switch m := msg.(type) {
+	case PollMsg:
+		if m.Source != source || !hasDB {
+			return nil, true
+		}
+		if *fetching {
+			return poll, true
+		}
+		*fetching = true
+		return tea.Batch(fetchData, poll), true
+
+	case DataMsg[T]:
+		*fetching = false
+		if m.Err != nil {
+			return nil, true
+		}
+		applyData(m.Data)
+		return nil, true
+	}
+
+	return nil, false
+}
