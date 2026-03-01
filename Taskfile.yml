@@ -96,7 +96,7 @@ tasks:
 
   lint:
     desc: Run all linters
-    deps: [lint:go, lint:scripts]
+    deps: [lint:go, lint:scripts, lint:naming]
 
   lint:go:
     desc: Run golangci-lint
@@ -106,7 +106,12 @@ tasks:
   lint:scripts:
     desc: Lint shell scripts with shellcheck
     cmds:
-      - shellcheck scripts/*.sh
+      - find scripts -type f -name "*.sh" -print0 | xargs -0 shellcheck
+
+  lint:naming:
+    desc: Enforce app event naming conventions
+    cmds:
+      - ./scripts/lint/check-event-naming.sh
 
   check:
     desc: Validate build

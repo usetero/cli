@@ -66,6 +66,8 @@ Message naming conventions:
 - local periodic triggers: `XTickMsg` or `XPollMsg`,
 - generic `resultMsg` only when the package has a single async workflow.
 
+These app event suffix conventions are enforced by `task lint:naming`.
+
 ## Shared helper placement and naming
 
 Use a three-level placement rule for UI helpers:
