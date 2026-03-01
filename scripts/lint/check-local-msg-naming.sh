@@ -6,13 +6,19 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 allowed_suffix='(Completed|Loaded|Requested|Tick|Poll|Updated|Created|Validated|Refreshed|Changed|Started|Update)$'
+local_root="${TERO_LOCAL_MSG_ROOT:-internal/app}"
+
+if ! [ -d "$local_root" ]; then
+	echo "local msg naming lint: directory not found: ${local_root}"
+	exit 1
+fi
 
 mapfile -t local_msgs < <(rg \
 	--no-filename \
 	--only-matching \
 	--replace '$1' \
 	'^type ([a-z][A-Za-z0-9_]*)Msg struct' \
-	internal/app \
+	"$local_root" \
 	-g '*.go' \
 	-g '!**/*_test.go' | sort -u)
 
