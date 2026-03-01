@@ -22,7 +22,7 @@ type StreamRunner interface {
 	Start(ctx context.Context, req StreamRequest) <-chan StreamUpdate
 }
 
-// ChatStreamRunner bridges chatclient snapshots into use-case updates.
+// ChatStreamRunner bridges boundary chat snapshots into use-case updates.
 type ChatStreamRunner struct {
 	gateway ChatGateway
 }

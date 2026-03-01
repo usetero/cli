@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestChatClientStreamErrorMapper(t *testing.T) {
+func TestChatBoundaryStreamErrorMapper(t *testing.T) {
 	t.Parallel()
 
-	m := NewChatClientStreamErrorMapper()
+	m := NewChatBoundaryStreamErrorMapper()
 	if got := m.Classify(context.Canceled); got == "" {
 		t.Fatal("classify should not be empty")
 	}

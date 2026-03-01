@@ -10,7 +10,7 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-func TestChatClientGateway_StreamSnapshots_MapsRequestAndForwards(t *testing.T) {
+func TestChatBoundaryGateway_StreamSnapshots_MapsRequestAndForwards(t *testing.T) {
 	t.Parallel()
 
 	var captured chat.Request
@@ -30,7 +30,7 @@ func TestChatClientGateway_StreamSnapshots_MapsRequestAndForwards(t *testing.T) 
 		},
 	}
 
-	gateway := NewChatClientGateway(client)
+	gateway := NewChatBoundaryGateway(client)
 	var gotSnapshots []corechat.StreamSnapshot
 	result, err := gateway.StreamSnapshots(context.Background(), StreamRequest{
 		ConversationID: "conv-1",
@@ -55,16 +55,16 @@ func TestChatClientGateway_StreamSnapshots_MapsRequestAndForwards(t *testing.T) 
 	}
 }
 
-func TestChatClientGateway_StreamSnapshots_NilGatewayOrClient(t *testing.T) {
+func TestChatBoundaryGateway_StreamSnapshots_NilGatewayOrClient(t *testing.T) {
 	t.Parallel()
 
-	var nilGateway *ChatClientGateway
+	var nilGateway *ChatBoundaryGateway
 	result, err := nilGateway.StreamSnapshots(context.Background(), StreamRequest{ConversationID: "conv-1"}, nil)
 	if err != nil || result != nil {
 		t.Fatalf("nil gateway = (%v, %v), want (nil, nil)", result, err)
 	}
 
-	gateway := NewChatClientGateway(nil)
+	gateway := NewChatBoundaryGateway(nil)
 	result, err = gateway.StreamSnapshots(context.Background(), StreamRequest{ConversationID: "conv-1"}, nil)
 	if err != nil || result != nil {
 		t.Fatalf("nil client = (%v, %v), want (nil, nil)", result, err)

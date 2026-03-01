@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	chatclient "github.com/usetero/cli/internal/boundary/chat"
+	chatboundary "github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
@@ -13,11 +13,11 @@ type RuntimeDeps struct {
 	ToolLoop           ToolLoop
 }
 
-func NewRuntimeDeps(db sqlite.DB, client chatclient.Client) RuntimeDeps {
-	gateway := NewChatClientGateway(client)
+func NewRuntimeDeps(db sqlite.DB, client chatboundary.Client) RuntimeDeps {
+	gateway := NewChatBoundaryGateway(client)
 	return RuntimeDeps{
 		StreamRunner:       NewChatStreamRunner(gateway),
-		StreamErrorMapper:  NewChatClientStreamErrorMapper(),
+		StreamErrorMapper:  NewChatBoundaryStreamErrorMapper(),
 		AssistantPersister: NewSQLiteAssistantPersister(db),
 		ToolLoop:           NewSQLiteToolLoop(db),
 	}
