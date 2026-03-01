@@ -39,7 +39,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if msg.Err != nil {
 		m.scope.Error("failed to load organizations", "error", msg.Err)
-		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load organizations", msg.Err, false))
+		return tea.Batch(m.list.Update(msg), appevents.PublishErrorToastCmd("Failed to load organizations", msg.Err, false))
 	}
 
 	m.orgs = stepkit.CastItems[domain.Organization](msg.Items)

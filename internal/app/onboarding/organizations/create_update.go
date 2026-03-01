@@ -16,7 +16,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create organization", "error", msg.err)
 			m.err = msg.err
-			return appevents.ErrorCmd("Failed to create organization", msg.err, false)
+			return appevents.PublishErrorToastCmd("Failed to create organization", msg.err, false)
 		}
 		_ = m.prefs.SetActiveOrgID(msg.result.Organization.ID)
 		org := *msg.result.Organization

@@ -41,7 +41,7 @@ func (m *Model) activateOrg(orgID domain.OrganizationID, msg tea.Msg) tea.Cmd {
 func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
 	if err := m.userPrefs.SetTheme(theme); err != nil {
 		m.scope.Error("failed to set theme", "error", err)
-		return appevents.ErrorCmd("Failed to save theme", err, false)
+		return appevents.PublishErrorToastCmd("Failed to save theme", err, false)
 	}
 	label := "Auto"
 	switch theme {
@@ -52,7 +52,7 @@ func (m *Model) setTheme(theme preferences.Theme) tea.Cmd {
 	case preferences.ThemeLight:
 		label = "Light"
 	}
-	return appevents.SuccessCmd("Theme set to " + label + ". Restart to apply.")
+	return appevents.PublishSuccessToastCmd("Theme set to " + label + ". Restart to apply.")
 }
 
 // switchOrganization re-enters onboarding at org selection.

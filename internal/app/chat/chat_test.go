@@ -571,29 +571,29 @@ func messageRoles(messages []domain.Message) []string {
 	return roles
 }
 
-func extractErrorToast(cmd tea.Cmd) (appevents.Error, bool) {
+func extractErrorToast(cmd tea.Cmd) (appevents.ErrorToastPublished, bool) {
 	if cmd == nil {
-		return appevents.Error{}, false
+		return appevents.ErrorToastPublished{}, false
 	}
 	msg := cmd()
 	if msg == nil {
-		return appevents.Error{}, false
+		return appevents.ErrorToastPublished{}, false
 	}
-	if e, ok := msg.(appevents.Error); ok {
+	if e, ok := msg.(appevents.ErrorToastPublished); ok {
 		return e, true
 	}
 	batch, ok := msg.(tea.BatchMsg)
 	if !ok {
-		return appevents.Error{}, false
+		return appevents.ErrorToastPublished{}, false
 	}
 	for _, sub := range batch {
 		if sub == nil {
 			continue
 		}
 		subMsg := sub()
-		if e, ok := subMsg.(appevents.Error); ok {
+		if e, ok := subMsg.(appevents.ErrorToastPublished); ok {
 			return e, true
 		}
 	}
-	return appevents.Error{}, false
+	return appevents.ErrorToastPublished{}, false
 }

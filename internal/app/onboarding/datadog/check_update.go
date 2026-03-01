@@ -27,7 +27,7 @@ func (m *CheckModel) handleCheckResult(msg datadogCheckResultMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("datadog check failed", "error", msg.err)
 		m.err = msg.err
-		return appevents.ErrorCmd("Failed to check Datadog status", msg.err, false)
+		return appevents.PublishErrorToastCmd("Failed to check Datadog status", msg.err, false)
 	}
 	if msg.hasDatadog {
 		m.scope.Info("datadog configured")

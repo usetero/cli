@@ -24,7 +24,7 @@ func (m *Model) handleGlobalMessage(msg tea.Msg) (tea.Cmd, bool) {
 	case appevents.PaletteCloseRequested:
 		m.palette = nil
 		return nil, true
-	case appevents.SetTheme:
+	case appevents.ThemeChangeRequested:
 		return m.setTheme(msg.Theme), true
 	default:
 		return nil, false
@@ -46,7 +46,7 @@ func (m *Model) handleInteractionMessage(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		// Let downstream components observe mouse messages.
 		return nil, false
-	case appevents.DrawerPrompt:
+	case appevents.DrawerPromptRequested:
 		m.statusBar.CloseDrawer()
 		return func() tea.Msg { return msgs.UserSubmittedInput{Text: msg.Text} }, true
 	case msgs.UserSubmittedInput:

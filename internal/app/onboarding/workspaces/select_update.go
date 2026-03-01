@@ -43,7 +43,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 
 func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if msg.Err != nil {
-		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load workspaces", msg.Err, false))
+		return tea.Batch(m.list.Update(msg), appevents.PublishErrorToastCmd("Failed to load workspaces", msg.Err, false))
 	}
 	m.workspaces = stepkit.CastItems[domain.Workspace](msg.Items)
 

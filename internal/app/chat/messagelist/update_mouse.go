@@ -72,7 +72,7 @@ func (m *Model) handleMouseRelease(_ tea.MouseReleaseMsg) []tea.Cmd {
 			tea.SetClipboard(text),
 			func() tea.Msg {
 				_ = clipboard.WriteAll(text)
-				return appevents.Success{Message: "Copied to clipboard"}
+				return appevents.SuccessToastPublished{Message: "Copied to clipboard"}
 			},
 		}
 	case releaseActionClick:

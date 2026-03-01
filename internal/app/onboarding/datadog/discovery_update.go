@@ -37,7 +37,7 @@ func (m *DiscoveryModel) handleStatus(msg discoveryStatusMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("discovery status check failed", "error", msg.err)
 		m.err = msg.err
-		return appevents.ErrorCmd("Failed to check discovery status", msg.err, false)
+		return appevents.PublishErrorToastCmd("Failed to check discovery status", msg.err, false)
 	}
 	m.status = msg.status
 

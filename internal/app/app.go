@@ -180,7 +180,7 @@ func (m *Model) checkForUpdate() tea.Cmd {
 		if result == nil {
 			return nil
 		}
-		return appevents.Info{Message: fmt.Sprintf("Tero CLI update available: %s → %s", result.Current, result.Latest)}
+		return appevents.InfoToastPublished{Message: fmt.Sprintf("Tero CLI update available: %s → %s", result.Current, result.Latest)}
 	}
 }
 

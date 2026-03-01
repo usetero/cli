@@ -16,7 +16,7 @@ func (m *CreateModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create account", "error", msg.err)
 			m.err = msg.err
-			return appevents.ErrorCmd("Failed to create account", msg.err, false)
+			return appevents.PublishErrorToastCmd("Failed to create account", msg.err, false)
 		}
 		_ = m.prefs.SetDefaultAccountID(msg.account.ID)
 		org := m.org

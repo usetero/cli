@@ -51,7 +51,7 @@ func (m *Model) paletteCommands() []palette.Command {
 func (m *Model) themeCommands() []palette.Command {
 	set := func(theme preferences.Theme) func() tea.Cmd {
 		return func() tea.Cmd {
-			return func() tea.Msg { return appevents.SetTheme{Theme: theme} }
+			return func() tea.Msg { return appevents.ThemeChangeRequested{Theme: theme} }
 		}
 	}
 	return []palette.Command{

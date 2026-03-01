@@ -35,10 +35,10 @@ func TestOnboardingGateRecoverySurfacesToastAndReturnsToPreflight(t *testing.T) 
 	}
 
 	msgs := collectCmdMsgs(cmd)
-	var toast appevents.Error
+	var toast appevents.ErrorToastPublished
 	var found bool
 	for _, msg := range msgs {
-		if e, ok := msg.(appevents.Error); ok {
+		if e, ok := msg.(appevents.ErrorToastPublished); ok {
 			toast = e
 			found = true
 			break

@@ -15,7 +15,7 @@ func (m *APIKeyModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("api key validation failed", "error", msg.err)
 			m.err = msg.err
-			return appevents.ErrorCmd("Failed to validate API key", msg.err, false)
+			return appevents.PublishErrorToastCmd("Failed to validate API key", msg.err, false)
 		}
 		if !msg.valid {
 			m.scope.Info("api key invalid", "reason", msg.errorMsg)

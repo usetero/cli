@@ -36,7 +36,7 @@ func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
 			slog.Bool("recovery", gate != bootstrap.GatePreflight),
 		)
 		if gate == bootstrap.GatePreflight {
-			return appevents.ErrorCmd("Onboarding setup failed. Please restart.", err, true)
+			return appevents.PublishErrorToastCmd("Onboarding setup failed. Please restart.", err, true)
 		}
 		m.scope.Warn("recovering onboarding to preflight",
 			slog.String("failed_gate", gate.String()),
@@ -45,7 +45,7 @@ func (m *Model) runGate(gate Gate, trigger string) tea.Cmd {
 		)
 		recovery := m.runGate(bootstrap.GatePreflight, "gate_recovery")
 		return tea.Batch(
-			appevents.ErrorCmd("Onboarding state changed. Rechecking setup.", err, false),
+			appevents.PublishErrorToastCmd("Onboarding state changed. Rechecking setup.", err, false),
 			recovery,
 		)
 	}

@@ -35,7 +35,7 @@ func newDetail(theme styles.Theme, category domain.PolicyCategoryStatus, policie
 	}
 }
 
-// Prompt returns a tea.Cmd that emits a DrawerPrompt for the selected policy.
+// Prompt returns a tea.Cmd that emits a DrawerPromptRequested event for the selected policy.
 func (d *detail) Prompt() tea.Cmd {
 	if len(d.policies) == 0 {
 		return nil
@@ -45,7 +45,7 @@ func (d *detail) Prompt() tea.Cmd {
 		"Tell me about the %s compliance issue for the %q log event in the %s service.",
 		d.category.Name(), p.LogEventName, p.ServiceName,
 	)
-	return appevents.DrawerPromptCmd(text)
+	return appevents.RequestDrawerPromptCmd(text)
 }
 
 // View renders the detail: a header with category summary, then a policy table.

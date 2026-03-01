@@ -37,7 +37,7 @@ func newDetail(theme styles.Theme, service domain.ServiceStatus, logEvents []dom
 	}
 }
 
-// Prompt returns a tea.Cmd that emits a DrawerPrompt for the selected log event.
+// Prompt returns a tea.Cmd that emits a DrawerPromptRequested event for the selected log event.
 func (d *detail) Prompt() tea.Cmd {
 	if len(d.logEvents) == 0 {
 		return nil
@@ -45,7 +45,7 @@ func (d *detail) Prompt() tea.Cmd {
 	le := d.logEvents[d.cursor]
 	svc := d.service.Name
 	text := fmt.Sprintf("Tell me about the %q log event in the %s service.", le.Name, svc)
-	return appevents.DrawerPromptCmd(text)
+	return appevents.RequestDrawerPromptCmd(text)
 }
 
 // View renders the detail: a header with service summary, then a log event table.

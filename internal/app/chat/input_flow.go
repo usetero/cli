@@ -42,7 +42,7 @@ func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 		)
 		if err != nil {
 			m.scope.Error("failed to create conversation", "error", err)
-			return appevents.Error{Message: "Failed to create conversation", Err: err}
+			return appevents.ErrorToastPublished{Message: "Failed to create conversation", Err: err}
 		}
 
 		return conversationCreated{
@@ -87,7 +87,7 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 		}
 		if err != nil {
 			m.scope.Error("failed to create user message", "error", err)
-			return appevents.Error{Message: "Failed to save message", Err: err}
+			return appevents.ErrorToastPublished{Message: "Failed to save message", Err: err}
 		}
 
 		if m.session == nil {

@@ -31,7 +31,7 @@ func (m *AuthenticateModel) handleDeviceAuth(msg deviceAuthMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("device auth failed", "error", msg.err)
 		m.err = msg.err
-		return appevents.ErrorCmd("Failed to start authentication", msg.err, false)
+		return appevents.PublishErrorToastCmd("Failed to start authentication", msg.err, false)
 	}
 
 	m.device = msg.deviceAuth
@@ -53,7 +53,7 @@ func (m *AuthenticateModel) handleAuthComplete(msg authCompleteMsg) tea.Cmd {
 		m.scope.Error("authentication failed", "error", msg.err)
 		m.err = msg.err
 		m.state = stateReady
-		return appevents.ErrorCmd("Authentication failed", msg.err, false)
+		return appevents.PublishErrorToastCmd("Authentication failed", msg.err, false)
 	}
 
 	m.state = stateComplete

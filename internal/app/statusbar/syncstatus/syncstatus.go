@@ -111,7 +111,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, func() tea.Msg { return appevents.SyncStateChanged{State: currentState} })
 
 			if errState, ok := currentState.(*powersync.Error); ok {
-				cmds = append(cmds, appevents.ErrorCmd("Sync error", errState.Err, true))
+				cmds = append(cmds, appevents.PublishErrorToastCmd("Sync error", errState.Err, true))
 			}
 		}
 

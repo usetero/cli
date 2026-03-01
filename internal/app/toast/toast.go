@@ -64,13 +64,13 @@ func (m *Model) Height() int {
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case appevents.Error:
+	case appevents.ErrorToastPublished:
 		return m.show(toast{typ: toastError, content: msg.Message, sticky: msg.Sticky})
-	case appevents.Warning:
+	case appevents.WarningToastPublished:
 		return m.show(toast{typ: toastWarning, content: msg.Message, sticky: msg.Sticky})
-	case appevents.Success:
+	case appevents.SuccessToastPublished:
 		return m.show(toast{typ: toastSuccess, content: msg.Message})
-	case appevents.Info:
+	case appevents.InfoToastPublished:
 		return m.show(toast{typ: toastInfo, content: msg.Message})
 	case clearToastMsg:
 		m.current = nil

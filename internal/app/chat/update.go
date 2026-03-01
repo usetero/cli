@@ -87,7 +87,7 @@ func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
 	}
 
 	cmds = append(cmds, m.inputBar.Update(msg))
-	cmds = append(cmds, appevents.ErrorCmd(usecase.UserFacingStreamError(m.runtimeDeps.StreamErrorMapper, msg.Err), msg.Err, false))
+	cmds = append(cmds, appevents.PublishErrorToastCmd(usecase.UserFacingStreamError(m.runtimeDeps.StreamErrorMapper, msg.Err), msg.Err, false))
 	return tea.Batch(cmds...)
 }
 

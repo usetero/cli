@@ -32,7 +32,7 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		catalogCmd, err := m.ensureRuntime(msg.Account.ID.String())
 		if err != nil {
 			m.scope.Error("failed to ensure runtime", "error", err)
-			return appevents.ErrorCmd("Failed to initialize account runtime", err, true), true
+			return appevents.PublishErrorToastCmd("Failed to initialize account runtime", err, true), true
 		}
 		m.scope.Info("runtime ensured", "account_id", msg.Account.ID.String(), "elapsed_ms", time.Since(start).Milliseconds())
 		if m.onboarding != nil {

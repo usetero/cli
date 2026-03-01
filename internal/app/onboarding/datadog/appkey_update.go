@@ -15,7 +15,7 @@ func (m *AppKeyModel) Update(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			m.scope.Error("failed to create datadog account", "error", msg.err)
 			m.err = msg.err
-			return appevents.ErrorCmd("Failed to create Datadog account", msg.err, false)
+			return appevents.PublishErrorToastCmd("Failed to create Datadog account", msg.err, false)
 		}
 		m.scope.Info("datadog account created", "id", msg.datadogAccountID)
 		ddAccountID := msg.datadogAccountID
