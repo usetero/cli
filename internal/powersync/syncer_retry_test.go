@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
+	"github.com/usetero/cli/internal/boundary/powersync/apitest"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/powersync/api"
-	"github.com/usetero/cli/internal/powersync/api/apitest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 )
@@ -24,10 +24,10 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			n := connectCalls.Add(1)
 			if n == 1 {
-				return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
+				return &psapi.Error{Kind: psapi.ErrorKindAuth, StatusCode: 401}
 			}
 			<-ctx.Done()
 			return ctx.Err()
@@ -79,10 +79,10 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			n := connectCalls.Add(1)
 			if n <= 5 {
-				return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
+				return &psapi.Error{Kind: psapi.ErrorKindAuth, StatusCode: 401}
 			}
 			<-ctx.Done()
 			return ctx.Err()
@@ -129,8 +129,8 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		db := dbtest.OpenTestDB(t)
 
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
-			return &api.Error{Kind: api.ErrorKindAuth, StatusCode: 401}
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
+			return &psapi.Error{Kind: psapi.ErrorKindAuth, StatusCode: 401}
 		}
 
 		var refreshCalls atomic.Int32
@@ -178,8 +178,8 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		db := dbtest.OpenTestDB(t)
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
-			return &api.Error{Kind: api.ErrorKindPermanent, StatusCode: 400, Message: "bad request"}
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
+			return &psapi.Error{Kind: psapi.ErrorKindPermanent, StatusCode: 400, Message: "bad request"}
 		}
 
 		syncer := powersynctest.NewSyncerWithMockClient(
@@ -212,7 +212,7 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			n := connectCalls.Add(1)
 			if n == 1 {
 				return fmt.Errorf("powersync_control: invalid state: No iteration is active")
@@ -256,7 +256,7 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 		db := dbtest.OpenTestDB(t)
 
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			return fmt.Errorf("powersync_control: invalid state: No iteration is active")
 		}
 
@@ -294,10 +294,10 @@ func TestSyncer_ErrorHandling(t *testing.T) {
 
 		var connectCalls atomic.Int32
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			n := connectCalls.Add(1)
 			if n == 1 {
-				return &api.Error{Kind: api.ErrorKindTransient, StatusCode: 503}
+				return &psapi.Error{Kind: psapi.ErrorKindTransient, StatusCode: 503}
 			}
 			<-ctx.Done()
 			return ctx.Err()

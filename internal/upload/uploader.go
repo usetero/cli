@@ -7,8 +7,8 @@ import (
 	"time"
 
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/log"
-	psapi "github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/sqlite"
 )

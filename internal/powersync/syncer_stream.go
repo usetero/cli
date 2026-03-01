@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/usetero/cli/internal/powersync/api"
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/powersync/extension"
 )
 
@@ -56,7 +56,7 @@ func (s *syncer) runSession(ctx context.Context) error {
 }
 
 // runStream connects to the stream and processes lines until disconnect.
-func (s *syncer) runStream(ctx context.Context, req *api.SyncStreamRequest) error {
+func (s *syncer) runStream(ctx context.Context, req *psapi.SyncStreamRequest) error {
 	if req == nil {
 		return fmt.Errorf("no sync request")
 	}

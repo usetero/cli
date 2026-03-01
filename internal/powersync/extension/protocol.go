@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/usetero/cli/internal/powersync/api"
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 )
 
 // InstructionType represents a PowerSync instruction type.
@@ -27,7 +27,7 @@ const (
 type Instruction struct {
 	Type InstructionType
 	// Fields vary by type
-	Request        *api.SyncStreamRequest
+	Request        *psapi.SyncStreamRequest
 	DidExpire      *bool
 	HideDisconnect *bool
 	SyncStatus     *SyncStatus
@@ -59,7 +59,7 @@ func (i *Instruction) UnmarshalJSON(data []byte) error {
 		switch i.Type {
 		case InstructionEstablishSyncStream:
 			var p struct {
-				Request *api.SyncStreamRequest `json:"request"`
+				Request *psapi.SyncStreamRequest `json:"request"`
 			}
 			if err := unmarshalStrict(payload, &p); err != nil {
 				return err

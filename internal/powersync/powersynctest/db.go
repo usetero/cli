@@ -8,9 +8,9 @@ import (
 	"io"
 	"log/slog"
 
+	"github.com/usetero/cli/internal/boundary/powersync/apitest"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/powersync/api/apitest"
 )
 
 // NewSyncerWithMockClient creates a Syncer with a mock client for testing.

@@ -13,8 +13,8 @@ import (
 	"os"
 	"path/filepath"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/powersync/api"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func run() error {
 
 	fmt.Println("Fetching schema from PowerSync service...")
 
-	schemaJSON, err := api.FetchSchemaJSON(ctx, endpoint, token)
+	schemaJSON, err := psapi.FetchSchemaJSON(ctx, endpoint, token)
 	if err != nil {
 		return fmt.Errorf("fetch schema: %w", err)
 	}

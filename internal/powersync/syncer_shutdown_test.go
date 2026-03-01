@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
+	"github.com/usetero/cli/internal/boundary/powersync/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/powersync/api"
-	"github.com/usetero/cli/internal/powersync/api/apitest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/powersync/extension"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
@@ -21,7 +21,7 @@ func TestSyncer_Stop_UnblocksBlockedControlPlaneCalls(t *testing.T) {
 	db := dbtest.OpenTestDB(t)
 	cp := &cancelAwareControlPlane{}
 	mockClient := apitest.NewMockClient()
-	mockClient.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+	mockClient.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 		if err := handler([]byte(`{"token_expires_in":3600}`)); err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func TestSyncer_Stop_UnblocksBlockedControlPlaneCalls(t *testing.T) {
 type cancelAwareControlPlane struct{}
 
 func (c *cancelAwareControlPlane) Start(context.Context, extension.StartRequest) ([]extension.Instruction, error) {
-	return []extension.Instruction{{Type: extension.InstructionEstablishSyncStream, Request: &api.SyncStreamRequest{}}}, nil
+	return []extension.Instruction{{Type: extension.InstructionEstablishSyncStream, Request: &psapi.SyncStreamRequest{}}}, nil
 }
 
 func (c *cancelAwareControlPlane) SendTextLine(ctx context.Context, line string) ([]extension.Instruction, error) {

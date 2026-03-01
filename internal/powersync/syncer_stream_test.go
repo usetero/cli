@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
+	"github.com/usetero/cli/internal/boundary/powersync/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/api"
-	"github.com/usetero/cli/internal/powersync/api/apitest"
 	"github.com/usetero/cli/internal/powersync/extension"
 )
 
@@ -20,7 +20,7 @@ func TestSyncer_RunStream_CloseInstructionEndsStream(t *testing.T) {
 		},
 	}
 	mockClient := apitest.NewMockClient()
-	mockClient.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+	mockClient.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 		return handler([]byte(`{"x":1}`))
 	}
 
@@ -30,7 +30,7 @@ func TestSyncer_RunStream_CloseInstructionEndsStream(t *testing.T) {
 		scope:   logtest.NewScope(t),
 	}
 
-	err := s.runStream(context.Background(), &api.SyncStreamRequest{})
+	err := s.runStream(context.Background(), &psapi.SyncStreamRequest{})
 	if err != nil {
 		t.Fatalf("runStream() error = %v", err)
 	}

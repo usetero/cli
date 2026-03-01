@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
+	"github.com/usetero/cli/internal/boundary/powersync/apitest"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync"
-	"github.com/usetero/cli/internal/powersync/api"
-	"github.com/usetero/cli/internal/powersync/api/apitest"
 	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 )
@@ -97,7 +97,7 @@ func TestSyncer_Start(t *testing.T) {
 		db := dbtest.OpenTestDB(t)
 		started := make(chan struct{})
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			close(started)
 			<-ctx.Done()
 			return ctx.Err()
@@ -135,7 +135,7 @@ func TestSyncer_Start(t *testing.T) {
 
 		handlerCalled := make(chan struct{})
 		mock := apitest.NewMockClient()
-		mock.SyncStreamFunc = func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		mock.SyncStreamFunc = func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			if err := handler([]byte(`{"token_expires_in":3600}`)); err != nil {
 				return err
 			}

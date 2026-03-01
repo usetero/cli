@@ -4,13 +4,13 @@ package apitest
 import (
 	"context"
 
-	"github.com/usetero/cli/internal/powersync/api"
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 )
 
-// MockClient is a test double for api.Client.
+// MockClient is a test double for psapi.Client.
 type MockClient struct {
 	// SyncStreamFunc is called when SyncStream is invoked.
-	SyncStreamFunc func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error
+	SyncStreamFunc func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error
 
 	// GetWriteCheckpointFunc is called when GetWriteCheckpoint is invoked.
 	GetWriteCheckpointFunc func(ctx context.Context, clientID string) (string, error)
@@ -25,21 +25,21 @@ type MockClient struct {
 	GetWriteCheckpointCalls int
 }
 
-// Ensure MockClient implements api.Client.
-var _ api.Client = (*MockClient)(nil)
+// Ensure MockClient implements psapi.Client.
+var _ psapi.Client = (*MockClient)(nil)
 
 // NewMockClient creates a new MockClient with sensible defaults.
 func NewMockClient() *MockClient {
 	return &MockClient{
-		SyncStreamFunc: func(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+		SyncStreamFunc: func(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 			<-ctx.Done()
 			return ctx.Err()
 		},
 	}
 }
 
-// SyncStream implements api.Client.
-func (m *MockClient) SyncStream(ctx context.Context, req *api.SyncStreamRequest, handler api.LineHandler) error {
+// SyncStream implements psapi.Client.
+func (m *MockClient) SyncStream(ctx context.Context, req *psapi.SyncStreamRequest, handler psapi.LineHandler) error {
 	m.SyncStreamCalls++
 	if m.SyncStreamFunc != nil {
 		return m.SyncStreamFunc(ctx, req, handler)
@@ -47,7 +47,7 @@ func (m *MockClient) SyncStream(ctx context.Context, req *api.SyncStreamRequest,
 	return nil
 }
 
-// GetWriteCheckpoint implements api.Client.
+// GetWriteCheckpoint implements psapi.Client.
 func (m *MockClient) GetWriteCheckpoint(ctx context.Context, clientID string) (string, error) {
 	m.GetWriteCheckpointCalls++
 	if m.GetWriteCheckpointFunc != nil {
@@ -56,14 +56,14 @@ func (m *MockClient) GetWriteCheckpoint(ctx context.Context, clientID string) (s
 	return "1", nil
 }
 
-// SetToken implements api.Client.
+// SetToken implements psapi.Client.
 func (m *MockClient) SetToken(token string) {
 	m.Token = token
 }
 
 // NewMockClientFactory returns a client factory that always returns the given mock.
-func NewMockClientFactory(mock *MockClient) func(endpoint string) api.Client {
-	return func(endpoint string) api.Client {
+func NewMockClientFactory(mock *MockClient) func(endpoint string) psapi.Client {
+	return func(endpoint string) psapi.Client {
 		return mock
 	}
 }

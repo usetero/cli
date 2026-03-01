@@ -7,8 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync/api"
 	"github.com/usetero/cli/internal/powersync/db"
 	"github.com/usetero/cli/internal/powersync/extension"
 	"github.com/usetero/cli/internal/sqlite"
@@ -50,14 +50,14 @@ type syncer struct {
 	endpoint       string
 	tokenRefresher TokenRefresher
 	scope          log.Scope
-	clientFactory  func(endpoint string) api.Client
+	clientFactory  func(endpoint string) psapi.Client
 	controlPlaneFn func(db sqlite.DB) ControlPlane
 	streamCapture  StreamCapture
 
 	database    sqlite.DB
 	accountID   string
 	control     ControlPlane
-	client      api.Client
+	client      psapi.Client
 	onFirstSync func()
 	controlMu   sync.Mutex
 
@@ -77,7 +77,7 @@ type stateWrapper struct {
 type SyncerOption func(*syncer)
 
 // WithClientFactory sets a custom client factory (for testing).
-func WithClientFactory(factory func(endpoint string) api.Client) SyncerOption {
+func WithClientFactory(factory func(endpoint string) psapi.Client) SyncerOption {
 	return func(s *syncer) {
 		s.clientFactory = factory
 	}
@@ -103,7 +103,7 @@ func NewSyncer(endpoint string, tokenRefresher TokenRefresher, scope log.Scope, 
 		endpoint:       endpoint,
 		tokenRefresher: tokenRefresher,
 		scope:          scope.Child("powersync"),
-		clientFactory:  api.NewClient,
+		clientFactory:  psapi.NewClient,
 		controlPlaneFn: func(db sqlite.DB) ControlPlane {
 			return extension.NewController(db)
 		},

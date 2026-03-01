@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync/api"
 )
 
 const (
@@ -38,7 +38,7 @@ func (s *syncer) run(ctx context.Context) {
 			return
 		}
 
-		var clientErr *api.Error
+		var clientErr *psapi.Error
 		if errors.As(err, &clientErr) {
 			if clientErr.IsAuth() {
 				s.scope.Debug("auth error, force-refreshing token")

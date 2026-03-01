@@ -23,6 +23,7 @@ func TestDependencyBoundaries(t *testing.T) {
 
 	graphqlRoot := filepath.Join(root, "internal", "boundary", "graphql")
 	chatBoundaryRoot := filepath.Join(root, "internal", "boundary", "chat")
+	powersyncBoundaryRoot := filepath.Join(root, "internal", "boundary", "powersync")
 	coreRoot := filepath.Join(root, "internal", "core")
 	chatRoot := filepath.Join(root, "internal", "app", "chat")
 
@@ -30,6 +31,9 @@ func TestDependencyBoundaries(t *testing.T) {
 		"github.com/usetero/cli/internal/app/",
 	})
 	assertNoForbiddenImports(t, chatBoundaryRoot, []string{
+		"github.com/usetero/cli/internal/app/",
+	})
+	assertNoForbiddenImports(t, powersyncBoundaryRoot, []string{
 		"github.com/usetero/cli/internal/app/",
 	})
 	assertNoForbiddenImports(t, coreRoot, []string{
@@ -191,9 +195,9 @@ func assertOnlyAllowedChatClientImports(t *testing.T, dir string, allowedRelPath
 					break
 				}
 			}
-				if !allowed {
-					t.Errorf("%s imports boundary/chat outside allowed boundary", path)
-				}
+			if !allowed {
+				t.Errorf("%s imports boundary/chat outside allowed boundary", path)
+			}
 		}
 		return nil
 	})
