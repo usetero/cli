@@ -18,7 +18,6 @@ import (
 	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/workos"
 )
 
 // org represents an organization for selection
@@ -57,9 +56,7 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			theme := styles.DetectTheme()
 			s := theme.Styles
 			env := cliConfig.Environment()
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 
 			ctx := cmd.Context()
 
@@ -102,7 +99,7 @@ func newLoginCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Fetch organizations
-			services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := newGraphQLServiceSet(cliConfig, authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				// Don't fail login if org fetch fails - user can use 'tero auth switch' later
@@ -158,9 +155,7 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			theme := styles.DetectTheme()
 			s := theme.Styles
 			env := cliConfig.Environment()
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 
 			ctx := cmd.Context()
 
@@ -170,7 +165,7 @@ func newSwitchCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Fetch organizations
-			services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			services := newGraphQLServiceSet(cliConfig, authService, scope)
 			orgs, err := fetchOrganizations(ctx, services)
 			if err != nil {
 				return fmt.Errorf("failed to fetch organizations: %w", err)
@@ -224,10 +219,7 @@ func newTokenCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		Short: "Print the current access token",
 		Long:  "Print the current access token to stdout. Refreshes the token if expired.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := cliConfig.Environment()
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 
 			token, err := authService.GetAccessToken(cmd.Context())
 			if err != nil {
@@ -248,10 +240,7 @@ func newLogoutCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			theme := styles.DetectTheme()
 			s := theme.Styles
-			env := cliConfig.Environment()
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 
 			if err := authService.ClearTokens(); err != nil {
 				return fmt.Errorf("failed to clear credentials: %w", err)
@@ -310,9 +299,8 @@ func newStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			// Try to get org name from API
 			if workosOrgID != "" {
 				orgName := workosOrgID // fallback to ID
-				workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-				authService := auth.NewService(workosClient, tokenStore, scope)
-				services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
+				authService := newAuthService(cliConfig, scope)
+				services := newGraphQLServiceSet(cliConfig, authService, scope)
 				if orgs, err := fetchOrganizations(cmd.Context(), services); err == nil {
 					for _, o := range orgs {
 						if o.WorkosID == domain.WorkosOrganizationID(workosOrgID) {

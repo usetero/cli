@@ -6,15 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/workos"
 )
 
 // listOrgIDs returns all org IDs found in the filesystem for the given environment.
@@ -100,9 +97,7 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			}
 
 			// Clear auth tokens
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 			if err := authService.ClearTokens(); err != nil {
 				return fmt.Errorf("failed to clear tokens: %w", err)
 			}

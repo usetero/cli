@@ -1,20 +1,15 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/auth"
-	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
-	"github.com/usetero/cli/internal/workos"
 )
 
 func NewInternalInspectCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
@@ -61,7 +56,7 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			}
 
 			// Get API services
-			services, err := getAPIServices(cmd.Context(), scope, cliConfig)
+			services, err := newAuthenticatedGraphQLServiceSet(cmd.Context(), cliConfig, scope)
 			if err != nil {
 				return err
 			}
@@ -196,7 +191,7 @@ func newDebugGraphQLCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Com
 			}
 
 			// Get API services
-			services, err := getAPIServices(cmd.Context(), scope, cliConfig)
+			services, err := newAuthenticatedGraphQLServiceSet(cmd.Context(), cliConfig, scope)
 			if err != nil {
 				return err
 			}
@@ -276,20 +271,4 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 			return nil
 		},
 	}
-}
-
-// getAPIServices creates authenticated API services
-func getAPIServices(ctx context.Context, scope log.Scope, cliConfig *config.CLIConfig) (graphql.ServiceSet, error) {
-	env := cliConfig.Environment()
-	tokenStore := keyring.New(env)
-	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-	authService := auth.NewService(workosClient, tokenStore, scope)
-
-	// Verify we're authenticated
-	_, err := authService.GetAccessToken(ctx)
-	if err != nil {
-		return graphql.ServiceSet{}, fmt.Errorf("not authenticated: run 'tero auth login' first")
-	}
-
-	return graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope), nil
 }

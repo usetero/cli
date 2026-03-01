@@ -7,17 +7,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 	"github.com/usetero/cli/internal/app"
-	"github.com/usetero/cli/internal/auth"
-	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/filter"
-	"github.com/usetero/cli/internal/workos"
 )
 
 func NewRootCmd(scope log.Scope, version string) *cobra.Command {
@@ -68,17 +64,8 @@ Just run 'tero' to start an interactive chat session.`,
 			}
 			orgPrefs := preferences.NewOrgService(orgCfg, scope)
 
-			// Create token store
-			tokenStore := keyring.New(env)
-
-			// Create WorkOS client for OAuth
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-
-			// Create auth service
-			authService := auth.NewService(workosClient, tokenStore, scope)
-
-			// Create API services
-			services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
+			authService := newAuthService(cliConfig, scope)
+			services := newGraphQLServiceSet(cliConfig, authService, scope)
 
 			// Create storage for SQLite databases
 			storage := sqlite.NewStorageService(orgCfg)

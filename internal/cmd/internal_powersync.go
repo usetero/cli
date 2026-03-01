@@ -10,14 +10,11 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/keyring"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/sqlite"
-	"github.com/usetero/cli/internal/workos"
 )
 
 func NewInternalPowerSyncCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
@@ -74,9 +71,7 @@ func newInternalPowerSyncCaptureCmd(scope log.Scope, cliConfig *config.CLIConfig
 				return fmt.Errorf("no account configured; pass --account-id or complete onboarding first")
 			}
 
-			tokenStore := keyring.New(env)
-			workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-			authService := auth.NewService(workosClient, tokenStore, scope)
+			authService := newAuthService(cliConfig, scope)
 
 			storage := sqlite.NewStorageService(orgCfg)
 			dbPath, err := storage.DatabasePath(accountID)
