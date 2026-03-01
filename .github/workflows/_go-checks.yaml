@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       runner:
-        description: Cirrus runner image
+        description: Runner label (defaults to GitHub-hosted ubuntu-latest)
         required: false
         default: ubuntu-latest
         type: string

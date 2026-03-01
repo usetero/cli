@@ -91,3 +91,14 @@ CI intentionally runs checks in parallel lanes instead of one monolithic
 Security checks run in a dedicated workflow with open-source scanners
 (`govulncheck` and `osv-scanner`) so they can evolve independently from the
 main PR gate.
+
+## Branch protection checks
+
+Recommended required checks on `master`:
+
+- `PR CI / required-checks`
+
+Recommended non-blocking (advisory) checks:
+
+- `Security / dependency-scans`
+- `Workflow Lint / actionlint` (path-scoped; do not require globally)

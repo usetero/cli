@@ -10,6 +10,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check:
+  checks:
     uses: ./.github/workflows/_go-checks.yaml
     secrets: inherit

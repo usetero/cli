@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  required-checks:
+    name: required-checks
     uses: ./.github/workflows/_go-checks.yaml
     secrets: inherit
