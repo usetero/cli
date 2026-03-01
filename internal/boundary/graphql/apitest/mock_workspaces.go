@@ -6,7 +6,7 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-// MockWorkspaces implements api.Workspaces for testing.
+// MockWorkspaces implements graphql.Workspaces for testing.
 type MockWorkspaces struct {
 	ListFunc func(ctx context.Context, accountID domain.AccountID) ([]domain.Workspace, error)
 }
