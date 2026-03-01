@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appevents "github.com/usetero/cli/internal/app/events"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
@@ -41,12 +42,7 @@ func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load organizations", msg.Err, false))
 	}
 
-	m.orgs = make([]domain.Organization, len(msg.Items))
-	for i, item := range msg.Items {
-		if org, ok := item.(domain.Organization); ok {
-			m.orgs[i] = org
-		}
-	}
+	m.orgs = stepkit.CastItems[domain.Organization](msg.Items)
 	m.scope.Info("organizations loaded", "count", len(m.orgs))
 
 	if len(m.orgs) == 0 {

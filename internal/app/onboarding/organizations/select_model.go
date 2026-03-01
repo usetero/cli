@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	"github.com/usetero/cli/internal/auth"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
@@ -83,16 +84,8 @@ func (m *SelectModel) ShortHelp() []key.Binding {
 	if m.refreshingToken || m.list.IsLoading() {
 		return nil
 	}
-	if m.list.HasError() {
-		return []key.Binding{
-			key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "retry")),
-		}
-	}
-	// Delegate to list, add step-specific bindings.
-	bindings := m.list.ShortHelp()
-	bindings = append(bindings,
+	return stepkit.RemoteListShortHelp(m.list,
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
 		key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new org")),
 	)
-	return bindings
 }

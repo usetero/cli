@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appevents "github.com/usetero/cli/internal/app/events"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
 )
@@ -44,12 +45,7 @@ func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 	if msg.Err != nil {
 		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load workspaces", msg.Err, false))
 	}
-	m.workspaces = make([]domain.Workspace, len(msg.Items))
-	for i, item := range msg.Items {
-		if ws, ok := item.(domain.Workspace); ok {
-			m.workspaces[i] = ws
-		}
-	}
+	m.workspaces = stepkit.CastItems[domain.Workspace](msg.Items)
 
 	if prefWS := findWorkspaceByID(m.workspaces, m.prefs.GetDefaultWorkspaceID()); prefWS != nil {
 		m.scope.Info("workspace restored from preference", slog.String("workspace_id", string(prefWS.ID)))

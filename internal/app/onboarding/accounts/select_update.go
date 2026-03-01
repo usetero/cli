@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	appevents "github.com/usetero/cli/internal/app/events"
+	"github.com/usetero/cli/internal/app/onboarding/stepkit"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/tea/components/remotelist"
@@ -27,12 +28,7 @@ func (m *SelectModel) handleLoadResult(msg remotelist.LoadResult) tea.Cmd {
 		return tea.Batch(m.list.Update(msg), appevents.ErrorCmd("Failed to load accounts", msg.Err, false))
 	}
 
-	m.accounts = make([]domain.Account, len(msg.Items))
-	for i, item := range msg.Items {
-		if acc, ok := item.(domain.Account); ok {
-			m.accounts[i] = acc
-		}
-	}
+	m.accounts = stepkit.CastItems[domain.Account](msg.Items)
 	m.scope.Info("accounts loaded", "count", len(m.accounts))
 
 	if len(m.accounts) == 0 {
