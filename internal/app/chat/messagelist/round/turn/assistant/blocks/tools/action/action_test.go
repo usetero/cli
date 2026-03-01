@@ -207,7 +207,7 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		m := New(0, "turn-1", "tool-1", 80, testConfig(), nil, logtest.NewScope(t))
-		foreign := actionExecutedMsg{
+		foreign := actionExecutionCompletedMsg{
 			toolID: "tool-2",
 			result: domaintools.Result{Content: map[string]any{"ok": true}},
 		}

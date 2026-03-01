@@ -171,12 +171,12 @@ func (m *Model) nextStreamUpdate() tea.Cmd {
 	return func() tea.Msg {
 		update, ok := <-updates
 		if !ok {
-			return streamUpdateMsg{
+			return turnStreamUpdateMsg{
 				turnID: userMsgID,
 				update: streamUpdate{done: true},
 			}
 		}
-		return streamUpdateMsg{
+		return turnStreamUpdateMsg{
 			turnID: userMsgID,
 			update: update,
 		}

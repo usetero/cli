@@ -46,7 +46,7 @@ type Model struct {
 	card *policycard.Model
 }
 
-type showExecutedMsg struct {
+type showExecutionCompletedMsg struct {
 	toolID string
 	result domaintools.ShowResult
 	err    error
@@ -76,7 +76,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
-	case showExecutedMsg:
+	case showExecutionCompletedMsg:
 		if msg.toolID != m.toolID {
 			return nil
 		}
@@ -141,7 +141,7 @@ func (m *Model) execute() tea.Cmd {
 	executor := m.executor
 	return func() tea.Msg {
 		result, err := executor.Execute(json.RawMessage(input))
-		return showExecutedMsg{toolID: m.toolID, result: result, err: err}
+		return showExecutionCompletedMsg{toolID: m.toolID, result: result, err: err}
 	}
 }
 

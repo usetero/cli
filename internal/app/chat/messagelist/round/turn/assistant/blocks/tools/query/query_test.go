@@ -86,7 +86,7 @@ func TestUpdate_IgnoresExecutionCompletionFromDifferentToolInstance(t *testing.T
 	scope := logtest.NewScope(t)
 
 	m := New(theme, 0, "turn-1", "tool-1", 80, nil, scope)
-	cmd := m.Update(queryExecutedMsg{
+	cmd := m.Update(queryExecutionCompletedMsg{
 		toolID:   "tool-2",
 		result:   domaintools.QueryResult{Rows: []map[string]any{{"name": "wrong"}}},
 		duration: 100 * time.Millisecond,

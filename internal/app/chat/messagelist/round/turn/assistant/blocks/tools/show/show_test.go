@@ -117,7 +117,7 @@ func TestUpdate_IgnoresExecutionCompletionFromDifferentToolInstance(t *testing.T
 	t.Parallel()
 
 	m := New(styles.NewTheme(true), 0, "turn-1", "tool-1", 80, nil, logtest.NewScope(t))
-	cmd := m.Update(showExecutedMsg{
+	cmd := m.Update(showExecutionCompletedMsg{
 		toolID: "tool-2",
 		result: domaintools.ShowResult{Entity: domaintools.EntityPolicy, ID: "p-2"},
 	})

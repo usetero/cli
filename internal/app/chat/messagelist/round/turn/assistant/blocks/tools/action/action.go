@@ -39,7 +39,7 @@ type Model struct {
 	err    error
 }
 
-type actionExecutedMsg struct {
+type actionExecutionCompletedMsg struct {
 	toolID string
 	result domaintools.Result
 	err    error
@@ -66,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
-	case actionExecutedMsg:
+	case actionExecutionCompletedMsg:
 		if msg.toolID != m.toolID {
 			return nil
 		}
@@ -109,7 +109,7 @@ func (m *Model) execute() tea.Cmd {
 	executor := m.executor
 	return func() tea.Msg {
 		result, err := executor(input)
-		return actionExecutedMsg{toolID: m.toolID, result: result, err: err}
+		return actionExecutionCompletedMsg{toolID: m.toolID, result: result, err: err}
 	}
 }
 

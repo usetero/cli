@@ -11,7 +11,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case streamUpdateMsg:
+	case turnStreamUpdateMsg:
 		if msg.turnID != m.userMessage.ID() {
 			return nil
 		}

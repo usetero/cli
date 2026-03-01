@@ -76,8 +76,8 @@ type streamUpdate struct {
 
 var errUserCancelled = errors.New("user_cancelled")
 
-// streamUpdateMsg is the internal message for stream handling.
-type streamUpdateMsg struct {
+// turnStreamUpdateMsg is the internal message for stream handling.
+type turnStreamUpdateMsg struct {
 	turnID domain.MessageID
 	update streamUpdate
 }

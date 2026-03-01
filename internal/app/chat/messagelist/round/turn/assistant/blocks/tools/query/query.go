@@ -47,7 +47,7 @@ type Model struct {
 	duration    time.Duration
 }
 
-type queryExecutedMsg struct {
+type queryExecutionCompletedMsg struct {
 	toolID   string
 	result   domaintools.QueryResult
 	err      error
@@ -76,7 +76,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.handleContent(msg.Message.Content)
 	case msgs.StreamCompleted:
 		return m.handleContent(msg.Message.Content)
-	case queryExecutedMsg:
+	case queryExecutionCompletedMsg:
 		if msg.toolID != m.toolID {
 			return nil
 		}
@@ -237,7 +237,7 @@ func (m *Model) execute() tea.Cmd {
 	executor := m.executor
 	return func() tea.Msg {
 		result, err := executor.Execute(json.RawMessage(input))
-		return queryExecutedMsg{
+		return queryExecutionCompletedMsg{
 			toolID:   m.toolID,
 			result:   result,
 			err:      err,
