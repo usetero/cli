@@ -11,10 +11,10 @@ import (
 // Update handles messages.
 func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case pollTickMsg:
+	case discoveryPollTickMsg:
 		return m.pollStatus()
 
-	case statusMsg:
+	case discoveryStatusMsg:
 		return m.handleStatus(msg)
 
 	case spinner.TickMsg:
@@ -33,7 +33,7 @@ func (m *DiscoveryModel) Update(msg tea.Msg) tea.Cmd {
 	return m.progress.Update(msg)
 }
 
-func (m *DiscoveryModel) handleStatus(msg statusMsg) tea.Cmd {
+func (m *DiscoveryModel) handleStatus(msg discoveryStatusMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Error("discovery status check failed", "error", msg.err)
 		m.err = msg.err

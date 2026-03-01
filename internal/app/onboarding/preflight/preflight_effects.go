@@ -20,28 +20,28 @@ func (m *Model) checkAuth() tea.Cmd {
 				_ = m.auth.ClearTokens()
 			}
 		}
-		return authCheckedMsg{hasValidAuth: hasValidAuth}
+		return preflightAuthCheckedMsg{hasValidAuth: hasValidAuth}
 	}
 }
 
 func (m *Model) loadOrganizations() tea.Cmd {
 	return func() tea.Msg {
 		orgs, err := m.services.WithAccountID("").Organizations.List(m.ctx)
-		return orgsLoadedMsg{orgs: orgs, err: err}
+		return preflightOrganizationsLoadedMsg{orgs: orgs, err: err}
 	}
 }
 
 func (m *Model) loadAccounts(orgID domain.OrganizationID) tea.Cmd {
 	return func() tea.Msg {
 		accounts, err := m.services.WithAccountID("").Accounts.List(m.ctx, orgID)
-		return accountsLoadedMsg{accounts: accounts, err: err}
+		return preflightAccountsLoadedMsg{accounts: accounts, err: err}
 	}
 }
 
 func (m *Model) emitResult() tea.Cmd {
 	m.stage = stageFinalizing
 	return func() tea.Msg {
-		return resultMsg{state: m.state}
+		return preflightResolvedMsg{state: m.state}
 	}
 }
 

@@ -27,7 +27,7 @@ func (m *SelectModel) loadOrgs() tea.Cmd {
 func (m *SelectModel) refreshToken(org domain.Organization) tea.Cmd {
 	return func() tea.Msg {
 		_, err := m.auth.RefreshTokenWithOrganization(m.ctx, org.WorkosOrganizationID)
-		return tokenRefreshedMsg{err: err}
+		return orgTokenRefreshedMsg{err: err}
 	}
 }
 

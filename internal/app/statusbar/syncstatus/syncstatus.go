@@ -25,14 +25,14 @@ const (
 	dbTimeout           = 2 * time.Second
 )
 
-// pollMsg triggers a sync status check.
-type pollMsg struct{}
+// syncPollTickMsg triggers a sync status check.
+type syncPollTickMsg struct{}
 
-// pendingPollMsg triggers a pending-upload count refresh.
-type pendingPollMsg struct{}
+// pendingUploadsPollTickMsg triggers a pending-upload count refresh.
+type pendingUploadsPollTickMsg struct{}
 
-// pendingMsg carries the result of an async pending-upload count.
-type pendingMsg struct {
+// pendingUploadsLoadedMsg carries the result of an async pending-upload count.
+type pendingUploadsLoadedMsg struct {
 	total int64
 }
 
@@ -81,20 +81,20 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) poll() tea.Cmd {
 	return tea.Tick(pollInterval, func(time.Time) tea.Msg {
-		return pollMsg{}
+		return syncPollTickMsg{}
 	})
 }
 
 func (m *Model) pollPending() tea.Cmd {
 	return tea.Tick(pendingPollInterval, func(time.Time) tea.Msg {
-		return pendingPollMsg{}
+		return pendingUploadsPollTickMsg{}
 	})
 }
 
 // Update handles messages.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case pollMsg:
+	case syncPollTickMsg:
 		if m.syncer == nil {
 			return nil
 		}
@@ -117,7 +117,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 		return tea.Batch(cmds...)
 
-	case pendingPollMsg:
+	case pendingUploadsPollTickMsg:
 		if m.db == nil {
 			return m.pollPending()
 		}
@@ -127,7 +127,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.pendingFetch = true
 		return tea.Batch(m.pollPending(), m.fetchPending())
 
-	case pendingMsg:
+	case pendingUploadsLoadedMsg:
 		m.pendingFetch = false
 		m.totalPending = msg.total
 	}
@@ -148,14 +148,14 @@ func (m *Model) fetchPending() tea.Cmd {
 		pending, err := db.PendingUploadCounts(ctx)
 		if err != nil {
 			scope.Error("pending upload counts", "err", err)
-			return pendingMsg{}
+			return pendingUploadsLoadedMsg{}
 		}
 
 		var total int64
 		for _, count := range pending {
 			total += count
 		}
-		return pendingMsg{total: total}
+		return pendingUploadsLoadedMsg{total: total}
 	}
 }
 

@@ -25,8 +25,8 @@ const (
 	toastInfo
 )
 
-// clearMsg dismisses the current toast.
-type clearMsg struct{}
+// clearToastMsg dismisses the current toast.
+type clearToastMsg struct{}
 
 // toast holds the current toast state.
 type toast struct {
@@ -72,7 +72,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.show(toast{typ: toastSuccess, content: msg.Message})
 	case appevents.Info:
 		return m.show(toast{typ: toastInfo, content: msg.Message})
-	case clearMsg:
+	case clearToastMsg:
 		m.current = nil
 		return nil
 	}
@@ -159,9 +159,9 @@ func (m *Model) View() string {
 	return labelText + msgText
 }
 
-// clearAfter returns a command that sends clearMsg after the duration.
+// clearAfter returns a command that sends clearToastMsg after the duration.
 func clearAfter(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg {
-		return clearMsg{}
+		return clearToastMsg{}
 	})
 }

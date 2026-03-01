@@ -5,20 +5,20 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-type resultMsg struct {
+type preflightResolvedMsg struct {
 	state bootstrap.PreflightState
 }
 
-type authCheckedMsg struct {
+type preflightAuthCheckedMsg struct {
 	hasValidAuth bool
 }
 
-type orgsLoadedMsg struct {
+type preflightOrganizationsLoadedMsg struct {
 	orgs []domain.Organization
 	err  error
 }
 
-type accountsLoadedMsg struct {
+type preflightAccountsLoadedMsg struct {
 	accounts []domain.Account
 	err      error
 }

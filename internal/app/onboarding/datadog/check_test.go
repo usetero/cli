@@ -22,7 +22,7 @@ func TestCheckHasDatadogEmitsReady(t *testing.T) {
 	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
-	cmd := m.Update(checkResultMsg{hasDatadog: true})
+	cmd := m.Update(datadogCheckResultMsg{hasDatadog: true})
 	if cmd == nil {
 		t.Fatal("expected command")
 	}
@@ -41,7 +41,7 @@ func TestCheckNoDatadogEmitsNeeded(t *testing.T) {
 	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
-	cmd := m.Update(checkResultMsg{hasDatadog: false})
+	cmd := m.Update(datadogCheckResultMsg{hasDatadog: false})
 	if cmd == nil {
 		t.Fatal("expected command")
 	}
@@ -60,7 +60,7 @@ func TestCheckErrorEnablesRetry(t *testing.T) {
 	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
-	if cmd := m.Update(checkResultMsg{err: errors.New("boom")}); cmd == nil {
+	if cmd := m.Update(datadogCheckResultMsg{err: errors.New("boom")}); cmd == nil {
 		t.Fatal("expected error command")
 	}
 	if len(m.ShortHelp()) == 0 {

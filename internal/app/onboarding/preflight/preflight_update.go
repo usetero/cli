@@ -11,13 +11,13 @@ import (
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case authCheckedMsg:
+	case preflightAuthCheckedMsg:
 		return m.handleAuthChecked(msg)
-	case orgsLoadedMsg:
+	case preflightOrganizationsLoadedMsg:
 		return m.handleOrganizationsLoaded(msg)
-	case accountsLoadedMsg:
+	case preflightAccountsLoadedMsg:
 		return m.handleAccountsLoaded(msg)
-	case resultMsg:
+	case preflightResolvedMsg:
 		return m.handleResult(msg)
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -27,7 +27,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleAuthChecked(msg authCheckedMsg) tea.Cmd {
+func (m *Model) handleAuthChecked(msg preflightAuthCheckedMsg) tea.Cmd {
 	m.state.HasValidAuth = msg.hasValidAuth
 	if !m.state.HasValidAuth {
 		return m.emitResult()
@@ -36,7 +36,7 @@ func (m *Model) handleAuthChecked(msg authCheckedMsg) tea.Cmd {
 	return m.loadOrganizations()
 }
 
-func (m *Model) handleOrganizationsLoaded(msg orgsLoadedMsg) tea.Cmd {
+func (m *Model) handleOrganizationsLoaded(msg preflightOrganizationsLoadedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Warn("preflight org lookup failed", "error", msg.err)
 		m.state.Outcome, m.state.Error = preflightOutcomeForError(msg.err)
@@ -50,7 +50,7 @@ func (m *Model) handleOrganizationsLoaded(msg orgsLoadedMsg) tea.Cmd {
 	return m.loadAccounts(m.state.Org.ID)
 }
 
-func (m *Model) handleAccountsLoaded(msg accountsLoadedMsg) tea.Cmd {
+func (m *Model) handleAccountsLoaded(msg preflightAccountsLoadedMsg) tea.Cmd {
 	if msg.err != nil {
 		m.scope.Warn("preflight account lookup failed", "error", msg.err, "org_id", m.state.Org.ID)
 		m.state.Outcome, m.state.Error = preflightOutcomeForError(msg.err)
@@ -60,7 +60,7 @@ func (m *Model) handleAccountsLoaded(msg accountsLoadedMsg) tea.Cmd {
 	return m.emitResult()
 }
 
-func (m *Model) handleResult(msg resultMsg) tea.Cmd {
+func (m *Model) handleResult(msg preflightResolvedMsg) tea.Cmd {
 	elapsed := time.Since(m.started)
 	m.scope.Debug("preflight resolved",
 		"has_valid_auth", msg.state.HasValidAuth,

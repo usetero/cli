@@ -15,7 +15,7 @@ func TestPendingPollDoesNotOverlapFetches(t *testing.T) {
 	m.SetDB(db)
 
 	m.pendingFetch = true
-	if cmd := m.Update(pendingPollMsg{}); cmd == nil {
+	if cmd := m.Update(pendingUploadsPollTickMsg{}); cmd == nil {
 		t.Fatalf("expected pending poll to keep polling even while fetch is in-flight")
 	}
 	if !m.pendingFetch {
@@ -23,11 +23,11 @@ func TestPendingPollDoesNotOverlapFetches(t *testing.T) {
 	}
 }
 
-func TestPendingMsgClearsInFlightFlag(t *testing.T) {
+func TestPendingUploadsLoadedMsgClearsInFlightFlag(t *testing.T) {
 	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com")
 	m.pendingFetch = true
 
-	m.Update(pendingMsg{total: 42})
+	m.Update(pendingUploadsLoadedMsg{total: 42})
 
 	if m.pendingFetch {
 		t.Fatalf("expected pending message to clear in-flight flag")

@@ -2,8 +2,8 @@ package organizations
 
 import "github.com/usetero/cli/internal/domain"
 
-// tokenRefreshedMsg is sent when token refresh completes.
-type tokenRefreshedMsg struct {
+// orgTokenRefreshedMsg is sent when token refresh completes.
+type orgTokenRefreshedMsg struct {
 	err error
 }
 

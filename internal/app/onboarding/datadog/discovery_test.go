@@ -24,7 +24,7 @@ func TestDiscoveryPollTickSchedulesAsyncFetch(t *testing.T) {
 	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
 
 	m := NewDiscovery(context.Background(), styles.NewTheme(true), "dd-1", services, logtest.NewScope(t))
-	cmd := m.Update(pollTickMsg{})
+	cmd := m.Update(discoveryPollTickMsg{})
 	if cmd == nil {
 		t.Fatalf("expected poll tick to schedule async fetch")
 	}
@@ -33,8 +33,8 @@ func TestDiscoveryPollTickSchedulesAsyncFetch(t *testing.T) {
 	}
 
 	msg := cmd()
-	if _, ok := msg.(statusMsg); !ok {
-		t.Fatalf("expected statusMsg from async fetch, got %T", msg)
+	if _, ok := msg.(discoveryStatusMsg); !ok {
+		t.Fatalf("expected discoveryStatusMsg from async fetch, got %T", msg)
 	}
 	if callCount != 1 {
 		t.Fatalf("expected one network call after fetch command execution, got %d", callCount)
@@ -52,14 +52,14 @@ func TestDiscoveryStatusSchedulesTimerTick(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(statusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: false}})
+	cmd := m.Update(discoveryStatusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: false}})
 	if cmd == nil {
 		t.Fatalf("expected non-ready status to schedule timer")
 	}
 
 	msg := cmd()
-	if _, ok := msg.(pollTickMsg); !ok {
-		t.Fatalf("expected pollTickMsg from scheduled timer, got %T", msg)
+	if _, ok := msg.(discoveryPollTickMsg); !ok {
+		t.Fatalf("expected discoveryPollTickMsg from scheduled timer, got %T", msg)
 	}
 }
 
@@ -74,7 +74,7 @@ func TestDiscoveryStatusReadyCompletesStep(t *testing.T) {
 		logtest.NewScope(t),
 	)
 
-	cmd := m.Update(statusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: true}})
+	cmd := m.Update(discoveryStatusMsg{status: &graphql.DatadogAccountStatus{ReadyForUse: true}})
 	if cmd == nil {
 		t.Fatalf("expected ready status to emit completion message")
 	}

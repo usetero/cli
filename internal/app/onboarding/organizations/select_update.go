@@ -16,7 +16,7 @@ func (m *SelectModel) Update(msg tea.Msg) tea.Cmd {
 	case remotelist.LoadResult:
 		return m.handleLoadResult(msg)
 
-	case tokenRefreshedMsg:
+	case orgTokenRefreshedMsg:
 		m.refreshingToken = false
 		if msg.err != nil {
 			m.scope.Warn("token refresh failed", "error", msg.err)
