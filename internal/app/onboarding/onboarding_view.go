@@ -2,7 +2,7 @@ package onboarding
 
 import "charm.land/lipgloss/v2"
 
-import appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 
 // View renders the current step.
 func (m *Model) View() string {
@@ -23,7 +23,7 @@ func (m *Model) View() string {
 		Render(view)
 }
 
-func (m *Model) hiddenStepView(status appmsg.StepStatus) string {
+func (m *Model) hiddenStepView(status onbstatus.StepStatus) string {
 	s := m.theme.Styles
 	title := s.Title.Render(status.Title)
 	body := s.Body.Render(status.Details)

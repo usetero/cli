@@ -1,9 +1,9 @@
 package preflight
 
-import appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 
 func (m *Model) Hidden() bool { return false }
 
-func (m *Model) Status() appmsg.StepStatus {
-	return appmsg.StepStatus{Title: "Getting ready", Details: "Preparing your account..."}
+func (m *Model) Status() onbstatus.StepStatus {
+	return onbstatus.StepStatus{Title: "Getting ready", Details: "Preparing your account..."}
 }

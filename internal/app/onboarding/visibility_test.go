@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -34,7 +34,7 @@ func TestViewUsesHiddenStepStatus(t *testing.T) {
 	m.step = hiddenTestStep{
 		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 		hidden:        true,
-		status: appmsg.StepStatus{
+		status: onbstatus.StepStatus{
 			Title:   "Loading",
 			Details: "Loading dynamic data...",
 		},
@@ -59,12 +59,12 @@ func TestViewUsesOverriddenEmbeddedStatus(t *testing.T) {
 		hiddenTestStep: hiddenTestStep{
 			fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 			hidden:        true,
-			status: appmsg.StepStatus{
+			status: onbstatus.StepStatus{
 				Title:   "Fallback",
 				Details: "fallback status text",
 			},
 		},
-		status: appmsg.StepStatus{
+		status: onbstatus.StepStatus{
 			Title:   "Datadog setup",
 			Details: "Checking Datadog configuration...",
 		},
@@ -91,7 +91,7 @@ func TestViewHiddenStatusNeverFallsBackToGenericTitle(t *testing.T) {
 	m.step = hiddenTestStep{
 		fixedTestStep: fixedTestStep{view: "step view should be hidden"},
 		hidden:        true,
-		status: appmsg.StepStatus{
+		status: onbstatus.StepStatus{
 			Title:   "Runtime setup",
 			Details: "Initializing account runtime...",
 		},
@@ -116,22 +116,22 @@ func (s fixedTestStep) View() string               { return s.view }
 func (s fixedTestStep) SetSize(width, height int)  {}
 func (s fixedTestStep) ShortHelp() []key.Binding   { return nil }
 func (s fixedTestStep) Hidden() bool               { return false }
-func (s fixedTestStep) Status() appmsg.StepStatus  { return appmsg.StepStatus{} }
+func (s fixedTestStep) Status() onbstatus.StepStatus  { return onbstatus.StepStatus{} }
 
 type hiddenTestStep struct {
 	fixedTestStep
 	hidden bool
-	status appmsg.StepStatus
+	status onbstatus.StepStatus
 }
 
 func (s hiddenTestStep) Hidden() bool { return s.hidden }
-func (s hiddenTestStep) Status() appmsg.StepStatus {
+func (s hiddenTestStep) Status() onbstatus.StepStatus {
 	return s.status
 }
 
 type hiddenStatusTestStep struct {
 	hiddenTestStep
-	status appmsg.StepStatus
+	status onbstatus.StepStatus
 }
 
-func (s hiddenStatusTestStep) Status() appmsg.StepStatus { return s.status }
+func (s hiddenStatusTestStep) Status() onbstatus.StepStatus { return s.status }

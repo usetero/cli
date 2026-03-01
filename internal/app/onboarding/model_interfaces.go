@@ -1,7 +1,7 @@
 package onboarding
 
 import (
-	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -15,5 +15,5 @@ type Step interface {
 	SetSize(width, height int)
 	ShortHelp() []key.Binding
 	Hidden() bool
-	Status() appmsg.StepStatus
+	Status() onbstatus.StepStatus
 }

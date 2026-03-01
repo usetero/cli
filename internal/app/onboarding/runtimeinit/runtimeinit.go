@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -54,8 +54,8 @@ func (m *Model) ShortHelp() []key.Binding { return nil }
 
 func (m *Model) Hidden() bool { return true }
 
-func (m *Model) Status() appmsg.StepStatus {
-	return appmsg.StepStatus{
+func (m *Model) Status() onbstatus.StepStatus {
+	return onbstatus.StepStatus{
 		Title:   "Getting ready",
 		Details: "Initializing your account runtime...",
 	}

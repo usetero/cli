@@ -8,7 +8,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -95,8 +95,8 @@ func (m *SelectModel) Hidden() bool {
 	return m.list.IsLoading()
 }
 
-func (m *SelectModel) Status() appmsg.StepStatus {
-	return appmsg.StepStatus{
+func (m *SelectModel) Status() onbstatus.StepStatus {
+	return onbstatus.StepStatus{
 		Title:   "Select workspace",
 		Details: "Loading workspaces...",
 	}

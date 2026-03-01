@@ -1,4 +1,4 @@
-package msgs
+package status
 
 // StepStatus describes user-facing progress for an onboarding stage.
 type StepStatus struct {

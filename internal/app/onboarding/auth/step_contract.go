@@ -1,9 +1,9 @@
 package auth
 
-import appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+import onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 
 func (m *AuthenticateModel) Hidden() bool { return false }
 
-func (m *AuthenticateModel) Status() appmsg.StepStatus {
-	return appmsg.StepStatus{Title: "Sign in", Details: "Sign in to continue."}
+func (m *AuthenticateModel) Status() onbstatus.StepStatus {
+	return onbstatus.StepStatus{Title: "Sign in", Details: "Sign in to continue."}
 }

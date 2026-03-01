@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	appmsg "github.com/usetero/cli/internal/app/onboarding/msgs"
+	onbstatus "github.com/usetero/cli/internal/app/onboarding/status"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -68,8 +68,8 @@ func (m *CheckModel) Hidden() bool {
 	return m.err == nil
 }
 
-func (m *CheckModel) Status() appmsg.StepStatus {
-	return appmsg.StepStatus{
+func (m *CheckModel) Status() onbstatus.StepStatus {
+	return onbstatus.StepStatus{
 		Title:   "Datadog setup",
 		Details: "Checking Datadog configuration...",
 	}
