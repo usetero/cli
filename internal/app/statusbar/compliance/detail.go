@@ -41,7 +41,7 @@ func (d *detail) Prompt() tea.Cmd {
 		"Tell me about the %s compliance issue for the %q log event in the %s service.",
 		d.category.Name(), p.LogEventName, p.ServiceName,
 	)
-	return func() tea.Msg { return appevents.DrawerPrompt{Text: text} }
+	return appevents.DrawerPromptCmd(text)
 }
 
 // View renders the detail: a header with category summary, then a policy table.

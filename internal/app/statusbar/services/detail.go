@@ -41,7 +41,7 @@ func (d *detail) Prompt() tea.Cmd {
 	le := d.logEvents[d.cursor]
 	svc := d.service.Name
 	text := fmt.Sprintf("Tell me about the %q log event in the %s service.", le.Name, svc)
-	return func() tea.Msg { return appevents.DrawerPrompt{Text: text} }
+	return appevents.DrawerPromptCmd(text)
 }
 
 // View renders the detail: a header with service summary, then a log event table.
