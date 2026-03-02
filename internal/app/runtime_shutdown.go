@@ -7,6 +7,7 @@ func (m *Model) shutdown() {
 		m.sessionCancel()
 		m.sessionCancel = nil
 	}
+	m.sessionCtx = nil
 	if m.syncer != nil {
 		m.syncer.Stop()
 	}

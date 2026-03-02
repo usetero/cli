@@ -1,6 +1,7 @@
 package turn
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -20,7 +21,7 @@ func newTestTurn(t *testing.T) *Model {
 	// Stream runner and persister are nil — these tests exercise the state machine,
 	// not persistence or streaming. The returned tea.Cmds are never executed.
 	return New(theme, "conv-1", "acct-1", "user-1",
-		msgs.UserSubmittedInput{Text: "hi"}, 80, nil, nil, nil, nil, scope)
+		msgs.UserSubmittedInput{Text: "hi"}, 80, nil, nil, nil, context.Background(), nil, scope)
 }
 
 func TestHandleStreamUpdate(t *testing.T) {

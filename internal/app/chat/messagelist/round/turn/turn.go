@@ -54,6 +54,7 @@ type Model struct {
 	streamRunner       usecase.StreamRunner
 	streamErrorMapper  usecase.StreamErrorMapper
 	assistantPersister usecase.AssistantPersister
+	effectCtx          context.Context
 	toolRegistry       *chattools.Registry
 }
 
@@ -100,6 +101,7 @@ func New(
 	streamRunner usecase.StreamRunner,
 	streamErrorMapper usecase.StreamErrorMapper,
 	assistantPersister usecase.AssistantPersister,
+	effectCtx context.Context,
 	toolRegistry *chattools.Registry,
 	scope log.Scope,
 ) *Model {
@@ -116,6 +118,7 @@ func New(
 		streamRunner:       streamRunner,
 		streamErrorMapper:  streamErrorMapper,
 		assistantPersister: assistantPersister,
+		effectCtx:          effectCtx,
 		toolRegistry:       toolRegistry,
 	}
 }

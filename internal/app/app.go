@@ -68,6 +68,7 @@ type Model struct {
 
 	// Runtime (created after account selection / onboarding)
 	sessionCancel context.CancelFunc
+	sessionCtx    context.Context
 	db            sqlite.DB
 	uploader      upload.Uploader
 	chatClient    chatboundary.Client

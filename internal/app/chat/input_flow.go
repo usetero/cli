@@ -1,13 +1,12 @@
 package chat
 
 import (
-	"context"
-
 	tea "charm.land/bubbletea/v2"
 	msgs "github.com/usetero/cli/internal/app/chat/events"
 	appevents "github.com/usetero/cli/internal/app/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/sqlite"
 )
 
 // handleUserInput creates conversation if needed, then persists the user message.
@@ -32,7 +31,7 @@ func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 // createConversation creates a new conversation.
 func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
 		defer cancel()
 
 		convID, err := m.db.Conversations().Create(
@@ -61,7 +60,7 @@ type conversationCreated struct {
 // persistUserMessage saves the user message and updates in-memory request history.
 func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
 		defer cancel()
 
 		var msgID domain.MessageID

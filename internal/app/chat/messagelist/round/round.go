@@ -1,6 +1,7 @@
 package round
 
 import (
+	"context"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -60,6 +61,7 @@ type Model struct {
 	assistantPersister usecase.AssistantPersister
 	toolLoop           usecase.ToolLoop
 	toolRegistry       *chattools.Registry
+	effectCtx          context.Context
 }
 
 // New creates a new round from explicit user input.
@@ -90,6 +92,7 @@ func New(
 		streamRunner,
 		streamErrorMapper,
 		assistantPersister,
+		runtimeDeps.EffectContext,
 		toolRegistry,
 		scope,
 	)
@@ -110,6 +113,7 @@ func New(
 		assistantPersister: runtimeDeps.AssistantPersister,
 		toolLoop:           runtimeDeps.ToolLoop,
 		toolRegistry:       toolRegistry,
+		effectCtx:          runtimeDeps.EffectContext,
 	}
 }
 

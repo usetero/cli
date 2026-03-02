@@ -28,10 +28,12 @@ func (m *Model) startSync(accountID string) error {
 
 	// Create a session context that is cancelled on shutdown.
 	sessionCtx, cancel := context.WithCancel(m.ctx)
+	m.sessionCtx = sessionCtx
 	m.sessionCancel = cancel
 
 	if err := m.syncer.Start(sessionCtx, m.db, accountID, nil); err != nil {
 		cancel()
+		m.sessionCtx = nil
 		m.sessionCancel = nil
 		return err
 	}
@@ -103,7 +105,7 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 	// Create chat client with tool definitions
 	m.chatClient = chatboundary.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
 		WithAccountID(domain.AccountID(accountID))
-	m.runtimeDeps = usecase.NewRuntimeDeps(m.db, m.chatClient)
+	m.runtimeDeps = usecase.NewRuntimeDeps(m.db, m.chatClient).WithEffectContext(m.sessionCtx)
 
 	return catalogCmd, nil
 }

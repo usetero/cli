@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"context"
 	"time"
 
 	"charm.land/bubbles/v2/key"
@@ -9,6 +8,7 @@ import (
 
 	msgs "github.com/usetero/cli/internal/app/chat/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
+	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
@@ -45,7 +45,7 @@ func (m *Model) handleEmptyStatePoll() tea.Cmd {
 func (m *Model) fetchEmptyStateSummary() tea.Cmd {
 	db := m.db
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, time.Second)
 		defer cancel()
 		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
 		return emptyStateSummaryLoadedMsg{summary: summary, err: err}

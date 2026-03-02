@@ -1,7 +1,6 @@
 package round
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
+	"github.com/usetero/cli/internal/sqlite"
 )
 
 // startNextTurn persists tool results and creates the next turn using in-memory history.
@@ -22,7 +22,7 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		ctx, cancel := sqlite.WithTimeout(m.effectCtx, dbOpTimeout)
 		defer cancel()
 
 		prepared, err := m.toolLoop.PrepareNextTurn(ctx, usecase.PrepareNextTurnInput{
@@ -118,6 +118,7 @@ func (m *Model) handleNextTurnReady(msg nextTurnReady) tea.Cmd {
 		m.streamRunner,
 		m.streamErrorMapper,
 		m.assistantPersister,
+		m.effectCtx,
 		m.toolRegistry,
 		m.scope,
 	)

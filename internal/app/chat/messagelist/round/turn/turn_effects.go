@@ -1,11 +1,10 @@
 package turn
 
 import (
-	"context"
-
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/sqlite"
 )
 
 // persistAssistantMessage saves the assistant message to the database.
@@ -15,7 +14,7 @@ func (m *Model) persistAssistantMessage(msg *domain.Message) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		ctx, cancel := sqlite.WithTimeout(m.effectCtx, dbOpTimeout)
 		defer cancel()
 
 		msgID, err := m.assistantPersister.PersistAssistant(ctx, usecase.PersistAssistantInput{
