@@ -146,15 +146,15 @@ func (u *uploader) Run(ctx context.Context) error {
 	}
 }
 
-// uploadAll uploads all pending CRUD entries following the PowerSync protocol:
+// uploadAll uploads the next pending CRUD transaction following the PowerSync protocol:
 // 1. Read entries from queue
 // 2. Upload each to backend
 // 3. Fetch write checkpoint
 // 4. Complete batch atomically
 func (u *uploader) uploadAll(ctx context.Context) (int, error) {
-	entries, err := u.queue.GetAllEntries(ctx)
+	entries, err := u.queue.GetNextTransaction(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("get entries: %w", err)
+		return 0, fmt.Errorf("get next transaction: %w", err)
 	}
 	if len(entries) == 0 {
 		return 0, nil
@@ -168,8 +168,8 @@ func (u *uploader) uploadAll(ctx context.Context) (int, error) {
 
 	// Upload each entry to backend
 	emit := u.emitter(ctx)
-	for _, entry := range entries {
-		if err := u.uploadEntry(ctx, entry, emit); err != nil {
+	for i := range entries {
+		if err := u.uploadEntry(ctx, &entries[i], emit); err != nil {
 			return 0, err
 		}
 	}
