@@ -102,6 +102,12 @@ func (m *Model) handleLifecycleMessage(msg tea.Msg) updateDispatch {
 
 	case msgs.StreamFailed:
 		return updateDispatch{cmd: m.handleStreamFailed(msg), handled: true, stop: true}
+
+	case orphanedMessagesCleanupCompleted:
+		if msg.err != nil {
+			m.scope.Error("failed to cleanup orphaned messages", "count", len(msg.ids), "error", msg.err)
+		}
+		return updateDispatch{handled: true}
 	}
 
 	return updateDispatch{}

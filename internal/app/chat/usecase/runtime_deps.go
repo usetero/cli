@@ -11,6 +11,7 @@ type RuntimeDeps struct {
 	StreamErrorMapper  StreamErrorMapper
 	AssistantPersister AssistantPersister
 	ToolLoop           ToolLoop
+	OrphanCleaner      OrphanMessageCleaner
 }
 
 func NewRuntimeDeps(db sqlite.DB, client chatboundary.Client) RuntimeDeps {
@@ -20,5 +21,6 @@ func NewRuntimeDeps(db sqlite.DB, client chatboundary.Client) RuntimeDeps {
 		StreamErrorMapper:  NewChatBoundaryStreamErrorMapper(),
 		AssistantPersister: NewSQLiteAssistantPersister(db),
 		ToolLoop:           NewSQLiteToolLoop(db),
+		OrphanCleaner:      NewSQLiteOrphanMessageCleaner(db),
 	}
 }

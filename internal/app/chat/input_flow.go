@@ -19,14 +19,14 @@ func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 	}
 
 	// Cancel any in-flight round before starting a new one.
-	m.CancelActiveRound()
+	_, cancelCmd := m.CancelActiveRound()
 
 	// If no conversation yet, create one first (only for text input).
 	if m.conversationID == "" {
-		return m.createConversation(input)
+		return tea.Batch(cancelCmd, m.createConversation(input))
 	}
 
-	return m.persistUserMessage(input)
+	return tea.Batch(cancelCmd, m.persistUserMessage(input))
 }
 
 // createConversation creates a new conversation.

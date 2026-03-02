@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -57,28 +58,22 @@ func (m *Model) ConversationID() domain.ConversationID {
 }
 
 // CancelActiveRound cancels the active round if one exists.
-// Returns true if a round was cancelled.
-func (m *Model) CancelActiveRound() bool {
+// Returns true if a round was cancelled and a command for async cleanup.
+func (m *Model) CancelActiveRound() (bool, tea.Cmd) {
 	if !m.messageList.HasActiveRound() {
-		return false
+		return false, nil
 	}
 
 	last := m.messageList.LastRound()
 	m.messageList.CancelActiveRound()
 
-	// Clean up orphaned messages from DB — same as StreamFailed handler.
+	var cleanupCmd tea.Cmd
 	if last != nil {
 		ids := last.LastTurnMessageIDs()
 		if m.session != nil {
 			m.session.RemoveMessagesByID(ids)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
-		defer cancel()
-		for _, id := range ids {
-			if err := m.db.Messages().Delete(ctx, id); err != nil {
-				m.scope.Error("failed to delete orphaned message", "id", id, "error", err)
-			}
-		}
+		cleanupCmd = m.cleanupOrphanedMessages(ids)
 
 		// Turn 1: remove round entirely (no assistant content to show).
 		if !last.HasAssistantContent() {
@@ -86,10 +81,30 @@ func (m *Model) CancelActiveRound() bool {
 		}
 	}
 
-	return true
+	return true, cleanupCmd
 }
 
 // hasMessages returns true if there are messages to display.
 func (m *Model) hasMessages() bool {
 	return m.messageList.Len() > 0
+}
+
+type orphanedMessagesCleanupCompleted struct {
+	ids []domain.MessageID
+	err error
+}
+
+func (m *Model) cleanupOrphanedMessages(ids []domain.MessageID) tea.Cmd {
+	if len(ids) == 0 || m.runtimeDeps.OrphanCleaner == nil {
+		return nil
+	}
+	cleaner := m.runtimeDeps.OrphanCleaner
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
+		defer cancel()
+		return orphanedMessagesCleanupCompleted{
+			ids: ids,
+			err: cleaner.CleanupMessages(ctx, ids),
+		}
+	}
 }

@@ -88,8 +88,10 @@ func (m *Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 			return nil, true
 		}
 		// Esc cancels active round first; only show dialog if nothing to cancel.
-		if m.chat != nil && m.chat.CancelActiveRound() {
-			return nil, true
+		if m.chat != nil {
+			if cancelled, cmd := m.chat.CancelActiveRound(); cancelled {
+				return cmd, true
+			}
 		}
 		m.quitDlg = newQuitDialog(m.theme)
 		return nil, true

@@ -1,8 +1,6 @@
 package chat
 
 import (
-	"context"
-
 	tea "charm.land/bubbletea/v2"
 
 	msgs "github.com/usetero/cli/internal/app/chat/events"
@@ -65,18 +63,7 @@ func (m *Model) handleStreamFailed(msg msgs.StreamFailed) tea.Cmd {
 			if m.session != nil {
 				m.session.RemoveMessagesByID(ids)
 			}
-			db := m.db
-			scope := m.scope
-			cmds = append(cmds, func() tea.Msg {
-				ctx, cancel := context.WithTimeout(context.Background(), dbOpTimeout)
-				defer cancel()
-				for _, id := range ids {
-					if err := db.Messages().Delete(ctx, id); err != nil {
-						scope.Error("failed to delete orphaned message", "id", id, "error", err)
-					}
-				}
-				return nil
-			})
+			cmds = append(cmds, m.cleanupOrphanedMessages(ids))
 		}
 
 		// Turn 1: remove round entirely, input bar restores text via pendingText.

@@ -177,7 +177,11 @@ func TestCancelActiveRound(t *testing.T) {
 		}
 
 		// Cancel the active round (simulates ESC).
-		m.CancelActiveRound()
+		cancelled, cmd := m.CancelActiveRound()
+		if !cancelled {
+			t.Fatal("expected active round to be cancelled")
+		}
+		teatest.DrainCmds(m.Update, cmd, 20)
 
 		// The orphaned user message should be cleaned up.
 		messages = listMessages(t, m)
@@ -192,7 +196,10 @@ func TestCancelActiveRound(t *testing.T) {
 
 		// First submit + cancel.
 		submitAndDrain(m, "first", 20)
-		m.CancelActiveRound()
+		cancelled, cmd := m.CancelActiveRound()
+		if cancelled {
+			teatest.DrainCmds(m.Update, cmd, 20)
+		}
 
 		// Second submit — should complete normally.
 		submitAndDrain(m, "second", 50)
