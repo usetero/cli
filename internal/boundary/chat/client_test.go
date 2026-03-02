@@ -278,6 +278,42 @@ func TestClient_Stream(t *testing.T) {
 		}
 	})
 
+	t.Run("non-200 error body in returned error is truncated", func(t *testing.T) {
+		t.Parallel()
+
+		longBody := "secret-token=abc123 " + strings.Repeat("x", 400)
+		httpClient := &mockHTTPClient{
+			doFunc: func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusBadRequest,
+					Body:       io.NopCloser(strings.NewReader(longBody)),
+				}, nil
+			},
+		}
+
+		mockAuth := &authtest.MockAuth{
+			GetAccessTokenFunc: func(ctx context.Context) (string, error) {
+				return "token", nil
+			},
+		}
+
+		client := chat.NewClientWithHTTP("https://api.example.com", mockAuth, httpClient, logtest.NewScope(t), nil)
+
+		_, err := client.Stream(context.Background(), validRequest(), func(msg *domain.Message) {})
+		if err == nil {
+			t.Fatal("Stream() expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "400") {
+			t.Fatalf("error = %q, want to contain 400", err.Error())
+		}
+		if strings.Contains(err.Error(), strings.Repeat("x", 300)) {
+			t.Fatalf("error unexpectedly contains full response body: %q", err.Error())
+		}
+		if !strings.Contains(err.Error(), "secret-token=abc123") {
+			t.Fatalf("error should include a short preview for debugging: %q", err.Error())
+		}
+	})
+
 	t.Run("returns error on wrong content type", func(t *testing.T) {
 		t.Parallel()
 

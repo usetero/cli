@@ -10,7 +10,9 @@ package chat
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +34,7 @@ const (
 	retryWaitMin         = 100 * time.Millisecond
 	retryWaitMax         = 2 * time.Second
 	defaultStreamTimeout = 10 * time.Minute
+	maxErrorBodyPreview  = 256
 )
 
 // HTTPDoer is the interface for making HTTP requests.
@@ -202,13 +205,17 @@ func (c *client) StreamSnapshots(ctx context.Context, req Request, onSnapshot fu
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
+		bodyPreview, bodyHash, bodyTruncated := summarizeErrorBody(respBody)
 		c.scope.Error("chat API returned error",
 			log.Int("status", resp.StatusCode),
 			log.String("url", url),
-			log.String("body", string(respBody)),
+			log.String("body_preview", bodyPreview),
+			log.String("body_sha256", bodyHash),
+			log.Int("body_bytes", len(respBody)),
+			log.Bool("body_truncated", bodyTruncated),
 			log.String("account_id", accountID.String()),
 		)
-		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("chat API error %d: %s", resp.StatusCode, bodyPreview)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -355,4 +362,22 @@ func summarizeToolLineage(messages []domain.Message) string {
 		}
 	}
 	return fmt.Sprintf("tool_use_ids=[%s] tool_result_ids=[%s]", strings.Join(toolUses, ","), strings.Join(toolResults, ","))
+}
+
+func summarizeErrorBody(body []byte) (preview, sha string, truncated bool) {
+	sum := sha256.Sum256(body)
+	sha = hex.EncodeToString(sum[:])
+
+	if len(body) == 0 {
+		return "(empty)", sha, false
+	}
+	text := strings.TrimSpace(string(body))
+	text = strings.Join(strings.Fields(text), " ")
+	if text == "" {
+		return "(empty)", sha, false
+	}
+	if len(text) <= maxErrorBodyPreview {
+		return text, sha, false
+	}
+	return text[:maxErrorBodyPreview] + "...", sha, true
 }
