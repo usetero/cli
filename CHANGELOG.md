@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.23.0](https://github.com/usetero/cli/compare/v1.22.3...v1.23.0) (2026-03-04)
+
+
+### Features
+
+* add debug sync capture workflow ([e4c5ed3](https://github.com/usetero/cli/commit/e4c5ed3d3a7c02eee35901f1d9393533289c4103))
+* add structured debug task workflows ([1a5d555](https://github.com/usetero/cli/commit/1a5d555a0417c38fe4134855571cc65a9fcd84e3))
+* add sync and data debug workflows ([f859fd6](https://github.com/usetero/cli/commit/f859fd62a9309a1f9ded0d6b998bc4e6471ee7fd))
+
+
+### Bug Fixes
+
+* add onboarding gate telemetry and polish stage copy ([88e11b3](https://github.com/usetero/cli/commit/88e11b3a045a12e2d637690dc68742592c5e60f1))
+* decouple discovery poll ticks from fetch execution ([47c3464](https://github.com/usetero/cli/commit/47c346463a1e09b72e763551de1001959c51ea1a))
+* harden onboarding completion and state invariants ([4298fc5](https://github.com/usetero/cli/commit/4298fc559a4e561a9e4228b23db3c12c95db9408))
+* harden onboarding gate recovery and transition contracts ([e0a716a](https://github.com/usetero/cli/commit/e0a716ada19c9e646df7da37998766a92c2c58d7))
+* harden task env wrapper for doppler config selection ([2e18063](https://github.com/usetero/cli/commit/2e1806360fd62a2c6d6bc8173d6a5b6d445108b8))
+* improve onboarding stage feedback and guard unsupported gates ([2f0fbd1](https://github.com/usetero/cli/commit/2f0fbd196696c4a258e46001ea15cc01165ef00a))
+* log slow app update and render paths ([bba63a0](https://github.com/usetero/cli/commit/bba63a0c1f6aecb3777159926dfd4f6ec526c465))
+* make chat empty-state polling async ([aff19d5](https://github.com/usetero/cli/commit/aff19d5990ffde51405e2f1b46f6c3682dca6901))
+* prevent statusbar polling from starving UI responsiveness ([4185229](https://github.com/usetero/cli/commit/418522956eb7b46f6b992c31ce7fe86465fd35f4))
+* process uploader queue one transaction at a time ([8b838c0](https://github.com/usetero/cli/commit/8b838c08ed75d3a1356607fbccbcca16a22548ca))
+* require runtime init gate before onboarding sync ([5be61c6](https://github.com/usetero/cli/commit/5be61c6bcf5966b8deae3cc7dbe124a483256383))
+* sanitize and bound chat API error body logging ([0b2404d](https://github.com/usetero/cli/commit/0b2404dfad908644e3ffc537bbdc854628cfeea4))
+* scope statusbar polling messages per tab ([87681df](https://github.com/usetero/cli/commit/87681dfac5d7f3a0d38783aff552d1bd6a83b450))
+* show onboarding preflight progress without hiding stage feedback ([e505d0e](https://github.com/usetero/cli/commit/e505d0e6d76948ace493e22748cd1d9fd502ca9f))
+* surface onboarding backend errors and speed auth polling ([0f29905](https://github.com/usetero/cli/commit/0f299054fb9faed016d5722ae8f8801a11a161d6))
+
 ## [1.22.3](https://github.com/usetero/cli/compare/v1.22.2...v1.22.3) (2026-02-26)
 
 
