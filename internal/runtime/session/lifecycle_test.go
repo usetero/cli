@@ -4,12 +4,28 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/infrastructure/logging/logtest"
 	"github.com/usetero/cli/internal/infrastructure/sqlite"
 	"github.com/usetero/cli/internal/runtime/session/sessiontest"
 )
+
+type gatedStorage struct {
+	path        sqlite.DatabasePath
+	acc2PathHit chan struct{}
+}
+
+func (s gatedStorage) DatabasePath(accountID sqlite.AccountID) (sqlite.DatabasePath, error) {
+	if accountID == sqlite.AccountID("acc_2") {
+		select {
+		case s.acc2PathHit <- struct{}{}:
+		default:
+		}
+	}
+	return s.path, nil
+}
 
 func TestService_Switch(t *testing.T) {
 	t.Parallel()
@@ -92,5 +108,100 @@ func TestService_StartOpenDBError(t *testing.T) {
 
 	if err := svc.Start(context.Background(), "acc_1"); err == nil {
 		t.Fatalf("expected open db error")
+	}
+}
+
+func TestService_ConcurrentStartWaitsForStop(t *testing.T) {
+	t.Parallel()
+
+	storage := gatedStorage{
+		path:        sqlite.DatabasePath(t.TempDir() + "/session.sqlite"),
+		acc2PathHit: make(chan struct{}, 1),
+	}
+
+	firstUploaderExit := make(chan struct{})
+	firstUploaderCanceled := make(chan struct{}, 1)
+	uploaderCalls := 0
+
+	svc, err := NewService(
+		storage,
+		func() (Syncer, error) { return &sessiontest.Syncer{Ready: true}, nil },
+		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
+			uploaderCalls++
+			uploader := sessiontest.NewUploader()
+			if uploaderCalls == 1 {
+				uploader.RunFn = func(ctx context.Context) error {
+					<-ctx.Done()
+					select {
+					case firstUploaderCanceled <- struct{}{}:
+					default:
+					}
+					<-firstUploaderExit
+					return ctx.Err()
+				}
+			}
+			return uploader, nil
+		},
+		logtest.NewScope(t),
+	)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+	svc.setOpenDB(openBareDB(t))
+
+	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {
+		t.Fatalf("start acc_1: %v", err)
+	}
+
+	stopDone := make(chan error, 1)
+	go func() {
+		stopDone <- svc.Stop()
+	}()
+
+	select {
+	case <-firstUploaderCanceled:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timed out waiting for first uploader cancellation")
+	}
+
+	start2Done := make(chan error, 1)
+	go func() {
+		start2Done <- svc.Start(context.Background(), tenancy.AccountID("acc_2"))
+	}()
+
+	select {
+	case <-storage.acc2PathHit:
+		t.Fatalf("start acc_2 progressed before stop completed")
+	case <-time.After(150 * time.Millisecond):
+	}
+
+	close(firstUploaderExit)
+
+	select {
+	case err := <-stopDone:
+		if err != nil {
+			t.Fatalf("stop failed: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timed out waiting for stop completion")
+	}
+
+	select {
+	case err := <-start2Done:
+		if err != nil {
+			t.Fatalf("start acc_2 failed: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timed out waiting for acc_2 start")
+	}
+
+	select {
+	case <-storage.acc2PathHit:
+	default:
+		t.Fatalf("expected acc_2 database path resolution after stop completion")
+	}
+
+	if err := svc.Stop(); err != nil {
+		t.Fatalf("final stop: %v", err)
 	}
 }

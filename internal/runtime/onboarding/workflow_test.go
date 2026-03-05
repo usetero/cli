@@ -13,6 +13,11 @@ import (
 
 type behaviorPrefs struct {
 	snapshot preferences.Snapshot
+
+	setOrganizationCalls int
+	setAccountCalls      int
+	setWorkspaceCalls    int
+	setScopeCalls        int
 }
 
 func (f *behaviorPrefs) Snapshot(context.Context) (preferences.Snapshot, error) {
@@ -23,17 +28,27 @@ func (f *behaviorPrefs) SetRole(_ context.Context, role preferences.Role) error 
 	return nil
 }
 func (f *behaviorPrefs) SetOrganization(_ context.Context, orgID tenancy.OrganizationID) error {
+	f.setOrganizationCalls++
 	f.snapshot.Organization = orgID
 	f.snapshot.Account = ""
 	f.snapshot.Workspace = ""
 	return nil
 }
 func (f *behaviorPrefs) SetAccount(_ context.Context, accountID tenancy.AccountID) error {
+	f.setAccountCalls++
 	f.snapshot.Account = accountID
 	f.snapshot.Workspace = ""
 	return nil
 }
 func (f *behaviorPrefs) SetWorkspace(_ context.Context, workspaceID tenancy.WorkspaceID) error {
+	f.setWorkspaceCalls++
+	f.snapshot.Workspace = workspaceID
+	return nil
+}
+func (f *behaviorPrefs) SetScope(_ context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error {
+	f.setScopeCalls++
+	f.snapshot.Organization = orgID
+	f.snapshot.Account = accountID
 	f.snapshot.Workspace = workspaceID
 	return nil
 }
@@ -158,6 +173,12 @@ func TestCreateOrganization_AppliesBootstrapScope(t *testing.T) {
 	}
 	if state.NextStep != StepDatadogRegion {
 		t.Fatalf("expected datadog region next, got %q", state.NextStep)
+	}
+	if prefs.setScopeCalls != 1 {
+		t.Fatalf("expected exactly one SetScope call, got %d", prefs.setScopeCalls)
+	}
+	if prefs.setOrganizationCalls != 0 || prefs.setAccountCalls != 0 || prefs.setWorkspaceCalls != 0 {
+		t.Fatalf("expected no partial scope writes, got setOrg=%d setAccount=%d setWorkspace=%d", prefs.setOrganizationCalls, prefs.setAccountCalls, prefs.setWorkspaceCalls)
 	}
 }
 

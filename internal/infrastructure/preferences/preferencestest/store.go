@@ -8,9 +8,10 @@ import (
 
 // Store is an in-memory preferences store with optional failure hooks.
 type Store struct {
-	Snapshot domainprefs.Snapshot
-	LoadErr  error
-	SaveErr  error
+	Snapshot  domainprefs.Snapshot
+	LoadErr   error
+	SaveErr   error
+	SaveCalls int
 }
 
 func (s *Store) Load(context.Context) (domainprefs.Snapshot, error) {
@@ -21,6 +22,7 @@ func (s *Store) Load(context.Context) (domainprefs.Snapshot, error) {
 }
 
 func (s *Store) Save(_ context.Context, snapshot domainprefs.Snapshot) error {
+	s.SaveCalls++
 	if s.SaveErr != nil {
 		return s.SaveErr
 	}

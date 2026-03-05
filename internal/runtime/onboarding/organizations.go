@@ -25,13 +25,7 @@ func (s *Service) CreateOrganization(ctx context.Context, name string) (State, e
 	if err != nil {
 		return State{}, err
 	}
-	if err := s.preferences.SetOrganization(ctx, bootstrap.Organization.ID); err != nil {
-		return State{}, err
-	}
-	if err := s.preferences.SetAccount(ctx, bootstrap.Account.ID); err != nil {
-		return State{}, err
-	}
-	if err := s.preferences.SetWorkspace(ctx, bootstrap.Workspace.ID); err != nil {
+	if err := s.preferences.SetScope(ctx, bootstrap.Organization.ID, bootstrap.Account.ID, bootstrap.Workspace.ID); err != nil {
 		return State{}, err
 	}
 	return s.State(ctx)

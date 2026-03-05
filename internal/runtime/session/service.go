@@ -45,14 +45,15 @@ type Service struct {
 	openDB      dbOpenFunc
 	log         logging.Scope
 
-	mu       sync.RWMutex
-	state    State
-	db       *sqlite.DB
-	syncer   Syncer
-	uploader Uploader
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	events   chan Event
+	lifecycleMu sync.Mutex
+	mu          sync.RWMutex
+	state       State
+	db          *sqlite.DB
+	syncer      Syncer
+	uploader    Uploader
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	events      chan Event
 }
 
 // NewService constructs the account runtime session service.

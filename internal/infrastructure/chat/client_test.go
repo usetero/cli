@@ -63,3 +63,42 @@ func TestClientStreamHTTPError(t *testing.T) {
 		t.Fatalf("expected HTTPError, got %T (%v)", err, err)
 	}
 }
+
+func TestClientStream_InvalidContentType(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"ok":true}`)
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL, nil)
+	_, err := client.Stream(context.Background(), Request{
+		ConversationID: "e7fdf7ec-fce5-4ca6-a572-bfd6bf8df3c8",
+		Messages:       []Message{{Role: RoleUser, Content: []Block{{Type: BlockTypeText, Text: &Text{Content: "hi"}}}}},
+	}, nil)
+	if err == nil || !strings.Contains(err.Error(), "expected text/event-stream") {
+		t.Fatalf("expected content-type error, got %v", err)
+	}
+}
+
+func TestClientStream_FallsBackToRequestConversationID(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"chat_stream_version\":\"v2\",\"turn_id\":\"turn-1\",\"seq\":1,\"type\":\"text_delta\",\"text\":{\"content\":\"hello\"}}\n")
+		_, _ = io.WriteString(w, "data: [DONE]\n")
+	}))
+	defer ts.Close()
+
+	req := Request{
+		ConversationID: "e7fdf7ec-fce5-4ca6-a572-bfd6bf8df3c8",
+		Messages:       []Message{{Role: RoleUser, Content: []Block{{Type: BlockTypeText, Text: &Text{Content: "hi"}}}}},
+	}
+	client := NewClient(ts.URL, nil)
+	res, err := client.Stream(context.Background(), req, nil)
+	if err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	if res.ConversationID != req.ConversationID {
+		t.Fatalf("expected fallback conversation id %q, got %q", req.ConversationID, res.ConversationID)
+	}
+}

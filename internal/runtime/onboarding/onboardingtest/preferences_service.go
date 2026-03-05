@@ -33,6 +33,12 @@ func (s *PreferenceService) SetWorkspace(_ context.Context, workspaceID tenancy.
 	s.SnapshotValue.Workspace = workspaceID
 	return nil
 }
+func (s *PreferenceService) SetScope(_ context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error {
+	s.SnapshotValue.Organization = orgID
+	s.SnapshotValue.Account = accountID
+	s.SnapshotValue.Workspace = workspaceID
+	return nil
+}
 func (s *PreferenceService) ClearScope(_ context.Context) error {
 	s.SnapshotValue.Organization = ""
 	s.SnapshotValue.Account = ""

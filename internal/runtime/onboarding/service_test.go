@@ -2,6 +2,7 @@ package onboarding
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/usetero/cli/internal/domains/integrations"
@@ -160,4 +161,111 @@ func TestState_DatadogAndPowerSyncOrdering(t *testing.T) {
 	if state.NextStep != StepPowerSyncReady {
 		t.Fatalf("expected powersync step, got %q", state.NextStep)
 	}
+}
+
+func TestState_StaleAccountPreferenceRequiresSelection(t *testing.T) {
+	svc := newServiceForTest(
+		preferences.Snapshot{
+			Role:         preferences.RoleEngineer,
+			Organization: "org_1",
+			Account:      "acct_stale",
+		},
+		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		map[tenancy.OrganizationID][]tenancy.Account{
+			"org_1": {{ID: "acct_1", Name: "A1"}, {ID: "acct_2", Name: "A2"}},
+		},
+		map[tenancy.AccountID][]tenancy.Workspace{},
+		nil,
+		nil,
+		false,
+	)
+
+	state, err := svc.State(context.Background())
+	if err != nil {
+		t.Fatalf("state: %v", err)
+	}
+	if state.SelectedAccount != nil {
+		t.Fatalf("expected stale account preference to be ignored, got %+v", state.SelectedAccount)
+	}
+	if state.NextStep != StepAccountSelect {
+		t.Fatalf("expected account select next step, got %q", state.NextStep)
+	}
+}
+
+func TestState_StaleWorkspacePreferenceRequiresSelection(t *testing.T) {
+	svc := newServiceForTest(
+		preferences.Snapshot{
+			Role:         preferences.RolePlatform,
+			Organization: "org_1",
+			Account:      "acct_1",
+			Workspace:    "ws_stale",
+		},
+		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		map[tenancy.OrganizationID][]tenancy.Account{
+			"org_1": {{ID: "acct_1", Name: "A1"}},
+		},
+		map[tenancy.AccountID][]tenancy.Workspace{
+			"acct_1": {
+				{ID: "ws_1", AccountID: "acct_1", Name: "Main"},
+				{ID: "ws_2", AccountID: "acct_1", Name: "Secondary"},
+			},
+		},
+		nil,
+		nil,
+		false,
+	)
+
+	state, err := svc.State(context.Background())
+	if err != nil {
+		t.Fatalf("state: %v", err)
+	}
+	if state.SelectedWorkspace != nil {
+		t.Fatalf("expected stale workspace preference to be ignored, got %+v", state.SelectedWorkspace)
+	}
+	if state.NextStep != StepWorkspaceSelect {
+		t.Fatalf("expected workspace select next step, got %q", state.NextStep)
+	}
+}
+
+func TestState_PropagatesReadinessErrors(t *testing.T) {
+	svc, err := NewService(
+		&onboardingtest.PreferenceService{SnapshotValue: preferences.Snapshot{
+			Role:         preferences.RolePlatform,
+			Organization: "org_1",
+			Account:      "acct_1",
+			Workspace:    "ws_1",
+		}},
+		&onboardingtest.OrganizationService{ListValue: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}}},
+		func(organizationID tenancy.OrganizationID) tenancy.AccountService {
+			return &onboardingtest.AccountService{ListValue: []tenancy.Account{{ID: "acct_1", Name: "A1"}}}
+		},
+		&onboardingtest.WorkspaceService{ListByAccountValue: map[tenancy.AccountID][]tenancy.Workspace{
+			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "W1"}},
+		}},
+		&onboardingtest.DatadogService{
+			ByAccountValue: map[tenancy.AccountID]*integrations.DatadogAccount{
+				"acct_1": {ID: "dd_1", Name: "DD", Site: integrations.DatadogSiteUS1},
+			},
+			StatusValue: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
+				"dd_1": {ReadyForUse: true},
+			},
+		},
+		readinessErr{err: errors.New("readiness unavailable")},
+	)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+
+	_, err = svc.State(context.Background())
+	if err == nil || err.Error() != "readiness unavailable" {
+		t.Fatalf("expected readiness error passthrough, got %v", err)
+	}
+}
+
+type readinessErr struct {
+	err error
+}
+
+func (r readinessErr) Ready(context.Context) (bool, error) {
+	return false, r.err
 }

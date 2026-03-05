@@ -20,6 +20,7 @@ type PreferenceService interface {
 	SetOrganization(ctx context.Context, orgID tenancy.OrganizationID) error
 	SetAccount(ctx context.Context, accountID tenancy.AccountID) error
 	SetWorkspace(ctx context.Context, workspaceID tenancy.WorkspaceID) error
+	SetScope(ctx context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error
 	ClearScope(ctx context.Context) error
 }
 
@@ -74,6 +75,23 @@ func (s *Service) SetWorkspace(ctx context.Context, workspaceID tenancy.Workspac
 		return fmt.Errorf("workspace id is required")
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
+		snapshot.Workspace = workspaceID
+	})
+}
+
+func (s *Service) SetScope(ctx context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error {
+	if orgID == "" {
+		return fmt.Errorf("organization id is required")
+	}
+	if accountID == "" {
+		return fmt.Errorf("account id is required")
+	}
+	if workspaceID == "" {
+		return fmt.Errorf("workspace id is required")
+	}
+	return s.update(ctx, func(snapshot *Snapshot) {
+		snapshot.Organization = orgID
+		snapshot.Account = accountID
 		snapshot.Workspace = workspaceID
 	})
 }

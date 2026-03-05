@@ -9,7 +9,12 @@ func (s *Service) Stop() error {
 	if s == nil {
 		return nil
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+	return s.stopLocked()
+}
 
+func (s *Service) stopLocked() error {
 	s.mu.Lock()
 	if !s.state.Running {
 		s.mu.Unlock()

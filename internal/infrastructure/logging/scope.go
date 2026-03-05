@@ -2,13 +2,14 @@ package logging
 
 // Scope wraps a logger with a hierarchical scope path.
 type Scope struct {
-	logger Logger
-	path   string
+	base  Logger
+	attrs []any
+	path  string
 }
 
 // RootScope creates the root scope.
 func RootScope(logger Logger) Scope {
-	return Scope{logger: logger}
+	return Scope{base: logger}
 }
 
 // Child returns a new nested scope.
@@ -17,7 +18,11 @@ func (s Scope) Child(name string) Scope {
 	if s.path != "" {
 		path = s.path + "/" + name
 	}
-	return Scope{logger: s.logger.With("scope", path), path: path}
+	return Scope{
+		base:  s.base,
+		attrs: append([]any(nil), s.attrs...),
+		path:  path,
+	}
 }
 
 // Path returns the scope path.
@@ -27,10 +32,30 @@ func (s Scope) Path() string {
 
 // With adds context fields to the logger.
 func (s Scope) With(args ...any) Scope {
-	return Scope{logger: s.logger.With(args...), path: s.path}
+	nextAttrs := append([]any(nil), s.attrs...)
+	nextAttrs = append(nextAttrs, args...)
+	return Scope{
+		base:  s.base,
+		attrs: nextAttrs,
+		path:  s.path,
+	}
 }
 
-func (s Scope) Debug(msg string, args ...any) { s.logger.Debug(msg, args...) }
-func (s Scope) Info(msg string, args ...any)  { s.logger.Info(msg, args...) }
-func (s Scope) Warn(msg string, args ...any)  { s.logger.Warn(msg, args...) }
-func (s Scope) Error(msg string, args ...any) { s.logger.Error(msg, args...) }
+func (s Scope) logger() Logger {
+	l := s.base
+	if l == nil {
+		return NewWithWriter(nil, LevelInfo)
+	}
+	if len(s.attrs) > 0 {
+		l = l.With(s.attrs...)
+	}
+	if s.path != "" {
+		l = l.With("scope", s.path)
+	}
+	return l
+}
+
+func (s Scope) Debug(msg string, args ...any) { s.logger().Debug(msg, args...) }
+func (s Scope) Info(msg string, args ...any)  { s.logger().Info(msg, args...) }
+func (s Scope) Warn(msg string, args ...any)  { s.logger().Warn(msg, args...) }
+func (s Scope) Error(msg string, args ...any) { s.logger().Error(msg, args...) }

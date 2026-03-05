@@ -132,6 +132,60 @@ func TestSignOut(t *testing.T) {
 	}
 }
 
+func TestGetAccessToken_ReturnsCachedTokenWhenNotExpired(t *testing.T) {
+	t.Parallel()
+
+	store := &identitytest.TokenStore{
+		AccessTokenValue:  identity.AccessToken(makeJWT(time.Now().Add(10 * time.Minute))),
+		RefreshTokenValue: identity.RefreshToken("refresh_1"),
+	}
+
+	refreshCalled := false
+	s := identity.NewService(identitytest.Provider{
+		StartDeviceAuthFn: func(context.Context) (identity.DeviceFlow, error) { return identity.DeviceFlow{}, nil },
+		PollAuthenticationFn: func(context.Context, string) (identity.Tokens, identity.User, error) {
+			return identity.Tokens{}, identity.User{}, nil
+		},
+		RefreshFn: func(context.Context, identity.RefreshToken, identity.ProviderOrgID) (identity.Tokens, error) {
+			refreshCalled = true
+			return identity.Tokens{}, nil
+		},
+	}, store, identity.NopLogger{})
+
+	got, err := s.GetAccessToken(context.Background())
+	if err != nil {
+		t.Fatalf("get access token: %v", err)
+	}
+	if got != string(store.AccessTokenValue) {
+		t.Fatalf("expected cached access token, got %q", got)
+	}
+	if refreshCalled {
+		t.Fatalf("refresh should not be called when token is still valid")
+	}
+}
+
+func TestGetAccessToken_ExpiredTokenWithoutRefreshReturnsNotAuthenticated(t *testing.T) {
+	t.Parallel()
+
+	s := identity.NewService(identitytest.Provider{
+		StartDeviceAuthFn: func(context.Context) (identity.DeviceFlow, error) { return identity.DeviceFlow{}, nil },
+		PollAuthenticationFn: func(context.Context, string) (identity.Tokens, identity.User, error) {
+			return identity.Tokens{}, identity.User{}, nil
+		},
+		RefreshFn: func(context.Context, identity.RefreshToken, identity.ProviderOrgID) (identity.Tokens, error) {
+			return identity.Tokens{}, nil
+		},
+	}, &identitytest.TokenStore{
+		AccessTokenValue:  identity.AccessToken(makeJWT(time.Now().Add(-1 * time.Minute))),
+		RefreshTokenValue: "",
+	}, identity.NopLogger{})
+
+	_, err := s.GetAccessToken(context.Background())
+	if !errors.Is(err, identity.ErrNotAuthenticated) {
+		t.Fatalf("expected ErrNotAuthenticated, got %v", err)
+	}
+}
+
 func makeJWT(exp time.Time) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
 	payload, _ := json.Marshal(map[string]any{"exp": exp.Unix()})

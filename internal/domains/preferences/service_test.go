@@ -46,3 +46,24 @@ func TestService_SetRoleRejectsInvalid(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestService_SetScopePersistsAllSelectionsInSingleWrite(t *testing.T) {
+	store := &preferencestest.Store{}
+	svc := domainprefs.NewService(store)
+
+	if err := svc.SetScope(context.Background(), "org_1", "acct_1", "ws_1"); err != nil {
+		t.Fatalf("set scope: %v", err)
+	}
+
+	if store.SaveCalls != 1 {
+		t.Fatalf("expected one save call, got %d", store.SaveCalls)
+	}
+
+	got, err := svc.Snapshot(context.Background())
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if got.Organization != "org_1" || got.Account != "acct_1" || got.Workspace != "ws_1" {
+		t.Fatalf("scope mismatch: %+v", got)
+	}
+}

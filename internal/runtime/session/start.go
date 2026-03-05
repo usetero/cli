@@ -12,7 +12,12 @@ func (s *Service) Start(ctx context.Context, accountID tenancy.AccountID) error 
 	if err := s.validateStart(accountID); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+	return s.startLocked(ctx, accountID)
+}
 
+func (s *Service) startLocked(ctx context.Context, accountID tenancy.AccountID) error {
 	s.mu.Lock()
 	if s.state.Running {
 		s.mu.Unlock()

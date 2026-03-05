@@ -182,6 +182,7 @@ func TestRuntime_ToolUseRunsSecondTurn(t *testing.T) {
 			if len(st.Messages) == 0 || st.Messages[len(st.Messages)-1].Content != "after tool" {
 				t.Fatalf("expected final assistant message after tool, got %+v", st.Messages)
 			}
+			assertNoEmptyAssistantMessages(t, st.Messages)
 			return
 		}
 		select {
@@ -272,6 +273,7 @@ func TestRuntime_ToolUseUnknownAndErrorStillContinue(t *testing.T) {
 			if !sawFinalAssistant {
 				t.Fatalf("expected final assistant message after tool errors, got %+v", st.Messages)
 			}
+			assertNoEmptyAssistantMessages(t, st.Messages)
 			return
 		}
 		select {
@@ -294,5 +296,14 @@ func TestRuntime_NewValidation(t *testing.T) {
 	}
 	if _, err := New(newConversationService(), newMessageService(), nil); err == nil {
 		t.Fatalf("expected client validation error")
+	}
+}
+
+func assertNoEmptyAssistantMessages(t *testing.T, messages []MessageView) {
+	t.Helper()
+	for i := range messages {
+		if messages[i].Role == domainchat.RoleAssistant && messages[i].Content == "" {
+			t.Fatalf("unexpected empty assistant message at index %d: %+v", i, messages[i])
+		}
 	}
 }

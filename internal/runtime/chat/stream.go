@@ -46,6 +46,9 @@ func (r *Runtime) runStream(ctx context.Context, conversationID domainchat.Conve
 		toolResults, summary := r.executeToolUses(ctx, toolUses)
 
 		r.mu.Lock()
+		if assistantText == "" {
+			r.removeAssistantPlaceholderIfEmptyLocked(assistantIndex)
+		}
 		r.history = append(r.history, assistantToolUseWireMessage(toolUses...))
 		r.history = append(r.history, toolResultWireMessage(toolResults...))
 		r.state.Messages = append(r.state.Messages, MessageView{
@@ -69,6 +72,17 @@ func (r *Runtime) appendAssistantPlaceholder() int {
 	})
 	r.publishLocked()
 	return idx
+}
+
+func (r *Runtime) removeAssistantPlaceholderIfEmptyLocked(index int) {
+	if index < 0 || index >= len(r.state.Messages) {
+		return
+	}
+	msg := r.state.Messages[index]
+	if msg.Role != domainchat.RoleAssistant || msg.Content != "" {
+		return
+	}
+	r.state.Messages = append(r.state.Messages[:index], r.state.Messages[index+1:]...)
 }
 
 func (r *Runtime) finishStreamWithError(err error) {
