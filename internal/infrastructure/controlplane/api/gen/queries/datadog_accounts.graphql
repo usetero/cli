@@ -1,0 +1,79 @@
+query GetAccount($id: ID!) {
+    accounts(where: { id: $id }, first: 1) {
+        edges {
+            node {
+                id
+                datadogAccount {
+                    id
+                    name
+                    site
+                }
+            }
+        }
+    }
+}
+
+mutation CreateDatadogAccountWithCredentials(
+    $input: CreateDatadogAccountWithCredentialsInput!
+) {
+    createDatadogAccount(input: $input) {
+        id
+        name
+        site
+        createdAt
+        updatedAt
+    }
+}
+
+mutation ValidateDatadogApiKey($input: ValidateDatadogApiKeyInput!) {
+    validateDatadogApiKey(input: $input) {
+        valid
+        error
+    }
+}
+
+query GetDatadogAccountStatus($id: ID!) {
+    datadogAccounts(where: { id: $id }, first: 1) {
+        edges {
+            node {
+                id
+                status {
+                    health
+                    readyForUse
+                    logEventCount
+                    logEventAnalyzedCount
+                    logServiceCount
+                    logActiveServices
+                    disabledServices
+                    inactiveServices
+                    okServices
+                    policyPendingCount
+                    policyApprovedCount
+                    policyDismissedCount
+                    serviceVolumePerHour
+                    serviceCostPerHourVolumeUsd
+                    logEventVolumePerHour
+                    logEventBytesPerHour
+                    logEventCostPerHourBytesUsd
+                    logEventCostPerHourVolumeUsd
+                    logEventCostPerHourUsd
+                    estimatedVolumeReductionPerHour
+                    estimatedBytesReductionPerHour
+                    estimatedCostReductionPerHourBytesUsd
+                    estimatedCostReductionPerHourVolumeUsd
+                    estimatedCostReductionPerHourUsd
+                    observedVolumePerHourBefore
+                    observedVolumePerHourAfter
+                    observedBytesPerHourBefore
+                    observedBytesPerHourAfter
+                    observedCostPerHourBeforeBytesUsd
+                    observedCostPerHourBeforeVolumeUsd
+                    observedCostPerHourBeforeUsd
+                    observedCostPerHourAfterBytesUsd
+                    observedCostPerHourAfterVolumeUsd
+                    observedCostPerHourAfterUsd
+                }
+            }
+        }
+    }
+}

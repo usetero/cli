@@ -1,0 +1,20 @@
+query ListAccounts($organizationID: ID!) {
+    accounts(where: { organizationID: $organizationID }) {
+        edges {
+            node {
+                id
+                name
+                createdAt
+            }
+        }
+        totalCount
+    }
+}
+
+mutation CreateAccount($input: CreateAccountInput!) {
+    createAccount(input: $input) {
+        id
+        name
+        createdAt
+    }
+}

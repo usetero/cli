@@ -9,12 +9,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/internal/auth"
-	"github.com/usetero/cli/internal/config"
-	"github.com/usetero/cli/internal/keyring"
-	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/workos"
-	workosadmin "github.com/usetero/cli/internal/workos/admin"
+	"github.com/usetero/cli/_internal_legacy/auth"
+	"github.com/usetero/cli/_internal_legacy/config"
+	"github.com/usetero/cli/_internal_legacy/keyring"
+	"github.com/usetero/cli/_internal_legacy/log"
+	"github.com/usetero/cli/_internal_legacy/workos"
+	workosadmin "github.com/usetero/cli/_internal_legacy/workos/admin"
 )
 
 func main() {
