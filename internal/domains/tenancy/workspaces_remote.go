@@ -17,10 +17,13 @@ type RemoteWorkspaceService struct {
 }
 
 func NewRemoteWorkspaceService(client remoteWorkspaceClient) *RemoteWorkspaceService {
+	if client == nil {
+		panic("tenancy remote workspace service requires client")
+	}
 	return &RemoteWorkspaceService{client: client}
 }
 
-func (s *RemoteWorkspaceService) Create(_ context.Context, _ AccountID, _ string) (WorkspaceID, error) {
+func (s *RemoteWorkspaceService) Create(_ context.Context, _ WorkspaceCreate) (WorkspaceID, error) {
 	return "", fmt.Errorf("tenancy remote workspace create is not implemented")
 }
 
@@ -29,9 +32,6 @@ func (s *RemoteWorkspaceService) Delete(_ context.Context, _ WorkspaceID) error 
 }
 
 func (s *RemoteWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {
-	if s == nil || s.client == nil {
-		return nil, fmt.Errorf("tenancy remote workspace service is not initialized")
-	}
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}

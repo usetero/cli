@@ -19,6 +19,18 @@ type Client struct {
 	GetDatadogAccountStatusFn             func(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
 }
 
+var _ interface {
+	ListOrganizations(ctx context.Context) ([]controlplane.Organization, error)
+	CreateOrganizationAndBootstrap(ctx context.Context, name string) (controlplane.OrganizationBootstrap, error)
+	ListAccounts(ctx context.Context, organizationID controlplane.OrganizationID) ([]controlplane.Account, error)
+	CreateAccount(ctx context.Context, organizationID controlplane.OrganizationID, name string) (controlplane.Account, error)
+	ListWorkspaces(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error)
+	GetAccountDatadogAccount(ctx context.Context, accountID controlplane.AccountID) (*controlplane.DatadogAccount, error)
+	ValidateDatadogAPIKey(ctx context.Context, apiKey string, site controlplane.DatadogSite) (bool, string, error)
+	CreateDatadogAccountWithCredentials(ctx context.Context, input controlplane.CreateDatadogAccountInput) (controlplane.DatadogAccount, error)
+	GetDatadogAccountStatus(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
+} = (*Client)(nil)
+
 func (c *Client) ListOrganizations(ctx context.Context) ([]controlplane.Organization, error) {
 	if c.ListOrganizationsFn == nil {
 		return nil, nil

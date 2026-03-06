@@ -19,7 +19,7 @@ type Store struct {
 
 func NewStore(env string) (*Store, error) {
 	if env == "" {
-		return nil, fmt.Errorf("env is required")
+		panic("preferences store requires env")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

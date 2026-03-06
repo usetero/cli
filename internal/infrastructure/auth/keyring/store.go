@@ -2,7 +2,6 @@ package keyring
 
 import (
 	"errors"
-	"fmt"
 
 	keyringlib "github.com/zalando/go-keyring"
 )
@@ -15,7 +14,7 @@ type Store struct {
 // NewStore creates an environment-scoped keyring store.
 func NewStore(env string) (*Store, error) {
 	if env == "" {
-		return nil, fmt.Errorf("env is required")
+		panic("keyring store requires env")
 	}
 	return &Store{service: baseServiceName + ":" + env}, nil
 }

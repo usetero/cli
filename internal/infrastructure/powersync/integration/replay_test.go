@@ -2,11 +2,12 @@ package integration_test
 
 import (
 	"context"
+	"io"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/usetero/cli/internal/infrastructure/logging/logtest"
+	"github.com/usetero/cli/internal/infrastructure/logging"
 	"github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 )
 
@@ -16,11 +17,12 @@ func TestReplay_InvariantCheckpointFixtureDoesNotFatal(t *testing.T) {
 	raw := openPowerSyncTestDB(t)
 	fixturePath := filepath.Join("..", "extension", "testdata", "checkpoint_lines.ndjson")
 	client := &replayStreamClient{path: fixturePath}
+	scope := logging.RootScope(logging.NewWithWriter(io.Discard, logging.LevelInfo))
 
 	s, err := syncer.New(
 		"https://powersync.example",
 		&syncerTokenSource{token: "tok"},
-		logtest.NewScope(t),
+		scope,
 		syncer.WithClientFactory(func(_ syncer.Endpoint) syncer.Client { return client }),
 		syncer.WithRetryPolicy(syncer.RetryPolicy{InitialDelay: 10 * time.Millisecond, MaxDelay: 50 * time.Millisecond, ErrorStateAfter: 2}),
 	)
@@ -50,11 +52,12 @@ func TestReplay_InvariantSanitizedFixtureDoesNotFatal(t *testing.T) {
 	raw := openPowerSyncTestDB(t)
 	fixturePath := filepath.Join("..", "extension", "testdata", "dev-sanitized.ndjson")
 	client := &replayStreamClient{path: fixturePath}
+	scope := logging.RootScope(logging.NewWithWriter(io.Discard, logging.LevelInfo))
 
 	s, err := syncer.New(
 		"https://powersync.example",
 		&syncerTokenSource{token: "tok"},
-		logtest.NewScope(t),
+		scope,
 		syncer.WithClientFactory(func(_ syncer.Endpoint) syncer.Client { return client }),
 		syncer.WithRetryPolicy(syncer.RetryPolicy{InitialDelay: 10 * time.Millisecond, MaxDelay: 50 * time.Millisecond, ErrorStateAfter: 2}),
 	)

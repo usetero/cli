@@ -17,13 +17,13 @@ func toControlPlaneDatadogSite(site DatadogSite) controlplane.DatadogSite {
 	return controlplane.DatadogSite(site)
 }
 
-func toControlPlaneCreateDatadogAccountInput(input CreateDatadogAccountInput) controlplane.CreateDatadogAccountInput {
+func toControlPlaneCreateDatadogAccountInput(input DatadogAccountCreate) controlplane.CreateDatadogAccountInput {
 	return controlplane.CreateDatadogAccountInput{
 		AccountID: toControlPlaneAccountID(input.AccountID),
-		Name:      input.Name,
+		Name:      input.Name.String(),
 		Site:      toControlPlaneDatadogSite(input.Site),
-		APIKey:    input.APIKey,
-		AppKey:    input.AppKey,
+		APIKey:    input.APIKey.String(),
+		AppKey:    input.AppKey.String(),
 	}
 }
 

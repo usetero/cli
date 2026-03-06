@@ -11,6 +11,10 @@ type Client struct {
 	StreamFn func(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error)
 }
 
+var _ interface {
+	Stream(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error)
+} = (*Client)(nil)
+
 func (c Client) Stream(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
 	if c.StreamFn == nil {
 		return infrachat.StreamResult{}, nil

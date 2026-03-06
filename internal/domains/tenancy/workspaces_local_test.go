@@ -11,12 +11,12 @@ func TestLocalWorkspaceService_CRUD(t *testing.T) {
 	accountSvc := NewLocalAccountService(db.Raw())
 	workspaceSvc := NewLocalWorkspaceService(db.Raw())
 
-	accountID, err := accountSvc.Create(context.Background(), "Primary")
+	accountID, err := accountSvc.Create(context.Background(), AccountCreate{Name: "Primary"})
 	if err != nil {
 		t.Fatalf("create account: %v", err)
 	}
 
-	workspaceID, err := workspaceSvc.Create(context.Background(), accountID, "Default")
+	workspaceID, err := workspaceSvc.Create(context.Background(), WorkspaceCreate{AccountID: accountID, Name: "Default"})
 	if err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -51,10 +51,10 @@ func TestLocalWorkspaceService_ValidationAndUninitialized(t *testing.T) {
 	db := openTenancyTestDB(t)
 	svc := NewLocalWorkspaceService(db.Raw())
 
-	if _, err := svc.Create(context.Background(), "", "Default"); err == nil || !strings.Contains(err.Error(), "account id is required") {
+	if _, err := svc.Create(context.Background(), WorkspaceCreate{Name: "Default"}); err == nil || !strings.Contains(err.Error(), "account id is required") {
 		t.Fatalf("expected account id validation error, got %v", err)
 	}
-	if _, err := svc.Create(context.Background(), "acc_1", ""); err == nil || !strings.Contains(err.Error(), "workspace name is required") {
+	if _, err := svc.Create(context.Background(), WorkspaceCreate{AccountID: "acc_1"}); err == nil || !strings.Contains(err.Error(), "workspace name is required") {
 		t.Fatalf("expected workspace name validation error, got %v", err)
 	}
 	if _, err := svc.ListByAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
@@ -62,10 +62,5 @@ func TestLocalWorkspaceService_ValidationAndUninitialized(t *testing.T) {
 	}
 	if err := svc.Delete(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
 		t.Fatalf("expected workspace id validation error, got %v", err)
-	}
-
-	var nilSvc *LocalWorkspaceService
-	if _, err := nilSvc.ListByAccount(context.Background(), "acc_1"); err == nil || !strings.Contains(err.Error(), "not initialized") {
-		t.Fatalf("expected uninitialized error, got %v", err)
 	}
 }

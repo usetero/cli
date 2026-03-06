@@ -7,7 +7,7 @@ cd "$repo_root"
 
 tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
-event_loop_root="${TERO_EVENT_LOOP_ROOT:-internal/app}"
+event_loop_root="${TERO_EVENT_LOOP_ROOT:-internal/interfaces/tui}"
 
 if ! [ -d "$event_loop_root" ]; then
 	echo "event-loop safety lint: directory not found: ${event_loop_root}"

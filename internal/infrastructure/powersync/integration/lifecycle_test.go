@@ -54,16 +54,13 @@ func TestInvariant_LifecycleStartStopRestartIsSafe(t *testing.T) {
 	cancel2()
 	s.Stop()
 
-	u, err := uploader.New(
+	u := uploader.New(
 		store,
 		client,
 		&uploaderTokenSource{token: "tok"},
 		logtest.NewScope(t),
 		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 0}),
 	)
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
 
 	uCtx, uCancel := context.WithCancel(ctx)
 	uDone := make(chan error, 1)

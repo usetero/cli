@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	psclient "github.com/usetero/cli/internal/infrastructure/powersync/client"
+	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 )
 
 type Client struct {
@@ -13,6 +14,8 @@ type Client struct {
 	TokenValue   string
 	SyncStreamFn func(ctx context.Context, req *psclient.SyncStreamRequest, handler psclient.LineHandler) error
 }
+
+var _ pssyncer.Client = (*Client)(nil)
 
 func (c *Client) SyncStream(ctx context.Context, req *psclient.SyncStreamRequest, handler psclient.LineHandler) error {
 	if c.SyncStreamFn == nil {

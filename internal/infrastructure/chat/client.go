@@ -27,24 +27,25 @@ type Client struct {
 }
 
 func NewClient(baseURL string, token TokenProvider) *Client {
-	return &Client{baseURL: strings.TrimSuffix(baseURL, "/"), http: &http.Client{Timeout: defaultTimeout}, token: token}
+	baseURL = strings.TrimSpace(strings.TrimSuffix(baseURL, "/"))
+	if baseURL == "" {
+		panic("chat client requires base url")
+	}
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultTimeout}, token: token}
 }
 
 func NewClientWithHTTP(baseURL string, token TokenProvider, httpClient *http.Client) *Client {
+	baseURL = strings.TrimSpace(strings.TrimSuffix(baseURL, "/"))
+	if baseURL == "" {
+		panic("chat client requires base url")
+	}
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: defaultTimeout}
 	}
-	return &Client{baseURL: strings.TrimSuffix(baseURL, "/"), http: httpClient, token: token}
+	return &Client{baseURL: baseURL, http: httpClient, token: token}
 }
 
 func (c *Client) Stream(ctx context.Context, req Request, onEvent func(Event)) (StreamResult, error) {
-	if c == nil {
-		return StreamResult{}, fmt.Errorf("chat client is nil")
-	}
-	if c.baseURL == "" {
-		return StreamResult{}, fmt.Errorf("chat base url is required")
-	}
-
 	payload, err := req.payload()
 	if err != nil {
 		return StreamResult{}, err

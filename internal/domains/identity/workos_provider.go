@@ -9,9 +9,6 @@ import (
 
 // StartDeviceAuth starts device authorization through WorkOS.
 func (p *WorkOSProvider) StartDeviceAuth(ctx context.Context) (DeviceFlow, error) {
-	if p == nil || p.client == nil {
-		return DeviceFlow{}, ErrProviderNotConfigured
-	}
 	flow, err := p.client.StartDeviceAuthorization(ctx)
 	if err != nil {
 		return DeviceFlow{}, mapWorkOSError(err)
@@ -28,9 +25,6 @@ func (p *WorkOSProvider) StartDeviceAuth(ctx context.Context) (DeviceFlow, error
 
 // PollAuthentication polls WorkOS for device auth completion.
 func (p *WorkOSProvider) PollAuthentication(ctx context.Context, deviceCode string) (Tokens, User, error) {
-	if p == nil || p.client == nil {
-		return Tokens{}, User{}, ErrProviderNotConfigured
-	}
 	result, err := p.client.PollDeviceAuthorization(ctx, deviceCode)
 	if err != nil {
 		return Tokens{}, User{}, mapWorkOSError(err)
@@ -49,9 +43,6 @@ func (p *WorkOSProvider) PollAuthentication(ctx context.Context, deviceCode stri
 
 // Refresh exchanges refresh token through WorkOS.
 func (p *WorkOSProvider) Refresh(ctx context.Context, refreshToken RefreshToken, providerOrgID ProviderOrgID) (Tokens, error) {
-	if p == nil || p.client == nil {
-		return Tokens{}, ErrProviderNotConfigured
-	}
 	result, err := p.client.RefreshToken(ctx, string(refreshToken), string(providerOrgID))
 	if err != nil {
 		return Tokens{}, mapWorkOSError(err)

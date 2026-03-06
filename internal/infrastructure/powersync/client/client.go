@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -40,6 +41,13 @@ type HTTPClient struct {
 
 // NewClient creates a new HTTP PowerSync client.
 func NewClient(endpoint string) *HTTPClient {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		panic("powersync client requires endpoint")
+	}
+	if _, err := url.ParseRequestURI(endpoint); err != nil {
+		panic(fmt.Sprintf("powersync client requires valid endpoint: %v", err))
+	}
 	return &HTTPClient{
 		endpoint: endpoint,
 		http:     http.DefaultClient,

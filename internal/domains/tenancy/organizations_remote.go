@@ -2,7 +2,6 @@ package tenancy
 
 import (
 	"context"
-	"fmt"
 
 	controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
 )
@@ -18,13 +17,13 @@ type RemoteOrganizationService struct {
 }
 
 func NewRemoteOrganizationService(client remoteOrganizationClient) *RemoteOrganizationService {
+	if client == nil {
+		panic("tenancy remote organization service requires client")
+	}
 	return &RemoteOrganizationService{client: client}
 }
 
 func (s *RemoteOrganizationService) List(ctx context.Context) ([]Organization, error) {
-	if s == nil || s.client == nil {
-		return nil, fmt.Errorf("tenancy remote organization service is not initialized")
-	}
 	orgs, err := s.client.ListOrganizations(ctx)
 	if err != nil {
 		return nil, err
@@ -37,15 +36,13 @@ func (s *RemoteOrganizationService) List(ctx context.Context) ([]Organization, e
 	return out, nil
 }
 
-func (s *RemoteOrganizationService) Create(ctx context.Context, name string) (OrganizationBootstrap, error) {
-	if s == nil || s.client == nil {
-		return OrganizationBootstrap{}, fmt.Errorf("tenancy remote organization service is not initialized")
-	}
-	if name == "" {
-		return OrganizationBootstrap{}, fmt.Errorf("organization name is required")
+func (s *RemoteOrganizationService) Create(ctx context.Context, create OrganizationCreate) (OrganizationBootstrap, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return OrganizationBootstrap{}, err
 	}
 
-	bootstrap, err := s.client.CreateOrganizationAndBootstrap(ctx, name)
+	bootstrap, err := s.client.CreateOrganizationAndBootstrap(ctx, validated.Name)
 	if err != nil {
 		return OrganizationBootstrap{}, err
 	}

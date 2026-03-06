@@ -21,7 +21,7 @@ func ParseEndpoint(raw string) (Endpoint, error) {
 
 	u, err := url.Parse(raw)
 	if err != nil {
-		return Endpoint{}, fmt.Errorf("%w: invalid endpoint: %v", ErrInvalidInput, err)
+		return Endpoint{}, fmt.Errorf("%w: invalid endpoint: %s", ErrInvalidInput, err.Error())
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return Endpoint{}, fmt.Errorf("%w: endpoint must use http or https", ErrInvalidInput)

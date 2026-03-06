@@ -22,6 +22,13 @@ func (r *Runtime) runStream(ctx context.Context, conversationID domainchat.Conve
 			defer r.mu.Unlock()
 
 			switch ev.Type {
+			case infrachat.EventTypeMessageStart,
+				infrachat.EventTypeThinkingDelta,
+				infrachat.EventTypeToolInputDelta,
+				infrachat.EventTypeContentBlockStop,
+				infrachat.EventTypeMessageStop,
+				infrachat.EventTypeMetadataUpdate:
+				// Runtime currently reacts only to text/tool-use deltas.
 			case infrachat.EventTypeTextDelta:
 				assistantText += ev.TextContent
 				r.state.Messages[assistantIndex].Content = assistantText

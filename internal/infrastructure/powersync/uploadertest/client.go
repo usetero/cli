@@ -16,6 +16,8 @@ type Client struct {
 	TokenSetCalls   atomic.Int32
 }
 
+var _ psclient.Client = (*Client)(nil)
+
 func (c *Client) SyncStream(context.Context, *psclient.SyncStreamRequest, psclient.LineHandler) error {
 	return nil
 }

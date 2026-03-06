@@ -124,7 +124,7 @@ tasks:
 
   lint:architecture:
     desc: Enforce Bubble Tea event-loop architecture guardrails
-    deps: [lint:architecture:event-loop, lint:architecture:ownership]
+    deps: [lint:architecture:event-loop, lint:architecture:ownership, lint:architecture:tui-routing]
     cmds: []
 
   lint:architecture:event-loop:
@@ -136,6 +136,11 @@ tasks:
     desc: Enforce feature event package ownership boundaries
     cmds:
       - ./scripts/lint/check-event-ownership.sh
+
+  lint:architecture:tui-routing:
+    desc: Enforce parent/child routing contract for TUI screen composition
+    cmds:
+      - ./scripts/lint/check-tui-child-routing.sh
 
   check:
     desc: Validate build

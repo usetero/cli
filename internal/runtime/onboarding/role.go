@@ -2,16 +2,16 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/usetero/cli/internal/domains/preferences"
 )
 
-func (s *Service) SetRole(ctx context.Context, role preferences.Role) (State, error) {
-	if !role.Valid() {
-		return State{}, fmt.Errorf("invalid role: %q", role)
+func (s *Service) SetRole(ctx context.Context, selection preferences.RoleSelection) (State, error) {
+	validated, err := selection.Validate()
+	if err != nil {
+		return State{}, err
 	}
-	if err := s.preferences.SetRole(ctx, role); err != nil {
+	if err := s.preferences.SetRole(ctx, validated); err != nil {
 		return State{}, err
 	}
 	return s.State(ctx)

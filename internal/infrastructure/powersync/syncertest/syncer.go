@@ -11,9 +11,18 @@ import (
 type Mock struct {
 	StartFn                 func(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error
 	StopFn                  func()
+	StateFn                 func() pssyncer.State
 	IsReadyFn               func() bool
 	NotifyUploadCompletedFn func(ctx context.Context) error
 }
+
+var _ interface {
+	Start(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error
+	Stop()
+	State() pssyncer.State
+	IsReady() bool
+	NotifyUploadCompleted(ctx context.Context) error
+} = (*Mock)(nil)
 
 func (m *Mock) Start(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error {
 	if m.StartFn == nil {
@@ -36,6 +45,16 @@ func (m *Mock) IsReady() bool {
 		return false
 	}
 	return m.IsReadyFn()
+}
+
+func (m *Mock) State() pssyncer.State {
+	if m.StateFn == nil {
+		if m.IsReady() {
+			return &pssyncer.Ready{}
+		}
+		return &pssyncer.Disconnected{}
+	}
+	return m.StateFn()
 }
 
 func (m *Mock) NotifyUploadCompleted(ctx context.Context) error {

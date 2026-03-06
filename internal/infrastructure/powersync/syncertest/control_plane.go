@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/usetero/cli/internal/infrastructure/powersync/extension"
+	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 )
 
 type ControlPlane struct {
@@ -18,6 +19,8 @@ type ControlPlane struct {
 	ActiveCalls               atomic.Int32
 	MaxConcurrentCalls        atomic.Int32
 }
+
+var _ pssyncer.ControlPlane = (*ControlPlane)(nil)
 
 func (c *ControlPlane) Start(context.Context, extension.StartRequest) ([]extension.Instruction, error) {
 	return c.StartInstructions, nil

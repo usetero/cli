@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +60,8 @@ func TestClientStreamHTTPError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if _, ok := err.(HTTPError); !ok {
+	var httpErr HTTPError
+	if !errors.As(err, &httpErr) {
 		t.Fatalf("expected HTTPError, got %T (%v)", err, err)
 	}
 }

@@ -19,7 +19,7 @@ import (
 func newConversationService() *domchattest.ConversationService {
 	var id domainchat.ConversationID
 	return &domchattest.ConversationService{
-		CreateFn: func(context.Context, *string) (domainchat.ConversationID, error) {
+		CreateFn: func(context.Context, domainchat.ConversationCreate) (domainchat.ConversationID, error) {
 			if id == "" {
 				id = "conv_1"
 			}
@@ -30,21 +30,18 @@ func newConversationService() *domchattest.ConversationService {
 
 func newMessageService() *domchattest.MessageService {
 	return &domchattest.MessageService{
-		CreateUserMessageFn: func(_ context.Context, _ domainchat.ConversationID, _ string) (domainchat.MessageID, error) {
+		CreateUserMessageFn: func(_ context.Context, _ domainchat.UserMessageCreate) (domainchat.MessageID, error) {
 			return "msg_user_1", nil
 		},
 	}
 }
 
 func TestRuntime_SendUserText(t *testing.T) {
-	rt, err := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(_ context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
+	rt := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(_ context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
 		onEvent(infrachat.Event{Type: infrachat.EventTypeTextDelta, TextContent: "hello"})
 		onEvent(infrachat.Event{Done: true})
 		return infrachat.StreamResult{ConversationID: req.ConversationID, TurnID: "turn_1", LastSeq: 1}, nil
 	}})
-	if err != nil {
-		t.Fatalf("new runtime: %v", err)
-	}
 	defer rt.Close()
 
 	if err := rt.SendUserText(context.Background(), "hi"); err != nil {
@@ -73,13 +70,10 @@ func TestRuntime_SendUserText(t *testing.T) {
 }
 
 func TestRuntime_Cancel(t *testing.T) {
-	rt, err := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
+	rt := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
 		<-ctx.Done()
 		return infrachat.StreamResult{}, ctx.Err()
 	}})
-	if err != nil {
-		t.Fatalf("new runtime: %v", err)
-	}
 	defer rt.Close()
 
 	if err := rt.SendUserText(context.Background(), "hi"); err != nil {
@@ -109,13 +103,10 @@ func TestRuntime_Cancel(t *testing.T) {
 
 func TestRuntime_RejectConcurrentSend(t *testing.T) {
 	block := make(chan struct{})
-	rt, err := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
+	rt := New(newConversationService(), newMessageService(), chattest.Client{StreamFn: func(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
 		<-block
 		return infrachat.StreamResult{}, errors.New("done")
 	}})
-	if err != nil {
-		t.Fatalf("new runtime: %v", err)
-	}
 	defer rt.Close()
 
 	if err := rt.SendUserText(context.Background(), "hi"); err != nil {
@@ -157,15 +148,12 @@ func TestRuntime_ToolUseRunsSecondTurn(t *testing.T) {
 		}
 	}}
 
-	rt, err := NewWithTools(
+	rt := NewWithTools(
 		newConversationService(),
 		newMessageService(),
 		client,
 		chattools.Toolset{Query: chattools.NewQueryTool(db)},
 	)
-	if err != nil {
-		t.Fatalf("new runtime with tools: %v", err)
-	}
 	defer rt.Close()
 
 	if err := rt.SendUserText(context.Background(), "run query"); err != nil {
@@ -225,7 +213,7 @@ func TestRuntime_ToolUseUnknownAndErrorStillContinue(t *testing.T) {
 		}
 	}}
 
-	rt, err := NewWithTools(
+	rt := NewWithTools(
 		newConversationService(),
 		newMessageService(),
 		client,
@@ -235,9 +223,6 @@ func TestRuntime_ToolUseUnknownAndErrorStillContinue(t *testing.T) {
 			}),
 		},
 	)
-	if err != nil {
-		t.Fatalf("new runtime with tools: %v", err)
-	}
 	defer rt.Close()
 
 	if err := rt.SendUserText(context.Background(), "run tools"); err != nil {
@@ -282,20 +267,6 @@ func TestRuntime_ToolUseUnknownAndErrorStillContinue(t *testing.T) {
 		default:
 			time.Sleep(10 * time.Millisecond)
 		}
-	}
-}
-
-func TestRuntime_NewValidation(t *testing.T) {
-	t.Parallel()
-
-	if _, err := New(nil, newMessageService(), chattest.Client{}); err == nil {
-		t.Fatalf("expected conversations validation error")
-	}
-	if _, err := New(newConversationService(), nil, chattest.Client{}); err == nil {
-		t.Fatalf("expected messages validation error")
-	}
-	if _, err := New(newConversationService(), newMessageService(), nil); err == nil {
-		t.Fatalf("expected client validation error")
 	}
 }
 

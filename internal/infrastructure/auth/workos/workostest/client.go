@@ -13,6 +13,12 @@ type Client struct {
 	RefreshTokenFn             func(ctx context.Context, refreshToken, workosOrgID string) (workos.RefreshResult, error)
 }
 
+var _ interface {
+	StartDeviceAuthorization(ctx context.Context) (workos.DeviceAuthorization, error)
+	PollDeviceAuthorization(ctx context.Context, deviceCode string) (workos.DeviceAuthenticationResult, error)
+	RefreshToken(ctx context.Context, refreshToken, workosOrgID string) (workos.RefreshResult, error)
+} = (*Client)(nil)
+
 func (c *Client) StartDeviceAuthorization(ctx context.Context) (workos.DeviceAuthorization, error) {
 	if c.StartDeviceAuthorizationFn == nil {
 		return workos.DeviceAuthorization{}, nil

@@ -16,25 +16,23 @@ type LocalWorkspaceService struct {
 }
 
 func NewLocalWorkspaceService(db *sql.DB) *LocalWorkspaceService {
+	if db == nil {
+		panic("tenancy local workspace service requires db")
+	}
 	return &LocalWorkspaceService{q: workspacesdb.New(db)}
 }
 
-func (s *LocalWorkspaceService) Create(ctx context.Context, accountID AccountID, name string) (WorkspaceID, error) {
-	if s == nil || s.q == nil {
-		return "", fmt.Errorf("tenancy local workspace service is not initialized")
-	}
-	if accountID == "" {
-		return "", fmt.Errorf("account id is required")
-	}
-	if name == "" {
-		return "", fmt.Errorf("workspace name is required")
+func (s *LocalWorkspaceService) Create(ctx context.Context, create WorkspaceCreate) (WorkspaceID, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return "", err
 	}
 
 	id := WorkspaceID(uuid.NewString())
-	err := s.q.Create(ctx, workspacesdb.CreateParams{
+	err = s.q.Create(ctx, workspacesdb.CreateParams{
 		ID:        toWorkspacesDBWorkspaceID(id),
-		AccountID: toWorkspacesDBAccountID(accountID),
-		Name:      name,
+		AccountID: toWorkspacesDBAccountID(validated.AccountID),
+		Name:      validated.Name,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
@@ -44,9 +42,6 @@ func (s *LocalWorkspaceService) Create(ctx context.Context, accountID AccountID,
 }
 
 func (s *LocalWorkspaceService) Delete(ctx context.Context, id WorkspaceID) error {
-	if s == nil || s.q == nil {
-		return fmt.Errorf("tenancy local workspace service is not initialized")
-	}
 	if id == "" {
 		return fmt.Errorf("workspace id is required")
 	}
@@ -54,9 +49,6 @@ func (s *LocalWorkspaceService) Delete(ctx context.Context, id WorkspaceID) erro
 }
 
 func (s *LocalWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {
-	if s == nil || s.q == nil {
-		return nil, fmt.Errorf("tenancy local workspace service is not initialized")
-	}
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}

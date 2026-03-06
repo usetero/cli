@@ -1,73 +1,120 @@
 # TUI Interface
 
-The TUI is the long-running interactive runtime for this repository.
-When people say “the app,” they usually mean the root Bubble Tea model in
-`internal/app`.
+The TUI is split into a thin app shell and focused screen models.
 
-The most useful way to think about this interface is as a shell with pages.
-The shell owns composition and global routing. Pages own feature behavior.
+Current ownership:
 
-## What the user-facing contract really is
+- `internal/interfaces/tui/root/model.go`:
+  app shell only (global quit, framing, top-level composition).
+- `internal/interfaces/tui/screens/onboarding/model.go`:
+  onboarding flow orchestration (runtime calls + step routing).
+- `internal/interfaces/tui/screens/onboarding/*`:
+  focused UI models for each step (role, organization/select, organization/create, account/select).
 
-From the user’s perspective, the TUI guarantees four things:
+## Core Pattern
 
-1. interactions stay responsive (no event-loop blocking),
-2. keybindings remain context-correct (page + overlay aware),
-3. state transitions are coherent (onboarding -> chat handoff is deterministic),
-4. visible data is consistent with local projection/runtime scope.
+1. Root composes, screens decide.
+2. Runtime calls stay in the orchestration model (`screens/onboarding/model.go`), not in leaf UI models.
+3. Leaf models own local UI state only.
+4. All async work returns typed `tea.Msg` contracts.
 
-Everything in the implementation should preserve those guarantees.
-If a change violates one of them, users notice immediately, usually as lag,
-focus confusion, or seemingly random state jumps.
+## Message Contracts
 
-## How control is split between root and children
+Message contracts are owned by the package that emits them.
 
-The root model (`internal/app/app.go`) is responsible for:
+Examples:
 
-- app-level lifecycle (`quit`, theme changes, overlay open/close),
-- routing high-level interaction messages,
-- page switching (`onboarding` vs `chat`),
-- runtime setup/teardown and layout propagation.
+- `screens/onboarding/role/submitted.go` -> `SubmittedMsg`
+- `screens/onboarding/organization/select/selected.go` -> `SelectedMsg`
+- `screens/onboarding/organization/create/created.go` -> `CreatedMsg`
+- `screens/onboarding/account/select/selected.go` -> `SelectedMsg`
 
-Child models (`onboarding`, `chat`, `statusbar`, `toast`, etc.) are responsible
-for their own local update/view logic. They do not reach up into parent state.
+Guidelines:
 
-This separation is deliberate: it keeps features independent and keeps global
-behavior legible in one place.
-When you are unsure where new behavior belongs, default to child ownership and
-promote to the root only if multiple pages/overlays need to coordinate.
+- Prefer event/fact names (`Submitted`, `Selected`, `Created`).
+- Keep payloads minimal and strongly typed.
+- Avoid shared catch-all message files at root.
 
-## Sizing and rendering behavior
+## Step Structure
 
-Layout is not ad hoc in views. The parent computes geometry and pushes it down.
+For multi-mode entities (like organization), split by intent:
 
-- Fixed-height components get width and report `Height()`.
-- Flexible page components get explicit `SetSize(width, height)`.
+- `organization/select`
+- `organization/create`
 
-Rendering is composed in a deterministic order in `app_layout_view.go` and
-`app_view.go`, with overlays layered by precedence (drawer, palette, quit).
-That predictable layering is part of the interface contract: users should never
-see ambiguous focus or inconsistent overlay behavior.
+This keeps each model small and keeps update/view logic obvious.
 
-## Message ownership expectations
+## Runtime Progression Contract
 
-Shared contracts live in `internal/app/events` (for example sync state changes or
-drawer prompt forwarding). Feature-local messages remain local unless there is
-a real cross-feature ownership need.
+The onboarding screen model uses runtime state as source of truth:
 
-Treat messages as facts, not imperative commands. That keeps update routing
-composable and makes regression tests meaningful.
-In practice, this also makes debugging faster because logs describe what
-happened, not what some caller wanted to force.
+1. `Init` loads state via `Runtime.State`.
+2. User action emits message from leaf model.
+3. Orchestrator calls runtime method (`SetRole`, `SelectOrganization`, `CreateOrganization`, `SelectAccount`).
+4. Returned state determines next route.
 
-## Performance and safety expectations
+Auto-selection behavior (single option, valid preference match) remains in runtime/domain logic, not in leaf UI models.
 
-This interface assumes strict Bubble Tea discipline:
+## Bubble Tea Rules
 
-- no blocking network/DB work in `View` or synchronous hot `Update` paths,
-- side effects only in `tea.Cmd`,
-- async completions re-enter update via typed messages.
+- No network/DB work in `View`.
+- Keep `Update` fast and deterministic.
+- Side effects only in `tea.Cmd`.
+- Re-enter through typed messages.
 
-The root model emits slow-loop telemetry (`slow app update`, `slow app render`)
-to catch regressions early. If a change violates these assumptions, users feel
-it immediately as input lag.
+## Input Policy
+
+- Root view owns global terminal policy:
+  - `AltScreen` enabled,
+  - `WindowTitle` set,
+  - `MouseMode` defaults to `MouseModeNone` unless a screen explicitly needs mouse interaction.
+- Program startup applies a global input filter (`internal/interfaces/tui/filter`) to throttle noisy mouse motion/wheel bursts.
+- Enable mouse modes only in screens that implement click/hover behavior.
+
+## Shell Contract
+
+- The shell has three fixed slots: header, body, footer.
+- Header and footer are pinned; body expands to consume remaining viewport height.
+- Global shell chrome does not draw a universal panel around page content.
+- Emphasized content (errors, alerts) uses reusable card chrome helpers in the screen body.
+
+## Rendering Boundaries
+
+- `chrome/*` is for presentational helpers only (shell, card, layout wrappers).
+- `components/*` is for interactive Bubble Tea models (input, list, progress, status, help).
+- If it has no `Update`/`Init` state and only renders strings, keep it in `chrome`.
+
+## Model Contract
+
+Nested screen models should implement `internal/interfaces/tui/screen.Model`:
+
+- `tea.Model` (`Init`, `Update`, `View`)
+- `SetSize(width, height int)`
+- `ShortHelp() []key.Binding`
+
+This contract is enforced with compile-time assertions in onboarding leaf and flow models.
+
+### Routing Discipline
+
+- Parent models handle only:
+  - global keys
+  - layout (`tea.WindowSizeMsg`)
+  - parent-owned typed intent messages
+- Otherwise, parents forward messages to the active child model.
+- `ShortHelp` cascades from root to active child; key bindings are defined in the same model that handles them.
+- Router child IDs are typed enums per parent model, not raw string literals.
+
+## Lint Guardrails
+
+Architecture lint now enforces the child-router contract for router-backed parent models:
+
+- parent updates must forward through `router.Forward(msg)`,
+- parent state transitions must explicitly activate/deactivate children (`ActivateOnly`, `SetActive`, `ClearActive`),
+- `ShortHelp` must cascade through `router.ShortHelp()`,
+- `tea.Cmd` closures must emit messages only (no parent state mutation inside closures).
+
+Run with:
+
+```bash
+task lint:architecture
+```

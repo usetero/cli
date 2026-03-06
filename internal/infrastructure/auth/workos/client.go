@@ -30,8 +30,9 @@ type Option func(*Client)
 // WithBaseURL overrides the default WorkOS API base URL.
 func WithBaseURL(baseURL string) Option {
 	return func(c *Client) {
+		baseURL = strings.TrimSpace(strings.TrimRight(baseURL, "/"))
 		if baseURL != "" {
-			c.baseURL = strings.TrimRight(baseURL, "/")
+			c.baseURL = baseURL
 		}
 	}
 }
@@ -46,12 +47,12 @@ func WithHTTPClient(httpClient *http.Client) Option {
 }
 
 // NewClient creates a WorkOS client.
-func NewClient(clientID string, audiences []string, opts ...Option) (*Client, error) {
+func NewClient(clientID string, audiences []string, opts ...Option) *Client {
 	if clientID == "" {
-		return nil, fmt.Errorf("workos client id is required")
+		panic("workos client requires client id")
 	}
 	if len(audiences) == 0 {
-		return nil, fmt.Errorf("at least one audience is required")
+		panic("workos client requires at least one audience")
 	}
 
 	c := &Client{
@@ -63,7 +64,10 @@ func NewClient(clientID string, audiences []string, opts ...Option) (*Client, er
 	for _, opt := range opts {
 		opt(c)
 	}
-	return c, nil
+	if _, err := url.ParseRequestURI(c.baseURL); err != nil {
+		panic(fmt.Sprintf("workos client requires valid base url: %v", err))
+	}
+	return c
 }
 
 func (c *Client) doForm(ctx context.Context, endpoint string, values url.Values, out any) error {

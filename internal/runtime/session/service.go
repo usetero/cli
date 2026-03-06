@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 
@@ -21,6 +20,7 @@ type Storage interface {
 type Syncer interface {
 	Start(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error
 	Stop()
+	State() pssyncer.State
 	IsReady() bool
 	NotifyUploadCompleted(ctx context.Context) error
 }
@@ -48,6 +48,7 @@ type Service struct {
 	lifecycleMu sync.Mutex
 	mu          sync.RWMutex
 	state       State
+	scope       Scope
 	db          *sqlite.DB
 	syncer      Syncer
 	uploader    Uploader
@@ -57,15 +58,15 @@ type Service struct {
 }
 
 // NewService constructs the account runtime session service.
-func NewService(storage Storage, newSyncer syncerFactory, newUploader uploaderFactory, log logging.Scope) (*Service, error) {
+func NewService(storage Storage, newSyncer syncerFactory, newUploader uploaderFactory, log logging.Scope) *Service {
 	if storage == nil {
-		return nil, fmt.Errorf("storage dependency is required")
+		panic("session service requires storage")
 	}
 	if newSyncer == nil {
-		return nil, fmt.Errorf("syncer factory is required")
+		panic("session service requires syncer factory")
 	}
 	if newUploader == nil {
-		return nil, fmt.Errorf("uploader factory is required")
+		panic("session service requires uploader factory")
 	}
 	if log.Path() == "" {
 		log = logging.RootScope(logging.NewWithWriter(io.Discard, logging.LevelInfo))
@@ -79,7 +80,7 @@ func NewService(storage Storage, newSyncer syncerFactory, newUploader uploaderFa
 		},
 		log:    log.Child("runtime_session"),
 		events: make(chan Event, 64),
-	}, nil
+	}
 }
 
 // Events returns lifecycle events for observers (non-blocking stream).

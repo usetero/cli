@@ -53,6 +53,9 @@ type Controller struct {
 }
 
 func NewController(db *sqlite.DB) *Controller {
+	if db == nil {
+		panic("powersync controller requires db")
+	}
 	return &Controller{db: db}
 }
 
@@ -96,7 +99,7 @@ func (c *Controller) Control(ctx context.Context, op ControlOp, payload any) ([]
 	if err != nil {
 		// The extension reports this state via error string only.
 		if strings.Contains(err.Error(), "No iteration is active") {
-			return nil, fmt.Errorf("%w: %v", ErrNoActiveIteration, err)
+			return nil, fmt.Errorf("%w: %s", ErrNoActiveIteration, err.Error())
 		}
 		if errors.Is(err, sql.ErrConnDone) {
 			return nil, err

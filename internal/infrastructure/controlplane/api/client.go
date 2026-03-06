@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	genqlient "github.com/Khan/genqlient/graphql"
@@ -130,6 +131,10 @@ type Client struct {
 
 // NewClient creates a new control-plane API client.
 func NewClient(endpoint string, token TokenProvider) *Client {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		panic("controlplane api client requires endpoint")
+	}
 	return &Client{
 		endpoint: endpoint,
 		http:     &http.Client{Timeout: defaultTimeout},
@@ -139,13 +144,6 @@ func NewClient(endpoint string, token TokenProvider) *Client {
 
 // ListOrganizations fetches organizations for the current user.
 func (c *Client) ListOrganizations(ctx context.Context) ([]Organization, error) {
-	if c == nil {
-		return nil, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return nil, fmt.Errorf("api endpoint is required")
-	}
-
 	client, err := c.gql(ctx)
 	if err != nil {
 		return nil, err
@@ -174,12 +172,6 @@ func (c *Client) ListOrganizations(ctx context.Context) ([]Organization, error) 
 
 // ListAccounts fetches accounts for the given organization.
 func (c *Client) ListAccounts(ctx context.Context, organizationID OrganizationID) ([]Account, error) {
-	if c == nil {
-		return nil, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return nil, fmt.Errorf("api endpoint is required")
-	}
 	if organizationID == "" {
 		return nil, fmt.Errorf("organization id is required")
 	}
@@ -212,12 +204,6 @@ func (c *Client) ListAccounts(ctx context.Context, organizationID OrganizationID
 
 // CreateAccount creates an account in the given organization.
 func (c *Client) CreateAccount(ctx context.Context, organizationID OrganizationID, name string) (Account, error) {
-	if c == nil {
-		return Account{}, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return Account{}, fmt.Errorf("api endpoint is required")
-	}
 	if organizationID == "" {
 		return Account{}, fmt.Errorf("organization id is required")
 	}
@@ -247,12 +233,6 @@ func (c *Client) CreateAccount(ctx context.Context, organizationID OrganizationI
 
 // ListWorkspaces fetches workspaces for the given account.
 func (c *Client) ListWorkspaces(ctx context.Context, accountID AccountID) ([]Workspace, error) {
-	if c == nil {
-		return nil, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return nil, fmt.Errorf("api endpoint is required")
-	}
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
@@ -285,12 +265,6 @@ func (c *Client) ListWorkspaces(ctx context.Context, accountID AccountID) ([]Wor
 
 // CreateOrganizationAndBootstrap creates org/account/workspace in one mutation.
 func (c *Client) CreateOrganizationAndBootstrap(ctx context.Context, name string) (OrganizationBootstrap, error) {
-	if c == nil {
-		return OrganizationBootstrap{}, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return OrganizationBootstrap{}, fmt.Errorf("api endpoint is required")
-	}
 	if name == "" {
 		return OrganizationBootstrap{}, fmt.Errorf("organization name is required")
 	}
@@ -325,12 +299,6 @@ func (c *Client) CreateOrganizationAndBootstrap(ctx context.Context, name string
 
 // GetAccountDatadogAccount fetches Datadog integration metadata for an account.
 func (c *Client) GetAccountDatadogAccount(ctx context.Context, accountID AccountID) (*DatadogAccount, error) {
-	if c == nil {
-		return nil, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return nil, fmt.Errorf("api endpoint is required")
-	}
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
@@ -361,12 +329,6 @@ func (c *Client) GetAccountDatadogAccount(ctx context.Context, accountID Account
 
 // ValidateDatadogAPIKey asks control plane to validate a Datadog API key.
 func (c *Client) ValidateDatadogAPIKey(ctx context.Context, apiKey string, site DatadogSite) (bool, string, error) {
-	if c == nil {
-		return false, "", fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return false, "", fmt.Errorf("api endpoint is required")
-	}
 	if apiKey == "" {
 		return false, "", fmt.Errorf("api key is required")
 	}
@@ -401,12 +363,6 @@ func (c *Client) ValidateDatadogAPIKey(ctx context.Context, apiKey string, site 
 
 // CreateDatadogAccountWithCredentials creates Datadog integration with credentials.
 func (c *Client) CreateDatadogAccountWithCredentials(ctx context.Context, input CreateDatadogAccountInput) (DatadogAccount, error) {
-	if c == nil {
-		return DatadogAccount{}, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return DatadogAccount{}, fmt.Errorf("api endpoint is required")
-	}
 	if input.AccountID == "" {
 		return DatadogAccount{}, fmt.Errorf("account id is required")
 	}
@@ -449,12 +405,6 @@ func (c *Client) CreateDatadogAccountWithCredentials(ctx context.Context, input 
 
 // GetDatadogAccountStatus returns status cache for Datadog account, or nil when unavailable.
 func (c *Client) GetDatadogAccountStatus(ctx context.Context, datadogAccountID DatadogAccountID) (*DatadogAccountStatus, error) {
-	if c == nil {
-		return nil, fmt.Errorf("api client is nil")
-	}
-	if c.endpoint == "" {
-		return nil, fmt.Errorf("api endpoint is required")
-	}
 	if datadogAccountID == "" {
 		return nil, fmt.Errorf("datadog account id is required")
 	}

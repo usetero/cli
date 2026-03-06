@@ -9,7 +9,7 @@ import (
 
 // Start initializes account runtime (db, syncer, uploader) for one account.
 func (s *Service) Start(ctx context.Context, accountID tenancy.AccountID) error {
-	if err := s.validateStart(accountID); err != nil {
+	if err := validateStartAccountID(string(accountID)); err != nil {
 		return err
 	}
 	s.lifecycleMu.Lock()
@@ -25,17 +25,16 @@ func (s *Service) startLocked(ctx context.Context, accountID tenancy.AccountID) 
 	}
 	s.mu.Unlock()
 
+	syncer, err := s.newSyncer()
+	if err != nil {
+		return err
+	}
 	path, err := s.storage.DatabasePath(toSQLiteAccountID(accountID))
 	if err != nil {
 		return err
 	}
 	db, err := s.openDB(ctx, path)
 	if err != nil {
-		return err
-	}
-	syncer, err := s.newSyncer()
-	if err != nil {
-		_ = db.Close()
 		return err
 	}
 
@@ -57,14 +56,18 @@ func (s *Service) startLocked(ctx context.Context, accountID tenancy.AccountID) 
 	}
 
 	s.mu.Lock()
+	scope := s.scope
+	scope.AccountID = accountID
+	s.scope = scope
 	s.db = db
 	s.syncer = syncer
 	s.uploader = uploader
 	s.cancel = cancel
 	s.state = State{
-		Running:   true,
-		AccountID: accountID,
-		DBPath:    path,
+		Running:        true,
+		OrganizationID: scope.OrganizationID,
+		AccountID:      accountID,
+		DBPath:         path,
 	}
 	s.mu.Unlock()
 

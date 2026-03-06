@@ -10,7 +10,7 @@ import (
 type DatadogDraft struct {
 	Site      integrations.DatadogSite
 	HasAPIKey bool
-	apiKey    string
+	apiKey    integrations.DatadogAPIKey
 }
 
 // State is the onboarding truth projection used to derive the next step.

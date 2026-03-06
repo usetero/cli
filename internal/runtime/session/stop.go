@@ -6,9 +6,6 @@ import (
 
 // Stop tears down account runtime lifecycle resources.
 func (s *Service) Stop() error {
-	if s == nil {
-		return nil
-	}
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
 	return s.stopLocked()
@@ -27,6 +24,7 @@ func (s *Service) stopLocked() error {
 	db := s.db
 
 	s.state = State{}
+	s.scope = Scope{}
 	s.cancel = nil
 	s.syncer = nil
 	s.uploader = nil

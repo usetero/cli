@@ -2,7 +2,6 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/usetero/cli/internal/domains/integrations"
@@ -32,24 +31,24 @@ func NewService(
 	workspaces tenancy.WorkspaceService,
 	datadog integrations.DatadogService,
 	readiness pssyncer.ReadinessService,
-) (*Service, error) {
+) *Service {
 	if preferences == nil {
-		return nil, fmt.Errorf("onboarding preferences dependency is required")
+		panic("onboarding service requires preferences")
 	}
 	if orgs == nil {
-		return nil, fmt.Errorf("onboarding organizations dependency is required")
+		panic("onboarding service requires organization service")
 	}
 	if accounts == nil {
-		return nil, fmt.Errorf("onboarding accounts dependency is required")
+		panic("onboarding service requires account factory")
 	}
 	if workspaces == nil {
-		return nil, fmt.Errorf("onboarding workspaces dependency is required")
+		panic("onboarding service requires workspace service")
 	}
 	if datadog == nil {
-		return nil, fmt.Errorf("onboarding datadog dependency is required")
+		panic("onboarding service requires datadog service")
 	}
 	if readiness == nil {
-		return nil, fmt.Errorf("onboarding powersync readiness dependency is required")
+		panic("onboarding service requires powersync readiness")
 	}
 
 	return &Service{
@@ -59,15 +58,11 @@ func NewService(
 		workspaces:  workspaces,
 		datadog:     datadog,
 		readiness:   readiness,
-	}, nil
+	}
 }
 
 // State returns current onboarding projection and next step.
 func (s *Service) State(ctx context.Context) (State, error) {
-	if err := s.validate(); err != nil {
-		return State{}, err
-	}
-
 	pref, err := s.preferences.Snapshot(ctx)
 	if err != nil {
 		return State{}, err
@@ -87,31 +82,6 @@ func (s *Service) State(ctx context.Context) (State, error) {
 // Refresh is an alias for State and is useful for polling loops.
 func (s *Service) Refresh(ctx context.Context) (State, error) {
 	return s.State(ctx)
-}
-
-func (s *Service) validate() error {
-	if s == nil {
-		return fmt.Errorf("onboarding service is nil")
-	}
-	if s.preferences == nil {
-		return fmt.Errorf("onboarding preferences dependency is required")
-	}
-	if s.orgs == nil {
-		return fmt.Errorf("onboarding organizations dependency is required")
-	}
-	if s.accounts == nil {
-		return fmt.Errorf("onboarding accounts dependency is required")
-	}
-	if s.workspaces == nil {
-		return fmt.Errorf("onboarding workspaces dependency is required")
-	}
-	if s.datadog == nil {
-		return fmt.Errorf("onboarding datadog dependency is required")
-	}
-	if s.readiness == nil {
-		return fmt.Errorf("onboarding powersync readiness dependency is required")
-	}
-	return nil
 }
 
 func (s *Service) currentDraft(accountID tenancy.AccountID) DatadogDraft {

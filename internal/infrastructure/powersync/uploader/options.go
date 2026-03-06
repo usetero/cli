@@ -47,22 +47,18 @@ type Option func(*Uploader)
 
 func WithPolicy(policy RunPolicy) Option {
 	return func(u *Uploader) {
-		u.policy = policy
+		u.processor.policy = policy
 	}
 }
 
 func WithHandler(table psdb.TableName, handler MutationHandler) Option {
 	return func(u *Uploader) {
-		if handler == nil {
-			delete(u.handlers, table)
-			return
-		}
-		u.handlers[table] = handler
+		u.processor.dispatcher.SetHandler(table, handler)
 	}
 }
 
 func WithSyncNotifier(notifier SyncNotifier) Option {
 	return func(u *Uploader) {
-		u.notifier = notifier
+		u.processor.notifier = notifier
 	}
 }

@@ -20,9 +20,10 @@ func (s *Service) SetDatadogSite(ctx context.Context, site integrations.DatadogS
 	return s.State(ctx)
 }
 
-func (s *Service) SubmitDatadogAPIKey(ctx context.Context, apiKey string) (State, error) {
-	if apiKey == "" {
-		return State{}, fmt.Errorf("api key is required")
+func (s *Service) SubmitDatadogAPIKey(ctx context.Context, submission integrations.DatadogAPIKeySubmission) (State, error) {
+	validatedSubmission, err := submission.Validate()
+	if err != nil {
+		return State{}, err
 	}
 	state, err := s.State(ctx)
 	if err != nil {
@@ -34,7 +35,10 @@ func (s *Service) SubmitDatadogAPIKey(ctx context.Context, apiKey string) (State
 	if !state.DatadogDraft.Site.Valid() {
 		return State{}, fmt.Errorf("datadog site must be selected first")
 	}
-	valid, message, err := s.datadog.ValidateAPIKey(ctx, state.DatadogDraft.Site, apiKey)
+	valid, message, err := s.datadog.ValidateAPIKey(ctx, integrations.DatadogAPIKeyValidation{
+		Site:   state.DatadogDraft.Site,
+		APIKey: validatedSubmission.APIKey,
+	})
 	if err != nil {
 		return State{}, err
 	}
@@ -47,17 +51,15 @@ func (s *Service) SubmitDatadogAPIKey(ctx context.Context, apiKey string) (State
 
 	s.setDraft(func(d *DatadogDraft) {
 		d.HasAPIKey = true
-		d.apiKey = apiKey
+		d.apiKey = validatedSubmission.APIKey
 	})
 	return s.State(ctx)
 }
 
-func (s *Service) SubmitDatadogAppKey(ctx context.Context, name, appKey string) (State, error) {
-	if name == "" {
-		return State{}, fmt.Errorf("datadog account name is required")
-	}
-	if appKey == "" {
-		return State{}, fmt.Errorf("app key is required")
+func (s *Service) SubmitDatadogAppKey(ctx context.Context, submission integrations.DatadogAppKeySubmission) (State, error) {
+	validatedSubmission, err := submission.Validate()
+	if err != nil {
+		return State{}, err
 	}
 	state, err := s.State(ctx)
 	if err != nil {
@@ -73,12 +75,12 @@ func (s *Service) SubmitDatadogAppKey(ctx context.Context, name, appKey string) 
 		return State{}, fmt.Errorf("datadog api key must be validated first")
 	}
 
-	_, err = s.datadog.Create(ctx, integrations.CreateDatadogAccountInput{
+	_, err = s.datadog.Create(ctx, integrations.DatadogAccountCreate{
 		AccountID: state.SelectedAccount.ID,
-		Name:      name,
+		Name:      validatedSubmission.Name,
 		Site:      state.DatadogDraft.Site,
 		APIKey:    state.DatadogDraft.apiKey,
-		AppKey:    appKey,
+		AppKey:    validatedSubmission.AppKey,
 	})
 	if err != nil {
 		return State{}, err

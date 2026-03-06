@@ -9,6 +9,8 @@ type TokenStore struct {
 	ClearTokensFn     func() error
 }
 
+var _ identity.TokenStore = (*TokenStore)(nil)
+
 func (s *TokenStore) AccessToken() (identity.AccessToken, error) {
 	return s.AccessTokenValue, nil
 }

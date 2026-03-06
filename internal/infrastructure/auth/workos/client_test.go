@@ -21,10 +21,7 @@ func TestStartDeviceAuthorization(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := NewClient("client_1", []string{"aud_1"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
-	if err != nil {
-		t.Fatalf("new client: %v", err)
-	}
+	c := NewClient("client_1", []string{"aud_1"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
 
 	flow, err := c.StartDeviceAuthorization(context.Background())
 	if err != nil {
@@ -44,12 +41,9 @@ func TestPollDeviceAuthorization_PendingError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := NewClient("client_1", []string{"aud_1"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
-	if err != nil {
-		t.Fatalf("new client: %v", err)
-	}
+	c := NewClient("client_1", []string{"aud_1"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
 
-	_, err = c.PollDeviceAuthorization(context.Background(), "dc")
+	_, err := c.PollDeviceAuthorization(context.Background(), "dc")
 	if !errors.Is(err, ErrAuthorizationPending) {
 		t.Fatalf("expected pending error, got: %v", err)
 	}
@@ -70,10 +64,7 @@ func TestRefreshToken_SendsOrganizationAndAudience(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c, err := NewClient("client_1", []string{"aud_1", "aud_2"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
-	if err != nil {
-		t.Fatalf("new client: %v", err)
-	}
+	c := NewClient("client_1", []string{"aud_1", "aud_2"}, WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
 
 	tokens, err := c.RefreshToken(context.Background(), "refresh_1", "org_1")
 	if err != nil {

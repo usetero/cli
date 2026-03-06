@@ -12,22 +12,17 @@ import (
 )
 
 func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
-	var nilSvc *RemoteDatadogService
-	if _, err := nilSvc.GetByAccount(context.Background(), "acc_1"); err == nil || !strings.Contains(err.Error(), "not initialized") {
-		t.Fatalf("expected uninitialized error, got %v", err)
-	}
-
 	svc := NewRemoteDatadogService(&apitest.Client{})
 	if _, err := svc.GetByAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
 		t.Fatalf("expected account id validation error, got %v", err)
 	}
-	if _, _, err := svc.ValidateAPIKey(context.Background(), "", "key"); err == nil || !strings.Contains(err.Error(), "datadog site is required") {
+	if _, _, err := svc.ValidateAPIKey(context.Background(), DatadogAPIKeyValidation{APIKey: DatadogAPIKey("key")}); err == nil || !strings.Contains(err.Error(), "datadog site is required") {
 		t.Fatalf("expected site validation error, got %v", err)
 	}
-	if _, _, err := svc.ValidateAPIKey(context.Background(), DatadogSiteUS1, ""); err == nil || !strings.Contains(err.Error(), "api key is required") {
+	if _, _, err := svc.ValidateAPIKey(context.Background(), DatadogAPIKeyValidation{Site: DatadogSiteUS1}); err == nil || !strings.Contains(err.Error(), "api key is required") {
 		t.Fatalf("expected api key validation error, got %v", err)
 	}
-	if _, err := svc.Create(context.Background(), CreateDatadogAccountInput{}); err == nil || !strings.Contains(err.Error(), "account id is required") {
+	if _, err := svc.Create(context.Background(), DatadogAccountCreate{}); err == nil || !strings.Contains(err.Error(), "account id is required") {
 		t.Fatalf("expected account id validation error, got %v", err)
 	}
 	if _, err := svc.Status(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "datadog account id is required") {
@@ -70,17 +65,17 @@ func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
 		t.Fatalf("unexpected account mapping: %+v", account)
 	}
 
-	ok, msg, err := svc.ValidateAPIKey(context.Background(), DatadogSiteUS1, "api")
+	ok, msg, err := svc.ValidateAPIKey(context.Background(), DatadogAPIKeyValidation{Site: DatadogSiteUS1, APIKey: DatadogAPIKey("api")})
 	if err != nil || !ok || msg != "" {
 		t.Fatalf("unexpected validate result ok=%v msg=%q err=%v", ok, msg, err)
 	}
 
-	createdID, err := svc.Create(context.Background(), CreateDatadogAccountInput{
+	createdID, err := svc.Create(context.Background(), DatadogAccountCreate{
 		AccountID: "acc_1",
-		Name:      "Main",
+		Name:      DatadogAccountName("Main"),
 		Site:      DatadogSiteUS1,
-		APIKey:    "api",
-		AppKey:    "app",
+		APIKey:    DatadogAPIKey("api"),
+		AppKey:    DatadogAppKey("app"),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)

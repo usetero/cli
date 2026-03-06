@@ -8,7 +8,7 @@ import (
 
 // Switch moves lifecycle to a new account (Stop + Start).
 func (s *Service) Switch(ctx context.Context, accountID tenancy.AccountID) error {
-	if err := s.validateStart(accountID); err != nil {
+	if err := validateStartAccountID(string(accountID)); err != nil {
 		return err
 	}
 	s.lifecycleMu.Lock()

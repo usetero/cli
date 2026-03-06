@@ -32,6 +32,9 @@ type Store struct {
 
 // NewStore builds a PowerSync DB store on top of an initialized SQLite DB.
 func NewStore(db *sqlite.DB) *Store {
+	if db == nil {
+		panic("powersync db store requires db")
+	}
 	return &Store{db: db}
 }
 
@@ -125,15 +128,33 @@ func (s *Store) PendingMutations(ctx context.Context) ([]Mutation, error) {
 // CompleteUploadedBatch atomically deletes uploaded rows and sets $local target_op.
 func (s *Store) CompleteUploadedBatch(ctx context.Context, lastMutationID MutationID, checkpoint OpID) error {
 	return s.db.WithTx(ctx, func(tx *sql.Tx) error {
+		var currentTargetOp int64
+		if err := tx.QueryRowContext(ctx, "SELECT target_op FROM ps_buckets WHERE name = ?", string(LocalBucket)).Scan(&currentTargetOp); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("local bucket is required before completing uploaded batch")
+			}
+			return wrap("read local target_op", err)
+		}
+		if int64(checkpoint) < currentTargetOp {
+			return fmt.Errorf("checkpoint regression: current target_op=%d next=%d", currentTargetOp, checkpoint)
+		}
 		if _, err := tx.ExecContext(ctx, "DELETE FROM ps_crud WHERE id <= ?", int64(lastMutationID)); err != nil {
 			return wrap("delete uploaded batch", err)
 		}
-		if _, err := tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			"UPDATE ps_buckets SET target_op = ? WHERE name = ?",
 			int64(checkpoint),
 			string(LocalBucket),
-		); err != nil {
+		)
+		if err != nil {
 			return wrap("set local target_op", err)
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return wrap("read local target_op rows affected", err)
+		}
+		if rowsAffected != 1 {
+			return fmt.Errorf("expected exactly one local bucket row, updated %d", rowsAffected)
 		}
 		return nil
 	})

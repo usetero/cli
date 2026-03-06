@@ -94,21 +94,22 @@ type Syncer struct {
 	accountID   AccountID
 	onFirstSync func()
 	firstSync   *sync.Once
+	phase       lifecyclePhase
 	state       State
 }
 
 // New creates a new syncer.
 func New(endpoint string, tokens TokenSource, log logging.Scope, opts ...Option) (*Syncer, error) {
-	if err := extension.Register(); err != nil {
-		return nil, fmt.Errorf("register powersync extension: %w", err)
-	}
-
 	parsedEndpoint, err := ParseEndpoint(endpoint)
 	if err != nil {
-		return nil, err
+		panic(fmt.Sprintf("powersync syncer requires valid endpoint: %v", err))
 	}
 	if tokens == nil {
-		return nil, fmt.Errorf("%w: token source is required", ErrInvalidInput)
+		panic("powersync syncer requires token source")
+	}
+
+	if err := extension.Register(); err != nil {
+		return nil, fmt.Errorf("register powersync extension: %w", err)
 	}
 
 	s := &Syncer{
@@ -128,13 +129,14 @@ func New(endpoint string, tokens TokenSource, log logging.Scope, opts ...Option)
 			case <-time.After(d):
 			}
 		},
+		phase: phaseDisconnected,
 		state: &Disconnected{},
 	}
 	for _, opt := range opts {
 		opt(s)
 	}
 	if err := s.retry.Validate(); err != nil {
-		return nil, err
+		panic(fmt.Sprintf("powersync syncer requires valid retry policy: %v", err))
 	}
 	return s, nil
 }
@@ -177,7 +179,7 @@ func (s *Syncer) Start(ctx context.Context, db *sqlite.DB, accountID AccountID, 
 	s.control = s.controlFactory(db)
 	s.runDone = make(chan struct{})
 	s.firstSync = &sync.Once{}
-	s.setStateLocked(&Connecting{})
+	s.transitionToConnectingLocked()
 
 	runCtx, cancel := context.WithCancel(ctx)
 	s.runCancel = cancel
@@ -217,7 +219,7 @@ func (s *Syncer) Stop() {
 	s.accountID = ""
 	s.onFirstSync = nil
 	s.firstSync = nil
-	s.setStateLocked(&Disconnected{})
+	s.transitionToDisconnectedLocked()
 }
 
 // NotifyUploadCompleted notifies control plane that one upload batch completed.
@@ -258,20 +260,26 @@ func (s *Syncer) IsReady() bool {
 	return ok
 }
 
-func (s *Syncer) setStateLocked(state State) {
-	s.state = state
+type runDeps struct {
+	client      Client
+	control     ControlPlane
+	db          *sqlite.DB
+	accountID   AccountID
+	onFirstSync func()
+	firstSync   *sync.Once
 }
 
-func (s *Syncer) setState(state State) {
+func (s *Syncer) takeRunDeps() runDeps {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.setStateLocked(state)
-}
-
-func (s *Syncer) takeRunDeps() (Client, ControlPlane, *sqlite.DB, AccountID, func(), *sync.Once) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.client, s.control, s.db, s.accountID, s.onFirstSync, s.firstSync
+	return runDeps{
+		client:      s.client,
+		control:     s.control,
+		db:          s.db,
+		accountID:   s.accountID,
+		onFirstSync: s.onFirstSync,
+		firstSync:   s.firstSync,
+	}
 }
 
 func (s *Syncer) clearFirstSyncCallback() {

@@ -8,6 +8,7 @@ import (
 	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/infrastructure/logging/logtest"
 	psdb "github.com/usetero/cli/internal/infrastructure/powersync/db"
+	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 	psuploader "github.com/usetero/cli/internal/infrastructure/powersync/uploader"
 	"github.com/usetero/cli/internal/infrastructure/sqlite"
 	"github.com/usetero/cli/internal/runtime/session/sessiontest"
@@ -28,7 +29,7 @@ func TestService_StartAndStop(t *testing.T) {
 	syncer := &sessiontest.Syncer{Ready: true}
 	uploader := sessiontest.NewUploader()
 
-	svc, err := NewService(
+	svc := NewService(
 		storage,
 		func() (Syncer, error) { return syncer, nil },
 		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
@@ -36,9 +37,6 @@ func TestService_StartAndStop(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 	svc.setOpenDB(openBareDB(t))
 
 	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {
@@ -81,7 +79,7 @@ func TestService_ForwardUploaderEvents(t *testing.T) {
 	syncer := &sessiontest.Syncer{Ready: true}
 	uploader := sessiontest.NewUploader()
 
-	svc, err := NewService(
+	svc := NewService(
 		storage,
 		func() (Syncer, error) { return syncer, nil },
 		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
@@ -89,15 +87,16 @@ func TestService_ForwardUploaderEvents(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 	svc.setOpenDB(openBareDB(t))
 
 	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	defer svc.Stop()
+	defer func() {
+		if stopErr := svc.Stop(); stopErr != nil {
+			t.Errorf("stop: %v", stopErr)
+		}
+	}()
 
 	uploader.EventsCh <- psuploader.SyncingEvent{ProcessedCount: 2}
 	uploader.EventsCh <- psuploader.StalledEvent{Error: context.DeadlineExceeded, Table: psdb.TableName("messages"), RowID: "row_1"}
@@ -107,10 +106,12 @@ func TestService_ForwardUploaderEvents(t *testing.T) {
 	gotStalled := false
 	gotRecovered := false
 	deadline := time.After(2 * time.Second)
-	for !(gotSyncing && gotStalled && gotRecovered) {
+	for !gotSyncing || !gotStalled || !gotRecovered {
 		select {
 		case ev := <-svc.Events():
 			switch ev.Kind {
+			case EventStarting, EventReady, EventStopped, EventError:
+				// Not relevant for this test; uploader mapping assertions below.
 			case EventSyncing:
 				gotSyncing = true
 			case EventStalled:
@@ -121,5 +122,46 @@ func TestService_ForwardUploaderEvents(t *testing.T) {
 		case <-deadline:
 			t.Fatalf("timed out waiting for mapped events")
 		}
+	}
+}
+
+func TestService_SyncState(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	storage := sessiontest.Storage{Path: sqlite.DatabasePath(dir + "/session.sqlite")}
+	syncer := &sessiontest.Syncer{Ready: false, StateValue: &pssyncer.Syncing{Progress: &pssyncer.Progress{Downloaded: 3, Total: 10}}}
+	uploader := sessiontest.NewUploader()
+
+	svc := NewService(
+		storage,
+		func() (Syncer, error) { return syncer, nil },
+		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
+			return uploader, nil
+		},
+		logtest.NewScope(t),
+	)
+	svc.setOpenDB(openBareDB(t))
+
+	if _, ok := svc.SyncState().(*pssyncer.Disconnected); !ok {
+		t.Fatalf("expected disconnected state before start")
+	}
+
+	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer func() {
+		if stopErr := svc.Stop(); stopErr != nil {
+			t.Errorf("stop: %v", stopErr)
+		}
+	}()
+
+	state := svc.SyncState()
+	syncing, ok := state.(*pssyncer.Syncing)
+	if !ok {
+		t.Fatalf("expected syncing state, got %T", state)
+	}
+	if syncing.Progress == nil || syncing.Progress.Downloaded != 3 || syncing.Progress.Total != 10 {
+		t.Fatalf("unexpected progress: %+v", syncing.Progress)
 	}
 }

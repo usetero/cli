@@ -87,6 +87,8 @@ func (i *Instruction) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			i.SyncStatus = &wrapper.Status
+		case InstructionFlushFileSystem, InstructionDidCompleteSync:
+			// Payload is currently ignored for these instructions.
 		case InstructionLogLine:
 			var p struct {
 				Severity LogSeverity `json:"severity"`

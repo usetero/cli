@@ -31,6 +31,9 @@ type QueryResult struct {
 }
 
 func NewQueryTool(db *sqlite.DB) *QueryTool {
+	if db == nil {
+		panic("query tool requires db")
+	}
 	return &QueryTool{db: db}
 }
 
@@ -52,10 +55,6 @@ func (t *QueryTool) Definition() Definition {
 }
 
 func (t *QueryTool) Run(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
-	if t == nil || t.db == nil {
-		return nil, fmt.Errorf("query tool is not initialized")
-	}
-
 	var in QueryInput
 	if err := json.Unmarshal(input, &in); err != nil {
 		return nil, fmt.Errorf("parse query input: %w", err)

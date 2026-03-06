@@ -1,0 +1,70 @@
+package theme
+
+import "charm.land/lipgloss/v2"
+
+const AppName = "Tero"
+
+// Theme defines shared TUI styles used by chrome, screens, and components.
+type Theme struct {
+	Shell    ShellStyles
+	Card     CardStyles
+	Text     TextStyles
+	List     ListStyles
+	Input    InputStyles
+	Progress ProgressStyles
+}
+
+// ShellStyles are the app-wide chrome styles.
+type ShellStyles struct {
+	Outer       lipgloss.Style
+	HeaderBar   lipgloss.Style
+	HeaderBrand lipgloss.Style
+	HeaderLead  lipgloss.Style
+	Body        lipgloss.Style
+	Footer      lipgloss.Style
+}
+
+// CardStyles are reusable card styles for emphasized content blocks.
+type CardStyles struct {
+	Container      lipgloss.Style
+	ErrorContainer lipgloss.Style
+	Title          lipgloss.Style
+	ErrorTitle     lipgloss.Style
+	Body           lipgloss.Style
+}
+
+// TextStyles are shared semantic text styles.
+type TextStyles struct {
+	Section lipgloss.Style
+	Body    lipgloss.Style
+	Muted   lipgloss.Style
+	Error   lipgloss.Style
+	Success lipgloss.Style
+	Warning lipgloss.Style
+}
+
+// ListStyles are shared styles for selectable lists.
+type ListStyles struct {
+	Cursor         lipgloss.Style
+	CursorInactive lipgloss.Style
+	Item           lipgloss.Style
+	ItemActive     lipgloss.Style
+	Subtitle       lipgloss.Style
+	SubtitleActive lipgloss.Style
+	Empty          lipgloss.Style
+}
+
+// InputStyles are shared styles for text inputs.
+type InputStyles struct {
+	Label       lipgloss.Style
+	Value       lipgloss.Style
+	Placeholder lipgloss.Style
+	Active      lipgloss.Style
+	Inactive    lipgloss.Style
+}
+
+// ProgressStyles are shared styles for progress bars.
+type ProgressStyles struct {
+	Fill  lipgloss.Style
+	Empty lipgloss.Style
+}

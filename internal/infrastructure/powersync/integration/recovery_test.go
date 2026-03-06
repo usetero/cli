@@ -22,7 +22,7 @@ func TestRecovery_StalledThenRecoveredAndDrained(t *testing.T) {
 
 	client := &pipelineClient{checkpoint: "9"}
 	handler := &flakyMutationHandler{failFirstN: 1}
-	u, err := uploader.New(
+	u := uploader.New(
 		store,
 		client,
 		&uploaderTokenSource{token: "tok"},
@@ -30,9 +30,6 @@ func TestRecovery_StalledThenRecoveredAndDrained(t *testing.T) {
 		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 0}),
 		uploader.WithHandler(psdb.TableMessages, handler),
 	)
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
 
 	runCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)

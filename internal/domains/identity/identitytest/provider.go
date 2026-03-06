@@ -12,6 +12,8 @@ type Provider struct {
 	RefreshFn            func(context.Context, identity.RefreshToken, identity.ProviderOrgID) (identity.Tokens, error)
 }
 
+var _ identity.Provider = (*Provider)(nil)
+
 func (p Provider) StartDeviceAuth(ctx context.Context) (identity.DeviceFlow, error) {
 	if p.StartDeviceAuthFn == nil {
 		return identity.DeviceFlow{}, nil

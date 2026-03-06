@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/domains/tenancy"
+	"github.com/usetero/cli/internal/domains/validation"
 )
 
 type DatadogSite string
@@ -59,18 +60,106 @@ type DatadogStatus struct {
 	DismissedPolicyCount int
 }
 
-type CreateDatadogAccountInput struct {
+// DatadogAPIKeySubmission is the onboarding API key submission input.
+type DatadogAPIKeySubmission struct {
+	APIKey DatadogAPIKey
+}
+
+// Validate normalizes and validates the Datadog API key submission input.
+func (s DatadogAPIKeySubmission) Validate() (DatadogAPIKeySubmission, error) {
+	parsedAPIKey, err := ParseDatadogAPIKey(s.APIKey.String())
+	if err != nil {
+		return DatadogAPIKeySubmission{}, err
+	}
+	s.APIKey = parsedAPIKey
+	return s, nil
+}
+
+// DatadogAppKeySubmission is the onboarding Datadog account submission input.
+type DatadogAppKeySubmission struct {
+	Name   DatadogAccountName
+	AppKey DatadogAppKey
+}
+
+// Validate normalizes and validates the Datadog app key submission input.
+func (s DatadogAppKeySubmission) Validate() (DatadogAppKeySubmission, error) {
+	parsedName, err := ParseDatadogAccountName(s.Name.String())
+	if err != nil {
+		return DatadogAppKeySubmission{}, err
+	}
+	parsedAppKey, err := ParseDatadogAppKey(s.AppKey.String())
+	if err != nil {
+		return DatadogAppKeySubmission{}, err
+	}
+	s.Name = parsedName
+	s.AppKey = parsedAppKey
+	return s, nil
+}
+
+// DatadogAPIKeyValidation is the Datadog API key validation input.
+type DatadogAPIKeyValidation struct {
+	Site   DatadogSite
+	APIKey DatadogAPIKey
+}
+
+// Validate normalizes and validates the Datadog API key validation input.
+func (v DatadogAPIKeyValidation) Validate() (DatadogAPIKeyValidation, error) {
+	if !v.Site.Valid() {
+		return DatadogAPIKeyValidation{}, validation.Struct(struct {
+			Site string `label:"datadog site" validate:"required"`
+		}{})
+	}
+	parsedAPIKey, err := ParseDatadogAPIKey(v.APIKey.String())
+	if err != nil {
+		return DatadogAPIKeyValidation{}, err
+	}
+	v.APIKey = parsedAPIKey
+	return v, nil
+}
+
+// DatadogAccountCreate is the Datadog account creation mutation input.
+type DatadogAccountCreate struct {
 	AccountID tenancy.AccountID
-	Name      string
+	Name      DatadogAccountName
 	Site      DatadogSite
-	APIKey    string
-	AppKey    string
+	APIKey    DatadogAPIKey
+	AppKey    DatadogAppKey
+}
+
+// Validate normalizes and validates Datadog account create input.
+func (c DatadogAccountCreate) Validate() (DatadogAccountCreate, error) {
+	if err := validation.Struct(struct {
+		AccountID tenancy.AccountID `label:"account id" validate:"required"`
+	}{AccountID: c.AccountID}); err != nil {
+		return DatadogAccountCreate{}, err
+	}
+	parsedName, err := ParseDatadogAccountName(c.Name.String())
+	if err != nil {
+		return DatadogAccountCreate{}, err
+	}
+	if !c.Site.Valid() {
+		return DatadogAccountCreate{}, validation.Struct(struct {
+			Site string `label:"datadog site" validate:"required"`
+		}{})
+	}
+	parsedAPIKey, err := ParseDatadogAPIKey(c.APIKey.String())
+	if err != nil {
+		return DatadogAccountCreate{}, err
+	}
+	parsedAppKey, err := ParseDatadogAppKey(c.AppKey.String())
+	if err != nil {
+		return DatadogAccountCreate{}, err
+	}
+	c.Name = parsedName
+	c.APIKey = parsedAPIKey
+	c.AppKey = parsedAppKey
+	return c, nil
 }
 
 // DatadogService is the domain contract for Datadog onboarding operations.
 type DatadogService interface {
 	GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*DatadogAccount, error)
-	ValidateAPIKey(ctx context.Context, site DatadogSite, apiKey string) (bool, string, error)
-	Create(ctx context.Context, input CreateDatadogAccountInput) (DatadogAccountID, error)
+	ValidateAPIKey(ctx context.Context, validation DatadogAPIKeyValidation) (bool, string, error)
+	Create(ctx context.Context, create DatadogAccountCreate) (DatadogAccountID, error)
 	Status(ctx context.Context, datadogAccountID DatadogAccountID) (*DatadogStatus, error)
 }

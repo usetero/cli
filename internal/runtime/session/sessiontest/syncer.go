@@ -13,10 +13,19 @@ type Syncer struct {
 	Started        bool
 	Stopped        bool
 	Ready          bool
+	StateValue     pssyncer.State
 	AccountID      pssyncer.AccountID
 	StartCalls     atomic.Int32
 	NotifyUploadFn func(context.Context) error
 }
+
+var _ interface {
+	Start(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error
+	Stop()
+	State() pssyncer.State
+	IsReady() bool
+	NotifyUploadCompleted(ctx context.Context) error
+} = (*Syncer)(nil)
 
 func (s *Syncer) Start(_ context.Context, _ *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error {
 	s.StartCalls.Add(1)
@@ -34,6 +43,15 @@ func (s *Syncer) Start(_ context.Context, _ *sqlite.DB, accountID pssyncer.Accou
 }
 
 func (s *Syncer) Stop() { s.Stopped = true }
+func (s *Syncer) State() pssyncer.State {
+	if s.StateValue != nil {
+		return s.StateValue
+	}
+	if s.Ready {
+		return &pssyncer.Ready{}
+	}
+	return &pssyncer.Connecting{}
+}
 func (s *Syncer) IsReady() bool {
 	return s.Ready
 }

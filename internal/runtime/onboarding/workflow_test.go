@@ -23,33 +23,33 @@ type behaviorPrefs struct {
 func (f *behaviorPrefs) Snapshot(context.Context) (preferences.Snapshot, error) {
 	return f.snapshot, nil
 }
-func (f *behaviorPrefs) SetRole(_ context.Context, role preferences.Role) error {
-	f.snapshot.Role = role
+func (f *behaviorPrefs) SetRole(_ context.Context, selection preferences.RoleSelection) error {
+	f.snapshot.Role = selection.Role
 	return nil
 }
-func (f *behaviorPrefs) SetOrganization(_ context.Context, orgID tenancy.OrganizationID) error {
+func (f *behaviorPrefs) SetOrganization(_ context.Context, selection preferences.OrganizationSelection) error {
 	f.setOrganizationCalls++
-	f.snapshot.Organization = orgID
+	f.snapshot.Organization = selection.OrganizationID
 	f.snapshot.Account = ""
 	f.snapshot.Workspace = ""
 	return nil
 }
-func (f *behaviorPrefs) SetAccount(_ context.Context, accountID tenancy.AccountID) error {
+func (f *behaviorPrefs) SetAccount(_ context.Context, selection preferences.AccountSelection) error {
 	f.setAccountCalls++
-	f.snapshot.Account = accountID
+	f.snapshot.Account = selection.AccountID
 	f.snapshot.Workspace = ""
 	return nil
 }
-func (f *behaviorPrefs) SetWorkspace(_ context.Context, workspaceID tenancy.WorkspaceID) error {
+func (f *behaviorPrefs) SetWorkspace(_ context.Context, selection preferences.WorkspaceSelection) error {
 	f.setWorkspaceCalls++
-	f.snapshot.Workspace = workspaceID
+	f.snapshot.Workspace = selection.WorkspaceID
 	return nil
 }
-func (f *behaviorPrefs) SetScope(_ context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error {
+func (f *behaviorPrefs) SetScope(_ context.Context, selection preferences.ScopeSelection) error {
 	f.setScopeCalls++
-	f.snapshot.Organization = orgID
-	f.snapshot.Account = accountID
-	f.snapshot.Workspace = workspaceID
+	f.snapshot.Organization = selection.OrganizationID
+	f.snapshot.Account = selection.AccountID
+	f.snapshot.Workspace = selection.WorkspaceID
 	return nil
 }
 func (f *behaviorPrefs) ClearScope(_ context.Context) error {
@@ -65,7 +65,17 @@ type behaviorOrgs struct {
 }
 
 func (f *behaviorOrgs) List(context.Context) ([]tenancy.Organization, error) { return f.list, nil }
-func (f *behaviorOrgs) Create(context.Context, string) (tenancy.OrganizationBootstrap, error) {
+func (f *behaviorOrgs) Create(context.Context, tenancy.OrganizationCreate) (tenancy.OrganizationBootstrap, error) {
+	found := false
+	for i := range f.list {
+		if f.list[i].ID == f.bootstrap.Organization.ID {
+			found = true
+			break
+		}
+	}
+	if !found && f.bootstrap.Organization.ID != "" {
+		f.list = append(f.list, f.bootstrap.Organization)
+	}
 	return f.bootstrap, nil
 }
 
@@ -74,7 +84,7 @@ type behaviorAccounts struct {
 	next tenancy.AccountID
 }
 
-func (f *behaviorAccounts) Create(context.Context, string) (tenancy.AccountID, error) {
+func (f *behaviorAccounts) Create(context.Context, tenancy.AccountCreate) (tenancy.AccountID, error) {
 	if f.next == "" {
 		f.next = "acct_new"
 	}
@@ -87,7 +97,7 @@ type behaviorWorkspaces struct {
 	list map[tenancy.AccountID][]tenancy.Workspace
 }
 
-func (f *behaviorWorkspaces) Create(context.Context, tenancy.AccountID, string) (tenancy.WorkspaceID, error) {
+func (f *behaviorWorkspaces) Create(context.Context, tenancy.WorkspaceCreate) (tenancy.WorkspaceID, error) {
 	return "", nil
 }
 func (f *behaviorWorkspaces) Delete(context.Context, tenancy.WorkspaceID) error { return nil }
@@ -107,11 +117,26 @@ type behaviorDatadog struct {
 func (f *behaviorDatadog) GetByAccount(_ context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error) {
 	return f.byAccount[accountID], nil
 }
-func (f *behaviorDatadog) ValidateAPIKey(context.Context, integrations.DatadogSite, string) (bool, string, error) {
+func (f *behaviorDatadog) ValidateAPIKey(context.Context, integrations.DatadogAPIKeyValidation) (bool, string, error) {
 	return f.validateOK, f.validateMsg, f.validateErr
 }
-func (f *behaviorDatadog) Create(context.Context, integrations.CreateDatadogAccountInput) (integrations.DatadogAccountID, error) {
-	return "dd_1", nil
+func (f *behaviorDatadog) Create(_ context.Context, input integrations.DatadogAccountCreate) (integrations.DatadogAccountID, error) {
+	if f.byAccount == nil {
+		f.byAccount = map[tenancy.AccountID]*integrations.DatadogAccount{}
+	}
+	if f.status == nil {
+		f.status = map[integrations.DatadogAccountID]*integrations.DatadogStatus{}
+	}
+	id := integrations.DatadogAccountID("dd_1")
+	f.byAccount[input.AccountID] = &integrations.DatadogAccount{
+		ID:   id,
+		Name: input.Name.String(),
+		Site: input.Site,
+	}
+	if _, exists := f.status[id]; !exists {
+		f.status[id] = &integrations.DatadogStatus{ReadyForUse: false}
+	}
+	return id, nil
 }
 func (f *behaviorDatadog) Status(_ context.Context, datadogAccountID integrations.DatadogAccountID) (*integrations.DatadogStatus, error) {
 	return f.status[datadogAccountID], nil
@@ -120,6 +145,12 @@ func (f *behaviorDatadog) Status(_ context.Context, datadogAccountID integration
 type behaviorReady struct{ ready bool }
 
 func (r behaviorReady) Ready(context.Context) (bool, error) { return r.ready, nil }
+
+type mutableReady struct {
+	ready bool
+}
+
+func (r *mutableReady) Ready(context.Context) (bool, error) { return r.ready, nil }
 
 func TestCreateOrganization_AppliesBootstrapScope(t *testing.T) {
 	t.Parallel()
@@ -134,7 +165,7 @@ func TestCreateOrganization_AppliesBootstrapScope(t *testing.T) {
 		},
 	}
 
-	svc, err := NewService(
+	svc := NewService(
 		prefs,
 		orgs,
 		func(orgID tenancy.OrganizationID) tenancy.AccountService {
@@ -151,11 +182,8 @@ func TestCreateOrganization_AppliesBootstrapScope(t *testing.T) {
 		&behaviorDatadog{byAccount: map[tenancy.AccountID]*integrations.DatadogAccount{}, status: map[integrations.DatadogAccountID]*integrations.DatadogStatus{}, validateOK: true},
 		behaviorReady{ready: false},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
-	state, err := svc.CreateOrganization(context.Background(), "Org 1")
+	state, err := svc.CreateOrganization(context.Background(), tenancy.OrganizationCreate{Name: "Org 1"})
 	if err != nil {
 		t.Fatalf("create organization: %v", err)
 	}
@@ -185,7 +213,7 @@ func TestCreateOrganization_AppliesBootstrapScope(t *testing.T) {
 func TestCreateAccount_RequiresSelectedOrganization(t *testing.T) {
 	t.Parallel()
 
-	svc, err := NewService(
+	svc := NewService(
 		&behaviorPrefs{snapshot: preferences.Snapshot{Role: preferences.RolePlatform}},
 		&behaviorOrgs{list: []tenancy.Organization{}},
 		func(tenancy.OrganizationID) tenancy.AccountService { return &behaviorAccounts{} },
@@ -193,11 +221,8 @@ func TestCreateAccount_RequiresSelectedOrganization(t *testing.T) {
 		&behaviorDatadog{byAccount: map[tenancy.AccountID]*integrations.DatadogAccount{}, status: map[integrations.DatadogAccountID]*integrations.DatadogStatus{}, validateOK: true},
 		behaviorReady{ready: true},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
-	_, err = svc.CreateAccount(context.Background(), "A")
+	_, err := svc.CreateAccount(context.Background(), tenancy.AccountCreate{Name: "A"})
 	if err == nil || !strings.Contains(err.Error(), "organization must be selected") {
 		t.Fatalf("expected selected-organization guard error, got %v", err)
 	}
@@ -206,7 +231,7 @@ func TestCreateAccount_RequiresSelectedOrganization(t *testing.T) {
 func TestSubmitDatadogAPIKey_UsesValidationMessage(t *testing.T) {
 	t.Parallel()
 
-	svc, err := NewService(
+	svc := NewService(
 		&behaviorPrefs{snapshot: preferences.Snapshot{
 			Role:         preferences.RolePlatform,
 			Organization: "org_1",
@@ -228,14 +253,11 @@ func TestSubmitDatadogAPIKey_UsesValidationMessage(t *testing.T) {
 		},
 		behaviorReady{ready: false},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
 	if _, err := svc.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1); err != nil {
 		t.Fatalf("set site: %v", err)
 	}
-	_, err = svc.SubmitDatadogAPIKey(context.Background(), "bad")
+	_, err := svc.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{APIKey: integrations.DatadogAPIKey("bad")})
 	if err == nil || !strings.Contains(err.Error(), "datadog rejected key") {
 		t.Fatalf("expected validation message error, got %v", err)
 	}
@@ -244,7 +266,7 @@ func TestSubmitDatadogAPIKey_UsesValidationMessage(t *testing.T) {
 func TestSubmitDatadogAppKey_RequiresValidatedAPIKey(t *testing.T) {
 	t.Parallel()
 
-	svc, err := NewService(
+	svc := NewService(
 		&behaviorPrefs{snapshot: preferences.Snapshot{
 			Role:         preferences.RoleEngineer,
 			Organization: "org_1",
@@ -261,14 +283,17 @@ func TestSubmitDatadogAppKey_RequiresValidatedAPIKey(t *testing.T) {
 		&behaviorDatadog{byAccount: map[tenancy.AccountID]*integrations.DatadogAccount{}, status: map[integrations.DatadogAccountID]*integrations.DatadogStatus{}, validateOK: true},
 		behaviorReady{ready: false},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
 	if _, err := svc.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1); err != nil {
 		t.Fatalf("set site: %v", err)
 	}
-	_, err = svc.SubmitDatadogAppKey(context.Background(), "DD", "app-key")
+	_, err := svc.SubmitDatadogAppKey(
+		context.Background(),
+		integrations.DatadogAppKeySubmission{
+			Name:   integrations.DatadogAccountName("DD"),
+			AppKey: integrations.DatadogAppKey("app-key"),
+		},
+	)
 	if err == nil || !strings.Contains(err.Error(), "api key must be validated first") {
 		t.Fatalf("expected api-key guard error, got %v", err)
 	}
@@ -289,7 +314,7 @@ func TestDatadogDraft_ResetsAcrossAccountSwitch(t *testing.T) {
 		validateOK:  false,
 		validateMsg: "bad",
 	}
-	svc, err := NewService(
+	svc := NewService(
 		prefs,
 		&behaviorOrgs{list: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}}},
 		func(tenancy.OrganizationID) tenancy.AccountService {
@@ -305,22 +330,19 @@ func TestDatadogDraft_ResetsAcrossAccountSwitch(t *testing.T) {
 		dd,
 		behaviorReady{ready: false},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
 	if _, err := svc.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1); err != nil {
 		t.Fatalf("set site: %v", err)
 	}
 	// Force draft HasAPIKey=true so we can validate reset behavior.
-	if _, err := svc.SubmitDatadogAPIKey(context.Background(), "k"); err == nil {
-		// expected validation error, draft should remain unvalidated
+	if _, err := svc.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{APIKey: integrations.DatadogAPIKey("k")}); err == nil {
+		t.Fatalf("expected datadog api key validation error")
 	}
 	svc.setDraft(func(d *DatadogDraft) {
 		d.HasAPIKey = true
 	})
 
-	if _, err := svc.SelectAccount(context.Background(), "acct_2"); err != nil {
+	if _, err := svc.SelectAccount(context.Background(), preferences.AccountSelection{AccountID: "acct_2"}); err != nil {
 		t.Fatalf("select account: %v", err)
 	}
 	state, err := svc.State(context.Background())
@@ -335,7 +357,7 @@ func TestDatadogDraft_ResetsAcrossAccountSwitch(t *testing.T) {
 func TestSubmitDatadogAPIKey_PropagatesValidationErrors(t *testing.T) {
 	t.Parallel()
 
-	svc, err := NewService(
+	svc := NewService(
 		&behaviorPrefs{snapshot: preferences.Snapshot{
 			Role:         preferences.RolePlatform,
 			Organization: "org_1",
@@ -357,15 +379,117 @@ func TestSubmitDatadogAPIKey_PropagatesValidationErrors(t *testing.T) {
 		},
 		behaviorReady{ready: false},
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 
 	if _, err := svc.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1); err != nil {
 		t.Fatalf("set site: %v", err)
 	}
-	_, err = svc.SubmitDatadogAPIKey(context.Background(), "k")
+	_, err := svc.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{APIKey: integrations.DatadogAPIKey("k")})
 	if err == nil || !strings.Contains(err.Error(), "datadog unavailable") {
 		t.Fatalf("expected validation transport error, got %v", err)
+	}
+}
+
+func TestWorkflow_ProgressesToDone(t *testing.T) {
+	t.Parallel()
+
+	prefs := &behaviorPrefs{snapshot: preferences.Snapshot{}}
+	orgs := &behaviorOrgs{
+		list: []tenancy.Organization{},
+		bootstrap: tenancy.OrganizationBootstrap{
+			Organization: tenancy.Organization{ID: "org_1", Name: "Org 1"},
+			Account:      tenancy.Account{ID: "acct_1", Name: "Account 1"},
+			Workspace:    tenancy.Workspace{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
+		},
+	}
+	ready := &mutableReady{ready: false}
+	dd := &behaviorDatadog{
+		byAccount:  map[tenancy.AccountID]*integrations.DatadogAccount{},
+		status:     map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+		validateOK: true,
+	}
+
+	svc := NewService(
+		prefs,
+		orgs,
+		func(tenancy.OrganizationID) tenancy.AccountService {
+			return &behaviorAccounts{list: []tenancy.Account{{ID: "acct_1", Name: "Account 1"}}}
+		},
+		&behaviorWorkspaces{list: map[tenancy.AccountID][]tenancy.Workspace{
+			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
+		}},
+		dd,
+		ready,
+	)
+
+	state, err := svc.State(context.Background())
+	if err != nil {
+		t.Fatalf("state: %v", err)
+	}
+	if state.NextStep != StepRoleSelect {
+		t.Fatalf("expected role select, got %q", state.NextStep)
+	}
+
+	state, err = svc.SetRole(context.Background(), preferences.RoleSelection{Role: preferences.RoleEngineer})
+	if err != nil {
+		t.Fatalf("set role: %v", err)
+	}
+	if state.NextStep != StepOrganizationCreate {
+		t.Fatalf("expected organization create, got %q", state.NextStep)
+	}
+
+	state, err = svc.CreateOrganization(context.Background(), tenancy.OrganizationCreate{Name: "Org 1"})
+	if err != nil {
+		t.Fatalf("create organization: %v", err)
+	}
+	if state.NextStep != StepDatadogRegion {
+		t.Fatalf("expected datadog region, got %q", state.NextStep)
+	}
+
+	state, err = svc.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1)
+	if err != nil {
+		t.Fatalf("set datadog site: %v", err)
+	}
+	if state.NextStep != StepDatadogAPIKey {
+		t.Fatalf("expected datadog api key, got %q", state.NextStep)
+	}
+
+	state, err = svc.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{APIKey: integrations.DatadogAPIKey("api-key")})
+	if err != nil {
+		t.Fatalf("submit api key: %v", err)
+	}
+	if state.NextStep != StepDatadogAppKey {
+		t.Fatalf("expected datadog app key, got %q", state.NextStep)
+	}
+
+	state, err = svc.SubmitDatadogAppKey(
+		context.Background(),
+		integrations.DatadogAppKeySubmission{
+			Name:   integrations.DatadogAccountName("Datadog"),
+			AppKey: integrations.DatadogAppKey("app-key"),
+		},
+	)
+	if err != nil {
+		t.Fatalf("submit app key: %v", err)
+	}
+	if state.NextStep != StepDatadogDiscovery {
+		t.Fatalf("expected datadog discovery, got %q", state.NextStep)
+	}
+
+	dd.status["dd_1"] = &integrations.DatadogStatus{ReadyForUse: true}
+	state, err = svc.State(context.Background())
+	if err != nil {
+		t.Fatalf("state after discovery ready: %v", err)
+	}
+	if state.NextStep != StepPowerSyncReady {
+		t.Fatalf("expected powersync ready, got %q", state.NextStep)
+	}
+
+	ready.ready = true
+	state, err = svc.State(context.Background())
+	if err != nil {
+		t.Fatalf("state after powersync ready: %v", err)
+	}
+	if state.NextStep != StepDone {
+		t.Fatalf("expected done, got %q", state.NextStep)
 	}
 }

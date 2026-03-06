@@ -59,12 +59,7 @@ func TestWorkOSProvider_Mapping(t *testing.T) {
 	}
 }
 
-func TestWorkOSProvider_ErrorMappingAndNilProvider(t *testing.T) {
-	var nilProvider *WorkOSProvider
-	if _, err := nilProvider.Refresh(context.Background(), "r", "org"); !errors.Is(err, ErrProviderNotConfigured) {
-		t.Fatalf("expected provider-not-configured, got %v", err)
-	}
-
+func TestWorkOSProvider_ErrorMapping(t *testing.T) {
 	provider := NewWorkOSProvider(&workostest.Client{
 		PollDeviceAuthorizationFn: func(context.Context, string) (workos.DeviceAuthenticationResult, error) {
 			return workos.DeviceAuthenticationResult{}, workos.ErrAuthorizationPending

@@ -7,7 +7,7 @@ cd "$repo_root"
 
 scan_root="${TERO_SCAN_ROOT:-$repo_root}"
 module_root="${TERO_MODULE_ROOT:-$scan_root}"
-app_root="${TERO_APP_ROOT:-$scan_root/internal/app}"
+app_root="${TERO_APP_ROOT:-$scan_root/internal/interfaces/tui}"
 module_prefix="${TERO_MODULE_PREFIX:-github.com/usetero/cli}"
 
 if ! [ -d "$app_root" ]; then

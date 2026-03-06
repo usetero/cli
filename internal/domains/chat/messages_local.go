@@ -16,27 +16,25 @@ type LocalMessageService struct {
 }
 
 func NewLocalMessageService(db *sql.DB) *LocalMessageService {
+	if db == nil {
+		panic("chat local message service requires db")
+	}
 	return &LocalMessageService{q: messagesdb.New(db)}
 }
 
 // CreateUserMessage inserts a user-authored message.
-func (s *LocalMessageService) CreateUserMessage(ctx context.Context, conversationID ConversationID, content string) (MessageID, error) {
-	if s == nil || s.q == nil {
-		return "", fmt.Errorf("chat local message service is not initialized")
-	}
-	if conversationID == "" {
-		return "", fmt.Errorf("conversation id is required")
-	}
-	if content == "" {
-		return "", fmt.Errorf("content is required")
+func (s *LocalMessageService) CreateUserMessage(ctx context.Context, create UserMessageCreate) (MessageID, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return "", err
 	}
 
 	id := MessageID(uuid.NewString())
-	err := s.q.Create(ctx, messagesdb.CreateParams{
+	err = s.q.Create(ctx, messagesdb.CreateParams{
 		ID:             toMessagesDBMessageID(id),
-		ConversationID: toMessagesDBConversationID(conversationID),
+		ConversationID: toMessagesDBConversationID(validated.ConversationID),
 		Role:           toMessagesDBRole(RoleUser),
-		Content:        content,
+		Content:        validated.Content,
 		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
@@ -47,9 +45,6 @@ func (s *LocalMessageService) CreateUserMessage(ctx context.Context, conversatio
 
 // Delete removes a message by id.
 func (s *LocalMessageService) Delete(ctx context.Context, messageID MessageID) error {
-	if s == nil || s.q == nil {
-		return fmt.Errorf("chat local message service is not initialized")
-	}
 	if messageID == "" {
 		return fmt.Errorf("message id is required")
 	}
@@ -58,9 +53,6 @@ func (s *LocalMessageService) Delete(ctx context.Context, messageID MessageID) e
 
 // ListByConversation returns messages for one conversation ordered by creation time.
 func (s *LocalMessageService) ListByConversation(ctx context.Context, conversationID ConversationID) ([]Message, error) {
-	if s == nil || s.q == nil {
-		return nil, fmt.Errorf("chat local message service is not initialized")
-	}
 	if conversationID == "" {
 		return nil, fmt.Errorf("conversation id is required")
 	}

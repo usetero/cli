@@ -32,7 +32,7 @@ func New(
 	conversations domainchat.ConversationService,
 	messages domainchat.MessageService,
 	client ChatClient,
-) (*Runtime, error) {
+) *Runtime {
 	return NewWithTools(conversations, messages, client, chattools.Toolset{})
 }
 
@@ -41,15 +41,15 @@ func NewWithTools(
 	messages domainchat.MessageService,
 	client ChatClient,
 	tools chattools.Toolset,
-) (*Runtime, error) {
+) *Runtime {
 	if conversations == nil {
-		return nil, fmt.Errorf("chat conversations dependency is required")
+		panic("chat runtime requires conversation service")
 	}
 	if messages == nil {
-		return nil, fmt.Errorf("chat messages dependency is required")
+		panic("chat runtime requires message service")
 	}
 	if client == nil {
-		return nil, fmt.Errorf("chat client dependency is required")
+		panic("chat runtime requires client")
 	}
 
 	return &Runtime{
@@ -59,7 +59,7 @@ func NewWithTools(
 		tools:         tools,
 		updates:       make(chan State, 32),
 		state:         State{CanSend: true},
-	}, nil
+	}
 }
 
 func (r *Runtime) State() State {

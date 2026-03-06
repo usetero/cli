@@ -79,41 +79,6 @@ func TestSyncerNotifyUploadCompletedBeforeStart(t *testing.T) {
 	}
 }
 
-func TestSyncerNewValidatesInputs(t *testing.T) {
-	t.Parallel()
-
-	t.Run("invalid endpoint fails", func(t *testing.T) {
-		t.Parallel()
-		if _, err := syncer.New("://bad", &syncertest.TokenSource{Token: "tok"}, logtest.NewScope(t)); err == nil {
-			t.Fatal("expected invalid endpoint error")
-		}
-	})
-
-	t.Run("nil token source fails", func(t *testing.T) {
-		t.Parallel()
-		if _, err := syncer.New("https://powersync.example", nil, logtest.NewScope(t)); err == nil {
-			t.Fatal("expected nil token source error")
-		}
-	})
-
-	t.Run("invalid retry policy fails", func(t *testing.T) {
-		t.Parallel()
-		_, err := syncer.New(
-			"https://powersync.example",
-			&syncertest.TokenSource{Token: "tok"},
-			logtest.NewScope(t),
-			syncer.WithRetryPolicy(syncer.RetryPolicy{
-				InitialDelay:    100 * time.Millisecond,
-				MaxDelay:        10 * time.Millisecond,
-				ErrorStateAfter: 1,
-			}),
-		)
-		if err == nil {
-			t.Fatal("expected invalid retry policy error")
-		}
-	})
-}
-
 func TestSyncerNotifyUploadCompletedAppliesInstructions(t *testing.T) {
 	t.Parallel()
 
@@ -162,7 +127,14 @@ func TestSyncerAuthErrorForcesRefresh(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	}}
-	tokens := &syncertest.TokenSource{Token: "stale", ForceToken: "fresh"}
+	forceStarted := make(chan struct{})
+	forceGate := make(chan struct{})
+	tokens := &syncertest.TokenSource{
+		Token:               "stale",
+		ForceToken:          "fresh",
+		ForceRefreshStarted: forceStarted,
+		ForceRefreshGate:    forceGate,
+	}
 
 	s := newTestSyncer(t, tokens, ctrl, cli)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -171,6 +143,15 @@ func TestSyncerAuthErrorForcesRefresh(t *testing.T) {
 		t.Fatalf("Start() error = %v", err)
 	}
 
+	select {
+	case <-forceStarted:
+	case <-time.After(time.Second):
+		t.Fatal("force refresh did not start")
+	}
+	if _, ok := s.State().(*syncer.Reconnecting); !ok {
+		t.Fatalf("State() = %T, want *Reconnecting", s.State())
+	}
+	close(forceGate)
 	waitFor(t, time.Second, func() bool { return tokens.ForceCalls.Load() > 0 })
 	s.Stop()
 
@@ -179,6 +160,77 @@ func TestSyncerAuthErrorForcesRefresh(t *testing.T) {
 	}
 	if cli.TokenValue != "fresh" {
 		t.Fatalf("client token = %q, want fresh", cli.TokenValue)
+	}
+}
+
+func TestSyncerUpdateSyncStatusTracksProgress(t *testing.T) {
+	t.Parallel()
+
+	database := openTestDB(t)
+	ctrl := &syncertest.ControlPlane{
+		StartInstructions: []extension.Instruction{{Type: extension.InstructionEstablishSyncStream, Request: &psclient.SyncStreamRequest{}}},
+		SendTextInstructions: []extension.Instruction{{
+			Type: extension.InstructionUpdateSyncStatus,
+			SyncStatus: &extension.SyncStatus{
+				Downloading: &extension.DownloadProgress{
+					Buckets: map[string]extension.BucketProgress{
+						"prio_3": {Priority: 3, SinceLast: 3, TargetCount: 10},
+						"prio_4": {Priority: 4, SinceLast: 2, TargetCount: 5},
+					},
+				},
+			},
+		}},
+	}
+	cli := &syncertest.Client{SyncStreamFn: func(ctx context.Context, _ *psclient.SyncStreamRequest, handler psclient.LineHandler) error {
+		if err := handler([]byte(`{"checkpoint":{"last_op_id":"1","buckets":[]}}`)); err != nil {
+			return err
+		}
+		<-ctx.Done()
+		return ctx.Err()
+	}}
+
+	s := newTestSyncer(t, &syncertest.TokenSource{Token: "tok"}, ctrl, cli)
+	if err := s.Start(context.Background(), database, syncer.AccountID("acc-1"), nil); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	defer s.Stop()
+
+	waitFor(t, time.Second, func() bool {
+		state, ok := s.State().(*syncer.Syncing)
+		return ok && state.Progress != nil
+	})
+
+	state, ok := s.State().(*syncer.Syncing)
+	if !ok || state.Progress == nil {
+		t.Fatalf("State() = %#v, want Syncing with progress", s.State())
+	}
+	if state.Progress.Downloaded != 5 || state.Progress.Total != 15 {
+		t.Fatalf("progress = %#v, want downloaded=5 total=15", state.Progress)
+	}
+}
+
+func TestSyncerStartWhileRunningReturnsAlreadyStarted(t *testing.T) {
+	t.Parallel()
+
+	database := openTestDB(t)
+	ctrl := &syncertest.ControlPlane{StartInstructions: []extension.Instruction{{Type: extension.InstructionEstablishSyncStream, Request: &psclient.SyncStreamRequest{}}}}
+	cli := &syncertest.Client{
+		SyncStreamFn: func(ctx context.Context, _ *psclient.SyncStreamRequest, _ psclient.LineHandler) error {
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+
+	s := newTestSyncer(t, &syncertest.TokenSource{Token: "tok"}, ctrl, cli)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := s.Start(ctx, database, syncer.AccountID("acc-1"), nil); err != nil {
+		t.Fatalf("first Start() error = %v", err)
+	}
+	defer s.Stop()
+
+	if err := s.Start(context.Background(), database, syncer.AccountID("acc-1"), nil); err != syncer.ErrAlreadyStarted {
+		t.Fatalf("second Start() error = %v, want ErrAlreadyStarted", err)
 	}
 }
 

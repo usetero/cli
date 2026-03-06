@@ -31,5 +31,8 @@ func NewWorkOSProvider(client interface {
 	PollDeviceAuthorization(ctx context.Context, deviceCode string) (workos.DeviceAuthenticationResult, error)
 	RefreshToken(ctx context.Context, refreshToken, workosOrgID string) (workos.RefreshResult, error)
 }) *WorkOSProvider {
+	if client == nil {
+		panic("identity workos provider requires client")
+	}
 	return &WorkOSProvider{client: client}
 }

@@ -19,21 +19,22 @@ type RemoteAccountService struct {
 }
 
 func NewRemoteAccountService(client remoteAccountClient, organizationID OrganizationID) *RemoteAccountService {
+	if client == nil {
+		panic("tenancy remote account service requires client")
+	}
+	if organizationID == "" {
+		panic("tenancy remote account service requires organization id")
+	}
 	return &RemoteAccountService{client: client, organizationID: organizationID}
 }
 
-func (s *RemoteAccountService) Create(ctx context.Context, name string) (AccountID, error) {
-	if s == nil || s.client == nil {
-		return "", fmt.Errorf("tenancy remote account service is not initialized")
-	}
-	if s.organizationID == "" {
-		return "", fmt.Errorf("organization id is required")
-	}
-	if name == "" {
-		return "", fmt.Errorf("account name is required")
+func (s *RemoteAccountService) Create(ctx context.Context, create AccountCreate) (AccountID, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return "", err
 	}
 
-	account, err := s.client.CreateAccount(ctx, toControlPlaneOrganizationID(s.organizationID), name)
+	account, err := s.client.CreateAccount(ctx, toControlPlaneOrganizationID(s.organizationID), validated.Name)
 	if err != nil {
 		return "", err
 	}
@@ -45,13 +46,6 @@ func (s *RemoteAccountService) Delete(_ context.Context, _ AccountID) error {
 }
 
 func (s *RemoteAccountService) List(ctx context.Context) ([]Account, error) {
-	if s == nil || s.client == nil {
-		return nil, fmt.Errorf("tenancy remote account service is not initialized")
-	}
-	if s.organizationID == "" {
-		return nil, fmt.Errorf("organization id is required")
-	}
-
 	rows, err := s.client.ListAccounts(ctx, toControlPlaneOrganizationID(s.organizationID))
 	if err != nil {
 		return nil, err

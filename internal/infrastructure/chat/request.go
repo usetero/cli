@@ -223,7 +223,7 @@ func isJSONObject(raw json.RawMessage) bool {
 
 func (r Request) payload() (Request, error) {
 	if err := r.Validate(); err != nil {
-		return Request{}, fmt.Errorf("%w: %v", ErrInvalidRequest, err)
+		return Request{}, fmt.Errorf("%w: %s", ErrInvalidRequest, err.Error())
 	}
 	r.ChatProtocolVersion = protocolVersion
 	return r, nil

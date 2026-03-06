@@ -32,6 +32,34 @@ For local dependencies like SQLite/log/theme, real instances are often clearer
 and more reliable than deep mocks.
 The bias here is toward realistic behavior and lower false confidence.
 
+## Test doubles and ownership
+
+Keep test infrastructure aligned with package ownership:
+
+- If an interface is owned by package `X`, put reusable doubles in `X/xtest`.
+- Avoid runtime-local "grab bag" test packages that mock other domains.
+- Add compile-time interface assertions for reusable doubles.
+- Create shared `*test` packages only when a double is reused by 2+ test suites.
+- Keep scenario-specific fakes inline in test files when reuse is low.
+
+## What not to test
+
+Avoid low-value tests that only lock down defensive wiring:
+
+- do not add tests for nil-receiver behavior on types that are not intended to
+  be zero-value usable,
+- do not add tests for trivial constructor panics like missing required
+  dependencies or empty required config,
+- do not preserve legacy "not initialized" assertions once a type has moved to
+  constructor-enforced invariants.
+
+Constructor tests are only worth keeping when the constructor has meaningful
+behavior of its own, such as normalization, defaulting, option precedence, or
+derived state that affects runtime behavior.
+
+The suite should spend its budget on user-visible behavior and runtime
+invariants, not on proving that obvious programmer mistakes fail fast.
+
 ## High-risk areas that must stay protected
 
 Chat and onboarding both rely on strict lifecycle semantics.

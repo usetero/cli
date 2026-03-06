@@ -62,26 +62,29 @@ func TestController_CheckpointFixtureReplay(t *testing.T) {
 	}
 
 	path := filepath.Join("testdata", "checkpoint_lines.ndjson")
-	f, err := os.Open(path)
-	if err != nil {
-		t.Fatalf("open fixture: %v", err)
+	if lineCount := replayFixture(t, controller, path); lineCount == 0 {
+		t.Fatal("expected checkpoint fixture to contain lines")
 	}
-	defer f.Close()
+}
 
-	scanner := bufio.NewScanner(f)
-	lineNo := 0
-	for scanner.Scan() {
-		lineNo++
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		if _, err := controller.SendTextLine(ctx, line); err != nil {
-			t.Fatalf("SendTextLine(line %d) error = %v", lineNo, err)
-		}
+func TestController_SanitizedFixtureReplay(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := openTestDB(t)
+	controller := extension.NewController(db)
+	t.Cleanup(func() { _ = controller.Close() })
+
+	if _, err := controller.Start(ctx, extension.StartRequest{IncludeDefaults: true}); err != nil {
+		t.Fatalf("Start() error = %v", err)
 	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan fixture: %v", err)
+	if _, err := controller.NotifyConnection(ctx, extension.ConnectionEstablished); err != nil {
+		t.Fatalf("NotifyConnection(established) error = %v", err)
+	}
+
+	path := filepath.Join("testdata", "dev-sanitized.ndjson")
+	if lineCount := replayFixture(t, controller, path); lineCount == 0 {
+		t.Fatal("expected sanitized fixture to contain lines")
 	}
 }
 
@@ -129,4 +132,32 @@ func openBareDB(t *testing.T) *sqlite.DB {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return db
+}
+
+func replayFixture(t *testing.T, controller *extension.Controller, path string) int {
+	t.Helper()
+
+	ctx := context.Background()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open fixture: %v", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	lineNo := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		lineNo++
+		if _, err := controller.SendTextLine(ctx, line); err != nil {
+			t.Fatalf("SendTextLine(line %d) error = %v", lineNo, err)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("scan fixture: %v", err)
+	}
+	return lineNo
 }

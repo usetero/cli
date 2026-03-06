@@ -36,7 +36,7 @@ func (s *Syncer) run(ctx context.Context, done chan struct{}) {
 		var apiErr *psclient.Error
 		if errors.As(err, &apiErr) {
 			if apiErr.IsAuth() {
-				s.setState(&Reconnecting{Degraded: retries >= s.retry.ErrorStateAfter})
+				s.transitionToReconnecting(retries)
 				if refreshErr := s.forceRefreshToken(ctx); refreshErr != nil {
 					retries++
 					s.wait(ctx, delay)
@@ -48,21 +48,21 @@ func (s *Syncer) run(ctx context.Context, done chan struct{}) {
 				continue
 			}
 			if apiErr.IsPermanent() {
-				s.setState(&Error{Err: err})
+				s.transitionToError(err)
 				return
 			}
 		}
 
 		retries++
-		s.setState(&Reconnecting{Degraded: retries >= s.retry.ErrorStateAfter})
+		s.transitionToReconnecting(retries)
 		s.wait(ctx, delay)
 		delay = minDuration(delay*2, s.retry.MaxDelay)
 	}
 }
 
 func (s *Syncer) runSession(ctx context.Context) error {
-	client, _, _, accountID, _, _ := s.takeRunDeps()
-	if client == nil {
+	deps := s.takeRunDeps()
+	if deps.client == nil {
 		return fmt.Errorf("syncer client unavailable")
 	}
 
@@ -71,11 +71,11 @@ func (s *Syncer) runSession(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("get access token: %w", err)
 	}
-	client.SetToken(psclient.AccessToken(token))
+	deps.client.SetToken(psclient.AccessToken(token))
 
 	instructions, err := s.controlStart(ctx, extension.StartRequest{
 		IncludeDefaults: true,
-		Parameters:      map[string]any{controlParamAccountID: accountID.String()},
+		Parameters:      map[string]any{controlParamAccountID: deps.accountID.String()},
 	})
 	if err != nil {
 		return fmt.Errorf("control start: %w", err)
@@ -102,18 +102,18 @@ func (s *Syncer) runSession(ctx context.Context) error {
 }
 
 func (s *Syncer) runStream(ctx context.Context, req *psclient.SyncStreamRequest) error {
-	client, _, _, _, _, _ := s.takeRunDeps()
-	if client == nil {
+	deps := s.takeRunDeps()
+	if deps.client == nil {
 		return fmt.Errorf("syncer client unavailable")
 	}
 	if req == nil {
 		return fmt.Errorf("missing sync stream request")
 	}
 
-	s.setState(&Syncing{})
+	s.transitionToSyncing(nil)
 	connected := false
 
-	err := client.SyncStream(ctx, req, func(line []byte) error {
+	err := deps.client.SyncStream(ctx, req, func(line []byte) error {
 		if !connected {
 			if _, err := s.controlNotifyConnection(ctx, extension.ConnectionEstablished); err != nil {
 				return fmt.Errorf("notify connection established: %w", err)
@@ -153,13 +153,15 @@ func (s *Syncer) runStream(ctx context.Context, req *psclient.SyncStreamRequest)
 func (s *Syncer) applyInstructions(ctx context.Context, instructions []extension.Instruction) (streamAction, error) {
 	for _, inst := range instructions {
 		switch inst.Type {
+		case extension.InstructionEstablishSyncStream:
+			// Handled by runCycle before stream starts.
 		case extension.InstructionDidCompleteSync:
-			s.setState(&Ready{})
+			s.transitionToReady()
 			s.fireFirstSync()
 		case extension.InstructionUpdateSyncStatus:
 			if inst.SyncStatus != nil && inst.SyncStatus.Downloading != nil {
 				downloaded, total := inst.SyncStatus.Downloading.TotalProgress()
-				s.setState(&Syncing{Progress: &Progress{Downloaded: downloaded, Total: total}})
+				s.transitionToSyncing(&Progress{Downloaded: downloaded, Total: total})
 			}
 		case extension.InstructionFetchCredentials:
 			if err := s.refreshToken(ctx); err != nil {
@@ -168,11 +170,11 @@ func (s *Syncer) applyInstructions(ctx context.Context, instructions []extension
 		case extension.InstructionCloseSyncStream:
 			return streamActionClose, nil
 		case extension.InstructionFlushFileSystem:
-			_, _, db, _, _, _ := s.takeRunDeps()
-			if db == nil {
+			deps := s.takeRunDeps()
+			if deps.db == nil {
 				return streamActionContinue, fmt.Errorf("database unavailable for flush")
 			}
-			if _, err := db.Exec(ctx, "PRAGMA wal_checkpoint(PASSIVE)"); err != nil {
+			if _, err := deps.db.Exec(ctx, "PRAGMA wal_checkpoint(PASSIVE)"); err != nil {
 				return streamActionContinue, fmt.Errorf("flush filesystem: %w", err)
 			}
 		case extension.InstructionLogLine:
@@ -187,11 +189,11 @@ func (s *Syncer) refreshToken(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("refresh access token: %w", err)
 	}
-	client, _, _, _, _, _ := s.takeRunDeps()
-	if client == nil {
+	deps := s.takeRunDeps()
+	if deps.client == nil {
 		return fmt.Errorf("syncer client unavailable")
 	}
-	client.SetToken(psclient.AccessToken(token))
+	deps.client.SetToken(psclient.AccessToken(token))
 	if _, err := s.controlNotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}
@@ -203,11 +205,11 @@ func (s *Syncer) forceRefreshToken(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("force refresh access token: %w", err)
 	}
-	client, _, _, _, _, _ := s.takeRunDeps()
-	if client == nil {
+	deps := s.takeRunDeps()
+	if deps.client == nil {
 		return fmt.Errorf("syncer client unavailable")
 	}
-	client.SetToken(psclient.AccessToken(token))
+	deps.client.SetToken(psclient.AccessToken(token))
 	if _, err := s.controlNotifyTokenRefreshed(ctx); err != nil {
 		return fmt.Errorf("notify token refreshed: %w", err)
 	}
@@ -215,12 +217,12 @@ func (s *Syncer) forceRefreshToken(ctx context.Context) error {
 }
 
 func (s *Syncer) fireFirstSync() {
-	_, _, _, _, cb, once := s.takeRunDeps()
-	if cb == nil || once == nil {
+	deps := s.takeRunDeps()
+	if deps.onFirstSync == nil || deps.firstSync == nil {
 		return
 	}
-	once.Do(func() {
-		cb()
+	deps.firstSync.Do(func() {
+		deps.onFirstSync()
 		s.clearFirstSyncCallback()
 	})
 }

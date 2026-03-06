@@ -7,7 +7,8 @@ import (
 
 // State is the current account-runtime lifecycle state.
 type State struct {
-	Running   bool
-	AccountID tenancy.AccountID
-	DBPath    sqlite.DatabasePath
+	Running        bool
+	OrganizationID tenancy.OrganizationID
+	AccountID      tenancy.AccountID
+	DBPath         sqlite.DatabasePath
 }

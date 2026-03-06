@@ -20,6 +20,9 @@ type ApprovePolicyTool struct {
 }
 
 func NewApprovePolicyTool(approveFunc func(ctx context.Context, policyID PolicyID) error) *ApprovePolicyTool {
+	if approveFunc == nil {
+		panic("approve policy tool requires approve function")
+	}
 	return &ApprovePolicyTool{approveFunc: approveFunc}
 }
 
@@ -38,13 +41,6 @@ func (t *ApprovePolicyTool) Definition() Definition {
 }
 
 func (t *ApprovePolicyTool) Run(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
-	if t == nil {
-		return nil, fmt.Errorf("approve policy tool is not initialized")
-	}
-	if t.approveFunc == nil {
-		return nil, fmt.Errorf("approve policy function is not configured")
-	}
-
 	var in ApprovePolicyInput
 	if err := json.Unmarshal(input, &in); err != nil {
 		return nil, fmt.Errorf("parse approve policy input: %w", err)

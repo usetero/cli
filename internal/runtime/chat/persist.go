@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"fmt"
 
 	domainchat "github.com/usetero/cli/internal/domains/chat"
 )
@@ -16,11 +15,7 @@ func (r *Runtime) ensureConversation(ctx context.Context) (domainchat.Conversati
 	}
 	r.mu.RUnlock()
 
-	if r.conversations == nil {
-		return "", fmt.Errorf("conversation service is required")
-	}
-
-	id, err := r.conversations.Create(ctx, nil)
+	id, err := r.conversations.Create(ctx, domainchat.ConversationCreate{})
 	if err != nil {
 		return "", err
 	}
@@ -34,10 +29,10 @@ func (r *Runtime) ensureConversation(ctx context.Context) (domainchat.Conversati
 }
 
 func (r *Runtime) persistUserMessage(ctx context.Context, conversationID domainchat.ConversationID, text string) (domainchat.MessageID, error) {
-	if r.messages == nil {
-		return "", fmt.Errorf("message service is required")
-	}
-	id, err := r.messages.CreateUserMessage(ctx, conversationID, text)
+	id, err := r.messages.CreateUserMessage(ctx, domainchat.UserMessageCreate{
+		ConversationID: conversationID,
+		Content:        text,
+	})
 	if err != nil {
 		return "", err
 	}

@@ -2,16 +2,16 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/usetero/cli/internal/domains/tenancy"
+	"github.com/usetero/cli/internal/domains/preferences"
 )
 
-func (s *Service) SelectWorkspace(ctx context.Context, workspaceID tenancy.WorkspaceID) (State, error) {
-	if workspaceID == "" {
-		return State{}, fmt.Errorf("workspace id is required")
+func (s *Service) SelectWorkspace(ctx context.Context, selection preferences.WorkspaceSelection) (State, error) {
+	validated, err := selection.Validate()
+	if err != nil {
+		return State{}, err
 	}
-	if err := s.preferences.SetWorkspace(ctx, workspaceID); err != nil {
+	if err := s.preferences.SetWorkspace(ctx, validated); err != nil {
 		return State{}, err
 	}
 	return s.State(ctx)

@@ -21,13 +21,13 @@ type RemoteDatadogService struct {
 }
 
 func NewRemoteDatadogService(client remoteDatadogClient) *RemoteDatadogService {
+	if client == nil {
+		panic("integrations remote datadog service requires client")
+	}
 	return &RemoteDatadogService{client: client}
 }
 
 func (s *RemoteDatadogService) GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*DatadogAccount, error) {
-	if s == nil || s.client == nil {
-		return nil, fmt.Errorf("integrations remote datadog service is not initialized")
-	}
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
@@ -43,40 +43,21 @@ func (s *RemoteDatadogService) GetByAccount(ctx context.Context, accountID tenan
 	return &mapped, nil
 }
 
-func (s *RemoteDatadogService) ValidateAPIKey(ctx context.Context, site DatadogSite, apiKey string) (bool, string, error) {
-	if s == nil || s.client == nil {
-		return false, "", fmt.Errorf("integrations remote datadog service is not initialized")
+func (s *RemoteDatadogService) ValidateAPIKey(ctx context.Context, validation DatadogAPIKeyValidation) (bool, string, error) {
+	validated, err := validation.Validate()
+	if err != nil {
+		return false, "", err
 	}
-	if !site.Valid() {
-		return false, "", fmt.Errorf("datadog site is required")
-	}
-	if apiKey == "" {
-		return false, "", fmt.Errorf("api key is required")
-	}
-	return s.client.ValidateDatadogAPIKey(ctx, apiKey, toControlPlaneDatadogSite(site))
+	return s.client.ValidateDatadogAPIKey(ctx, validated.APIKey.String(), toControlPlaneDatadogSite(validated.Site))
 }
 
-func (s *RemoteDatadogService) Create(ctx context.Context, input CreateDatadogAccountInput) (DatadogAccountID, error) {
-	if s == nil || s.client == nil {
-		return "", fmt.Errorf("integrations remote datadog service is not initialized")
-	}
-	if input.AccountID == "" {
-		return "", fmt.Errorf("account id is required")
-	}
-	if input.Name == "" {
-		return "", fmt.Errorf("name is required")
-	}
-	if !input.Site.Valid() {
-		return "", fmt.Errorf("datadog site is required")
-	}
-	if input.APIKey == "" {
-		return "", fmt.Errorf("api key is required")
-	}
-	if input.AppKey == "" {
-		return "", fmt.Errorf("app key is required")
+func (s *RemoteDatadogService) Create(ctx context.Context, create DatadogAccountCreate) (DatadogAccountID, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return "", err
 	}
 
-	created, err := s.client.CreateDatadogAccountWithCredentials(ctx, toControlPlaneCreateDatadogAccountInput(input))
+	created, err := s.client.CreateDatadogAccountWithCredentials(ctx, toControlPlaneCreateDatadogAccountInput(validated))
 	if err != nil {
 		return "", err
 	}
@@ -84,9 +65,6 @@ func (s *RemoteDatadogService) Create(ctx context.Context, input CreateDatadogAc
 }
 
 func (s *RemoteDatadogService) Status(ctx context.Context, datadogAccountID DatadogAccountID) (*DatadogStatus, error) {
-	if s == nil || s.client == nil {
-		return nil, fmt.Errorf("integrations remote datadog service is not initialized")
-	}
 	if datadogAccountID == "" {
 		return nil, fmt.Errorf("datadog account id is required")
 	}

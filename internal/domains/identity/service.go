@@ -19,6 +19,12 @@ type Service struct {
 
 // NewService constructs an identity service.
 func NewService(provider Provider, store TokenStore, log Logger) *Service {
+	if provider == nil {
+		panic("identity service requires provider")
+	}
+	if store == nil {
+		panic("identity service requires token store")
+	}
 	if log == nil {
 		log = NopLogger{}
 	}

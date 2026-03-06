@@ -11,7 +11,7 @@ func InTx(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) error {
 	if err != nil {
 		return wrapErr("begin tx", err)
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer tx.Rollback() //nolint:errcheck // Best-effort rollback; commit path handles success.
 
 	if err := fn(tx); err != nil {
 		return err

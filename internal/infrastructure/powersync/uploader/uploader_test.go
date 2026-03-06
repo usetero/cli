@@ -23,14 +23,11 @@ func TestUploaderRunStopsOnContextCancel(t *testing.T) {
 	raw := openTestDB(t)
 	store := psdb.NewStore(raw)
 	client := &uploadertest.Client{WriteCheckpoint: "1"}
-	u, err := uploader.New(store, client, &uploadertest.TokenSource{Token: "tok"}, logtest.NewScope(t))
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
+	u := uploader.New(store, client, &uploadertest.TokenSource{Token: "tok"}, logtest.NewScope(t))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err = u.Run(ctx)
+	err := u.Run(ctx)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -51,7 +48,7 @@ func TestUploaderProcessesBatchAndCompletesCheckpoint(t *testing.T) {
 	store := psdb.NewStore(raw)
 	client := &uploadertest.Client{WriteCheckpoint: "42"}
 	handler := &countingHandler{}
-	u, err := uploader.New(
+	u := uploader.New(
 		store,
 		client,
 		&uploadertest.TokenSource{Token: "tok"},
@@ -59,9 +56,6 @@ func TestUploaderProcessesBatchAndCompletesCheckpoint(t *testing.T) {
 		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 1}),
 		uploader.WithHandler(psdb.TableMessages, handler),
 	)
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
 
 	runCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
@@ -109,7 +103,7 @@ func TestUploaderStalledThenRecovered(t *testing.T) {
 	store := psdb.NewStore(raw)
 	client := &uploadertest.Client{WriteCheckpoint: "11"}
 	handler := &flakyHandler{failCount: 1}
-	u, err := uploader.New(
+	u := uploader.New(
 		store,
 		client,
 		&uploadertest.TokenSource{Token: "tok"},
@@ -117,9 +111,6 @@ func TestUploaderStalledThenRecovered(t *testing.T) {
 		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 0}),
 		uploader.WithHandler(psdb.TableMessages, handler),
 	)
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
 
 	runCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
@@ -155,7 +146,7 @@ func TestUploaderInvalidCheckpointStalls(t *testing.T) {
 
 	store := psdb.NewStore(raw)
 	client := &uploadertest.Client{WriteCheckpoint: "not-int"}
-	u, err := uploader.New(
+	u := uploader.New(
 		store,
 		client,
 		&uploadertest.TokenSource{Token: "tok"},
@@ -163,9 +154,6 @@ func TestUploaderInvalidCheckpointStalls(t *testing.T) {
 		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 0}),
 		uploader.WithHandler(psdb.TableMessages, &countingHandler{}),
 	)
-	if err != nil {
-		t.Fatalf("uploader.New() error = %v", err)
-	}
 
 	runCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
@@ -182,6 +170,71 @@ func TestUploaderInvalidCheckpointStalls(t *testing.T) {
 
 	cancel()
 	<-done
+}
+
+func TestUploaderUnknownTableStallsAndKeepsQueue(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	raw := openTestDB(t)
+	seedLocalBucket(t, raw, 0, 0)
+	insertCrud(t, raw, 1, nil, `{"op":"PUT","type":"mystery_table","id":"m1","data":{"content":"hello"}}`)
+
+	store := psdb.NewStore(raw)
+	client := &uploadertest.Client{WriteCheckpoint: "1"}
+	u := uploader.New(
+		store,
+		client,
+		&uploadertest.TokenSource{Token: "tok"},
+		logtest.NewScope(t),
+		uploader.WithPolicy(uploader.RunPolicy{PollInterval: 5 * time.Millisecond, RetryDelay: 5 * time.Millisecond, MaxRetries: 0}),
+	)
+
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan error, 1)
+	go func() { done <- u.Run(runCtx) }()
+
+	ev := waitEvent(t, u.Events(), 2*time.Second)
+	stalled, ok := ev.(uploader.StalledEvent)
+	if !ok {
+		t.Fatalf("event = %T, want StalledEvent", ev)
+	}
+	var unknownErr uploader.UnknownMutationHandlerError
+	if !errors.As(stalled.Error, &unknownErr) {
+		t.Fatalf("stalled error = %v, want UnknownMutationHandlerError", stalled.Error)
+	}
+	if unknownErr.Table != psdb.TableName("mystery_table") {
+		t.Fatalf("unknown handler table = %q", unknownErr.Table)
+	}
+
+	cancel()
+	<-done
+
+	next, err := store.NextMutation(ctx)
+	if err != nil {
+		t.Fatalf("NextMutation() error = %v", err)
+	}
+	if next == nil || next.Table != psdb.TableName("mystery_table") {
+		t.Fatalf("expected queued unknown-table mutation to remain, got %+v", next)
+	}
+}
+
+func TestUploaderRunIsOneShot(t *testing.T) {
+	t.Parallel()
+
+	raw := openTestDB(t)
+	store := psdb.NewStore(raw)
+	client := &uploadertest.Client{WriteCheckpoint: "1"}
+	u := uploader.New(store, client, &uploadertest.TokenSource{Token: "tok"}, logtest.NewScope(t))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := u.Run(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("first Run() error = %v", err)
+	}
+	if err := u.Run(context.Background()); !errors.Is(err, uploader.ErrAlreadyRun) {
+		t.Fatalf("second Run() error = %v, want ErrAlreadyRun", err)
+	}
 }
 
 type countingHandler struct {

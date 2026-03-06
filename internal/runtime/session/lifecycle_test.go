@@ -43,7 +43,7 @@ func TestService_Switch(t *testing.T) {
 	uploaders := []*sessiontest.Uploader{uploaderOne, uploaderTwo}
 	uploaderIdx := 0
 
-	svc, err := NewService(
+	svc := NewService(
 		storage,
 		func() (Syncer, error) {
 			v := syncers[syncerIdx]
@@ -57,9 +57,6 @@ func TestService_Switch(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 	svc.setOpenDB(openBareDB(t))
 
 	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {
@@ -68,7 +65,11 @@ func TestService_Switch(t *testing.T) {
 	if err := svc.Switch(context.Background(), tenancy.AccountID("acc_2")); err != nil {
 		t.Fatalf("switch: %v", err)
 	}
-	defer svc.Stop()
+	defer func() {
+		if stopErr := svc.Stop(); stopErr != nil {
+			t.Errorf("stop: %v", stopErr)
+		}
+	}()
 
 	if !syncerOne.Stopped {
 		t.Fatalf("expected previous syncer to stop")
@@ -79,19 +80,11 @@ func TestService_Switch(t *testing.T) {
 	}
 }
 
-func TestService_StartValidation(t *testing.T) {
-	t.Parallel()
-
-	if _, err := NewService(nil, nil, nil, logtest.NewScope(t)); err == nil {
-		t.Fatalf("expected constructor validation error")
-	}
-}
-
 func TestService_StartOpenDBError(t *testing.T) {
 	t.Parallel()
 
 	storage := sessiontest.Storage{Path: "/tmp/any.sqlite"}
-	svc, err := NewService(
+	svc := NewService(
 		storage,
 		func() (Syncer, error) { return &sessiontest.Syncer{Ready: true}, nil },
 		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
@@ -99,9 +92,6 @@ func TestService_StartOpenDBError(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 	svc.setOpenDB(func(context.Context, sqlite.DatabasePath) (*sqlite.DB, error) {
 		return nil, errors.New("boom")
 	})
@@ -123,7 +113,7 @@ func TestService_ConcurrentStartWaitsForStop(t *testing.T) {
 	firstUploaderCanceled := make(chan struct{}, 1)
 	uploaderCalls := 0
 
-	svc, err := NewService(
+	svc := NewService(
 		storage,
 		func() (Syncer, error) { return &sessiontest.Syncer{Ready: true}, nil },
 		func(_ *sqlite.DB, _ interface{ NotifyUploadCompleted(context.Context) error }) (Uploader, error) {
@@ -144,9 +134,6 @@ func TestService_ConcurrentStartWaitsForStop(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err != nil {
-		t.Fatalf("new service: %v", err)
-	}
 	svc.setOpenDB(openBareDB(t))
 
 	if err := svc.Start(context.Background(), tenancy.AccountID("acc_1")); err != nil {

@@ -9,6 +9,10 @@ type Storage struct {
 	Err  error
 }
 
+var _ interface {
+	DatabasePath(accountID sqlite.AccountID) (sqlite.DatabasePath, error)
+} = (*Storage)(nil)
+
 func (s Storage) DatabasePath(sqlite.AccountID) (sqlite.DatabasePath, error) {
 	return s.Path, s.Err
 }

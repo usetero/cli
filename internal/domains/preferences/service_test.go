@@ -14,17 +14,17 @@ func TestService_CascadeResets(t *testing.T) {
 	svc := domainprefs.NewService(store)
 	ctx := context.Background()
 
-	if err := svc.SetOrganization(ctx, "org_1"); err != nil {
+	if err := svc.SetOrganization(ctx, domainprefs.OrganizationSelection{OrganizationID: "org_1"}); err != nil {
 		t.Fatalf("set org: %v", err)
 	}
-	if err := svc.SetAccount(ctx, "acct_1"); err != nil {
+	if err := svc.SetAccount(ctx, domainprefs.AccountSelection{AccountID: "acct_1"}); err != nil {
 		t.Fatalf("set account: %v", err)
 	}
-	if err := svc.SetWorkspace(ctx, "ws_1"); err != nil {
+	if err := svc.SetWorkspace(ctx, domainprefs.WorkspaceSelection{WorkspaceID: "ws_1"}); err != nil {
 		t.Fatalf("set workspace: %v", err)
 	}
 
-	if err := svc.SetOrganization(ctx, "org_2"); err != nil {
+	if err := svc.SetOrganization(ctx, domainprefs.OrganizationSelection{OrganizationID: "org_2"}); err != nil {
 		t.Fatalf("set org: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func TestService_CascadeResets(t *testing.T) {
 
 func TestService_SetRoleRejectsInvalid(t *testing.T) {
 	svc := domainprefs.NewService(&preferencestest.Store{})
-	if err := svc.SetRole(context.Background(), domainprefs.Role("bad")); err == nil {
+	if err := svc.SetRole(context.Background(), domainprefs.RoleSelection{Role: domainprefs.Role("bad")}); err == nil {
 		t.Fatal("expected error")
 	}
 }
@@ -51,7 +51,11 @@ func TestService_SetScopePersistsAllSelectionsInSingleWrite(t *testing.T) {
 	store := &preferencestest.Store{}
 	svc := domainprefs.NewService(store)
 
-	if err := svc.SetScope(context.Background(), "org_1", "acct_1", "ws_1"); err != nil {
+	if err := svc.SetScope(context.Background(), domainprefs.ScopeSelection{
+		OrganizationID: "org_1",
+		AccountID:      "acct_1",
+		WorkspaceID:    "ws_1",
+	}); err != nil {
 		t.Fatalf("set scope: %v", err)
 	}
 

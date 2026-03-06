@@ -7,16 +7,18 @@ import (
 )
 
 type ConversationService struct {
-	CreateFn func(ctx context.Context, title *string) (domainchat.ConversationID, error)
+	CreateFn func(ctx context.Context, create domainchat.ConversationCreate) (domainchat.ConversationID, error)
 	DeleteFn func(ctx context.Context, id domainchat.ConversationID) error
 	ListFn   func(ctx context.Context) ([]domainchat.Conversation, error)
 }
 
-func (s *ConversationService) Create(ctx context.Context, title *string) (domainchat.ConversationID, error) {
+var _ domainchat.ConversationService = (*ConversationService)(nil)
+
+func (s *ConversationService) Create(ctx context.Context, create domainchat.ConversationCreate) (domainchat.ConversationID, error) {
 	if s.CreateFn == nil {
 		return "", nil
 	}
-	return s.CreateFn(ctx, title)
+	return s.CreateFn(ctx, create)
 }
 
 func (s *ConversationService) Delete(ctx context.Context, id domainchat.ConversationID) error {

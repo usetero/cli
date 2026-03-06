@@ -25,6 +25,12 @@ func NewEnableServiceTool(
 	enableFunc func(ctx context.Context, serviceID ServiceID) error,
 	disableFunc func(ctx context.Context, serviceID ServiceID) error,
 ) *EnableServiceTool {
+	if enableFunc == nil {
+		panic("enable service tool requires enable function")
+	}
+	if disableFunc == nil {
+		panic("enable service tool requires disable function")
+	}
 	return &EnableServiceTool{
 		enableFunc:  enableFunc,
 		disableFunc: disableFunc,
@@ -47,9 +53,6 @@ func (t *EnableServiceTool) Definition() Definition {
 }
 
 func (t *EnableServiceTool) Run(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
-	if t == nil {
-		return nil, fmt.Errorf("enable service tool is not initialized")
-	}
 	var in EnableServiceInput
 	if err := json.Unmarshal(input, &in); err != nil {
 		return nil, fmt.Errorf("parse enable service input: %w", err)
@@ -60,16 +63,10 @@ func (t *EnableServiceTool) Run(ctx context.Context, input json.RawMessage) (jso
 	}
 
 	if in.Enabled {
-		if t.enableFunc == nil {
-			return nil, fmt.Errorf("enable service function is not configured")
-		}
 		if err := t.enableFunc(ctx, serviceID); err != nil {
 			return nil, err
 		}
 	} else {
-		if t.disableFunc == nil {
-			return nil, fmt.Errorf("disable service function is not configured")
-		}
 		if err := t.disableFunc(ctx, serviceID); err != nil {
 			return nil, err
 		}

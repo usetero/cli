@@ -28,6 +28,9 @@ type ShowResult struct {
 }
 
 func NewShowTool(db *sqlite.DB) *ShowTool {
+	if db == nil {
+		panic("show tool requires db")
+	}
 	return &ShowTool{db: db}
 }
 
@@ -49,10 +52,6 @@ func (t *ShowTool) Definition() Definition {
 }
 
 func (t *ShowTool) Run(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
-	if t == nil || t.db == nil {
-		return nil, fmt.Errorf("show tool is not initialized")
-	}
-
 	var in ShowInput
 	if err := json.Unmarshal(input, &in); err != nil {
 		return nil, fmt.Errorf("parse show input: %w", err)

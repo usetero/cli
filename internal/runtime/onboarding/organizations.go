@@ -2,30 +2,36 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
-func (s *Service) SelectOrganization(ctx context.Context, organizationID tenancy.OrganizationID) (State, error) {
-	if organizationID == "" {
-		return State{}, fmt.Errorf("organization id is required")
+func (s *Service) SelectOrganization(ctx context.Context, selection preferences.OrganizationSelection) (State, error) {
+	validated, err := selection.Validate()
+	if err != nil {
+		return State{}, err
 	}
-	if err := s.preferences.SetOrganization(ctx, organizationID); err != nil {
+	if err := s.preferences.SetOrganization(ctx, validated); err != nil {
 		return State{}, err
 	}
 	return s.State(ctx)
 }
 
-func (s *Service) CreateOrganization(ctx context.Context, name string) (State, error) {
-	if name == "" {
-		return State{}, fmt.Errorf("organization name is required")
-	}
-	bootstrap, err := s.orgs.Create(ctx, name)
+func (s *Service) CreateOrganization(ctx context.Context, create tenancy.OrganizationCreate) (State, error) {
+	validated, err := create.Validate()
 	if err != nil {
 		return State{}, err
 	}
-	if err := s.preferences.SetScope(ctx, bootstrap.Organization.ID, bootstrap.Account.ID, bootstrap.Workspace.ID); err != nil {
+	bootstrap, err := s.orgs.Create(ctx, validated)
+	if err != nil {
+		return State{}, err
+	}
+	if err := s.preferences.SetScope(ctx, preferences.ScopeSelection{
+		OrganizationID: bootstrap.Organization.ID,
+		AccountID:      bootstrap.Account.ID,
+		WorkspaceID:    bootstrap.Workspace.ID,
+	}); err != nil {
 		return State{}, err
 	}
 	return s.State(ctx)

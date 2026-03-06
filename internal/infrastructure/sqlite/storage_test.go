@@ -56,8 +56,6 @@ func TestStorageDatabasePathValidation(t *testing.T) {
 		id      AccountID
 		wantErr string
 	}{
-		{name: "missing env", storage: Storage{BaseDir: "/base", OrgID: "org_1"}, id: "acc_1", wantErr: "env is required"},
-		{name: "missing org", storage: Storage{BaseDir: "/base", Env: "dev"}, id: "acc_1", wantErr: "org id is required"},
 		{name: "missing account", storage: Storage{BaseDir: "/base", Env: "dev", OrgID: "org_1"}, id: "", wantErr: "account id is required"},
 	}
 

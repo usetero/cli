@@ -18,7 +18,7 @@ func TestLocalAccountService_CRUD(t *testing.T) {
 	db := openTenancyTestDB(t)
 	svc := NewLocalAccountService(db.Raw())
 
-	createdID, err := svc.Create(context.Background(), "Primary")
+	createdID, err := svc.Create(context.Background(), AccountCreate{Name: "Primary"})
 	if err != nil {
 		t.Fatalf("create account: %v", err)
 	}
@@ -53,15 +53,23 @@ func TestLocalAccountService_ValidationAndUninitialized(t *testing.T) {
 	db := openTenancyTestDB(t)
 	svc := NewLocalAccountService(db.Raw())
 
-	if _, err := svc.Create(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account name is required") {
+	if _, err := svc.Create(context.Background(), AccountCreate{Name: ""}); err == nil || !strings.Contains(err.Error(), "account name is required") {
 		t.Fatalf("expected account name validation error, got %v", err)
 	}
 	if err := svc.Delete(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
 		t.Fatalf("expected account id validation error, got %v", err)
 	}
+}
 
-	var nilSvc *LocalAccountService
-	if _, err := nilSvc.List(context.Background()); err == nil || !strings.Contains(err.Error(), "not initialized") {
-		t.Fatalf("expected uninitialized error, got %v", err)
+func TestAccountCreate_ValidateTrimsAndChecks(t *testing.T) {
+	create, err := (AccountCreate{Name: "  Acme  "}).Validate()
+	if err != nil {
+		t.Fatalf("validate create: %v", err)
+	}
+	if create.Name != "Acme" {
+		t.Fatalf("expected trimmed name, got %q", create.Name)
+	}
+	if _, err := (AccountCreate{Name: "   "}).Validate(); err == nil {
+		t.Fatal("expected validation error for blank name")
 	}
 }

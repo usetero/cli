@@ -165,36 +165,72 @@ func TestStorePendingAndHasPending(t *testing.T) {
 func TestStoreCompleteUploadedBatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	database := openTestDB(t)
-	store := db.NewStore(database)
+	t.Run("deletes through uploaded id and advances target_op", func(t *testing.T) {
+		t.Parallel()
+		database := openTestDB(t)
+		store := db.NewStore(database)
 
-	insertCrud(t, database, 1, nil, `{"op":"PUT","type":"messages","id":"m1","data":{}}`)
-	insertCrud(t, database, 2, nil, `{"op":"PUT","type":"messages","id":"m2","data":{}}`)
-	insertCrud(t, database, 3, nil, `{"op":"PUT","type":"messages","id":"m3","data":{}}`)
+		insertCrud(t, database, 1, nil, `{"op":"PUT","type":"messages","id":"m1","data":{}}`)
+		insertCrud(t, database, 2, nil, `{"op":"PUT","type":"messages","id":"m2","data":{}}`)
+		insertCrud(t, database, 3, nil, `{"op":"PUT","type":"messages","id":"m3","data":{}}`)
 
-	if _, err := database.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES (?, 0, 0)", string(db.LocalBucket)); err != nil {
-		t.Fatalf("seed local bucket: %v", err)
-	}
+		if _, err := database.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES (?, 0, 0)", string(db.LocalBucket)); err != nil {
+			t.Fatalf("seed local bucket: %v", err)
+		}
 
-	if err := store.CompleteUploadedBatch(ctx, 2, db.OpID(42)); err != nil {
-		t.Fatalf("CompleteUploadedBatch() error = %v", err)
-	}
+		if err := store.CompleteUploadedBatch(ctx, 2, db.OpID(42)); err != nil {
+			t.Fatalf("CompleteUploadedBatch() error = %v", err)
+		}
 
-	var count int
-	if err := database.QueryRow(ctx, "SELECT COUNT(*) FROM ps_crud").Scan(&count); err != nil {
-		t.Fatalf("count ps_crud: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("count = %d, want 1", count)
-	}
+		pending, err := store.PendingMutations(ctx)
+		if err != nil {
+			t.Fatalf("PendingMutations() error = %v", err)
+		}
+		if len(pending) != 1 || pending[0].RowID != "m3" {
+			t.Fatalf("pending = %+v", pending)
+		}
 
-	var targetOp int64
-	if err := database.QueryRow(ctx, "SELECT target_op FROM ps_buckets WHERE name = ?", string(db.LocalBucket)).Scan(&targetOp); err != nil {
-		t.Fatalf("read target_op: %v", err)
-	}
-	if targetOp != 42 {
-		t.Fatalf("target_op = %d, want 42", targetOp)
-	}
+		var targetOp int64
+		if err := database.QueryRow(ctx, "SELECT target_op FROM ps_buckets WHERE name = ?", string(db.LocalBucket)).Scan(&targetOp); err != nil {
+			t.Fatalf("read target_op: %v", err)
+		}
+		if targetOp != 42 {
+			t.Fatalf("target_op = %d, want 42", targetOp)
+		}
+	})
+
+	t.Run("rejects checkpoint regression and preserves queue", func(t *testing.T) {
+		t.Parallel()
+		database := openTestDB(t)
+		store := db.NewStore(database)
+
+		insertCrud(t, database, 1, nil, `{"op":"PUT","type":"messages","id":"m1","data":{}}`)
+		insertCrud(t, database, 2, nil, `{"op":"PUT","type":"messages","id":"m2","data":{}}`)
+
+		if _, err := database.Exec(ctx, "INSERT INTO ps_buckets (name, last_op, target_op) VALUES (?, 0, 42)", string(db.LocalBucket)); err != nil {
+			t.Fatalf("seed local bucket: %v", err)
+		}
+
+		if err := store.CompleteUploadedBatch(ctx, 2, db.OpID(41)); err == nil {
+			t.Fatal("expected checkpoint regression error")
+		}
+
+		pending, err := store.PendingMutations(ctx)
+		if err != nil {
+			t.Fatalf("PendingMutations() error = %v", err)
+		}
+		if len(pending) != 2 {
+			t.Fatalf("pending count = %d, want 2", len(pending))
+		}
+
+		var targetOp int64
+		if err := database.QueryRow(ctx, "SELECT target_op FROM ps_buckets WHERE name = ?", string(db.LocalBucket)).Scan(&targetOp); err != nil {
+			t.Fatalf("read target_op: %v", err)
+		}
+		if targetOp != 42 {
+			t.Fatalf("target_op = %d, want 42", targetOp)
+		}
+	})
 }
 
 func TestStoreClientID(t *testing.T) {

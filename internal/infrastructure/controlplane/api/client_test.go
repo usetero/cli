@@ -192,10 +192,12 @@ func TestAuthTransport_SetsAuthorizationHeader(t *testing.T) {
 	})
 
 	tr := &authTransport{token: "abc123", base: rt}
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
-	if _, err := tr.RoundTrip(req); err != nil {
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
 		t.Fatalf("round trip: %v", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if gotAuth != "Bearer abc123" {
 		t.Fatalf("authorization header mismatch: %q", gotAuth)
 	}

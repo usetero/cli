@@ -2,9 +2,6 @@ package preferences
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
 // Store persists preference snapshots.
@@ -16,11 +13,11 @@ type Store interface {
 // PreferenceService is the domain contract for preference operations.
 type PreferenceService interface {
 	Snapshot(ctx context.Context) (Snapshot, error)
-	SetRole(ctx context.Context, role Role) error
-	SetOrganization(ctx context.Context, orgID tenancy.OrganizationID) error
-	SetAccount(ctx context.Context, accountID tenancy.AccountID) error
-	SetWorkspace(ctx context.Context, workspaceID tenancy.WorkspaceID) error
-	SetScope(ctx context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error
+	SetRole(ctx context.Context, selection RoleSelection) error
+	SetOrganization(ctx context.Context, selection OrganizationSelection) error
+	SetAccount(ctx context.Context, selection AccountSelection) error
+	SetWorkspace(ctx context.Context, selection WorkspaceSelection) error
+	SetScope(ctx context.Context, selection ScopeSelection) error
 	ClearScope(ctx context.Context) error
 }
 
@@ -30,69 +27,68 @@ type Service struct {
 }
 
 func NewService(store Store) *Service {
+	if store == nil {
+		panic("preferences service requires store")
+	}
 	return &Service{store: store}
 }
 
 func (s *Service) Snapshot(ctx context.Context) (Snapshot, error) {
-	if s == nil || s.store == nil {
-		return Snapshot{}, fmt.Errorf("preferences service is not initialized")
-	}
 	return s.store.Load(ctx)
 }
 
-func (s *Service) SetRole(ctx context.Context, role Role) error {
-	if !role.Valid() {
-		return fmt.Errorf("role is required")
+func (s *Service) SetRole(ctx context.Context, selection RoleSelection) error {
+	validated, err := selection.Validate()
+	if err != nil {
+		return err
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
-		snapshot.Role = role
+		snapshot.Role = validated.Role
 	})
 }
 
-func (s *Service) SetOrganization(ctx context.Context, orgID tenancy.OrganizationID) error {
-	if orgID == "" {
-		return fmt.Errorf("organization id is required")
+func (s *Service) SetOrganization(ctx context.Context, selection OrganizationSelection) error {
+	validated, err := selection.Validate()
+	if err != nil {
+		return err
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
-		snapshot.Organization = orgID
+		snapshot.Organization = validated.OrganizationID
 		snapshot.Account = ""
 		snapshot.Workspace = ""
 	})
 }
 
-func (s *Service) SetAccount(ctx context.Context, accountID tenancy.AccountID) error {
-	if accountID == "" {
-		return fmt.Errorf("account id is required")
+func (s *Service) SetAccount(ctx context.Context, selection AccountSelection) error {
+	validated, err := selection.Validate()
+	if err != nil {
+		return err
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
-		snapshot.Account = accountID
+		snapshot.Account = validated.AccountID
 		snapshot.Workspace = ""
 	})
 }
 
-func (s *Service) SetWorkspace(ctx context.Context, workspaceID tenancy.WorkspaceID) error {
-	if workspaceID == "" {
-		return fmt.Errorf("workspace id is required")
+func (s *Service) SetWorkspace(ctx context.Context, selection WorkspaceSelection) error {
+	validated, err := selection.Validate()
+	if err != nil {
+		return err
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
-		snapshot.Workspace = workspaceID
+		snapshot.Workspace = validated.WorkspaceID
 	})
 }
 
-func (s *Service) SetScope(ctx context.Context, orgID tenancy.OrganizationID, accountID tenancy.AccountID, workspaceID tenancy.WorkspaceID) error {
-	if orgID == "" {
-		return fmt.Errorf("organization id is required")
-	}
-	if accountID == "" {
-		return fmt.Errorf("account id is required")
-	}
-	if workspaceID == "" {
-		return fmt.Errorf("workspace id is required")
+func (s *Service) SetScope(ctx context.Context, selection ScopeSelection) error {
+	validated, err := selection.Validate()
+	if err != nil {
+		return err
 	}
 	return s.update(ctx, func(snapshot *Snapshot) {
-		snapshot.Organization = orgID
-		snapshot.Account = accountID
-		snapshot.Workspace = workspaceID
+		snapshot.Organization = validated.OrganizationID
+		snapshot.Account = validated.AccountID
+		snapshot.Workspace = validated.WorkspaceID
 	})
 }
 
@@ -105,9 +101,6 @@ func (s *Service) ClearScope(ctx context.Context) error {
 }
 
 func (s *Service) update(ctx context.Context, mutate func(snapshot *Snapshot)) error {
-	if s == nil || s.store == nil {
-		return fmt.Errorf("preferences service is not initialized")
-	}
 	current, err := s.store.Load(ctx)
 	if err != nil {
 		return err

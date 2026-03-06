@@ -37,6 +37,12 @@ type Storage struct {
 
 // NewDefaultStorage returns a storage resolver under ~/.tero/environments.
 func NewDefaultStorage(env, orgID string) (Storage, error) {
+	if env == "" {
+		panic("sqlite storage requires env")
+	}
+	if orgID == "" {
+		panic("sqlite storage requires organization id")
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return Storage{}, err
@@ -50,12 +56,6 @@ func NewDefaultStorage(env, orgID string) (Storage, error) {
 
 // DatabasePath returns the account-scoped SQLite path.
 func (s Storage) DatabasePath(accountID AccountID) (DatabasePath, error) {
-	if s.Env == "" {
-		return "", fmt.Errorf("env is required")
-	}
-	if s.OrgID == "" {
-		return "", fmt.Errorf("org id is required")
-	}
 	if err := accountID.Validate(); err != nil {
 		return "", err
 	}

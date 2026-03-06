@@ -5,8 +5,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-allowed_suffix='(Completed|Loaded|Requested|Tick|Poll|Updated|Created|Validated|Refreshed|Changed|Started|Update)$'
-local_root="${TERO_LOCAL_MSG_ROOT:-internal/app}"
+allowed_suffix='(Completed|Loaded|Requested|Tick|Poll|Updated|Created|Validated|Refreshed|Changed|Started|Update|Resolved|Ensured)$'
+local_root="${TERO_LOCAL_MSG_ROOT:-internal/interfaces/tui}"
 
 if ! [ -d "$local_root" ]; then
 	echo "local msg naming lint: directory not found: ${local_root}"
@@ -23,7 +23,7 @@ mapfile -t local_msgs < <(rg \
 	-g '!**/*_test.go' | sort -u)
 
 if [ "${#local_msgs[@]}" -eq 0 ]; then
-	echo "local msg naming lint: no local message structs found under internal/app"
+	echo "local msg naming lint: no local message structs found under ${local_root}"
 	exit 0
 fi
 
@@ -37,7 +37,7 @@ done
 if [ "${#violations[@]}" -gt 0 ]; then
 	echo "local msg naming lint failed:"
 	echo "  local message structs must use semantic suffixes before Msg"
-	echo "  allowed suffixes: Completed, Loaded, Requested, Tick, Poll, Updated, Created, Validated, Refreshed, Changed, Started, Update"
+	echo "  allowed suffixes: Completed, Loaded, Requested, Tick, Poll, Updated, Created, Validated, Refreshed, Changed, Started, Update, Resolved, Ensured"
 	for name in "${violations[@]}"; do
 		echo "  - ${name}"
 	done

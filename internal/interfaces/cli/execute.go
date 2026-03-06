@@ -14,6 +14,7 @@ import (
 type CLI struct {
 	Config config.RuntimeConfig `embed:""`
 
+	TUI TUI `cmd:"" default:"1" help:"Run TUI mode."`
 	MCP MCP `cmd:"" help:"Run MCP mode."`
 }
 

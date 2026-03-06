@@ -4,17 +4,16 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/usetero/cli/_internal_legacy/auth"
-	"github.com/usetero/cli/_internal_legacy/config"
-	"github.com/usetero/cli/_internal_legacy/keyring"
-	"github.com/usetero/cli/_internal_legacy/log"
-	"github.com/usetero/cli/_internal_legacy/workos"
 	workosadmin "github.com/usetero/cli/_internal_legacy/workos/admin"
+	"github.com/usetero/cli/internal/domains/identity"
+	authkeyring "github.com/usetero/cli/internal/infrastructure/auth/keyring"
 )
 
 func main() {
@@ -38,7 +37,7 @@ func newJoinOrgCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, userID, err := setup(cmd)
+			client, userID, err := setup()
 			if err != nil {
 				return err
 			}
@@ -62,7 +61,7 @@ func newLeaveOrgCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			client, userID, err := setup(cmd)
+			client, userID, err := setup()
 			if err != nil {
 				return err
 			}
@@ -84,26 +83,74 @@ func newLeaveOrgCmd() *cobra.Command {
 }
 
 // setup creates the admin client and resolves the current user's WorkOS ID.
-func setup(cmd *cobra.Command) (*workosadmin.Client, string, error) {
+func setup() (*workosadmin.Client, string, error) {
 	apiKey := os.Getenv("WORKOS_API_KEY")
 	if apiKey == "" {
 		return nil, "", fmt.Errorf("WORKOS_API_KEY is required (use doppler run)")
 	}
 
-	logger := log.Wrap(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	})))
-	scope := log.RootScope(logger)
-
-	cliConfig := config.LoadCLIConfig()
-	tokenStore := keyring.New(cliConfig.Environment())
-	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
-	authService := auth.NewService(workosClient, tokenStore, scope)
-
-	userID, err := authService.GetUserID(cmd.Context())
+	tokenStore, err := currentTokenStore()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get user ID (are you logged in?): %w", err)
+		return nil, "", fmt.Errorf("failed to initialize token store: %w", err)
+	}
+
+	accessToken, err := tokenStore.AccessToken()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to load access token: %w", err)
+	}
+	if accessToken == "" {
+		return nil, "", fmt.Errorf("not authenticated: no access token in keyring")
+	}
+
+	userID, err := userIDFromAccessToken(string(accessToken))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to resolve user ID from access token: %w", err)
 	}
 
 	return workosadmin.NewClient(apiKey), userID, nil
+}
+
+func currentTokenStore() (*identity.KeyringTokenStore, error) {
+	env := os.Getenv("TERO_ENV")
+	if env == "" {
+		env = "local"
+	}
+	store, err := authkeyring.NewStore(env)
+	if err != nil {
+		return nil, err
+	}
+	return identity.NewKeyringTokenStore(store), nil
+}
+
+type tokenClaims struct {
+	Subject string `json:"sub"`
+}
+
+func userIDFromAccessToken(token string) (string, error) {
+	claims, err := parseTokenClaims(token)
+	if err != nil {
+		return "", err
+	}
+	if claims.Subject == "" {
+		return "", fmt.Errorf("token subject claim is empty")
+	}
+	return claims.Subject, nil
+}
+
+func parseTokenClaims(token string) (tokenClaims, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return tokenClaims{}, fmt.Errorf("invalid jwt format")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return tokenClaims{}, fmt.Errorf("decode jwt payload: %w", err)
+	}
+
+	var claims tokenClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return tokenClaims{}, fmt.Errorf("unmarshal jwt claims: %w", err)
+	}
+	return claims, nil
 }

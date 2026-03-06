@@ -13,12 +13,12 @@ type RuntimeReadiness struct {
 }
 
 func NewRuntimeReadiness(runtime interface{ IsReady() bool }) RuntimeReadiness {
+	if runtime == nil {
+		panic("powersync runtime readiness requires runtime")
+	}
 	return RuntimeReadiness{runtime: runtime}
 }
 
 func (r RuntimeReadiness) Ready(_ context.Context) (bool, error) {
-	if r.runtime == nil {
-		return false, nil
-	}
 	return r.runtime.IsReady(), nil
 }

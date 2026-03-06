@@ -55,10 +55,11 @@ func (c *pipelineClient) GetWriteCheckpoint(context.Context, psclient.ClientID) 
 }
 
 type replayStreamClient struct {
-	path      string
-	token     psclient.AccessToken
-	calls     atomic.Int32
-	lineCount atomic.Int32
+	path       string
+	token      psclient.AccessToken
+	checkpoint psclient.WriteCheckpoint
+	calls      atomic.Int32
+	lineCount  atomic.Int32
 }
 
 func (c *replayStreamClient) SetToken(token psclient.AccessToken) {
@@ -99,6 +100,9 @@ func (c *replayStreamClient) SyncStream(ctx context.Context, _ *psclient.SyncStr
 }
 
 func (c *replayStreamClient) GetWriteCheckpoint(context.Context, psclient.ClientID) (psclient.WriteCheckpoint, error) {
+	if c.checkpoint != "" {
+		return c.checkpoint, nil
+	}
 	return "0", nil
 }
 

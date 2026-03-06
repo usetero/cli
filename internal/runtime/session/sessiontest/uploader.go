@@ -12,6 +12,11 @@ type Uploader struct {
 	RunFn    func(ctx context.Context) error
 }
 
+var _ interface {
+	Run(ctx context.Context) error
+	Events() <-chan psuploader.Event
+} = (*Uploader)(nil)
+
 func NewUploader() *Uploader {
 	return &Uploader{EventsCh: make(chan psuploader.Event, 16)}
 }

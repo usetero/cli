@@ -16,21 +16,22 @@ type LocalAccountService struct {
 }
 
 func NewLocalAccountService(db *sql.DB) *LocalAccountService {
+	if db == nil {
+		panic("tenancy local account service requires db")
+	}
 	return &LocalAccountService{q: accountsdb.New(db)}
 }
 
-func (s *LocalAccountService) Create(ctx context.Context, name string) (AccountID, error) {
-	if s == nil || s.q == nil {
-		return "", fmt.Errorf("tenancy local account service is not initialized")
-	}
-	if name == "" {
-		return "", fmt.Errorf("account name is required")
+func (s *LocalAccountService) Create(ctx context.Context, create AccountCreate) (AccountID, error) {
+	validated, err := create.Validate()
+	if err != nil {
+		return "", err
 	}
 
 	id := AccountID(uuid.NewString())
-	err := s.q.Create(ctx, accountsdb.CreateParams{
+	err = s.q.Create(ctx, accountsdb.CreateParams{
 		ID:        toAccountsDBAccountID(id),
-		Name:      name,
+		Name:      validated.Name,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
@@ -40,9 +41,6 @@ func (s *LocalAccountService) Create(ctx context.Context, name string) (AccountI
 }
 
 func (s *LocalAccountService) Delete(ctx context.Context, id AccountID) error {
-	if s == nil || s.q == nil {
-		return fmt.Errorf("tenancy local account service is not initialized")
-	}
 	if id == "" {
 		return fmt.Errorf("account id is required")
 	}
@@ -50,9 +48,6 @@ func (s *LocalAccountService) Delete(ctx context.Context, id AccountID) error {
 }
 
 func (s *LocalAccountService) List(ctx context.Context) ([]Account, error) {
-	if s == nil || s.q == nil {
-		return nil, fmt.Errorf("tenancy local account service is not initialized")
-	}
 	rows, err := s.q.List(ctx)
 	if err != nil {
 		return nil, err
