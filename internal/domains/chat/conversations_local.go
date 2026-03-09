@@ -30,9 +30,9 @@ func (s *LocalConversationService) Create(ctx context.Context, create Conversati
 	}
 	id := ConversationID(uuid.NewString())
 	err = s.q.Create(ctx, conversationsdb.CreateParams{
-		ID:        toConversationsDBConversationID(id),
+		ID:        ptrString(toConversationsDBConversationID(id)),
 		Title:     validated.Title,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		CreatedAt: ptrString(time.Now().UTC().Format(time.RFC3339)),
 	})
 	if err != nil {
 		return "", err
@@ -45,7 +45,7 @@ func (s *LocalConversationService) Delete(ctx context.Context, id ConversationID
 	if id == "" {
 		return fmt.Errorf("conversation id is required")
 	}
-	return s.q.Delete(ctx, toConversationsDBConversationID(id))
+	return s.q.Delete(ctx, ptrString(toConversationsDBConversationID(id)))
 }
 
 // List returns conversations ordered by creation time descending.
@@ -57,7 +57,7 @@ func (s *LocalConversationService) List(ctx context.Context) ([]Conversation, er
 
 	out := make([]Conversation, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, fromConversationsDBConversation(row))
+		out = append(out, fromConversationsDBListRow(row))
 	}
 	return out, nil
 }

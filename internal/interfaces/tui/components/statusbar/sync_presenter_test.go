@@ -12,6 +12,7 @@ func TestPresentSync(t *testing.T) {
 		name      string
 		status    sessionruntime.Status
 		compact   bool
+		wantIcon  string
 		wantLabel string
 		wantTone  syncTone
 	}{
@@ -19,42 +20,48 @@ func TestPresentSync(t *testing.T) {
 			name:      "offline full",
 			status:    sessionruntime.Status{Running: false, Sync: &pssyncer.Disconnected{}},
 			compact:   false,
-			wantLabel: "○ offline",
-			wantTone:  syncToneMuted,
+			wantIcon:  "●",
+			wantLabel: "offline",
+			wantTone:  syncToneError,
 		},
 		{
 			name:      "offline compact",
 			status:    sessionruntime.Status{Running: false, Sync: &pssyncer.Disconnected{}},
 			compact:   true,
-			wantLabel: "○ off",
-			wantTone:  syncToneMuted,
+			wantIcon:  "●",
+			wantLabel: "off",
+			wantTone:  syncToneError,
 		},
 		{
 			name:      "syncing progress full",
 			status:    sessionruntime.Status{Running: true, Sync: &pssyncer.Syncing{Progress: &pssyncer.Progress{Downloaded: 2, Total: 7}}},
 			compact:   false,
-			wantLabel: "● sync 2/7",
+			wantIcon:  "●",
+			wantLabel: "sync 2/7",
 			wantTone:  syncToneWarning,
 		},
 		{
 			name:      "connecting compact",
 			status:    sessionruntime.Status{Running: true, Sync: &pssyncer.Connecting{}},
 			compact:   true,
-			wantLabel: "● conn",
+			wantIcon:  "●",
+			wantLabel: "conn",
 			wantTone:  syncToneWarning,
 		},
 		{
 			name:      "ready",
 			status:    sessionruntime.Status{Running: true, Sync: &pssyncer.Ready{}},
 			compact:   false,
-			wantLabel: "● ready",
+			wantIcon:  "●",
+			wantLabel: "ready",
 			wantTone:  syncToneSuccess,
 		},
 		{
 			name:      "error compact",
 			status:    sessionruntime.Status{Running: true, Sync: &pssyncer.Error{}},
 			compact:   true,
-			wantLabel: "● err",
+			wantIcon:  "●",
+			wantLabel: "err",
 			wantTone:  syncToneError,
 		},
 	}
@@ -62,6 +69,9 @@ func TestPresentSync(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := presentSync(tc.status, tc.compact)
+			if got.icon != tc.wantIcon {
+				t.Fatalf("expected icon %q, got %q", tc.wantIcon, got.icon)
+			}
 			if got.label != tc.wantLabel {
 				t.Fatalf("expected label %q, got %q", tc.wantLabel, got.label)
 			}

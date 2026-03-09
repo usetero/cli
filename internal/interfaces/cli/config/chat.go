@@ -1,6 +1,6 @@
 package config
 
-// ChatConfig configures the chat API endpoint.
+// ChatConfig configures the chat service origin.
 type ChatConfig struct {
-	URL string `name:"chat-url" help:"Chat API URL." env:"TERO_CHAT_URL"`
+	Origin string `name:"chat-origin" help:"Chat API origin. Do not include a path." env:"TERO_CHAT_ORIGIN"`
 }

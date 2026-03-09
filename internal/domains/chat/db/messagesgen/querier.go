@@ -10,8 +10,8 @@ import (
 
 type Querier interface {
 	Create(ctx context.Context, arg CreateParams) error
-	Delete(ctx context.Context, id string) error
-	ListByConversation(ctx context.Context, conversationID string) ([]Message, error)
+	Delete(ctx context.Context, id *string) error
+	ListByConversation(ctx context.Context, conversationID *string) ([]ListByConversationRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

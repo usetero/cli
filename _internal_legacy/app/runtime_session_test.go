@@ -156,7 +156,7 @@ func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
 	m := &Model{
 		ctx:         context.Background(),
 		scope:       scope,
-		cfg:         &config.CLIConfig{PowerSyncEndpoint: "https://powersync.example.com"},
+		cfg:         &config.CLIConfig{PowerSyncOrigin: "https://powersync.example.com"},
 		db:          db,
 		syncer:      syncer,
 		services:    graphql.NewServiceSetFromClient(mockClient, scope),

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 )
@@ -13,6 +14,15 @@ func TestModel_EmptyView(t *testing.T) {
 	view := model.View().Content
 	if !strings.Contains(view, "No options available.") {
 		t.Fatalf("expected empty message, got %q", view)
+	}
+}
+
+func TestModel_CustomEmptyText(t *testing.T) {
+	model := New(theme.New(false))
+	model.SetEmptyText("No organizations available.")
+	view := model.View().Content
+	if !strings.Contains(view, "No organizations available.") {
+		t.Fatalf("expected custom empty message, got %q", view)
 	}
 }
 
@@ -43,5 +53,23 @@ func TestModel_NavigateAndSelect(t *testing.T) {
 	}
 	if selected.Index != 1 {
 		t.Fatalf("expected selected index 1, got %d", selected.Index)
+	}
+}
+
+func TestModel_ShortHelpUsesLegacySelectTerminology(t *testing.T) {
+	model := New(theme.New(false))
+
+	bindings := model.ShortHelp()
+	if len(bindings) != 2 {
+		t.Fatalf("expected 2 bindings, got %d", len(bindings))
+	}
+	if got := bindings[0].Help(); got.Key != "↑/↓" || got.Desc != "select" {
+		t.Fatalf("unexpected move help: %+v", got)
+	}
+	if got := bindings[1].Help(); got.Key != "enter" || got.Desc != "confirm" {
+		t.Fatalf("unexpected select help: %+v", got)
+	}
+	if !key.Matches(tea.KeyPressMsg{Code: tea.KeyDown}, bindings[0]) {
+		t.Fatal("expected move help binding to still match down arrow")
 	}
 }

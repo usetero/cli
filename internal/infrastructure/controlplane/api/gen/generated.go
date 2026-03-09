@@ -11,8 +11,8 @@ import (
 	"github.com/Khan/genqlient/graphql"
 )
 
-// ApproveLogEventPolicyApproveLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type ApproveLogEventPolicyApproveLogEventPolicy struct {
+// ApproveLogEventPolicyApproveLogEventRecommendation includes the requested fields of the GraphQL type LogEventRecommendation.
+type ApproveLogEventPolicyApproveLogEventRecommendation struct {
 	// Unique identifier
 	Id string `json:"id"`
 	// When this policy was approved by a user
@@ -25,33 +25,39 @@ type ApproveLogEventPolicyApproveLogEventPolicy struct {
 	DismissedBy *string `json:"dismissedBy"`
 }
 
-// GetId returns ApproveLogEventPolicyApproveLogEventPolicy.Id, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetId() string { return v.Id }
+// GetId returns ApproveLogEventPolicyApproveLogEventRecommendation.Id, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventRecommendation) GetId() string { return v.Id }
 
-// GetApprovedAt returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
+// GetApprovedAt returns ApproveLogEventPolicyApproveLogEventRecommendation.ApprovedAt, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventRecommendation) GetApprovedAt() *time.Time {
+	return v.ApprovedAt
+}
 
-// GetApprovedBy returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
+// GetApprovedBy returns ApproveLogEventPolicyApproveLogEventRecommendation.ApprovedBy, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventRecommendation) GetApprovedBy() *string {
+	return v.ApprovedBy
+}
 
-// GetDismissedAt returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedAt() *time.Time {
+// GetDismissedAt returns ApproveLogEventPolicyApproveLogEventRecommendation.DismissedAt, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventRecommendation) GetDismissedAt() *time.Time {
 	return v.DismissedAt
 }
 
-// GetDismissedBy returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
+// GetDismissedBy returns ApproveLogEventPolicyApproveLogEventRecommendation.DismissedBy, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyApproveLogEventRecommendation) GetDismissedBy() *string {
+	return v.DismissedBy
+}
 
 // ApproveLogEventPolicyResponse is returned by ApproveLogEventPolicy on success.
 type ApproveLogEventPolicyResponse struct {
 	// Approve a log event policy, enabling it for enforcement.
 	// Clears any previous dismissal.
-	ApproveLogEventPolicy ApproveLogEventPolicyApproveLogEventPolicy `json:"approveLogEventPolicy"`
+	ApproveLogEventRecommendation ApproveLogEventPolicyApproveLogEventRecommendation `json:"approveLogEventRecommendation"`
 }
 
-// GetApproveLogEventPolicy returns ApproveLogEventPolicyResponse.ApproveLogEventPolicy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyResponse) GetApproveLogEventPolicy() ApproveLogEventPolicyApproveLogEventPolicy {
-	return v.ApproveLogEventPolicy
+// GetApproveLogEventRecommendation returns ApproveLogEventPolicyResponse.ApproveLogEventRecommendation, and is useful for accessing the field via an interface.
+func (v *ApproveLogEventPolicyResponse) GetApproveLogEventRecommendation() ApproveLogEventPolicyApproveLogEventRecommendation {
+	return v.ApproveLogEventRecommendation
 }
 
 // A content block in a message. Exactly one of the typed fields should be set.
@@ -549,6 +555,14 @@ var AllDatadogAccountStatusCacheHealth = []DatadogAccountStatusCacheHealth{
 	DatadogAccountStatusCacheHealthOk,
 }
 
+// DeleteAccountResponse is returned by DeleteAccount on success.
+type DeleteAccountResponse struct {
+	DeleteAccount bool `json:"deleteAccount"`
+}
+
+// GetDeleteAccount returns DeleteAccountResponse.DeleteAccount, and is useful for accessing the field via an interface.
+func (v *DeleteAccountResponse) GetDeleteAccount() bool { return v.DeleteAccount }
+
 // DeleteConversationResponse is returned by DeleteConversation on success.
 type DeleteConversationResponse struct {
 	// Delete a conversation and all its messages.
@@ -557,6 +571,22 @@ type DeleteConversationResponse struct {
 
 // GetDeleteConversation returns DeleteConversationResponse.DeleteConversation, and is useful for accessing the field via an interface.
 func (v *DeleteConversationResponse) GetDeleteConversation() bool { return v.DeleteConversation }
+
+// DeleteOrganizationResponse is returned by DeleteOrganization on success.
+type DeleteOrganizationResponse struct {
+	DeleteOrganization bool `json:"deleteOrganization"`
+}
+
+// GetDeleteOrganization returns DeleteOrganizationResponse.DeleteOrganization, and is useful for accessing the field via an interface.
+func (v *DeleteOrganizationResponse) GetDeleteOrganization() bool { return v.DeleteOrganization }
+
+// DeleteWorkspaceResponse is returned by DeleteWorkspace on success.
+type DeleteWorkspaceResponse struct {
+	DeleteWorkspace bool `json:"deleteWorkspace"`
+}
+
+// GetDeleteWorkspace returns DeleteWorkspaceResponse.DeleteWorkspace, and is useful for accessing the field via an interface.
+func (v *DeleteWorkspaceResponse) GetDeleteWorkspace() bool { return v.DeleteWorkspace }
 
 // DisableServiceResponse is returned by DisableService on success.
 type DisableServiceResponse struct {
@@ -587,8 +617,8 @@ func (v *DisableServiceUpdateService) GetName() string { return v.Name }
 // GetEnabled returns DisableServiceUpdateService.Enabled, and is useful for accessing the field via an interface.
 func (v *DisableServiceUpdateService) GetEnabled() bool { return v.Enabled }
 
-// DismissLogEventPolicyDismissLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type DismissLogEventPolicyDismissLogEventPolicy struct {
+// DismissLogEventPolicyDismissLogEventRecommendation includes the requested fields of the GraphQL type LogEventRecommendation.
+type DismissLogEventPolicyDismissLogEventRecommendation struct {
 	// Unique identifier
 	Id string `json:"id"`
 	// When this policy was dismissed by a user
@@ -601,33 +631,39 @@ type DismissLogEventPolicyDismissLogEventPolicy struct {
 	ApprovedBy *string `json:"approvedBy"`
 }
 
-// GetId returns DismissLogEventPolicyDismissLogEventPolicy.Id, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetId() string { return v.Id }
+// GetId returns DismissLogEventPolicyDismissLogEventRecommendation.Id, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventRecommendation) GetId() string { return v.Id }
 
-// GetDismissedAt returns DismissLogEventPolicyDismissLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedAt() *time.Time {
+// GetDismissedAt returns DismissLogEventPolicyDismissLogEventRecommendation.DismissedAt, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventRecommendation) GetDismissedAt() *time.Time {
 	return v.DismissedAt
 }
 
-// GetDismissedBy returns DismissLogEventPolicyDismissLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
+// GetDismissedBy returns DismissLogEventPolicyDismissLogEventRecommendation.DismissedBy, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventRecommendation) GetDismissedBy() *string {
+	return v.DismissedBy
+}
 
-// GetApprovedAt returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
+// GetApprovedAt returns DismissLogEventPolicyDismissLogEventRecommendation.ApprovedAt, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventRecommendation) GetApprovedAt() *time.Time {
+	return v.ApprovedAt
+}
 
-// GetApprovedBy returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
+// GetApprovedBy returns DismissLogEventPolicyDismissLogEventRecommendation.ApprovedBy, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyDismissLogEventRecommendation) GetApprovedBy() *string {
+	return v.ApprovedBy
+}
 
 // DismissLogEventPolicyResponse is returned by DismissLogEventPolicy on success.
 type DismissLogEventPolicyResponse struct {
 	// Dismiss a log event policy, hiding it from pending review.
 	// Clears any previous approval.
-	DismissLogEventPolicy DismissLogEventPolicyDismissLogEventPolicy `json:"dismissLogEventPolicy"`
+	DismissLogEventRecommendation DismissLogEventPolicyDismissLogEventRecommendation `json:"dismissLogEventRecommendation"`
 }
 
-// GetDismissLogEventPolicy returns DismissLogEventPolicyResponse.DismissLogEventPolicy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyResponse) GetDismissLogEventPolicy() DismissLogEventPolicyDismissLogEventPolicy {
-	return v.DismissLogEventPolicy
+// GetDismissLogEventRecommendation returns DismissLogEventPolicyResponse.DismissLogEventRecommendation, and is useful for accessing the field via an interface.
+func (v *DismissLogEventPolicyResponse) GetDismissLogEventRecommendation() DismissLogEventPolicyDismissLogEventRecommendation {
+	return v.DismissLogEventRecommendation
 }
 
 // EnableServiceResponse is returned by EnableService on success.
@@ -769,7 +805,7 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount struct {
 	// Unique identifier of the Datadog configuration
 	Id string `json:"id"`
-	// Status of this Datadog account in the discovery pipeline.
+	// Status of this Datadog account in the catalog pipeline.
 	// Derived from the status of all services discovered from this account.
 	// Returns null if cache has not been populated yet.
 	Status *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache `json:"status"`
@@ -787,41 +823,22 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache includes the requested fields of the GraphQL type DatadogAccountStatusCache.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache struct {
-	// Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-	Health                                 DatadogAccountStatusCacheHealth `json:"health"`
-	ReadyForUse                            bool                            `json:"readyForUse"`
-	LogEventCount                          int                             `json:"logEventCount"`
-	LogEventAnalyzedCount                  int                             `json:"logEventAnalyzedCount"`
-	LogServiceCount                        int                             `json:"logServiceCount"`
-	LogActiveServices                      int                             `json:"logActiveServices"`
-	DisabledServices                       int                             `json:"disabledServices"`
-	InactiveServices                       int                             `json:"inactiveServices"`
-	OkServices                             int                             `json:"okServices"`
-	PolicyPendingCount                     int                             `json:"policyPendingCount"`
-	PolicyApprovedCount                    int                             `json:"policyApprovedCount"`
-	PolicyDismissedCount                   int                             `json:"policyDismissedCount"`
-	ServiceVolumePerHour                   *float64                        `json:"serviceVolumePerHour"`
-	ServiceCostPerHourVolumeUsd            *float64                        `json:"serviceCostPerHourVolumeUsd"`
-	LogEventVolumePerHour                  *float64                        `json:"logEventVolumePerHour"`
-	LogEventBytesPerHour                   *float64                        `json:"logEventBytesPerHour"`
-	LogEventCostPerHourBytesUsd            *float64                        `json:"logEventCostPerHourBytesUsd"`
-	LogEventCostPerHourVolumeUsd           *float64                        `json:"logEventCostPerHourVolumeUsd"`
-	LogEventCostPerHourUsd                 *float64                        `json:"logEventCostPerHourUsd"`
-	EstimatedVolumeReductionPerHour        *float64                        `json:"estimatedVolumeReductionPerHour"`
-	EstimatedBytesReductionPerHour         *float64                        `json:"estimatedBytesReductionPerHour"`
-	EstimatedCostReductionPerHourBytesUsd  *float64                        `json:"estimatedCostReductionPerHourBytesUsd"`
-	EstimatedCostReductionPerHourVolumeUsd *float64                        `json:"estimatedCostReductionPerHourVolumeUsd"`
-	EstimatedCostReductionPerHourUsd       *float64                        `json:"estimatedCostReductionPerHourUsd"`
-	ObservedVolumePerHourBefore            *float64                        `json:"observedVolumePerHourBefore"`
-	ObservedVolumePerHourAfter             *float64                        `json:"observedVolumePerHourAfter"`
-	ObservedBytesPerHourBefore             *float64                        `json:"observedBytesPerHourBefore"`
-	ObservedBytesPerHourAfter              *float64                        `json:"observedBytesPerHourAfter"`
-	ObservedCostPerHourBeforeBytesUsd      *float64                        `json:"observedCostPerHourBeforeBytesUsd"`
-	ObservedCostPerHourBeforeVolumeUsd     *float64                        `json:"observedCostPerHourBeforeVolumeUsd"`
-	ObservedCostPerHourBeforeUsd           *float64                        `json:"observedCostPerHourBeforeUsd"`
-	ObservedCostPerHourAfterBytesUsd       *float64                        `json:"observedCostPerHourAfterBytesUsd"`
-	ObservedCostPerHourAfterVolumeUsd      *float64                        `json:"observedCostPerHourAfterVolumeUsd"`
-	ObservedCostPerHourAfterUsd            *float64                        `json:"observedCostPerHourAfterUsd"`
+	Health                       DatadogAccountStatusCacheHealth `json:"health"`
+	ReadyForUse                  bool                            `json:"readyForUse"`
+	LogEventCount                int                             `json:"logEventCount"`
+	LogEventAnalyzedCount        int                             `json:"logEventAnalyzedCount"`
+	LogServiceCount              int                             `json:"logServiceCount"`
+	LogActiveServices            int                             `json:"logActiveServices"`
+	DisabledServices             int                             `json:"disabledServices"`
+	InactiveServices             int                             `json:"inactiveServices"`
+	OkServices                   int                             `json:"okServices"`
+	PendingRecommendationCount   int                             `json:"pendingRecommendationCount"`
+	ApprovedRecommendationCount  int                             `json:"approvedRecommendationCount"`
+	DismissedRecommendationCount int                             `json:"dismissedRecommendationCount"`
+	PolicyPendingLowCount        int                             `json:"policyPendingLowCount"`
+	PolicyPendingMediumCount     int                             `json:"policyPendingMediumCount"`
+	PolicyPendingHighCount       int                             `json:"policyPendingHighCount"`
+	PolicyPendingCriticalCount   int                             `json:"policyPendingCriticalCount"`
 }
 
 // GetHealth returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.Health, and is useful for accessing the field via an interface.
@@ -869,129 +886,39 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 	return v.OkServices
 }
 
-// GetPolicyPendingCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingCount() int {
-	return v.PolicyPendingCount
+// GetPendingRecommendationCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PendingRecommendationCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPendingRecommendationCount() int {
+	return v.PendingRecommendationCount
 }
 
-// GetPolicyApprovedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyApprovedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyApprovedCount() int {
-	return v.PolicyApprovedCount
+// GetApprovedRecommendationCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ApprovedRecommendationCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetApprovedRecommendationCount() int {
+	return v.ApprovedRecommendationCount
 }
 
-// GetPolicyDismissedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyDismissedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyDismissedCount() int {
-	return v.PolicyDismissedCount
+// GetDismissedRecommendationCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.DismissedRecommendationCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetDismissedRecommendationCount() int {
+	return v.DismissedRecommendationCount
 }
 
-// GetServiceVolumePerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ServiceVolumePerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetServiceVolumePerHour() *float64 {
-	return v.ServiceVolumePerHour
+// GetPolicyPendingLowCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingLowCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingLowCount() int {
+	return v.PolicyPendingLowCount
 }
 
-// GetServiceCostPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ServiceCostPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetServiceCostPerHourVolumeUsd() *float64 {
-	return v.ServiceCostPerHourVolumeUsd
+// GetPolicyPendingMediumCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingMediumCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingMediumCount() int {
+	return v.PolicyPendingMediumCount
 }
 
-// GetLogEventVolumePerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventVolumePerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventVolumePerHour() *float64 {
-	return v.LogEventVolumePerHour
+// GetPolicyPendingHighCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingHighCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingHighCount() int {
+	return v.PolicyPendingHighCount
 }
 
-// GetLogEventBytesPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventBytesPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventBytesPerHour() *float64 {
-	return v.LogEventBytesPerHour
-}
-
-// GetLogEventCostPerHourBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourBytesUsd() *float64 {
-	return v.LogEventCostPerHourBytesUsd
-}
-
-// GetLogEventCostPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourVolumeUsd() *float64 {
-	return v.LogEventCostPerHourVolumeUsd
-}
-
-// GetLogEventCostPerHourUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourUsd() *float64 {
-	return v.LogEventCostPerHourUsd
-}
-
-// GetEstimatedVolumeReductionPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedVolumeReductionPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedVolumeReductionPerHour() *float64 {
-	return v.EstimatedVolumeReductionPerHour
-}
-
-// GetEstimatedBytesReductionPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedBytesReductionPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedBytesReductionPerHour() *float64 {
-	return v.EstimatedBytesReductionPerHour
-}
-
-// GetEstimatedCostReductionPerHourBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourBytesUsd() *float64 {
-	return v.EstimatedCostReductionPerHourBytesUsd
-}
-
-// GetEstimatedCostReductionPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourVolumeUsd() *float64 {
-	return v.EstimatedCostReductionPerHourVolumeUsd
-}
-
-// GetEstimatedCostReductionPerHourUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourUsd() *float64 {
-	return v.EstimatedCostReductionPerHourUsd
-}
-
-// GetObservedVolumePerHourBefore returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedVolumePerHourBefore, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedVolumePerHourBefore() *float64 {
-	return v.ObservedVolumePerHourBefore
-}
-
-// GetObservedVolumePerHourAfter returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedVolumePerHourAfter, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedVolumePerHourAfter() *float64 {
-	return v.ObservedVolumePerHourAfter
-}
-
-// GetObservedBytesPerHourBefore returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedBytesPerHourBefore, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedBytesPerHourBefore() *float64 {
-	return v.ObservedBytesPerHourBefore
-}
-
-// GetObservedBytesPerHourAfter returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedBytesPerHourAfter, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedBytesPerHourAfter() *float64 {
-	return v.ObservedBytesPerHourAfter
-}
-
-// GetObservedCostPerHourBeforeBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeBytesUsd() *float64 {
-	return v.ObservedCostPerHourBeforeBytesUsd
-}
-
-// GetObservedCostPerHourBeforeVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeVolumeUsd() *float64 {
-	return v.ObservedCostPerHourBeforeVolumeUsd
-}
-
-// GetObservedCostPerHourBeforeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeUsd() *float64 {
-	return v.ObservedCostPerHourBeforeUsd
-}
-
-// GetObservedCostPerHourAfterBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterBytesUsd() *float64 {
-	return v.ObservedCostPerHourAfterBytesUsd
-}
-
-// GetObservedCostPerHourAfterVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterVolumeUsd() *float64 {
-	return v.ObservedCostPerHourAfterVolumeUsd
-}
-
-// GetObservedCostPerHourAfterUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterUsd() *float64 {
-	return v.ObservedCostPerHourAfterUsd
+// GetPolicyPendingCriticalCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingCriticalCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingCriticalCount() int {
+	return v.PolicyPendingCriticalCount
 }
 
 // GetDatadogAccountStatusResponse is returned by GetDatadogAccountStatus on success.
@@ -1103,9 +1030,9 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 // GetServiceNodeEdgeInstance
 // GetServiceNodeLogEvent
 // GetServiceNodeLogEventField
-// GetServiceNodeLogEventPolicy
-// GetServiceNodeLogEventPolicyCategoryStatusCache
-// GetServiceNodeLogEventPolicyStatusCache
+// GetServiceNodeLogEventRecommendation
+// GetServiceNodeLogEventRecommendationCategoryStatusCache
+// GetServiceNodeLogEventRecommendationStatusCache
 // GetServiceNodeLogEventStatusCache
 // GetServiceNodeLogSample
 // GetServiceNodeMessage
@@ -1136,20 +1063,21 @@ func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()   
 func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()              {}
 func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()                  {}
 func (v *GetServiceNodeLogEventField) implementsGraphQLInterfaceGetServiceNode()             {}
-func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()            {}
-func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) implementsGraphQLInterfaceGetServiceNode() {
+func (v *GetServiceNodeLogEventRecommendation) implementsGraphQLInterfaceGetServiceNode()    {}
+func (v *GetServiceNodeLogEventRecommendationCategoryStatusCache) implementsGraphQLInterfaceGetServiceNode() {
 }
-func (v *GetServiceNodeLogEventPolicyStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode()       {}
-func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()                 {}
-func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()                   {}
-func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()                   {}
-func (v *GetServiceNodeServiceStatusCache) implementsGraphQLInterfaceGetServiceNode()        {}
-func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                      {}
-func (v *GetServiceNodeView) implementsGraphQLInterfaceGetServiceNode()                      {}
-func (v *GetServiceNodeViewFavorite) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()                 {}
+func (v *GetServiceNodeLogEventRecommendationStatusCache) implementsGraphQLInterfaceGetServiceNode() {
+}
+func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
+func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()           {}
+func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()             {}
+func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()             {}
+func (v *GetServiceNodeServiceStatusCache) implementsGraphQLInterfaceGetServiceNode()  {}
+func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                {}
+func (v *GetServiceNodeView) implementsGraphQLInterfaceGetServiceNode()                {}
+func (v *GetServiceNodeViewFavorite) implementsGraphQLInterfaceGetServiceNode()        {}
+func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()           {}
 
 func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	if string(b) == "null" {
@@ -1195,14 +1123,14 @@ func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
 	case "LogEventField":
 		*v = new(GetServiceNodeLogEventField)
 		return json.Unmarshal(b, *v)
-	case "LogEventPolicy":
-		*v = new(GetServiceNodeLogEventPolicy)
+	case "LogEventRecommendation":
+		*v = new(GetServiceNodeLogEventRecommendation)
 		return json.Unmarshal(b, *v)
-	case "LogEventPolicyCategoryStatusCache":
-		*v = new(GetServiceNodeLogEventPolicyCategoryStatusCache)
+	case "LogEventRecommendationCategoryStatusCache":
+		*v = new(GetServiceNodeLogEventRecommendationCategoryStatusCache)
 		return json.Unmarshal(b, *v)
-	case "LogEventPolicyStatusCache":
-		*v = new(GetServiceNodeLogEventPolicyStatusCache)
+	case "LogEventRecommendationStatusCache":
+		*v = new(GetServiceNodeLogEventRecommendationStatusCache)
 		return json.Unmarshal(b, *v)
 	case "LogEventStatusCache":
 		*v = new(GetServiceNodeLogEventStatusCache)
@@ -1327,28 +1255,28 @@ func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
 			*GetServiceNodeLogEventField
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicy:
-		typename = "LogEventPolicy"
+	case *GetServiceNodeLogEventRecommendation:
+		typename = "LogEventRecommendation"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicy
+			*GetServiceNodeLogEventRecommendation
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicyCategoryStatusCache:
-		typename = "LogEventPolicyCategoryStatusCache"
+	case *GetServiceNodeLogEventRecommendationCategoryStatusCache:
+		typename = "LogEventRecommendationCategoryStatusCache"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicyCategoryStatusCache
+			*GetServiceNodeLogEventRecommendationCategoryStatusCache
 		}{typename, v}
 		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicyStatusCache:
-		typename = "LogEventPolicyStatusCache"
+	case *GetServiceNodeLogEventRecommendationStatusCache:
+		typename = "LogEventRecommendationStatusCache"
 
 		result := struct {
 			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicyStatusCache
+			*GetServiceNodeLogEventRecommendationStatusCache
 		}{typename, v}
 		return json.Marshal(result)
 	case *GetServiceNodeLogEventStatusCache:
@@ -1519,29 +1447,31 @@ type GetServiceNodeLogEventField struct {
 // GetTypename returns GetServiceNodeLogEventField.Typename, and is useful for accessing the field via an interface.
 func (v *GetServiceNodeLogEventField) GetTypename() *string { return v.Typename }
 
-// GetServiceNodeLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type GetServiceNodeLogEventPolicy struct {
+// GetServiceNodeLogEventRecommendation includes the requested fields of the GraphQL type LogEventRecommendation.
+type GetServiceNodeLogEventRecommendation struct {
 	Typename *string `json:"__typename"`
 }
 
-// GetTypename returns GetServiceNodeLogEventPolicy.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicy) GetTypename() *string { return v.Typename }
+// GetTypename returns GetServiceNodeLogEventRecommendation.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventRecommendation) GetTypename() *string { return v.Typename }
 
-// GetServiceNodeLogEventPolicyCategoryStatusCache includes the requested fields of the GraphQL type LogEventPolicyCategoryStatusCache.
-type GetServiceNodeLogEventPolicyCategoryStatusCache struct {
+// GetServiceNodeLogEventRecommendationCategoryStatusCache includes the requested fields of the GraphQL type LogEventRecommendationCategoryStatusCache.
+type GetServiceNodeLogEventRecommendationCategoryStatusCache struct {
 	Typename *string `json:"__typename"`
 }
 
-// GetTypename returns GetServiceNodeLogEventPolicyCategoryStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) GetTypename() *string { return v.Typename }
+// GetTypename returns GetServiceNodeLogEventRecommendationCategoryStatusCache.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventRecommendationCategoryStatusCache) GetTypename() *string {
+	return v.Typename
+}
 
-// GetServiceNodeLogEventPolicyStatusCache includes the requested fields of the GraphQL type LogEventPolicyStatusCache.
-type GetServiceNodeLogEventPolicyStatusCache struct {
+// GetServiceNodeLogEventRecommendationStatusCache includes the requested fields of the GraphQL type LogEventRecommendationStatusCache.
+type GetServiceNodeLogEventRecommendationStatusCache struct {
 	Typename *string `json:"__typename"`
 }
 
-// GetTypename returns GetServiceNodeLogEventPolicyStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicyStatusCache) GetTypename() *string { return v.Typename }
+// GetTypename returns GetServiceNodeLogEventRecommendationStatusCache.Typename, and is useful for accessing the field via an interface.
+func (v *GetServiceNodeLogEventRecommendationStatusCache) GetTypename() *string { return v.Typename }
 
 // GetServiceNodeLogEventStatusCache includes the requested fields of the GraphQL type LogEventStatusCache.
 type GetServiceNodeLogEventStatusCache struct {
@@ -2327,6 +2257,18 @@ type __CreateOrganizationAndBootstrapInput struct {
 // GetInput returns __CreateOrganizationAndBootstrapInput.Input, and is useful for accessing the field via an interface.
 func (v *__CreateOrganizationAndBootstrapInput) GetInput() CreateOrganizationInput { return v.Input }
 
+// __DeleteAccountInput is used internally by genqlient
+type __DeleteAccountInput struct {
+	Id           string `json:"id"`
+	Confirmation string `json:"confirmation"`
+}
+
+// GetId returns __DeleteAccountInput.Id, and is useful for accessing the field via an interface.
+func (v *__DeleteAccountInput) GetId() string { return v.Id }
+
+// GetConfirmation returns __DeleteAccountInput.Confirmation, and is useful for accessing the field via an interface.
+func (v *__DeleteAccountInput) GetConfirmation() string { return v.Confirmation }
+
 // __DeleteConversationInput is used internally by genqlient
 type __DeleteConversationInput struct {
 	Id string `json:"id"`
@@ -2334,6 +2276,30 @@ type __DeleteConversationInput struct {
 
 // GetId returns __DeleteConversationInput.Id, and is useful for accessing the field via an interface.
 func (v *__DeleteConversationInput) GetId() string { return v.Id }
+
+// __DeleteOrganizationInput is used internally by genqlient
+type __DeleteOrganizationInput struct {
+	Id           string `json:"id"`
+	Confirmation string `json:"confirmation"`
+}
+
+// GetId returns __DeleteOrganizationInput.Id, and is useful for accessing the field via an interface.
+func (v *__DeleteOrganizationInput) GetId() string { return v.Id }
+
+// GetConfirmation returns __DeleteOrganizationInput.Confirmation, and is useful for accessing the field via an interface.
+func (v *__DeleteOrganizationInput) GetConfirmation() string { return v.Confirmation }
+
+// __DeleteWorkspaceInput is used internally by genqlient
+type __DeleteWorkspaceInput struct {
+	Id           string `json:"id"`
+	Confirmation string `json:"confirmation"`
+}
+
+// GetId returns __DeleteWorkspaceInput.Id, and is useful for accessing the field via an interface.
+func (v *__DeleteWorkspaceInput) GetId() string { return v.Id }
+
+// GetConfirmation returns __DeleteWorkspaceInput.Confirmation, and is useful for accessing the field via an interface.
+func (v *__DeleteWorkspaceInput) GetConfirmation() string { return v.Confirmation }
 
 // __DisableServiceInput is used internally by genqlient
 type __DisableServiceInput struct {
@@ -2430,7 +2396,7 @@ func (v *__ValidateDatadogApiKeyInput) GetInput() ValidateDatadogApiKeyInput { r
 // The mutation executed by ApproveLogEventPolicy.
 const ApproveLogEventPolicy_Operation = `
 mutation ApproveLogEventPolicy ($id: ID!) {
-	approveLogEventPolicy(id: $id) {
+	approveLogEventRecommendation(id: $id) {
 		id
 		approvedAt
 		approvedBy
@@ -2662,6 +2628,40 @@ func CreateOrganizationAndBootstrap(
 	return data_, err_
 }
 
+// The mutation executed by DeleteAccount.
+const DeleteAccount_Operation = `
+mutation DeleteAccount ($id: ID!, $confirmation: String!) {
+	deleteAccount(id: $id, confirmation: $confirmation)
+}
+`
+
+func DeleteAccount(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+	confirmation string,
+) (data_ *DeleteAccountResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "DeleteAccount",
+		Query:  DeleteAccount_Operation,
+		Variables: &__DeleteAccountInput{
+			Id:           id,
+			Confirmation: confirmation,
+		},
+	}
+
+	data_ = &DeleteAccountResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
 // The mutation executed by DeleteConversation.
 const DeleteConversation_Operation = `
 mutation DeleteConversation ($id: ID!) {
@@ -2683,6 +2683,74 @@ func DeleteConversation(
 	}
 
 	data_ = &DeleteConversationResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by DeleteOrganization.
+const DeleteOrganization_Operation = `
+mutation DeleteOrganization ($id: ID!, $confirmation: String!) {
+	deleteOrganization(id: $id, confirmation: $confirmation)
+}
+`
+
+func DeleteOrganization(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+	confirmation string,
+) (data_ *DeleteOrganizationResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "DeleteOrganization",
+		Query:  DeleteOrganization_Operation,
+		Variables: &__DeleteOrganizationInput{
+			Id:           id,
+			Confirmation: confirmation,
+		},
+	}
+
+	data_ = &DeleteOrganizationResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by DeleteWorkspace.
+const DeleteWorkspace_Operation = `
+mutation DeleteWorkspace ($id: ID!, $confirmation: String!) {
+	deleteWorkspace(id: $id, confirmation: $confirmation)
+}
+`
+
+func DeleteWorkspace(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	id string,
+	confirmation string,
+) (data_ *DeleteWorkspaceResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "DeleteWorkspace",
+		Query:  DeleteWorkspace_Operation,
+		Variables: &__DeleteWorkspaceInput{
+			Id:           id,
+			Confirmation: confirmation,
+		},
+	}
+
+	data_ = &DeleteWorkspaceResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(
@@ -2734,7 +2802,7 @@ func DisableService(
 // The mutation executed by DismissLogEventPolicy.
 const DismissLogEventPolicy_Operation = `
 mutation DismissLogEventPolicy ($id: ID!) {
-	dismissLogEventPolicy(id: $id) {
+	dismissLogEventRecommendation(id: $id) {
 		id
 		dismissedAt
 		dismissedBy
@@ -2867,31 +2935,13 @@ query GetDatadogAccountStatus ($id: ID!) {
 					disabledServices
 					inactiveServices
 					okServices
-					policyPendingCount
-					policyApprovedCount
-					policyDismissedCount
-					serviceVolumePerHour
-					serviceCostPerHourVolumeUsd
-					logEventVolumePerHour
-					logEventBytesPerHour
-					logEventCostPerHourBytesUsd
-					logEventCostPerHourVolumeUsd
-					logEventCostPerHourUsd
-					estimatedVolumeReductionPerHour
-					estimatedBytesReductionPerHour
-					estimatedCostReductionPerHourBytesUsd
-					estimatedCostReductionPerHourVolumeUsd
-					estimatedCostReductionPerHourUsd
-					observedVolumePerHourBefore
-					observedVolumePerHourAfter
-					observedBytesPerHourBefore
-					observedBytesPerHourAfter
-					observedCostPerHourBeforeBytesUsd
-					observedCostPerHourBeforeVolumeUsd
-					observedCostPerHourBeforeUsd
-					observedCostPerHourAfterBytesUsd
-					observedCostPerHourAfterVolumeUsd
-					observedCostPerHourAfterUsd
+					pendingRecommendationCount
+					approvedRecommendationCount
+					dismissedRecommendationCount
+					policyPendingLowCount
+					policyPendingMediumCount
+					policyPendingHighCount
+					policyPendingCriticalCount
 				}
 			}
 		}

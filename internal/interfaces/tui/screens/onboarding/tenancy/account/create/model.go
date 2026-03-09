@@ -5,13 +5,15 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/infrastructure/logging"
-	"github.com/usetero/cli/internal/interfaces/tui/components/textinput"
+	"github.com/usetero/cli/internal/interfaces/tui/components/form"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 )
+
+const fieldName form.FieldID = "name"
 
 var submitBinding = key.NewBinding(
 	key.WithKeys("enter"),
@@ -22,35 +24,41 @@ var submitBinding = key.NewBinding(
 type Model struct {
 	scope logging.Scope
 	theme theme.Theme
-	input *textinput.Model
+	form  *form.Model
 }
 
 var _ screen.Model = (*Model)(nil)
 
 // New constructs the onboarding account-creation model.
 func New(scope logging.Scope, appTheme theme.Theme) *Model {
-	input := textinput.New(appTheme)
-	input.SetPlaceholder("Account name")
-	return &Model{scope: scope, theme: appTheme, input: input}
+	return &Model{
+		scope: scope,
+		theme: appTheme,
+		form: form.New(appTheme, form.FieldSpec{
+			ID:          fieldName,
+			Label:       "Name: ",
+			Placeholder: "Account name",
+		}),
+	}
 }
 
 // Init satisfies Bubble Tea model requirements.
 func (m *Model) Init() tea.Cmd { return nil }
 
 // SetSize is part of the screen contract. Create currently ignores dimensions.
-func (m *Model) SetSize(_, _ int) {}
+func (m *Model) SetSize(width, height int) { m.form.SetSize(width, height) }
 
 // Reset clears current input state.
-func (m *Model) Reset() { m.input.Reset() }
+func (m *Model) Reset() { m.form.Reset() }
 
 // Name returns current account name input.
-func (m *Model) Name() string { return m.input.Value() }
+func (m *Model) Name() string { return m.form.Value(fieldName) }
 
 // Update handles local account-creation input.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	next, _ := m.input.Update(msg)
-	if input, ok := next.(*textinput.Model); ok {
-		m.input = input
+	next, _ := m.form.Update(msg)
+	if formModel, ok := next.(*form.Model); ok {
+		m.form = formModel
 	}
 
 	keyMsg, ok := msg.(tea.KeyPressMsg)
@@ -58,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if key.Matches(keyMsg, submitBinding) {
-		name := strings.TrimSpace(m.input.Value())
+		name := strings.TrimSpace(m.form.Value(fieldName))
 		if name == "" {
 			return m, nil
 		}
@@ -71,21 +79,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the account-creation screen.
 func (m *Model) View() tea.View {
-	return tea.NewView(lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.theme.Text.Section.Render("Create your account:"),
-		"",
-		lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			m.theme.Input.Label.Render("Name: "),
-			m.input.View().Content,
-		),
+	return present.View(m.theme, present.Section(
+		"Create your account:",
+		present.Raw(m.form.View().Content),
 	))
 }
 
 // ShortHelp returns account-create key bindings.
 func (m *Model) ShortHelp() []key.Binding {
-	bindings := append([]key.Binding{}, m.input.ShortHelp()...)
+	bindings := append([]key.Binding{}, m.form.ShortHelp()...)
 	bindings = append(bindings, submitBinding)
 	return bindings
 }

@@ -82,8 +82,8 @@ func newViewTestModel(t *testing.T) *Model {
 	m := New(
 		context.Background(),
 		&config.CLIConfig{
-			Env:         "dev",
-			APIEndpoint: "https://graphql.example.com",
+			Env:       "dev",
+			APIOrigin: "https://api.example.com",
 		},
 		styles.NewTheme(true),
 		"dev",

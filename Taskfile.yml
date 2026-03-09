@@ -45,18 +45,24 @@ tasks:
       - task: generate:schema
 
   generate:client:
-    desc: Generate GraphQL client (requires control plane at localhost:18081)
-    dir: internal/boundary/graphql/gen
+    desc: Generate GraphQL client (defaults to local control-plane origin)
     cmds:
-      - npx get-graphql-schema http://localhost:18081/graphql > schema.graphql
-      - go run github.com/Khan/genqlient
+      - |
+        ./scripts/with-env.sh sh -c '
+          set -e
+          api_origin="${TERO_API_ORIGIN:-http://localhost:18081}"
+          cd internal/infrastructure/controlplane/api/gen
+          # TERO_API_ORIGIN is the service origin; append the GraphQL path here.
+          npx get-graphql-schema "${api_origin}/graphql" > schema.graphql
+          go run github.com/Khan/genqlient
+        '
 
   generate:schema:
-    desc: Generate PowerSync and SQLite schema (uses local control plane)
+    desc: Generate PowerSync schema.json and SQLite reflected schema/sqlc
     cmds:
-      - go generate ./internal/powersync
-      - go generate ./internal/sqlite
-      - sed '/^-- Auto-generated/d; /^-- Run .task generate/d' ../control-plane/internal/powersync/schema.sql > internal/chat/tools/query_schema.sql
+      - ./scripts/with-env.sh go generate ./internal/infrastructure/powersync/extension
+      - ./scripts/with-env.sh go generate ./internal/infrastructure/sqlite
+      - cp internal/infrastructure/sqlite/schema.sql internal/domains/chat/tools/query_schema.sql
 
   # ===========================================================================
   # Build
@@ -175,6 +181,11 @@ tasks:
     desc: Run live integration tests against non-production services (TERO_ENV=dev|prd)
     cmds:
       - './scripts/with-env.sh gotestsum --format short-verbose -- -race -tags=integration_live -run "^TestIntegrationLive_" ./...'
+
+  test:integration:local:
+    desc: Run live onboarding integration tests against the local control plane stack
+    cmds:
+      - 'TERO_ENV=local ./scripts/with-env.sh gotestsum --format short-verbose -- -race -tags=integration_live -run "^TestIntegrationLive_" ./cmd/tero'
 
   test:tags:compile:
     desc: Compile all opt-in tagged tests (integration/live/correctness)

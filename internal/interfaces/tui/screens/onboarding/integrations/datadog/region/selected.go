@@ -2,7 +2,7 @@ package datadogregion
 
 import "github.com/usetero/cli/internal/domains/integrations"
 
-// SelectedMsg reports that the user confirmed a Datadog site.
+// SelectedMsg reports that the user confirmed a Datadog region.
 type SelectedMsg struct {
 	Site integrations.DatadogSite
 }

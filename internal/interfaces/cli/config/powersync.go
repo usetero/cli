@@ -1,6 +1,6 @@
 package config
 
-// PowerSyncConfig configures the PowerSync endpoint.
+// PowerSyncConfig configures the PowerSync service origin.
 type PowerSyncConfig struct {
-	URL string `name:"powersync-url" help:"PowerSync API URL." env:"TERO_POWERSYNC_URL"`
+	Origin string `name:"powersync-origin" help:"PowerSync API origin. Do not include a path." env:"TERO_POWERSYNC_ORIGIN"`
 }

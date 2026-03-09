@@ -9,6 +9,7 @@ import (
 
 type remoteAccountClient interface {
 	CreateAccount(ctx context.Context, organizationID controlplane.OrganizationID, name string) (controlplane.Account, error)
+	DeleteAccount(ctx context.Context, accountID controlplane.AccountID) error
 	ListAccounts(ctx context.Context, organizationID controlplane.OrganizationID) ([]controlplane.Account, error)
 }
 
@@ -41,8 +42,11 @@ func (s *RemoteAccountService) Create(ctx context.Context, create AccountCreate)
 	return fromControlPlaneAccount(account).ID, nil
 }
 
-func (s *RemoteAccountService) Delete(_ context.Context, _ AccountID) error {
-	return fmt.Errorf("tenancy remote account delete is not implemented")
+func (s *RemoteAccountService) Delete(ctx context.Context, id AccountID) error {
+	if id == "" {
+		return fmt.Errorf("account id is required")
+	}
+	return s.client.DeleteAccount(ctx, toControlPlaneAccountID(id))
 }
 
 func (s *RemoteAccountService) List(ctx context.Context) ([]Account, error) {

@@ -31,11 +31,11 @@ func TestIntegrationLive_Syncer(t *testing.T) {
 	env := cliConfig.Environment()
 
 	t.Logf("Environment: %s", env)
-	t.Logf("API Endpoint: %s", cliConfig.APIEndpoint)
-	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
+	t.Logf("API Origin: %s", cliConfig.APIOrigin)
+	t.Logf("PowerSync Origin: %s", cliConfig.PowerSyncOrigin)
 
 	storage := keyring.New(env)
-	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
+	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatOrigin, cliConfig.PowerSyncOrigin)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
 	if _, err := authSvc.GetAccessToken(context.Background()); err != nil {
@@ -52,7 +52,7 @@ func TestIntegrationLive_Syncer(t *testing.T) {
 		t.Fatalf("no default account (run: task run)")
 	}
 
-	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger).WithAccountID(accountID)
+	services := graphql.NewServiceSet(cliConfig.APIOrigin+"/graphql", authSvc, logger).WithAccountID(accountID)
 
 	account, err := services.Accounts.Get(context.Background(), accountID)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestIntegrationLive_Syncer(t *testing.T) {
 
 	t.Run("connects and syncs data", func(t *testing.T) {
 		database := dbtest.OpenTestDB(t)
-		syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logtest.NewScope(t))
+		syncer := powersync.NewSyncer(cliConfig.PowerSyncOrigin, authSvc, logtest.NewScope(t))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()

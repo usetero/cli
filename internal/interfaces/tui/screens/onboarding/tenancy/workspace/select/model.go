@@ -3,10 +3,10 @@ package workspaceselect
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/infrastructure/logging"
 	"github.com/usetero/cli/internal/interfaces/tui/components/selectlist"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 )
@@ -24,14 +24,16 @@ var _ screen.Model = (*Model)(nil)
 
 // New constructs the onboarding workspace-selection model.
 func New(scope logging.Scope, appTheme theme.Theme) *Model {
-	return &Model{scope: scope, theme: appTheme, list: selectlist.New(appTheme)}
+	list := selectlist.New(appTheme)
+	list.SetEmptyText("No workspaces available.")
+	return &Model{scope: scope, theme: appTheme, list: list}
 }
 
 // Init satisfies Bubble Tea model requirements.
 func (m *Model) Init() tea.Cmd { return nil }
 
-// SetSize is part of the screen contract. Workspace select currently ignores dimensions.
-func (m *Model) SetSize(_, _ int) {}
+// SetSize is part of the screen contract.
+func (m *Model) SetSize(width, height int) { m.list.SetSize(width, height) }
 
 // SetWorkspaces replaces selectable workspaces and resets cursor if needed.
 func (m *Model) SetWorkspaces(workspaces []tenancy.Workspace, selected *tenancy.Workspace) {
@@ -81,15 +83,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the workspace-selection screen.
 func (m *Model) View() tea.View {
-	lines := []string{m.theme.Text.Section.Render("Select your workspace:")}
-
-	if len(m.options) == 0 {
-		lines = append(lines, "", m.theme.Text.Muted.Render("No workspaces available."))
-		return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, lines...))
-	}
-
-	lines = append(lines, "", m.theme.Text.Body.Render(m.list.View().Content))
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return present.View(m.theme, present.Section("Select your workspace:", present.Raw(m.list.View().Content)))
 }
 
 // ShortHelp returns workspace-select key bindings.

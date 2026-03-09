@@ -10,8 +10,8 @@ import (
 
 type Querier interface {
 	Create(ctx context.Context, arg CreateParams) error
-	Delete(ctx context.Context, id string) error
-	ListByAccount(ctx context.Context, accountID string) ([]Workspace, error)
+	Delete(ctx context.Context, id *string) error
+	ListByAccount(ctx context.Context, accountID *string) ([]ListByAccountRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

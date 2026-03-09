@@ -1,65 +1,118 @@
-# Chat Domain
+# Chat
 
-Chat is where this repository is most sensitive to lifecycle mistakes.
-The user experience looks simple, but under the hood it combines stream
-protocol state, tool execution, persistence, cancellation, and rendering.
+Chat is the most lifecycle-sensitive product area in this repository.
 
-If those concerns collapse into one layer, bugs become hard to reason about.
-So the code is split intentionally.
+The user experience looks simple, but the implementation has to keep
+conversation history, local persistence, streaming state, cancellation, and
+tool execution coherent across a long-lived session.
 
-## The two-layer model
+## Why this domain is separate
 
-`internal/boundary/chat` is the protocol/transport adapter layer.
-It owns stream wire contracts, parsing, and remote request/response handling.
+The expensive chat bugs are not visual. They are semantic:
 
-`internal/core/chat` is the pure chat lifecycle core (for example session/history
-state handling and deterministic message-history mutations).
+- sending a message twice,
+- appending streamed output to the wrong turn,
+- persisting incomplete assistant output incorrectly,
+- letting tool execution escape the current round,
+- leaving the runtime stuck in a streaming state after cancellation or failure.
 
-`internal/app/chat` is the UI/runtime shell.
-It owns Bubble Tea interaction, focus/layout, round lifecycle wiring, and
-persistence integration with the local DB.
+Those are runtime and domain problems, not just UI problems.
 
-That split is the key domain boundary. If you keep it, chat stays testable.
+## The current model
 
-## Dependency rule
+The rebuilt chat stack is split into three layers:
 
-Keep dependency direction explicit:
+1. domain storage contracts
+   [`internal/domains/chat`](../../internal/domains/chat) owns typed
+   conversation/message operations and local persistence boundaries.
+2. chat runtime
+   [`internal/runtime/chat`](../../internal/runtime/chat) owns send/cancel,
+   stream accumulation, state publication, tool dispatch, and persistence
+   sequencing.
+3. transport client
+   [`internal/infrastructure/chat`](../../internal/infrastructure/chat) owns
+   the remote streaming protocol.
 
-- `internal/app/chat/*` depends on `internal/app/chat/usecase` contracts.
-- `internal/app/chat/usecase` owns adapters to `internal/boundary/chat`.
-- `internal/core/chat` stays pure and does not import app/api packages.
+```mermaid
+flowchart LR
+    UI[User-facing surface]
+    RT[chat runtime]
+    DOM[conversation/message services]
+    CLI[streaming chat client]
+    TOOLS[toolset]
 
-In practice: if you need `internal/boundary/chat` in UI files, that is usually a boundary
-leak. Add/extend a use-case contract instead.
+    UI --> RT
+    RT --> DOM
+    RT --> CLI
+    RT --> TOOLS
+```
 
-## What this domain is trying to protect
+## What the domain contracts protect
 
-The expensive failures in chat are usually not visual; they are semantic:
+The domain layer keeps chat state explicit:
 
-- events from one turn mutating another turn,
-- terminal state being applied twice,
-- cancellation persisting incorrect assistant output,
-- tool-result lifecycle firing too early or too late.
+- conversations are created and listed through typed operations in
+  [`conversations.go`](../../internal/domains/chat/conversations.go),
+- user messages are created through validated input in
+  [`messages.go`](../../internal/domains/chat/messages.go),
+- local adapters under `internal/domains/chat/*_local.go` keep persistence
+  behavior behind domain contracts,
+- tool definitions under [`internal/domains/chat/tools`](../../internal/domains/chat/tools)
+  stay separate from transport/runtime wiring.
 
-These are domain invariants, not “nice to have” details.
+That split matters because chat history should be testable without a running UI
+or live stream.
 
-## How to change chat safely
+## What the runtime owns
 
-When a change touches transport protocol behavior, start in
-`internal/boundary/chat`. When it touches pure lifecycle/state behavior, start
-in `internal/core/chat`. Then wire the result into `internal/app/chat` as
-message-driven orchestration.
+The runtime in [`internal/runtime/chat`](../../internal/runtime/chat) is the
+source of truth for round lifecycle:
 
-When a change is purely presentation-level, keep it in `internal/app/chat`
-without leaking policy into protocol layers.
+- whether a send is allowed,
+- whether a stream is active,
+- how streamed events are accumulated,
+- when state updates are published,
+- when cancellation is legal,
+- when data is persisted.
 
-## Testing posture for this domain
+If a chat bug depends on timing, ordering, or cancellation, start in runtime
+before touching presentation code.
 
-Chat tests should prioritize lifecycle and scoping correctness over incidental
-formatting details. See:
+## What must stay true
 
-- [../operations/testing.md](../operations/testing.md)
-- [../specs/chat-test-audit.md](../specs/chat-test-audit.md)
+- one round owns one stream lifecycle at a time,
+- the runtime is the authority for `CanSend`, `Streaming`, and cancellation
+  state,
+- persistence happens through domain services, not ad hoc transport callbacks,
+- tools execute through an explicit toolset boundary,
+- transport events re-enter through runtime state transitions instead of
+  mutating UI state directly.
 
-If a bug was user-visible, this domain expects a direct regression test for the
-specific semantic failure.
+## Failure behavior
+
+The useful way to debug chat failures is by class:
+
+- if the wrong text is stored, inspect runtime persistence sequencing,
+- if sends overlap, inspect runtime readiness checks,
+- if stream output is malformed, inspect the infrastructure chat client,
+- if tool behavior is wrong, inspect the toolset contract before changing
+  runtime state code.
+
+Do not patch chat issues purely in the UI unless the bug is truly rendering-only.
+
+## Current product reality
+
+The runtime and domain layers are present now, but the rebuilt TUI chat surface
+is still intentionally minimal compared with onboarding. That means the domain
+model here is ahead of the final interface polish, which is fine. The important
+thing is that the lifecycle and persistence contracts are already explicit.
+
+## Code entry points
+
+- [`internal/domains/chat/conversations.go`](../../internal/domains/chat/conversations.go)
+- [`internal/domains/chat/messages.go`](../../internal/domains/chat/messages.go)
+- [`internal/domains/chat/tools`](../../internal/domains/chat/tools)
+- [`internal/runtime/chat/runtime.go`](../../internal/runtime/chat/runtime.go)
+- [`internal/runtime/chat/send.go`](../../internal/runtime/chat/send.go)
+- [`internal/runtime/chat/stream.go`](../../internal/runtime/chat/stream.go)
+- [`internal/infrastructure/chat`](../../internal/infrastructure/chat)

@@ -52,7 +52,11 @@ func TestService_Ensure_StartNoopAndSwitch(t *testing.T) {
 	)
 	svc.setOpenDB(openBareDB(t))
 
-	scope1 := Scope{OrganizationID: "org_1", AccountID: "acc_1"}
+	scope1 := Scope{
+		Organization: tenancy.Organization{ID: "org_1", Name: "Acme"},
+		Account:      tenancy.Account{ID: "acc_1", Name: "Primary"},
+		Workspace:    tenancy.Workspace{ID: "ws_1", Name: "Prod", AccountID: "acc_1"},
+	}
 	if err := svc.Ensure(context.Background(), scope1); err != nil {
 		t.Fatalf("ensure scope1: %v", err)
 	}
@@ -63,7 +67,23 @@ func TestService_Ensure_StartNoopAndSwitch(t *testing.T) {
 		t.Fatalf("expected one syncer start after noop ensure, got %d", syncerIdx)
 	}
 
-	scope2 := Scope{OrganizationID: "org_1", AccountID: "acc_2"}
+	scopeWorkspaceOnly := Scope{
+		Organization: scope1.Organization,
+		Account:      scope1.Account,
+		Workspace:    tenancy.Workspace{ID: "ws_2", Name: "Staging", AccountID: "acc_1"},
+	}
+	if err := svc.Ensure(context.Background(), scopeWorkspaceOnly); err != nil {
+		t.Fatalf("ensure workspace-only scope change: %v", err)
+	}
+	if syncerIdx != 1 {
+		t.Fatalf("expected workspace-only scope change to avoid restart, got starts=%d", syncerIdx)
+	}
+
+	scope2 := Scope{
+		Organization: scope1.Organization,
+		Account:      tenancy.Account{ID: "acc_2", Name: "Secondary"},
+		Workspace:    tenancy.Workspace{ID: "ws_3", Name: "Default", AccountID: "acc_2"},
+	}
 	if err := svc.Ensure(context.Background(), scope2); err != nil {
 		t.Fatalf("ensure scope2: %v", err)
 	}
@@ -71,7 +91,11 @@ func TestService_Ensure_StartNoopAndSwitch(t *testing.T) {
 		t.Fatalf("expected scope switch to restart session, got starts=%d", syncerIdx)
 	}
 
-	scope3 := Scope{OrganizationID: "org_2", AccountID: "acc_2"}
+	scope3 := Scope{
+		Organization: tenancy.Organization{ID: "org_2", Name: "Globex"},
+		Account:      scope2.Account,
+		Workspace:    tenancy.Workspace{ID: "ws_3", Name: "Default", AccountID: "acc_2"},
+	}
 	if err := svc.Ensure(context.Background(), scope3); err != nil {
 		t.Fatalf("ensure scope3: %v", err)
 	}
@@ -106,7 +130,10 @@ func TestService_Ensure_RequiresScopedStorage(t *testing.T) {
 		},
 		logtest.NewScope(t),
 	)
-	if err := svc.Ensure(context.Background(), Scope{OrganizationID: "org_1", AccountID: "acc_1"}); !errors.Is(err, ErrStorageNotScopeAware) {
+	if err := svc.Ensure(context.Background(), Scope{
+		Organization: tenancy.Organization{ID: "org_1", Name: "Acme"},
+		Account:      tenancy.Account{ID: "acc_1", Name: "Primary"},
+	}); !errors.Is(err, ErrStorageNotScopeAware) {
 		t.Fatalf("expected ErrStorageNotScopeAware, got %v", err)
 	}
 }

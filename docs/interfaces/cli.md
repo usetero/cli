@@ -9,9 +9,11 @@ That keeps command behavior predictable and aligned with other clients.
 
 ## How commands are wired
 
-`internal/cmd/root.go` composes the command tree and shared dependencies.
-Subcommands such as `auth`, `reset`, and `internal` each live in their own
-files and receive scoped services.
+[`internal/interfaces/cli/execute.go`](../../internal/interfaces/cli/execute.go)
+owns config resolution and surface selection.
+
+Individual command entrypoints then compose their own narrow dependencies under
+[`internal/interfaces/cli`](../../internal/interfaces/cli).
 
 This wiring pattern matters because it keeps command behavior testable and
 prevents hidden global state from leaking across commands.
@@ -25,10 +27,9 @@ A strong command handler reads like a short pipeline:
 3. call service/client boundaries,
 4. render result with clear success/failure semantics.
 
-You can see this pattern clearly in `auth` flows (`internal/cmd/auth.go`) and
-in internal diagnostics commands under `internal/cmd/internal_*`.
-If a handler stops reading like a pipeline, it is usually a sign that concerns
-should be split.
+The current surface is intentionally small, but the same rule applies as more
+commands are added. If a handler stops reading like a pipeline, it is usually a
+sign that concerns should be split.
 
 ## What should not happen in command handlers
 
@@ -43,6 +44,10 @@ Small command functions are easier to reason about and much easier to test.
 
 Commands run against an explicit environment (`local`, `dev`, `prd`) through
 configuration and token stores scoped to that environment.
+
+Service environment variables should store origins, not transport-specific
+endpoints. For example, `TERO_API_ORIGIN` should be `https://api.usetero.dev`,
+not `https://api.usetero.dev/graphql`. Clients append their own fixed paths.
 
 For commands that interact with account/org data, scoping must stay explicit so
 calls and local state mutations target the intended tenant context.

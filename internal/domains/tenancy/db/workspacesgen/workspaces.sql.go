@@ -15,10 +15,10 @@ VALUES (?, ?, ?, ?)
 `
 
 type CreateParams struct {
-	ID        string
-	AccountID string
-	Name      string
-	CreatedAt string
+	ID        *string
+	AccountID *string
+	Name      *string
+	CreatedAt *string
 }
 
 func (q *Queries) Create(ctx context.Context, arg CreateParams) error {
@@ -36,7 +36,7 @@ DELETE FROM workspaces
 WHERE id = ?
 `
 
-func (q *Queries) Delete(ctx context.Context, id string) error {
+func (q *Queries) Delete(ctx context.Context, id *string) error {
 	_, err := q.db.ExecContext(ctx, delete, id)
 	return err
 }
@@ -48,15 +48,22 @@ WHERE account_id = ?
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListByAccount(ctx context.Context, accountID string) ([]Workspace, error) {
+type ListByAccountRow struct {
+	ID        *string
+	AccountID *string
+	Name      *string
+	CreatedAt *string
+}
+
+func (q *Queries) ListByAccount(ctx context.Context, accountID *string) ([]ListByAccountRow, error) {
 	rows, err := q.db.QueryContext(ctx, listByAccount, accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Workspace
+	var items []ListByAccountRow
 	for rows.Next() {
-		var i Workspace
+		var i ListByAccountRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.AccountID,

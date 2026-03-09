@@ -3,10 +3,10 @@ package providerselect
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/domains/integrations"
 	"github.com/usetero/cli/internal/infrastructure/logging"
 	"github.com/usetero/cli/internal/interfaces/tui/components/selectlist"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 )
@@ -30,8 +30,8 @@ func New(scope logging.Scope, appTheme theme.Theme) *Model {
 // Init satisfies Bubble Tea model requirements.
 func (m *Model) Init() tea.Cmd { return nil }
 
-// SetSize is part of the screen contract. Provider select currently ignores dimensions.
-func (m *Model) SetSize(_, _ int) {}
+// SetSize is part of the screen contract.
+func (m *Model) SetSize(width, height int) { m.list.SetSize(width, height) }
 
 // SetProviders sets selectable providers and resets cursor.
 func (m *Model) SetProviders(providers []integrations.Provider) {
@@ -70,12 +70,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the provider selection screen.
 func (m *Model) View() tea.View {
-	lines := []string{
-		m.theme.Text.Section.Render("Select your integration provider:"),
-		"",
-		m.theme.Text.Body.Render(m.list.View().Content),
-	}
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return present.View(m.theme, present.Section("Select your integration provider:", present.Raw(m.list.View().Content)))
 }
 
 // ShortHelp returns provider-select key bindings.

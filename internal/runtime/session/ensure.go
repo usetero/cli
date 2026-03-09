@@ -8,7 +8,7 @@ func (s *Service) Ensure(ctx context.Context, scope Scope) error {
 	if err := scope.Validate(); err != nil {
 		return err
 	}
-	if err := validateStartAccountID(string(scope.AccountID)); err != nil {
+	if err := validateStartAccountID(string(scope.Account.ID)); err != nil {
 		return err
 	}
 
@@ -19,14 +19,17 @@ func (s *Service) Ensure(ctx context.Context, scope Scope) error {
 	if !ok {
 		return ErrStorageNotScopeAware
 	}
-	scopedStorage.SetOrganizationID(scope.OrganizationID)
+	scopedStorage.SetOrganizationID(scope.Organization.ID)
 
 	s.mu.RLock()
 	running := s.state.Running
 	currentScope := s.scope
 	s.mu.RUnlock()
 
-	if running && currentScope == scope {
+	if running && sameRuntimeIdentity(currentScope, scope) {
+		s.mu.Lock()
+		s.scope = scope
+		s.mu.Unlock()
 		return nil
 	}
 	if running {
@@ -34,13 +37,17 @@ func (s *Service) Ensure(ctx context.Context, scope Scope) error {
 			return err
 		}
 	}
-	if err := s.startLocked(ctx, scope.AccountID); err != nil {
+	if err := s.startLocked(ctx, scope.Account.ID); err != nil {
 		return err
 	}
 
 	s.mu.Lock()
 	s.scope = scope
-	s.state.OrganizationID = scope.OrganizationID
+	s.state.OrganizationID = scope.Organization.ID
 	s.mu.Unlock()
 	return nil
+}
+
+func sameRuntimeIdentity(current Scope, next Scope) bool {
+	return current.Organization.ID == next.Organization.ID && current.Account.ID == next.Account.ID
 }

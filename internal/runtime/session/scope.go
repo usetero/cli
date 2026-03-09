@@ -9,15 +9,16 @@ import (
 
 // Scope identifies the organization/account context for a running session.
 type Scope struct {
-	OrganizationID tenancy.OrganizationID
-	AccountID      tenancy.AccountID
+	Organization tenancy.Organization
+	Account      tenancy.Account
+	Workspace    tenancy.Workspace
 }
 
 func (s Scope) Validate() error {
-	if s.OrganizationID == "" {
+	if s.Organization.ID == "" {
 		return fmt.Errorf("organization id is required")
 	}
-	if s.AccountID == "" {
+	if s.Account.ID == "" {
 		return fmt.Errorf("account id is required")
 	}
 	return nil

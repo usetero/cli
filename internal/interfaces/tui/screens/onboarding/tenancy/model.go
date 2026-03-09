@@ -3,7 +3,7 @@ package tenancyflow
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 	"github.com/usetero/cli/internal/runtime/onboarding"
@@ -152,10 +152,7 @@ func (m *Model) View() tea.View {
 	case routeWorkspaceSelect:
 		return m.workspaceSelect.View()
 	default:
-		return tea.NewView(lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.theme.Text.Muted.Render("Tenancy flow is not active."),
-		))
+		return present.View(m.theme, present.Notice("Tenancy flow is not active.", ""))
 	}
 }
 

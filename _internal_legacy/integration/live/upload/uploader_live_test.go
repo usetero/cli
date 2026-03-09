@@ -35,11 +35,11 @@ func TestIntegrationLive_Upload(t *testing.T) {
 	env := cliConfig.Environment()
 
 	t.Logf("Environment: %s", env)
-	t.Logf("API Endpoint: %s", cliConfig.APIEndpoint)
-	t.Logf("PowerSync Endpoint: %s", cliConfig.PowerSyncEndpoint)
+	t.Logf("API Origin: %s", cliConfig.APIOrigin)
+	t.Logf("PowerSync Origin: %s", cliConfig.PowerSyncOrigin)
 
 	storage := keyring.New(env)
-	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatEndpoint, cliConfig.PowerSyncEndpoint)
+	oauthProvider := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.ChatOrigin, cliConfig.PowerSyncOrigin)
 	authSvc := auth.NewService(oauthProvider, storage, logger)
 
 	if _, err := authSvc.GetAccessToken(ctx); err != nil {
@@ -65,11 +65,11 @@ func TestIntegrationLive_Upload(t *testing.T) {
 	t.Logf("Account ID: %s", accountID)
 	t.Logf("Workspace ID: %s", workspaceID)
 
-	services := graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authSvc, logger).WithAccountID(accountID)
+	services := graphql.NewServiceSet(cliConfig.APIOrigin+"/graphql", authSvc, logger).WithAccountID(accountID)
 
 	t.Run("mutation round-trip maintains healthy database", func(t *testing.T) {
 		database := dbtest.OpenTestDB(t)
-		syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authSvc, logger)
+		syncer := powersync.NewSyncer(cliConfig.PowerSyncOrigin, authSvc, logger)
 
 		syncCtx, syncCancel := context.WithTimeout(ctx, 90*time.Second)
 		defer syncCancel()
@@ -98,7 +98,7 @@ func TestIntegrationLive_Upload(t *testing.T) {
 
 		uploader := upload.New(
 			database,
-			psapi.NewClient(cliConfig.PowerSyncEndpoint),
+			psapi.NewClient(cliConfig.PowerSyncOrigin),
 			authSvc,
 			upload.MutationDeps{
 				Conversations: services.Conversations,

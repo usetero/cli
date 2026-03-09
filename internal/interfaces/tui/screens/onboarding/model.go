@@ -10,6 +10,7 @@ import (
 	"github.com/usetero/cli/internal/domains/integrations"
 	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
+	"github.com/usetero/cli/internal/interfaces/tui/components/loading"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	integrationsflow "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/integrations"
 	powersyncscreen "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/powersync"
@@ -83,6 +84,7 @@ type Model struct {
 	step    onboardingruntime.Step
 	loadErr error
 	router  screen.Router[childID]
+	loading *loading.Model
 
 	role         *role.Model
 	tenancy      *tenancyflow.Model
@@ -120,6 +122,7 @@ func New(
 		theme:        appTheme,
 		runtime:      runtime,
 		session:      session,
+		loading:      loading.NewThinking(appTheme, "Loading onboarding state..."),
 		role:         roleModel,
 		tenancy:      tenancyModel,
 		integrations: integrationsModel,
@@ -135,27 +138,36 @@ func New(
 func (m *Model) Init() tea.Cmd { return m.loadStateCmd() }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var loadingCmd tea.Cmd
+	if m.route == routeLoading {
+		next, cmd := m.loading.Update(msg)
+		if model, ok := next.(*loading.Model); ok {
+			m.loading = model
+		}
+		loadingCmd = cmd
+	}
+
 	switch msg := msg.(type) {
 	case role.SubmittedMsg:
-		return m, m.setRoleCmd(msg.Role)
+		return m, batch(loadingCmd, m.setRoleCmd(msg.Role))
 	case tenancyflow.OrganizationSelectedMsg:
-		return m, m.selectOrganizationCmd(msg.OrganizationID)
+		return m, batch(loadingCmd, m.selectOrganizationCmd(msg.OrganizationID))
 	case tenancyflow.OrganizationCreatedMsg:
-		return m, m.createOrganizationCmd(msg.Create)
+		return m, batch(loadingCmd, m.createOrganizationCmd(msg.Create))
 	case tenancyflow.AccountSelectedMsg:
-		return m, m.selectAccountCmd(msg.AccountID)
+		return m, batch(loadingCmd, m.selectAccountCmd(msg.AccountID))
 	case tenancyflow.AccountCreatedMsg:
-		return m, m.createAccountCmd(msg.Create)
+		return m, batch(loadingCmd, m.createAccountCmd(msg.Create))
 	case tenancyflow.WorkspaceSelectedMsg:
-		return m, m.selectWorkspaceCmd(msg.WorkspaceID)
+		return m, batch(loadingCmd, m.selectWorkspaceCmd(msg.WorkspaceID))
 	case integrationsflow.SetDatadogSiteMsg:
-		return m, m.setDatadogSiteCmd(msg.Site)
+		return m, batch(loadingCmd, m.setDatadogSiteCmd(msg.Site))
 	case integrationsflow.SubmitDatadogAPIKeyMsg:
-		return m, m.submitDatadogAPIKeyCmd(msg.Submission)
+		return m, batch(loadingCmd, m.submitDatadogAPIKeyCmd(msg.Submission))
 	case integrationsflow.SubmitDatadogAppKeyMsg:
-		return m, m.submitDatadogAppKeyCmd(msg.Submission)
+		return m, batch(loadingCmd, m.submitDatadogAppKeyCmd(msg.Submission))
 	case integrationsflow.RefreshRequestedMsg:
-		return m, m.loadStateCmd()
+		return m, batch(loadingCmd, m.loadStateCmd())
 	case stateResolvedMsg:
 		if msg.err != nil {
 			m.loadErr = msg.err
@@ -163,7 +175,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.route = routeError
 				m.router.ClearActive()
 			}
-			return m, nil
+			return m, loadingCmd
 		}
 		previousRoute := m.route
 		m.loadErr = nil
@@ -177,7 +189,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cmds = append(cmds, m.pollStateCmd())
 		}
-		return m, tea.Batch(cmds...)
+		return m, batch(append([]tea.Cmd{loadingCmd}, cmds...)...)
 	case sessionEnsuredMsg:
 		if msg.err != nil {
 			m.loadErr = msg.err
@@ -186,18 +198,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.router.ClearActive()
 			}
 		}
-		return m, nil
+		return m, loadingCmd
 	case pollStateTickMsg:
 		if m.route != routePowerSyncReady {
-			return m, nil
+			return m, loadingCmd
 		}
-		return m, tea.Batch(m.loadStateCmd(), m.pollStateCmd())
-	case tea.WindowSizeMsg:
-		m.router.SetSizeAll(msg.Width, msg.Height)
-		return m, nil
+		return m, batch(loadingCmd, m.loadStateCmd(), m.pollStateCmd())
 	}
 
-	return m, m.router.Forward(msg)
+	return m, batch(loadingCmd, m.router.Forward(msg))
 }
 
 func (m *Model) loadStateCmd() tea.Cmd {
@@ -278,8 +287,11 @@ func (m *Model) ensureSessionCmd(state onboardingruntime.State) tea.Cmd {
 		return nil
 	}
 	scope := sessionruntime.Scope{
-		OrganizationID: state.SelectedOrganization.ID,
-		AccountID:      state.SelectedAccount.ID,
+		Organization: *state.SelectedOrganization,
+		Account:      *state.SelectedAccount,
+	}
+	if state.SelectedWorkspace != nil {
+		scope.Workspace = *state.SelectedWorkspace
 	}
 	return func() tea.Msg {
 		return sessionEnsuredMsg{err: m.session.Ensure(context.Background(), scope)}
@@ -290,6 +302,19 @@ func (m *Model) pollStateCmd() tea.Cmd {
 	return tea.Tick(powersyncPollInterval, func(time.Time) tea.Msg {
 		return pollStateTickMsg{}
 	})
+}
+
+func batch(cmds ...tea.Cmd) tea.Cmd {
+	filtered := make([]tea.Cmd, 0, len(cmds))
+	for _, cmd := range cmds {
+		if cmd != nil {
+			filtered = append(filtered, cmd)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return tea.Batch(filtered...)
 }
 
 func (m *Model) applyState(state onboardingruntime.State) {
@@ -323,4 +348,9 @@ func (m *Model) applyState(state onboardingruntime.State) {
 // ShortHelp returns the active onboarding step key bindings.
 func (m *Model) ShortHelp() []key.Binding {
 	return m.router.ShortHelp()
+}
+
+// SetSize applies the shell body size to all onboarding children.
+func (m *Model) SetSize(width, height int) {
+	m.router.SetSizeAll(width, height)
 }

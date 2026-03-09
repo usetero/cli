@@ -31,11 +31,11 @@ func (s *LocalMessageService) CreateUserMessage(ctx context.Context, create User
 
 	id := MessageID(uuid.NewString())
 	err = s.q.Create(ctx, messagesdb.CreateParams{
-		ID:             toMessagesDBMessageID(id),
-		ConversationID: toMessagesDBConversationID(validated.ConversationID),
-		Role:           toMessagesDBRole(RoleUser),
-		Content:        validated.Content,
-		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
+		ID:             ptrString(toMessagesDBMessageID(id)),
+		ConversationID: ptrString(toMessagesDBConversationID(validated.ConversationID)),
+		Role:           ptrString(toMessagesDBRole(RoleUser)),
+		Content:        ptrString(validated.Content),
+		CreatedAt:      ptrString(time.Now().UTC().Format(time.RFC3339)),
 	})
 	if err != nil {
 		return "", err
@@ -48,7 +48,7 @@ func (s *LocalMessageService) Delete(ctx context.Context, messageID MessageID) e
 	if messageID == "" {
 		return fmt.Errorf("message id is required")
 	}
-	return s.q.Delete(ctx, toMessagesDBMessageID(messageID))
+	return s.q.Delete(ctx, ptrString(toMessagesDBMessageID(messageID)))
 }
 
 // ListByConversation returns messages for one conversation ordered by creation time.
@@ -56,14 +56,14 @@ func (s *LocalMessageService) ListByConversation(ctx context.Context, conversati
 	if conversationID == "" {
 		return nil, fmt.Errorf("conversation id is required")
 	}
-	rows, err := s.q.ListByConversation(ctx, toMessagesDBConversationID(conversationID))
+	rows, err := s.q.ListByConversation(ctx, ptrString(toMessagesDBConversationID(conversationID)))
 	if err != nil {
 		return nil, err
 	}
 
 	var out []Message
 	for _, row := range rows {
-		out = append(out, fromMessagesDBMessage(row))
+		out = append(out, fromMessagesDBListRow(row))
 	}
 	return out, nil
 }

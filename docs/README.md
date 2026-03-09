@@ -9,9 +9,9 @@ paths below.
 ## What This Repo Is
 
 The CLI is a presentation runtime for the Tero control plane. It renders the
-interactive TUI (`internal/app`), exposes direct command surfaces
-(`internal/cmd`), and keeps terminal interactions responsive through a local
-SQLite projection backed by PowerSync.
+interactive TUI (`internal/interfaces/tui`), exposes direct command surfaces
+(`internal/interfaces/cli`), and keeps terminal interactions responsive
+through runtime and local projection layers backed by PowerSync.
 
 Business truth still lives in the control plane. The CLI should present and
 orchestrate that truth, not redefine it.
@@ -33,8 +33,11 @@ orchestrate that truth, not redefine it.
 - [architecture/README.md](architecture/README.md)
 - [architecture/system-overview.md](architecture/system-overview.md)
 - [architecture/data-flow.md](architecture/data-flow.md)
-- [architecture/ui-architecture.md](architecture/ui-architecture.md)
-- [architecture/message-contracts.md](architecture/message-contracts.md)
+- [architecture/runtime-architecture.md](architecture/runtime-architecture.md)
+- [architecture/ui-runtime.md](architecture/ui-runtime.md)
+- [architecture/ui-messages.md](architecture/ui-messages.md)
+- [architecture/ui-layout.md](architecture/ui-layout.md)
+- [architecture/theme-and-chrome.md](architecture/theme-and-chrome.md)
 
 ### I am changing onboarding/bootstrap behavior
 
@@ -75,13 +78,15 @@ orchestrate that truth, not redefine it.
 Use these paths when docs and code should be read together:
 
 - `cmd/tero/main.go`: executable entrypoint.
-- `internal/cmd/root.go`: dependency composition and app bootstrap wiring.
-- `internal/app/app.go`: root Bubble Tea model and high-level state orchestration.
-- `internal/app/onboarding/`: onboarding orchestrator and gate steps.
-- `internal/core/bootstrap/`: deterministic onboarding transition engine.
-- `internal/core/chat/`: pure chat lifecycle/session policy.
-- `internal/boundary/chat/`: chat streaming client/protocol adapters.
-- `internal/powersync/`: sync lifecycle and projection pipeline.
+- `internal/interfaces/cli/execute.go`: config resolution and surface selection.
+- `internal/interfaces/tui/app.go`: TUI composition and startup.
+- `internal/interfaces/tui/root/`: root Bubble Tea shell.
+- `internal/interfaces/tui/screens/onboarding/`: onboarding flow orchestration and steps.
+- `internal/runtime/onboarding/`: deterministic onboarding projection and progression.
+- `internal/runtime/session/`: account-scoped long-running runtime.
+- `internal/infrastructure/controlplane/api/`: control-plane GraphQL client.
+- `internal/infrastructure/powersync/`: sync lifecycle and projection pipeline.
+- `internal/domains/`: typed business operations and contracts.
 
 ## Documentation Quality Bar
 

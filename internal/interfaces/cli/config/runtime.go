@@ -7,6 +7,7 @@ type RuntimeConfig struct {
 	Chat      ChatConfig         `embed:""`
 	PowerSync PowerSyncConfig    `embed:""`
 	WorkOS    WorkOSConfig       `embed:""`
+	Theme     ThemeConfig        `embed:""`
 	Logging   LoggingConfig      `embed:""`
 }
 
@@ -24,24 +25,28 @@ func Resolve(in RuntimeConfig) (RuntimeConfig, error) {
 
 	cfg := RuntimeConfig{
 		Env:       env,
-		API:       APIConfig{URL: defaults.APIURL},
-		Chat:      ChatConfig{URL: defaults.ChatURL},
-		PowerSync: PowerSyncConfig{URL: defaults.PowerSyncURL},
+		API:       APIConfig{Origin: defaults.APIOrigin},
+		Chat:      ChatConfig{Origin: defaults.ChatOrigin},
+		PowerSync: PowerSyncConfig{Origin: defaults.PowerSyncOrigin},
 		WorkOS:    WorkOSConfig{ClientID: defaults.WorkOSClientID},
+		Theme:     ThemeConfig{Mode: ThemeModeAuto},
 		Logging:   LoggingConfig{Level: defaults.LogLevel},
 	}
 
-	if in.API.URL != "" {
-		cfg.API.URL = in.API.URL
+	if in.API.Origin != "" {
+		cfg.API.Origin = in.API.Origin
 	}
-	if in.Chat.URL != "" {
-		cfg.Chat.URL = in.Chat.URL
+	if in.Chat.Origin != "" {
+		cfg.Chat.Origin = in.Chat.Origin
 	}
-	if in.PowerSync.URL != "" {
-		cfg.PowerSync.URL = in.PowerSync.URL
+	if in.PowerSync.Origin != "" {
+		cfg.PowerSync.Origin = in.PowerSync.Origin
 	}
 	if in.WorkOS.ClientID != "" {
 		cfg.WorkOS.ClientID = in.WorkOS.ClientID
+	}
+	if in.Theme.Mode != "" {
+		cfg.Theme.Mode = in.Theme.Mode
 	}
 	if in.Logging.Level != "" {
 		cfg.Logging.Level = in.Logging.Level

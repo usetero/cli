@@ -1,101 +1,70 @@
 # Status Bar
 
-The status bar is a persistent runtime surface, not a decorative header. It has
-two jobs:
+The status bar is the shell-level orientation surface for the TUI.
 
-1. give fast ambient health signals in compact mode, and
-2. provide focused drill-down views in the drawer without blocking the main TUI
-   loop.
+In the rebuilt app, it is deliberately much smaller in scope than the legacy
+tabbed status subsystem. It does not own drawers, detail views, or product
+queries. It presents brand, environment, and session sync state in one compact
+line.
 
-If this surface regresses, users immediately feel it as lag, jitter, or
-confusing stale state.
+## Why this surface matters
 
-## What the status bar owns
+The status bar is always visible. If it is wrong, users immediately lose trust
+in the rest of the app:
 
-The status bar owns presentation state and interaction for five tabs:
-waste, quality, compliance, services, and sync.
+- stale "ready" signals hide sync failures,
+- noisy state labels make the shell feel unstable,
+- width regressions break the visual rhythm of the app header,
+- presentation logic leaking upward makes the root shell brittle.
 
-It does not own business truth. Facts still come from synced SQLite state and
-sync runtime signals.
+So even though the component is small, the contract matters.
 
-In code, the root model lives in `internal/app/statusbar/` and each tab package
-owns its rendering + tab-local interaction behavior.
+## The current model
 
-## Mental model
+The status bar in
+[`internal/interfaces/tui/components/statusbar`](../../internal/interfaces/tui/components/statusbar)
+has one job: render session status from [`internal/runtime/session`](../../internal/runtime/session)
+into a width-aware shell header.
 
-Think of the status bar as a shell plus tab plugins.
+It reads:
 
-- Shell (`statusbar.go`, `statusbar_view.go`, `statusbar_drawer.go`):
-  compact row layout, drawer open/close, active tab routing, shared key handling.
-- Tab contracts (`tabs.go`):
-  strict interfaces for tab lifecycle, view rendering, and optional detail
-  interaction.
-- Shared poll lifecycle (`tabpoll/`):
-  typed `PollMsg` -> async fetch -> typed `DataMsg` cycle.
-- Shared policy-tab behavior (`policytab/`):
-  reusable base for waste/quality/compliance polling, change detection, and
-  list/detail cursor lifecycle.
-- Shared list/detail mechanics (`listdetail/`):
-  keyboard navigation and detail-view enter/exit semantics.
+- environment name,
+- runtime `Running` state,
+- PowerSync sync state exposed through session status.
 
-This keeps orchestration in one place while pushing tab-specific complexity down
-into tab packages.
+It does not fetch, poll, or derive product truth on its own.
 
-## Non-negotiable invariants
+## What must stay true
 
-1. `Update` paths must stay non-blocking. Database work runs in `tea.Cmd`.
-2. Status bar view state is presentation-only; it must not become a second
-   business domain.
-3. Tab-local cache keys are presentation types (primitive fields), not
-   `internal/domain` ownership.
-4. Drawer interactions are tab-owned; the shell routes keys but does not
-   micromanage tab internals.
-5. Shared polling/list-detail behavior belongs in `tabpoll`, `policytab`, and
-   `listdetail`, not duplicated per tab.
+- runtime session state is the source of truth for header sync status,
+- the status bar remains presentation-only,
+- compact rendering degrades intentionally as width shrinks,
+- production environment stays visually quieter than non-production shells,
+- root shell owns placement; the status bar owns only its rendered line.
 
-## Data and ownership boundaries
+## Failure behavior
 
-Status bar tabs read from local runtime state:
+Most problems here fall into one of three buckets:
 
-- policy/service counts from SQLite query surfaces,
-- sync health from the syncer integration model.
+- wrong status label: inspect session status mapping before touching theme code,
+- visual overflow or truncation: inspect width-aware rendering in the component,
+- stale shell state: inspect runtime/session publication, not the header first.
 
-They should not call remote APIs directly from tab update/render paths.
-Onboarding handles API-first bootstrap; status bar is runtime projection UI.
+If the status bar ever needs polling, data loading, or complex local state, that
+is almost certainly a boundary regression.
 
-## Why the current split exists
+## Why the legacy mental model no longer applies
 
-Waste, quality, and compliance look similar because they solve the same shape of
-problem: poll summary + categories, render compact signal, then offer a
-list/detail drawer for category inspection.
+The old status bar page described a much larger feature with tabs, drawers, and
+query lifecycles. That is not the rebuilt app.
 
-The shared `policytab.Base` exists to remove boilerplate that was previously
-easy to drift:
+Today the root shell owns a single header slot, and the status bar is a focused
+presentational component inside that slot. Treating it like a mini-application
+would overcomplicate both the code and the docs.
 
-- poll lifecycle bookkeeping,
-- "has data" gating,
-- cursor clamp and state-change checks,
-- standard list/detail navigation wiring.
+## Code entry points
 
-The remaining logic in each tab should be domain-specific rendering and query
-selection only.
-
-## Naming contract
-
-To keep tabs consistent, use these names:
-
-- async message payloads: `...Msg` (for example `detailMsg`),
-- cache key builders: `buildStateKey(...)`,
-- rendering helpers: `render...` for tab-local view composition.
-
-When two tabs need the same lifecycle behavior, move it to `tabpoll`,
-`policytab`, or `viewkit` instead of introducing one-off names in each tab.
-
-## Practical change checklist
-
-When changing status bar behavior:
-
-1. ensure no synchronous DB/API work was added to `Update` or `View`,
-2. keep any new cache/change keys as presentation structs with primitive fields,
-3. prefer extending shared helpers before copying lifecycle logic into a tab,
-4. run `go test ./internal/app/statusbar/...` and `task do`.
+- [`internal/interfaces/tui/components/statusbar/model.go`](../../internal/interfaces/tui/components/statusbar/model.go)
+- [`internal/interfaces/tui/components/statusbar/sync_presenter.go`](../../internal/interfaces/tui/components/statusbar/sync_presenter.go)
+- [`internal/interfaces/tui/root/model.go`](../../internal/interfaces/tui/root/model.go)
+- [`internal/runtime/session/service.go`](../../internal/runtime/session/service.go)

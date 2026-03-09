@@ -26,7 +26,8 @@ Keep these constraints explicit as implementation starts:
 ## Practical implementation guidance
 
 When this interface is implemented, mirror the same composition style used in
-`internal/cmd/root.go`: wire dependencies once, keep handlers narrow, and push
-shared behavior into existing service/domain layers.
+[`internal/interfaces/cli/execute.go`](../../internal/interfaces/cli/execute.go):
+wire dependencies once, keep handlers narrow, and push shared behavior into
+existing service, runtime, and domain layers.
 That keeps the MCP surface consistent with existing interfaces and avoids a
 third policy implementation.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +23,9 @@ func TestClientListOrganizations_SendsAuthAndMapsResponse(t *testing.T) {
 	called := false
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
 		if got := r.Header.Get("Authorization"); got != "Bearer tok_1" {
 			t.Fatalf("authorization header mismatch: %q", got)
 		}
@@ -75,6 +79,9 @@ func TestClientValidateDatadogAPIKey_DefaultErrorMessage(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
 		body, _ := io.ReadAll(r.Body)
 		if !strings.Contains(string(body), "ValidateDatadogApiKey") {
 			t.Fatalf("expected ValidateDatadogApiKey query, got body=%s", string(body))
@@ -107,6 +114,9 @@ func TestClientGetAccountDatadogAccount_ReturnsNilWhenAbsent(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
 		body, _ := io.ReadAll(r.Body)
 		if !strings.Contains(string(body), "GetAccount") {
 			t.Fatalf("expected GetAccount query, got body=%s", string(body))
@@ -141,7 +151,7 @@ func TestClientGetAccountDatadogAccount_ReturnsNilWhenAbsent(t *testing.T) {
 func TestClientCreateDatadogAccountWithCredentials_Validation(t *testing.T) {
 	t.Parallel()
 
-	client := NewClient("http://example.com/graphql", nil)
+	client := NewClient("http://example.com", nil)
 
 	tests := []struct {
 		name  string
@@ -169,7 +179,7 @@ func TestClientListAccounts_PropagatesTokenProviderErrors(t *testing.T) {
 	t.Parallel()
 
 	wantErr := errors.New("token unavailable")
-	client := NewClient("http://example.com/graphql", tokenProviderFunc(func(context.Context) (string, error) {
+	client := NewClient("http://example.com", tokenProviderFunc(func(context.Context) (string, error) {
 		return "", wantErr
 	}))
 	_, err := client.ListAccounts(context.Background(), OrganizationID("org_1"))
@@ -182,8 +192,10 @@ func TestAuthTransport_SetsAuthorizationHeader(t *testing.T) {
 	t.Parallel()
 
 	var gotAuth string
+	var gotAccount string
 	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		gotAuth = req.Header.Get("Authorization")
+		gotAccount = req.Header.Get("X-Account-ID")
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(`{"ok":true}`)),
@@ -191,7 +203,7 @@ func TestAuthTransport_SetsAuthorizationHeader(t *testing.T) {
 		}, nil
 	})
 
-	tr := &authTransport{token: "abc123", base: rt}
+	tr := &authTransport{token: "abc123", accountID: "acc_123", base: rt}
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
@@ -200,6 +212,35 @@ func TestAuthTransport_SetsAuthorizationHeader(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 	if gotAuth != "Bearer abc123" {
 		t.Fatalf("authorization header mismatch: %q", gotAuth)
+	}
+	if gotAccount != "acc_123" {
+		t.Fatalf("account header mismatch: %q", gotAccount)
+	}
+}
+
+func TestClientListWorkspaces_SetsAccountHeader(t *testing.T) {
+	t.Parallel()
+
+	var gotAccount string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAccount = r.Header.Get("X-Account-ID")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"workspaces": {
+					"edges": [],
+					"totalCount": 0
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL, nil)
+	if _, err := client.ListWorkspaces(context.Background(), AccountID("acc_1")); err != nil {
+		t.Fatalf("list workspaces: %v", err)
+	}
+	if gotAccount != "acc_1" {
+		t.Fatalf("expected X-Account-ID header acc_1, got %q", gotAccount)
 	}
 }
 
@@ -211,6 +252,9 @@ func TestClientListAccounts_MapsCreatedAt(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
 		var payload map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&payload)
 		_, _ = w.Write([]byte(`{
@@ -243,4 +287,78 @@ func TestClientListAccounts_MapsCreatedAt(t *testing.T) {
 	if !accounts[0].CreatedAt.Equal(time.Date(2026, 3, 4, 10, 0, 0, 0, time.UTC)) {
 		t.Fatalf("unexpected createdAt mapping: %s", accounts[0].CreatedAt)
 	}
+}
+
+func TestClientDeleteOrganization_SendsConfirmedMutation(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		payload := string(body)
+		if !strings.Contains(payload, "DeleteOrganization") {
+			t.Fatalf("expected DeleteOrganization mutation, got body=%s", payload)
+		}
+		if !strings.Contains(payload, `"confirmation":"DELETE"`) {
+			t.Fatalf("expected DELETE confirmation variable, got body=%s", payload)
+		}
+		_, _ = w.Write([]byte(`{"data":{"deleteOrganization":true}}`))
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL, nil)
+	if err := client.DeleteOrganization(context.Background(), "org_1"); err != nil {
+		t.Fatalf("delete organization: %v", err)
+	}
+}
+
+func TestClientDeleteAccountAndWorkspace_ValidationAndMutation(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		payload := string(body)
+		switch {
+		case strings.Contains(payload, "DeleteAccount"):
+			_, _ = w.Write([]byte(`{"data":{"deleteAccount":true}}`))
+		case strings.Contains(payload, "DeleteWorkspace"):
+			_, _ = w.Write([]byte(`{"data":{"deleteWorkspace":true}}`))
+		default:
+			t.Fatalf("unexpected mutation body=%s", payload)
+		}
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL, nil)
+
+	if err := client.DeleteAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
+		t.Fatalf("expected account id validation error, got %v", err)
+	}
+	if err := client.DeleteWorkspace(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
+		t.Fatalf("expected workspace id validation error, got %v", err)
+	}
+	if err := client.DeleteAccount(context.Background(), "acc_1"); err != nil {
+		t.Fatalf("delete account: %v", err)
+	}
+	if err := client.DeleteWorkspace(context.Background(), "ws_1"); err != nil {
+		t.Fatalf("delete workspace: %v", err)
+	}
+}
+
+func TestNewClient_PanicsWhenOriginIncludesPath(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatalf("expected panic")
+		}
+		if got := strings.TrimSpace(fmt.Sprint(r)); !strings.Contains(got, "must not include a path") {
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+
+	_ = NewClient("https://api.usetero.dev/graphql", nil)
 }

@@ -354,7 +354,11 @@ func TestModel_EnsureOnlyWhenScopeReadyAndPollTransitionsToDone(t *testing.T) {
 	if session.ensureCalls != 1 {
 		t.Fatalf("expected 1 ensure call, got %d", session.ensureCalls)
 	}
-	if len(session.ensureScope) != 1 || session.ensureScope[0].OrganizationID != "org_1" || session.ensureScope[0].AccountID != "acc_1" {
+	if len(session.ensureScope) != 1 ||
+		session.ensureScope[0].Organization.ID != "org_1" ||
+		session.ensureScope[0].Organization.Name != "Org 1" ||
+		session.ensureScope[0].Account.ID != "acc_1" ||
+		session.ensureScope[0].Account.Name != "Account 1" {
 		t.Fatalf("unexpected ensure scope: %+v", session.ensureScope)
 	}
 	if !strings.Contains(m.View().Content, "Syncing your account data") {

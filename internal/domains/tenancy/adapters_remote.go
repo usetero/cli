@@ -10,6 +10,10 @@ func toControlPlaneAccountID(id AccountID) controlplane.AccountID {
 	return controlplane.AccountID(id)
 }
 
+func toControlPlaneWorkspaceID(id WorkspaceID) controlplane.WorkspaceID {
+	return controlplane.WorkspaceID(id)
+}
+
 func fromControlPlaneOrganization(in controlplane.Organization) Organization {
 	return Organization{
 		ID:                   OrganizationID(in.ID),

@@ -71,7 +71,7 @@ Just run 'tero' to start an interactive chat session.`,
 			storage := sqlite.NewStorageService(orgCfg)
 
 			// Create PowerSync syncer
-			syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authService, scope)
+			syncer := powersync.NewSyncer(cliConfig.PowerSyncOrigin, authService, scope)
 
 			// Create and run the TUI
 			p := tea.NewProgram(
@@ -89,7 +89,7 @@ Just run 'tero' to start an interactive chat session.`,
 	}
 
 	// Global flags with defaults from CLI config
-	rootCmd.PersistentFlags().String("endpoint", cliConfig.APIEndpoint, "Tero control plane endpoint")
+	rootCmd.PersistentFlags().String("api-origin", cliConfig.APIOrigin, "Tero control plane API origin")
 	rootCmd.PersistentFlags().BoolP("debug", "d", cliConfig.Debug, "Enable debug logging")
 
 	return rootCmd

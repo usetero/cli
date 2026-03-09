@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
+	"github.com/usetero/cli/internal/interfaces/tui/components/loading"
 	"github.com/usetero/cli/internal/interfaces/tui/components/progress"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 	sessionruntime "github.com/usetero/cli/internal/runtime/session"
@@ -22,7 +22,7 @@ type Session interface {
 type Model struct {
 	session  Session
 	theme    theme.Theme
-	spinner  spinner.Model
+	loading  *loading.Model
 	progress *progress.Model
 }
 
@@ -32,59 +32,69 @@ func New(session Session, appTheme theme.Theme) *Model {
 	if session == nil {
 		panic("powersync session is required")
 	}
-	sp := spinner.New()
-	sp.Spinner = spinner.Dot
 	return &Model{
 		session:  session,
 		theme:    appTheme,
-		spinner:  sp,
+		loading:  loading.NewSpinner(appTheme, "Initializing sync..."),
 		progress: progress.New(appTheme, 40),
 	}
 }
 
 func (m *Model) Init() tea.Cmd {
-	return m.spinner.Tick
+	return m.loading.Init()
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	tick, ok := msg.(spinner.TickMsg)
-	if !ok {
-		return m, nil
+	next, cmd := m.loading.Update(msg)
+	if model, ok := next.(*loading.Model); ok {
+		m.loading = model
 	}
-	var cmd tea.Cmd
-	m.spinner, cmd = m.spinner.Update(tick)
 	return m, cmd
 }
 
 func (m *Model) View() tea.View {
-	lines := []string{
-		m.theme.Text.Section.Render("Syncing your account data..."),
-	}
-
 	switch state := m.session.Status().Sync.(type) {
 	case *pssyncer.Ready:
-		lines = append(lines, "", m.theme.Text.Body.Render("PowerSync is ready."))
+		return present.View(m.theme, present.StatusBlock(
+			"Syncing your account data...",
+			present.Success("PowerSync is ready."),
+		))
 	case *pssyncer.Error:
-		lines = append(lines, "", m.theme.Text.Error.Render("Sync failed: "+state.Err.Error()))
+		return present.View(m.theme, present.ErrorCard(present.BlockGap(
+			1,
+			present.Error("Sync failed."),
+			present.Body("Sync failed: "+state.Err.Error()),
+		)))
 	case *pssyncer.Connecting:
-		lines = append(lines, "", m.theme.Text.Body.Render(m.spinner.View()+" Connecting..."))
+		m.loading.SetLabel("Connecting...")
+		return present.View(m.theme, present.StatusBlock(
+			"Syncing your account data...",
+			present.Raw(m.loading.View().Content),
+		))
 	case *pssyncer.Syncing:
-		lines = append(lines, "", m.theme.Text.Body.Render(m.spinner.View()+" Syncing..."))
+		m.loading.SetLabel("Syncing...")
+		parts := []present.BlockItem{present.Raw(m.loading.View().Content)}
 		if state.Progress != nil && state.Progress.Total > 0 {
 			percent := float64(state.Progress.Downloaded) / float64(state.Progress.Total) * 100.0
-			lines = append(lines,
-				"",
-				m.progress.ViewAs(percent),
-				m.theme.Text.Muted.Render(fmt.Sprintf("%d / %d rows", state.Progress.Downloaded, state.Progress.Total)),
+			parts = append(parts,
+				present.Raw(m.progress.ViewAs(percent)),
+				present.Muted(fmt.Sprintf("%d / %d rows", state.Progress.Downloaded, state.Progress.Total)),
 			)
 		}
+		return present.View(m.theme, present.StatusBlock("Syncing your account data...", parts...))
 	case *pssyncer.Reconnecting:
-		lines = append(lines, "", m.theme.Text.Body.Render(m.spinner.View()+" Reconnecting..."))
+		m.loading.SetLabel("Reconnecting...")
+		return present.View(m.theme, present.StatusBlock(
+			"Syncing your account data...",
+			present.Raw(m.loading.View().Content),
+		))
 	default:
-		lines = append(lines, "", m.theme.Text.Body.Render(m.spinner.View()+" Initializing sync..."))
+		m.loading.SetLabel("Initializing sync...")
+		return present.View(m.theme, present.StatusBlock(
+			"Syncing your account data...",
+			present.Raw(m.loading.View().Content),
+		))
 	}
-
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
 func (m *Model) SetSize(width, _ int) {

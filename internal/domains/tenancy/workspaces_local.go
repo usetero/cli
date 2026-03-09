@@ -30,10 +30,10 @@ func (s *LocalWorkspaceService) Create(ctx context.Context, create WorkspaceCrea
 
 	id := WorkspaceID(uuid.NewString())
 	err = s.q.Create(ctx, workspacesdb.CreateParams{
-		ID:        toWorkspacesDBWorkspaceID(id),
-		AccountID: toWorkspacesDBAccountID(validated.AccountID),
-		Name:      validated.Name,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		ID:        ptrString(toWorkspacesDBWorkspaceID(id)),
+		AccountID: ptrString(toWorkspacesDBAccountID(validated.AccountID)),
+		Name:      ptrString(validated.Name),
+		CreatedAt: ptrString(time.Now().UTC().Format(time.RFC3339)),
 	})
 	if err != nil {
 		return "", err
@@ -45,21 +45,21 @@ func (s *LocalWorkspaceService) Delete(ctx context.Context, id WorkspaceID) erro
 	if id == "" {
 		return fmt.Errorf("workspace id is required")
 	}
-	return s.q.Delete(ctx, toWorkspacesDBWorkspaceID(id))
+	return s.q.Delete(ctx, ptrString(toWorkspacesDBWorkspaceID(id)))
 }
 
 func (s *LocalWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
-	rows, err := s.q.ListByAccount(ctx, toWorkspacesDBAccountID(accountID))
+	rows, err := s.q.ListByAccount(ctx, ptrString(toWorkspacesDBAccountID(accountID)))
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]Workspace, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, fromWorkspacesDBWorkspace(row))
+		out = append(out, fromWorkspacesDBListRow(row))
 	}
 	return out, nil
 }

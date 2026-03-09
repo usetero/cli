@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
@@ -45,7 +44,8 @@ func TestModel_SpinnerTickUpdates(t *testing.T) {
 		status: sessionruntime.Status{Sync: &pssyncer.Connecting{}},
 	}, theme.New(false))
 
-	_, cmd := model.Update(spinner.TickMsg{})
+	msg := model.Init()()
+	_, cmd := model.Update(msg)
 	if cmd == nil {
 		t.Fatal("expected spinner tick command")
 	}
@@ -61,7 +61,7 @@ func TestModel_SyncingProgressView(t *testing.T) {
 	if !strings.Contains(view, "3 / 10 rows") {
 		t.Fatalf("expected row progress message, got %q", view)
 	}
-	if !strings.Contains(view, "[") || !strings.Contains(view, "]") {
+	if !strings.Contains(view, "%") {
 		t.Fatalf("expected progress bar output, got %q", view)
 	}
 }

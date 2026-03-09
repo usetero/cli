@@ -18,3 +18,7 @@ mutation CreateAccount($input: CreateAccountInput!) {
         createdAt
     }
 }
+
+mutation DeleteAccount($id: ID!, $confirmation: String!) {
+    deleteAccount(id: $id, confirmation: $confirmation)
+}

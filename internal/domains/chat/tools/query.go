@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -16,6 +17,9 @@ const (
 	queryResultCap = 128 * 1024
 	queryFieldCap  = 4096
 )
+
+//go:embed query_schema.sql
+var querySchema string
 
 type QueryTool struct {
 	db *sqlite.DB
@@ -39,8 +43,19 @@ func NewQueryTool(db *sqlite.DB) *QueryTool {
 
 func (t *QueryTool) Definition() Definition {
 	return Definition{
-		Name:        QueryToolName,
-		Description: "Run read-only SQL against local SQLite state.",
+		Name: QueryToolName,
+		Description: fmt.Sprintf(`Run read-only SQL against local SQLite state.
+
+Schema:
+
+%s
+
+Rules:
+1. SELECT or WITH only.
+2. Query local SQLite projections, not control-plane concepts.
+3. Prefer cache/status tables for current metrics and derived state.
+4. Timestamps are ISO 8601 strings.
+`, strings.TrimSpace(querySchema)),
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

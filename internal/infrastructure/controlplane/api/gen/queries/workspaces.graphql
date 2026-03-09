@@ -11,3 +11,7 @@ query ListWorkspaces($accountID: ID!) {
         totalCount
     }
 }
+
+mutation DeleteWorkspace($id: ID!, $confirmation: String!) {
+    deleteWorkspace(id: $id, confirmation: $confirmation)
+}

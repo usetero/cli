@@ -8,6 +8,7 @@ import (
 )
 
 type remoteWorkspaceClient interface {
+	DeleteWorkspace(ctx context.Context, workspaceID controlplane.WorkspaceID) error
 	ListWorkspaces(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error)
 }
 
@@ -27,8 +28,11 @@ func (s *RemoteWorkspaceService) Create(_ context.Context, _ WorkspaceCreate) (W
 	return "", fmt.Errorf("tenancy remote workspace create is not implemented")
 }
 
-func (s *RemoteWorkspaceService) Delete(_ context.Context, _ WorkspaceID) error {
-	return fmt.Errorf("tenancy remote workspace delete is not implemented")
+func (s *RemoteWorkspaceService) Delete(ctx context.Context, id WorkspaceID) error {
+	if id == "" {
+		return fmt.Errorf("workspace id is required")
+	}
+	return s.client.DeleteWorkspace(ctx, toControlPlaneWorkspaceID(id))
 }
 
 func (s *RemoteWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {

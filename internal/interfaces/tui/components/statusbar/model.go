@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/usetero/cli/internal/interfaces/tui/chrome"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 	sessionruntime "github.com/usetero/cli/internal/runtime/session"
 )
@@ -46,16 +47,7 @@ func (m *Model) SetWidth(width int) {
 // View renders the full status bar line.
 func (m *Model) View() string {
 	status := m.session.Status()
-	syncFull := presentSync(status, false)
-	syncCompact := presentSync(status, true)
-
-	candidates := []string{
-		m.renderLine(true, syncFull, m.separator()),
-		m.renderLine(false, syncFull, m.separator()),
-		m.renderLine(false, syncCompact, m.separator()),
-		m.renderLine(false, syncCompact, " "),
-		syncCompact.render(m.theme),
-	}
+	candidates := m.candidates(status)
 
 	if m.width <= 0 {
 		return candidates[0]
@@ -66,23 +58,134 @@ func (m *Model) View() string {
 		}
 	}
 
-	truncated := truncateLabel(syncCompact.label, m.width)
-	return syncCompact.renderWithLabel(
-		m.theme,
-		truncated,
+	syncCompact := presentSync(status, true)
+	if hasContext(status) {
+		contextLabel := truncateLabel(presentContext(status, true), m.width-lipgloss.Width(syncCompact.icon)-1)
+		return presentSyncContextLabel(m.theme, syncCompact, contextLabel)
+	}
+	return syncCompact.renderDot(m.theme)
+}
+
+func (m *Model) candidates(status sessionruntime.Status) []string {
+	if hasContext(status) {
+		if m.width > 48 || m.width <= 0 {
+			return []string{
+				m.renderCandidate(status, true, false, true, false),
+				m.renderCandidate(status, false, false, false, false),
+				m.renderCandidate(status, false, false, true, false),
+				m.renderCandidate(status, false, true, false, false),
+				m.renderCandidate(status, false, true, true, false),
+			}
+		}
+		return []string{
+			m.renderCandidate(status, false, false, false, false),
+			m.renderCandidate(status, false, true, false, false),
+			m.renderCandidate(status, true, false, true, false),
+			m.renderCandidate(status, false, false, true, false),
+			m.renderCandidate(status, false, true, true, false),
+		}
+	}
+
+	return []string{
+		m.renderCandidate(status, true, false, true, false),
+		m.renderCandidate(status, false, false, true, false),
+		m.renderCandidate(status, false, false, false, false),
+		m.renderCandidate(status, false, true, false, false),
+		m.renderCandidate(status, false, true, true, false),
+		m.renderCandidate(status, false, false, true, true),
+		m.renderCandidate(status, false, false, false, true),
+		m.renderCandidate(status, false, true, false, true),
+	}
+}
+
+func (m *Model) renderCandidate(status sessionruntime.Status, includeEnv bool, compactContext bool, includeHint bool, textualSync bool) string {
+	left := m.renderLeft(status, includeEnv, compactContext, textualSync)
+	right := ""
+	if includeHint {
+		right = m.renderDrawerHint()
+	}
+	return m.composeLine(left, right)
+}
+
+func (m *Model) renderLeft(status sessionruntime.Status, includeEnv bool, compactContext bool, textualSync bool) string {
+	segments := []string{m.renderBrand()}
+	statusSegment := m.renderStatusContext(status, compactContext, textualSync)
+	if statusSegment != "" {
+		segments = append(segments, statusSegment)
+	}
+	envSegment := ""
+	if !hasContext(status) {
+		envSegment = m.renderEnv(includeEnv)
+	}
+	if envSegment != "" {
+		segments = append(segments, envSegment)
+	}
+	return strings.Join(segments, " ")
+}
+
+func (m *Model) renderStatusContext(status sessionruntime.Status, compactContext bool, textualSync bool) string {
+	sync := presentSync(status, compactContext)
+	if textualSync {
+		return sync.render(m.theme)
+	}
+
+	return presentSyncContext(m.theme, status, compactContext)
+}
+
+func (m *Model) composeLine(left string, right string) string {
+	leftDiags := chrome.RenderSlashMotif(m.theme, 2)
+	rightDiags := chrome.RenderSlashMotif(m.theme, 2)
+
+	if m.width <= 0 {
+		if right == "" {
+			return lipgloss.JoinHorizontal(lipgloss.Left, leftDiags, " ", left)
+		}
+		return lipgloss.JoinHorizontal(lipgloss.Left, leftDiags, " ", left, " ", right, " ", rightDiags)
+	}
+
+	leftWidth := lipgloss.Width(left)
+	leftDiagsWidth := lipgloss.Width(leftDiags)
+	if right == "" {
+		motifWidth := m.width - leftDiagsWidth - leftWidth - 2
+		if motifWidth <= 0 {
+			return lipgloss.JoinHorizontal(lipgloss.Left, leftDiags, " ", left)
+		}
+		return lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			leftDiags,
+			" ",
+			left,
+			" ",
+			chrome.RenderSlashMotif(m.theme, motifWidth),
+		)
+	}
+
+	rightWidth := lipgloss.Width(right)
+	rightDiagsWidth := lipgloss.Width(rightDiags)
+	motifWidth := m.width - leftDiagsWidth - leftWidth - rightWidth - rightDiagsWidth - 4
+	if motifWidth <= 0 {
+		return lipgloss.JoinHorizontal(lipgloss.Left, leftDiags, " ", left, " ", right, " ", rightDiags)
+	}
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		leftDiags,
+		" ",
+		left,
+		" ",
+		chrome.RenderSlashMotif(m.theme, motifWidth),
+		" ",
+		right,
+		" ",
+		rightDiags,
 	)
 }
 
-func (m *Model) separator() string {
-	return m.theme.Shell.HeaderLead.Render("  ╱  ")
-}
-
-func (m *Model) renderLine(includeEnv bool, sync syncPresentation, separator string) string {
+func (m *Model) renderDrawerHint() string {
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		m.renderBrand(includeEnv),
-		separator,
-		sync.render(m.theme),
+		m.theme.Shell.HeaderLead.Render("ctrl+d"),
+		m.theme.Shell.HeaderRule.Render(" open"),
 	)
 }
 

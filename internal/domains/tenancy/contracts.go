@@ -3,7 +3,6 @@ package tenancy
 import controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
 
 var (
-	_ AccountService      = (*LocalAccountService)(nil)
 	_ AccountService      = (*RemoteAccountService)(nil)
 	_ WorkspaceService    = (*LocalWorkspaceService)(nil)
 	_ WorkspaceService    = (*RemoteWorkspaceService)(nil)

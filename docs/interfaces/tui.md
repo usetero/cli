@@ -1,120 +1,112 @@
 # TUI Interface
 
-The TUI is split into a thin app shell and focused screen models.
+The TUI is the interactive presentation surface for the rebuilt app. It should
+feel responsive and cohesive, but it is still only a surface over domain,
+infrastructure, and runtime layers.
 
-Current ownership:
+If you are changing TUI behavior, start with these architecture pages:
 
-- `internal/interfaces/tui/root/model.go`:
-  app shell only (global quit, framing, top-level composition).
-- `internal/interfaces/tui/screens/onboarding/model.go`:
-  onboarding flow orchestration (runtime calls + step routing).
-- `internal/interfaces/tui/screens/onboarding/*`:
-  focused UI models for each step (role, organization/select, organization/create, account/select).
+- [`../architecture/ui-runtime.md`](../architecture/ui-runtime.md)
+- [`../architecture/ui-messages.md`](../architecture/ui-messages.md)
+- [`../architecture/ui-layout.md`](../architecture/ui-layout.md)
+- [`../architecture/theme-and-chrome.md`](../architecture/theme-and-chrome.md)
 
-## Core Pattern
+This page is narrower. It describes the TUI-specific contract as a user-facing
+surface.
 
-1. Root composes, screens decide.
-2. Runtime calls stay in the orchestration model (`screens/onboarding/model.go`), not in leaf UI models.
-3. Leaf models own local UI state only.
-4. All async work returns typed `tea.Msg` contracts.
+## What the TUI owns
 
-## Message Contracts
+The TUI owns:
 
-Message contracts are owned by the package that emits them.
+- interactive terminal behavior,
+- page and flow composition,
+- local widget interaction,
+- routing between screens,
+- rendering and shell chrome,
+- translating user intent into runtime or domain calls.
 
-Examples:
+The TUI does not own product truth, long-running business workflows, or
+concrete transport/storage implementation.
 
-- `screens/onboarding/role/submitted.go` -> `SubmittedMsg`
-- `screens/onboarding/organization/select/selected.go` -> `SelectedMsg`
-- `screens/onboarding/organization/create/created.go` -> `CreatedMsg`
-- `screens/onboarding/account/select/selected.go` -> `SelectedMsg`
+## Current structure
 
-Guidelines:
+The current surface is composed from:
 
-- Prefer event/fact names (`Submitted`, `Selected`, `Created`).
-- Keep payloads minimal and strongly typed.
-- Avoid shared catch-all message files at root.
+- [`internal/interfaces/tui/app.go`](../../internal/interfaces/tui/app.go):
+  TUI startup and composition
+- [`internal/interfaces/tui/root`](../../internal/interfaces/tui/root):
+  root shell
+- [`internal/interfaces/tui/present`](../../internal/interfaces/tui/present):
+  typed content and surface rendering
+- [`internal/interfaces/tui/screens/onboarding`](../../internal/interfaces/tui/screens/onboarding):
+  onboarding flow
+- [`internal/interfaces/tui/components`](../../internal/interfaces/tui/components):
+  reusable interactive widgets
+- [`internal/interfaces/tui/chrome`](../../internal/interfaces/tui/chrome):
+  shell layout and brand helpers
+- [`internal/interfaces/tui/theme`](../../internal/interfaces/tui/theme):
+  semantic presentation tokens
 
-## Step Structure
+## Surface rules
 
-For multi-mode entities (like organization), split by intent:
+The TUI should follow these rules consistently:
 
-- `organization/select`
-- `organization/create`
+- root owns shell concerns
+- flow models own routing and runtime calls
+- leaf models own local interaction state only
+- all async work re-enters through typed messages
+- chrome owns shell and frame layout
+- present owns shared content surfaces
+- components own reusable interaction behavior
 
-This keeps each model small and keeps update/view logic obvious.
+If a change breaks one of those rules, it is usually being made at the wrong
+layer.
 
-## Runtime Progression Contract
+## Input and terminal policy
 
-The onboarding screen model uses runtime state as source of truth:
+The root view owns global terminal policy:
 
-1. `Init` loads state via `Runtime.State`.
-2. User action emits message from leaf model.
-3. Orchestrator calls runtime method (`SetRole`, `SelectOrganization`, `CreateOrganization`, `SelectAccount`).
-4. Returned state determines next route.
+- `AltScreen` enabled
+- `WindowTitle` set
+- `MouseMode` disabled by default unless a surface truly needs it
 
-Auto-selection behavior (single option, valid preference match) remains in runtime/domain logic, not in leaf UI models.
+Program startup applies the shared input filter under
+[`internal/interfaces/tui/filter`](../../internal/interfaces/tui/filter) to
+reduce noisy terminal input bursts.
 
-## Bubble Tea Rules
+## Layout contract
 
-- No network/DB work in `View`.
-- Keep `Update` fast and deterministic.
-- Side effects only in `tea.Cmd`.
-- Re-enter through typed messages.
+The shell has three conceptual regions:
 
-## Input Policy
+- header
+- body
+- footer
 
-- Root view owns global terminal policy:
-  - `AltScreen` enabled,
-  - `WindowTitle` set,
-  - `MouseMode` defaults to `MouseModeNone` unless a screen explicitly needs mouse interaction.
-- Program startup applies a global input filter (`internal/interfaces/tui/filter`) to throttle noisy mouse motion/wheel bursts.
-- Enable mouse modes only in screens that implement click/hover behavior.
+Header and footer are shell-owned. Body placement is handled by chrome and page
+frame rules, not by random per-screen padding.
 
-## Shell Contract
+That layout contract is described in
+[`../architecture/ui-layout.md`](../architecture/ui-layout.md).
 
-- The shell has three fixed slots: header, body, footer.
-- Header and footer are pinned; body expands to consume remaining viewport height.
-- Global shell chrome does not draw a universal panel around page content.
-- Emphasized content (errors, alerts) uses reusable card chrome helpers in the screen body.
+## Testing expectation
 
-## Rendering Boundaries
+TUI tests should protect:
 
-- `chrome/*` is for presentational helpers only (shell, card, layout wrappers).
-- `components/*` is for interactive Bubble Tea models (input, list, progress, status, help).
-- If it has no `Update`/`Init` state and only renders strings, keep it in `chrome`.
+- route correctness,
+- message ownership,
+- child/parent forwarding behavior,
+- user-visible rendering contracts when layout or visibility matters.
 
-## Model Contract
+For broader confidence, use the executable smoke and live integration lanes in
+`cmd/tero`.
 
-Nested screen models should implement `internal/interfaces/tui/screen.Model`:
+## Failure patterns
 
-- `tea.Model` (`Init`, `Update`, `View`)
-- `SetSize(width, height int)`
-- `ShortHelp() []key.Binding`
+The TUI surface is drifting when:
 
-This contract is enforced with compile-time assertions in onboarding leaf and flow models.
+- screens start performing their own service or runtime work,
+- local widget state is treated as product truth,
+- shell layout is patched per screen instead of through chrome,
+- user-visible behavior depends on hidden global state outside the event loop.
 
-### Routing Discipline
-
-- Parent models handle only:
-  - global keys
-  - layout (`tea.WindowSizeMsg`)
-  - parent-owned typed intent messages
-- Otherwise, parents forward messages to the active child model.
-- `ShortHelp` cascades from root to active child; key bindings are defined in the same model that handles them.
-- Router child IDs are typed enums per parent model, not raw string literals.
-
-## Lint Guardrails
-
-Architecture lint now enforces the child-router contract for router-backed parent models:
-
-- parent updates must forward through `router.Forward(msg)`,
-- parent state transitions must explicitly activate/deactivate children (`ActivateOnly`, `SetActive`, `ClearActive`),
-- `ShortHelp` must cascade through `router.ShortHelp()`,
-- `tea.Cmd` closures must emit messages only (no parent state mutation inside closures).
-
-Run with:
-
-```bash
-task lint:architecture
-```
+Those failures usually mean the wrong layer owns the change.

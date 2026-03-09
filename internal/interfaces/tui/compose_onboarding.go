@@ -40,7 +40,7 @@ func newOnboardingDependencies(cfg config.RuntimeConfig, scope logging.Scope) (*
 	}
 	workosClient := workos.NewClient(
 		cfg.WorkOS.ClientID,
-		[]string{cfg.API.URL, cfg.PowerSync.URL, cfg.Chat.URL},
+		[]string{cfg.API.Origin, cfg.PowerSync.Origin, cfg.Chat.Origin},
 	)
 
 	identityService := identity.NewService(
@@ -49,7 +49,7 @@ func newOnboardingDependencies(cfg config.RuntimeConfig, scope logging.Scope) (*
 		identity.NopLogger{},
 	)
 
-	apiClient := controlplane.NewClient(cfg.API.URL, identityService)
+	apiClient := controlplane.NewClient(cfg.API.Origin, identityService)
 
 	organizationService := tenancy.NewRemoteOrganizationService(apiClient)
 	workspaceService := tenancy.NewRemoteWorkspaceService(apiClient)
@@ -63,7 +63,7 @@ func newOnboardingDependencies(cfg config.RuntimeConfig, scope logging.Scope) (*
 		sessionStorage,
 		func() (session.Syncer, error) {
 			return syncer.New(
-				cfg.PowerSync.URL,
+				cfg.PowerSync.Origin,
 				syncerTokenSource{identity: identityService},
 				scope.Child("root/session/syncer"),
 			)
@@ -73,7 +73,7 @@ func newOnboardingDependencies(cfg config.RuntimeConfig, scope logging.Scope) (*
 		}) (session.Uploader, error) {
 			return uploader.New(
 				psdb.NewStore(db),
-				psclient.NewClient(cfg.PowerSync.URL),
+				psclient.NewClient(cfg.PowerSync.Origin),
 				uploaderTokenSource{identity: identityService},
 				scope.Child("root/session/uploader"),
 				uploader.WithSyncNotifier(notifier),

@@ -45,7 +45,7 @@ func TestModel_RoutesFromProviderToRegion(t *testing.T) {
 	}
 	_, _ = model.Update(cmd())
 
-	if !strings.Contains(model.View().Content, "Select your Datadog site:") {
+	if !strings.Contains(model.View().Content, "Select your Datadog region") {
 		t.Fatalf("expected datadog region view after provider select, got %q", model.View().Content)
 	}
 }

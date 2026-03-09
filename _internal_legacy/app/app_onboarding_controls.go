@@ -84,7 +84,7 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.chat = nil
 	m.services = m.services.WithAccountID("") // clear stale account scope
 
-	m.statusBar = statusbar.New(m.theme, m.scope, m.syncer, m.cfg.APIEndpoint, m.cfg.Env)
+	m.statusBar = statusbar.New(m.theme, m.scope, m.syncer, m.cfg.APIOrigin, m.cfg.Env)
 	m.windowTitle = ""
 
 	m.onboarding = onboarding.New(m.ctx, m.theme, m.services, m.userPrefs, m.orgPrefs, m.authService, m.syncer, m.scope)

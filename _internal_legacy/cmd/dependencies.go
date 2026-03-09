@@ -17,15 +17,15 @@ func newAuthService(cliConfig *config.CLIConfig, scope log.Scope) *auth.Service 
 	tokenStore := keyring.New(env)
 	workosClient := workos.NewClient(
 		cliConfig.WorkOSClientID,
-		cliConfig.APIEndpoint,
-		cliConfig.PowerSyncEndpoint,
-		cliConfig.ChatEndpoint,
+		cliConfig.APIOrigin,
+		cliConfig.PowerSyncOrigin,
+		cliConfig.ChatOrigin,
 	)
 	return auth.NewService(workosClient, tokenStore, scope)
 }
 
 func newGraphQLServiceSet(cliConfig *config.CLIConfig, authService auth.Auth, scope log.Scope) graphql.ServiceSet {
-	return graphql.NewServiceSet(cliConfig.APIEndpoint+"/graphql", authService, scope)
+	return graphql.NewServiceSet(cliConfig.APIOrigin+"/graphql", authService, scope)
 }
 
 func newAuthenticatedGraphQLServiceSet(ctx context.Context, cliConfig *config.CLIConfig, scope log.Scope) (graphql.ServiceSet, error) {

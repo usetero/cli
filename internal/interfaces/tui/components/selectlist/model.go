@@ -1,9 +1,10 @@
 package selectlist
 
 import (
+	"strings"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/interfaces/tui/theme"
 )
 
@@ -16,11 +17,11 @@ var (
 	)
 	selectBinding = key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "continue"),
+		key.WithHelp("enter", "confirm"),
 	)
 	moveHelpBinding = key.NewBinding(
 		key.WithKeys("up", "down"),
-		key.WithHelp("up/down", "move"),
+		key.WithHelp("↑/↓", "select"),
 	)
 )
 
@@ -37,21 +38,39 @@ type SelectedMsg struct {
 
 // Model owns list cursor state and selection key handling.
 type Model struct {
-	theme  theme.Theme
-	items  []Item
-	cursor int
+	theme     theme.Theme
+	items     []Item
+	cursor    int
+	width     int
+	emptyText string
 }
 
 // New constructs a select list model.
 func New(theme theme.Theme) *Model {
-	return &Model{theme: theme}
+	return &Model{
+		theme:     theme,
+		emptyText: "No options available.",
+	}
 }
 
 // Init satisfies tea.Model.
 func (m *Model) Init() tea.Cmd { return nil }
 
-// SetSize is part of the shared screen contract. Select list currently ignores dimensions.
-func (m *Model) SetSize(_, _ int) {}
+// SetSize is part of the shared screen contract.
+func (m *Model) SetSize(width, _ int) {
+	if width > 0 {
+		m.width = width
+	}
+}
+
+// SetEmptyText replaces the default empty-state copy.
+func (m *Model) SetEmptyText(text string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		text = "No options available."
+	}
+	m.emptyText = text
+}
 
 // SetItems replaces options and applies selected index if valid.
 func (m *Model) SetItems(items []Item, selected int) {
@@ -103,22 +122,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders only the rows for this list.
 func (m *Model) View() tea.View {
 	if len(m.items) == 0 {
-		return tea.NewView(m.theme.List.Empty.Render("No options available."))
+		return tea.NewView(m.theme.List.Empty.Render(m.emptyText))
 	}
 	lines := make([]string, 0, len(m.items)*2)
 	for i := range m.items {
+		border := m.theme.List.CursorInactive.Render("│")
 		prefix := m.theme.List.CursorInactive.Render("  ")
-		title := m.theme.List.Item.Render(m.items[i].Title)
-		subtitle := m.theme.List.Subtitle.Render(m.items[i].Subtitle)
+		titleStyle := m.theme.List.Item
+		subtitleStyle := m.theme.List.Subtitle
 		if i == m.cursor {
+			border = m.theme.List.Cursor.Render("┃")
 			prefix = m.theme.List.Cursor.Render("> ")
-			title = m.theme.List.ItemActive.Render(m.items[i].Title)
-			subtitle = m.theme.List.SubtitleActive.Render(m.items[i].Subtitle)
+			titleStyle = m.theme.List.ItemActive
+			subtitleStyle = m.theme.List.SubtitleActive
 		}
-		lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Left, prefix, title))
+
+		contentWidth := m.width - 4
+		if contentWidth > 0 {
+			titleStyle = titleStyle.MaxWidth(contentWidth)
+			subtitleStyle = subtitleStyle.MaxWidth(contentWidth)
+		}
+		lines = append(lines, border+" "+prefix+titleStyle.Render(m.items[i].Title))
 		if m.items[i].Subtitle != "" {
-			lines = append(lines, "  "+subtitle)
+			lines = append(lines, border+"   "+subtitleStyle.Render(m.items[i].Subtitle))
 		}
 	}
-	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return tea.NewView(strings.Join(lines, "\n"))
 }

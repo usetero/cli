@@ -1,95 +1,103 @@
 # Onboarding Bootstrap
 
-Onboarding is the bootstrap runtime that gets a user from “fresh session” to
-“chat can safely run on a real account/workspace runtime.”
+Onboarding is the bootstrap runtime that gets a user from "authenticated" to
+"account-scoped runtime can safely start."
 
-The important thing to understand is that this is not a linear wizard. It is a
-deterministic state machine with a UI wrapped around it.
+The important model is that onboarding is not a linear wizard. It is a
+deterministic projection over preferences, remote tenancy state, Datadog
+integration state, and PowerSync readiness.
 
-## Why onboarding is separate from normal app runtime
+## Why this flow exists
 
-Before runtime initialization, the app does not yet have a valid account-scoped
-local database + sync loop. That means the normal “local SQLite projection”
-model is not ready yet. During bootstrap, onboarding uses API-driven steps to
-resolve auth, org, account, Datadog setup, workspace, and sync readiness.
+Before account scope is known and runtime is running, the app cannot rely on
+local projection as the main source of truth. So onboarding is deliberately
+API-first and projection-driven.
 
-Only after bootstrap is complete does the app hand off to chat/runtime state.
+That split protects two things:
 
-You can see that handoff in `internal/app/onboarding_orchestration.go`, where
-`bootstrap.OnboardingComplete` switches app state to chat and initializes the
-chat model.
+- bootstrap can work before SQLite and PowerSync are active,
+- progression stays correct even when the user restarts, refreshes, or partially
+  completes the flow.
 
-## The mental model that makes this code predictable
+## The mental model
 
-Think of onboarding as five collaborating parts.
+The current onboarding runtime is easiest to understand as four parts:
 
-- `bootstrap.State`: accumulated bootstrap truth (user, org, account, workspace,
-  Datadog readiness).
-- Step messages: typed facts (`RoleSelected`, `WorkspaceSelected`,
-  `SyncComplete`) emitted from gate components.
-- Event adapter: orchestrator converts step facts into canonical
-  `bootstrap.Event` values.
-- Transition engine: `bootstrap.ApplyEvent`, pure and deterministic for the same
-  `(state, event)` input.
-- Orchestrator + steps: `internal/app/onboarding` owns gate selection/navigation;
-  each step owns only its gate UI and async side effects.
+1. preferences snapshot
+   Persisted role and scope hints from [`internal/domains/preferences`](../../internal/domains/preferences).
+2. remote state loaders
+   Tenancy and integration reads from [`internal/domains/tenancy`](../../internal/domains/tenancy)
+   and [`internal/domains/integrations`](../../internal/domains/integrations).
+3. onboarding projection
+   [`internal/runtime/onboarding`](../../internal/runtime/onboarding) loads
+   current truth into one `State` and derives `NextStep`.
+4. TUI orchestration
+   [`internal/interfaces/tui/screens/onboarding`](../../internal/interfaces/tui/screens/onboarding)
+   renders the current step and turns user intent into typed runtime calls.
 
-That split is intentional: policy is centralized, while UI/effects are pushed to step packages.
+```mermaid
+flowchart TD
+    P[Preferences snapshot]
+    T[Tenancy + integration reads]
+    O[Onboarding runtime State]
+    N[Derived NextStep]
+    U[TUI step model]
+    M[Typed mutation]
 
-## How a transition actually flows at runtime
+    P --> O
+    T --> O
+    O --> N
+    N --> U
+    U --> M
+    M --> T
+    M --> P
+```
 
-A typical update cycle looks like this:
+## What progression actually depends on
 
-1. A step emits a typed bootstrap message.
-2. The orchestrator converts it with `bootstrap.EventFromMessage`
-   (`transition_policy.go`).
-3. The orchestrator applies the transition with `bootstrap.ApplyEvent`
-   (`transition_apply.go`).
-4. The transition result is executed in `transition_cmds.go` (advance, complete,
-   or noop).
-5. Gate navigation creates and initializes the next step
-   (`gate_navigation.go`, `gate_definitions.go`).
+The onboarding runtime state in
+[`internal/runtime/onboarding/state.go`](../../internal/runtime/onboarding/state.go)
+tracks:
 
-Two design details matter here:
+- selected role,
+- known organizations/accounts/workspaces,
+- the currently selected organization/account/workspace,
+- Datadog account and readiness state,
+- in-progress Datadog draft state,
+- PowerSync readiness,
+- the derived `NextStep`.
 
-- Gate rewinding is explicit. If prerequisites for a requested gate are missing,
-  `rewindGateFor` moves back to the earliest valid gate.
-- Gate construction failures are handled safely (logged + recovery to preflight),
-  not by panic.
+That means the TUI should not infer progression from local widget state. It
+should always re-apply runtime state and let the runtime choose the next step.
 
-## Step contract and visibility behavior
+## What must stay true
 
-The step contract is intentionally explicit (`model_interfaces.go`): lifecycle,
-help bindings, and visibility/status methods are all part of one interface.
+- onboarding progression is derived from runtime state, not from screen-local
+  assumptions,
+- typed domain inputs validate user intent before remote mutations execute,
+- selection state in preferences is explicit and scope-safe,
+- session startup happens only after onboarding has enough scoped state to call
+  [`internal/runtime/session`](../../internal/runtime/session) safely,
+- PowerSync readiness is treated as a real gate, not cosmetic status.
 
-That gives the orchestrator one consistent way to render any gate:
+## Failure behavior
 
-- If a step is visible, render the step view.
-- If a step is hidden, render the step’s status text.
+When onboarding fails, the important question is where truth drifted:
 
-There is no generic hidden fallback anymore. Hidden steps must provide their own
-status, which is why “stuck on getting ready” is now diagnosable and fixable.
+- if the wrong step appears, check runtime projection before touching the UI,
+- if a mutation succeeds but the UI stays stale, the bug is usually missing
+  reprojection or a remote contract mismatch,
+- if scope feels inconsistent, check preferences updates and selection resets,
+- if onboarding stalls at the sync step, inspect session ensure/readiness
+  boundaries instead of step rendering first.
 
-## Observability and jitter/stuck diagnosis
+The correct recovery pattern is to re-read and re-project. Do not patch around
+stale UI state with local step-specific flags.
 
-Onboarding now emits gate telemetry in `gate_telemetry.go`:
+## Code entry points
 
-- gate enter: `gate`, `trigger`
-- gate exit: `gate`, `next_gate`, `trigger`, `duration_ms`
-
-This gives you a concrete sequence and timing for every gate transition.
-When users report jitter or stalls, this telemetry tells you which gate they are
-in, which event moved them, how long each gate took, and whether completion was
-reached with valid state.
-
-## Non-negotiable invariants
-
-The architecture depends on these rules staying true:
-
-1. Transition policy is deterministic and centralized in `internal/core/bootstrap`.
-2. Step components emit facts, not routing commands.
-3. `Update`/`View` paths do not perform blocking I/O.
-4. Bootstrap state is local to onboarding until completion handoff.
-5. Gate navigation is safe under missing prerequisites (rewind) and gate build failures (recover to preflight + user feedback).
-
-If you keep those intact, onboarding stays predictable even as step UIs evolve.
+- [`internal/runtime/onboarding/service.go`](../../internal/runtime/onboarding/service.go)
+- [`internal/runtime/onboarding/load_state.go`](../../internal/runtime/onboarding/load_state.go)
+- [`internal/runtime/onboarding/progression.go`](../../internal/runtime/onboarding/progression.go)
+- [`internal/interfaces/tui/screens/onboarding/model.go`](../../internal/interfaces/tui/screens/onboarding/model.go)
+- [`internal/runtime/session/service.go`](../../internal/runtime/session/service.go)

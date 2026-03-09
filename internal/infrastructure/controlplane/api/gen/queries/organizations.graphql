@@ -30,3 +30,7 @@ mutation CreateOrganizationAndBootstrap($input: CreateOrganizationInput!) {
         }
     }
 }
+
+mutation DeleteOrganization($id: ID!, $confirmation: String!) {
+    deleteOrganization(id: $id, confirmation: $confirmation)
+}

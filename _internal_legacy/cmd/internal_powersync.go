@@ -90,7 +90,7 @@ func newInternalPowerSyncCaptureCmd(scope log.Scope, cliConfig *config.CLIConfig
 			}
 
 			syncer := powersync.NewSyncer(
-				cliConfig.PowerSyncEndpoint,
+				cliConfig.PowerSyncOrigin,
 				authService,
 				scope,
 				powersync.WithStreamCapture(capture),

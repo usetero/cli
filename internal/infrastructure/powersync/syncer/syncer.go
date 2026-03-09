@@ -17,6 +17,7 @@ import (
 
 var (
 	errCloseSyncStream = errors.New("close sync stream")
+	ErrApplySchema     = errors.New("apply powersync schema")
 )
 
 // TokenSource supplies access tokens for PowerSync requests.
@@ -158,7 +159,7 @@ func (s *Syncer) Start(ctx context.Context, db *sqlite.DB, accountID AccountID, 
 	}
 
 	if err := extension.ApplySchema(ctx, db); err != nil {
-		return fmt.Errorf("apply powersync schema: %w", err)
+		return fmt.Errorf("%w: %w", ErrApplySchema, err)
 	}
 
 	store := psdb.NewStore(db)

@@ -3,8 +3,9 @@ package integrationsflow
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/domains/integrations"
+	"github.com/usetero/cli/internal/interfaces/tui/components/loading"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/screen"
 	datadogapikey "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/integrations/datadog/api_key"
 	datadogappkey "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/integrations/datadog/app_key"
@@ -55,6 +56,7 @@ type Model struct {
 	datadogRegion  *datadogregion.Model
 	datadogAPIKey  *datadogapikey.Model
 	datadogAppKey  *datadogappkey.Model
+	discovery      *loading.Model
 }
 
 var _ screen.Model = (*Model)(nil)
@@ -85,7 +87,9 @@ func New(
 		datadogRegion:  datadogRegionModel,
 		datadogAPIKey:  datadogAPIKeyModel,
 		datadogAppKey:  datadogAppKeyModel,
+		discovery:      loading.NewThinking(appTheme, "Waiting for Datadog discovery"),
 	}
+	model.discovery.SetDetail("Press enter or r to refresh.")
 	model.router.Register(childProviderSelect, model.providerSelect)
 	model.router.Register(childDatadogRegion, model.datadogRegion)
 	model.router.Register(childDatadogAPIKey, model.datadogAPIKey)
@@ -117,10 +121,12 @@ func (m *Model) ApplyState(state onboarding.State) bool {
 		m.router.ActivateOnly(childProviderSelect)
 		return true
 	case onboarding.StepDatadogAPIKey:
+		m.datadogAPIKey.SetSite(state.DatadogDraft.Site)
 		m.route = routeDatadogAPIKey
 		m.router.ActivateOnly(childDatadogAPIKey)
 		return true
 	case onboarding.StepDatadogAppKey:
+		m.datadogAppKey.SetSite(state.DatadogDraft.Site)
 		m.route = routeDatadogAppKey
 		m.router.ActivateOnly(childDatadogAppKey)
 		return true
@@ -136,29 +142,38 @@ func (m *Model) ApplyState(state onboarding.State) bool {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var discoveryCmd tea.Cmd
+	if m.route == routeDatadogDiscovery {
+		next, cmd := m.discovery.Update(msg)
+		if model, ok := next.(*loading.Model); ok {
+			m.discovery = model
+		}
+		discoveryCmd = cmd
+	}
+
 	switch typed := msg.(type) {
 	case ProviderSelectedMsg:
 		if typed.Provider == integrations.ProviderDatadog {
 			m.route = routeDatadogRegion
 			m.router.ActivateOnly(childDatadogRegion)
 		}
-		return m, nil
+		return m, discoveryCmd
 	}
 
 	switch m.route {
 	case routeProviderSelect:
-		return m, m.router.Forward(msg)
+		return m, batch(discoveryCmd, m.router.Forward(msg))
 	case routeDatadogRegion, routeDatadogAPIKey, routeDatadogAppKey:
-		return m, m.router.Forward(msg)
+		return m, batch(discoveryCmd, m.router.Forward(msg))
 	case routeDatadogDiscovery:
 		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 			if key.Matches(keyMsg, discoveryRefreshEnterBinding) || key.Matches(keyMsg, discoveryRefreshRBinding) {
-				return m, func() tea.Msg { return RefreshRequestedMsg{} }
+				return m, batch(discoveryCmd, func() tea.Msg { return RefreshRequestedMsg{} })
 			}
 		}
-		return m, nil
+		return m, discoveryCmd
 	default:
-		return m, nil
+		return m, discoveryCmd
 	}
 }
 
@@ -173,14 +188,9 @@ func (m *Model) View() tea.View {
 	case routeDatadogAppKey:
 		return m.datadogAppKey.View()
 	case routeDatadogDiscovery:
-		return tea.NewView(lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.theme.Text.Section.Render("Waiting for Datadog discovery..."),
-			"",
-			m.theme.Text.Muted.Render("Press enter or r to refresh."),
-		))
+		return m.discovery.View()
 	default:
-		return tea.NewView(m.theme.Text.Muted.Render("Integrations flow is not active."))
+		return present.View(m.theme, present.Notice("Integrations flow is not active.", ""))
 	}
 }
 
@@ -262,4 +272,17 @@ func liftDatadogAppKeyCmd(cmd tea.Cmd) tea.Cmd {
 			return msg
 		}
 	}
+}
+
+func batch(cmds ...tea.Cmd) tea.Cmd {
+	filtered := make([]tea.Cmd, 0, len(cmds))
+	for _, cmd := range cmds {
+		if cmd != nil {
+			filtered = append(filtered, cmd)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return tea.Batch(filtered...)
 }

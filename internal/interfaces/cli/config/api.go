@@ -1,6 +1,6 @@
 package config
 
-// APIConfig configures the control-plane API endpoint.
+// APIConfig configures the control-plane service origin.
 type APIConfig struct {
-	URL string `name:"api-url" help:"Control-plane API URL." env:"TERO_API_URL"`
+	Origin string `name:"api-origin" help:"Control-plane API origin. Do not include /graphql." env:"TERO_API_ORIGIN"`
 }

@@ -26,7 +26,7 @@ func main() {
 
 func run() error {
 	cfg := config.LoadCLIConfig()
-	endpoint := cfg.PowerSyncEndpoint
+	origin := cfg.PowerSyncOrigin
 	token := os.Getenv("POWERSYNC_API_TOKEN")
 
 	if token == "" {
@@ -37,7 +37,7 @@ func run() error {
 
 	fmt.Println("Fetching schema from PowerSync service...")
 
-	schemaJSON, err := psapi.FetchSchemaJSON(ctx, endpoint, token)
+	schemaJSON, err := psapi.FetchSchemaJSON(ctx, origin, token)
 	if err != nil {
 		return fmt.Errorf("fetch schema: %w", err)
 	}

@@ -43,7 +43,7 @@ func (m *Model) startSync(accountID string) error {
 	m.services = m.services.WithAccountID(domain.AccountID(accountID))
 
 	// Create PowerSync API client for write checkpoints
-	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
+	psClient := psapi.NewClient(m.cfg.PowerSyncOrigin)
 
 	// Create and start uploader
 	syncer := m.syncer
@@ -103,7 +103,7 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 	)
 
 	// Create chat client with tool definitions
-	m.chatClient = chatboundary.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
+	m.chatClient = chatboundary.NewClient(m.cfg.ChatOrigin, m.authService, m.scope, m.toolRegistry.Definitions()).
 		WithAccountID(domain.AccountID(accountID))
 	m.runtimeDeps = usecase.NewRuntimeDeps(m.db, m.chatClient).WithEffectContext(m.sessionCtx)
 

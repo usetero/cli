@@ -6,9 +6,9 @@ import (
 
 func TestLoadCLIConfig_DefaultsToPrd(t *testing.T) {
 	t.Setenv("TERO_ENV", "")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 	t.Setenv("TERO_DEBUG", "")
 
@@ -20,14 +20,14 @@ func TestLoadCLIConfig_DefaultsToPrd(t *testing.T) {
 	if cfg.Environment() != "prd" {
 		t.Errorf("Environment() = %q, want %q", cfg.Environment(), "prd")
 	}
-	if cfg.APIEndpoint != "https://api.usetero.com" {
-		t.Errorf("APIEndpoint = %q, want production", cfg.APIEndpoint)
+	if cfg.APIOrigin != "https://api.usetero.com" {
+		t.Errorf("APIOrigin = %q, want production", cfg.APIOrigin)
 	}
-	if cfg.PowerSyncEndpoint != "https://powersync.usetero.com" {
-		t.Errorf("PowerSyncEndpoint = %q, want production", cfg.PowerSyncEndpoint)
+	if cfg.PowerSyncOrigin != "https://powersync.usetero.com" {
+		t.Errorf("PowerSyncOrigin = %q, want production", cfg.PowerSyncOrigin)
 	}
-	if cfg.ChatEndpoint != "https://chat.usetero.com" {
-		t.Errorf("ChatEndpoint = %q, want production", cfg.ChatEndpoint)
+	if cfg.ChatOrigin != "https://chat.usetero.com" {
+		t.Errorf("ChatOrigin = %q, want production", cfg.ChatOrigin)
 	}
 	if cfg.WorkOSClientID != "client_01JQCC2D06JF9ASFA6GRHMFA3N" {
 		t.Errorf("WorkOSClientID = %q, want production client", cfg.WorkOSClientID)
@@ -36,9 +36,9 @@ func TestLoadCLIConfig_DefaultsToPrd(t *testing.T) {
 
 func TestLoadCLIConfig_Local(t *testing.T) {
 	t.Setenv("TERO_ENV", "local")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	cfg := LoadCLIConfig()
@@ -46,14 +46,14 @@ func TestLoadCLIConfig_Local(t *testing.T) {
 	if cfg.Env != "local" {
 		t.Errorf("Env = %q, want %q", cfg.Env, "local")
 	}
-	if cfg.APIEndpoint != "http://localhost:18081" {
-		t.Errorf("APIEndpoint = %q, want localhost", cfg.APIEndpoint)
+	if cfg.APIOrigin != "http://localhost:18081" {
+		t.Errorf("APIOrigin = %q, want localhost", cfg.APIOrigin)
 	}
-	if cfg.PowerSyncEndpoint != "http://localhost:18084" {
-		t.Errorf("PowerSyncEndpoint = %q, want localhost", cfg.PowerSyncEndpoint)
+	if cfg.PowerSyncOrigin != "http://localhost:18084" {
+		t.Errorf("PowerSyncOrigin = %q, want localhost", cfg.PowerSyncOrigin)
 	}
-	if cfg.ChatEndpoint != "http://localhost:18083" {
-		t.Errorf("ChatEndpoint = %q, want localhost", cfg.ChatEndpoint)
+	if cfg.ChatOrigin != "http://localhost:18083" {
+		t.Errorf("ChatOrigin = %q, want localhost", cfg.ChatOrigin)
 	}
 	if cfg.WorkOSClientID != "client_01JQCC2CJMTB8AY2JRMZXFY9R1" {
 		t.Errorf("WorkOSClientID = %q, want local/dev client", cfg.WorkOSClientID)
@@ -62,9 +62,9 @@ func TestLoadCLIConfig_Local(t *testing.T) {
 
 func TestLoadCLIConfig_Dev(t *testing.T) {
 	t.Setenv("TERO_ENV", "dev")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	cfg := LoadCLIConfig()
@@ -72,22 +72,22 @@ func TestLoadCLIConfig_Dev(t *testing.T) {
 	if cfg.Env != "dev" {
 		t.Errorf("Env = %q, want %q", cfg.Env, "dev")
 	}
-	if cfg.APIEndpoint != "https://api.usetero.dev" {
-		t.Errorf("APIEndpoint = %q, want dev", cfg.APIEndpoint)
+	if cfg.APIOrigin != "https://api.usetero.dev" {
+		t.Errorf("APIOrigin = %q, want dev", cfg.APIOrigin)
 	}
-	if cfg.PowerSyncEndpoint != "https://powersync.usetero.dev" {
-		t.Errorf("PowerSyncEndpoint = %q, want dev", cfg.PowerSyncEndpoint)
+	if cfg.PowerSyncOrigin != "https://powersync.usetero.dev" {
+		t.Errorf("PowerSyncOrigin = %q, want dev", cfg.PowerSyncOrigin)
 	}
-	if cfg.ChatEndpoint != "https://chat.usetero.dev" {
-		t.Errorf("ChatEndpoint = %q, want dev", cfg.ChatEndpoint)
+	if cfg.ChatOrigin != "https://chat.usetero.dev" {
+		t.Errorf("ChatOrigin = %q, want dev", cfg.ChatOrigin)
 	}
 }
 
 func TestLoadCLIConfig_Prd(t *testing.T) {
 	t.Setenv("TERO_ENV", "prd")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	cfg := LoadCLIConfig()
@@ -95,16 +95,16 @@ func TestLoadCLIConfig_Prd(t *testing.T) {
 	if cfg.Env != "prd" {
 		t.Errorf("Env = %q, want %q", cfg.Env, "prd")
 	}
-	if cfg.APIEndpoint != "https://api.usetero.com" {
-		t.Errorf("APIEndpoint = %q, want production", cfg.APIEndpoint)
+	if cfg.APIOrigin != "https://api.usetero.com" {
+		t.Errorf("APIOrigin = %q, want production", cfg.APIOrigin)
 	}
 }
 
 func TestLoadCLIConfig_UnknownEnvFallsToPrd(t *testing.T) {
 	t.Setenv("TERO_ENV", "staging")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	cfg := LoadCLIConfig()
@@ -115,34 +115,34 @@ func TestLoadCLIConfig_UnknownEnvFallsToPrd(t *testing.T) {
 	if cfg.Environment() != "staging" {
 		t.Errorf("Environment() = %q, want %q", cfg.Environment(), "staging")
 	}
-	if cfg.APIEndpoint != "https://api.usetero.com" {
-		t.Errorf("APIEndpoint = %q, want production fallback", cfg.APIEndpoint)
+	if cfg.APIOrigin != "https://api.usetero.com" {
+		t.Errorf("APIOrigin = %q, want production fallback", cfg.APIOrigin)
 	}
 }
 
 func TestLoadCLIConfig_EnvVarOverridesDefaults(t *testing.T) {
 	t.Setenv("TERO_ENV", "dev")
-	t.Setenv("TERO_API_ENDPOINT", "http://custom:9999")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "http://custom:9999")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	cfg := LoadCLIConfig()
 
-	if cfg.APIEndpoint != "http://custom:9999" {
-		t.Errorf("APIEndpoint = %q, want custom override", cfg.APIEndpoint)
+	if cfg.APIOrigin != "http://custom:9999" {
+		t.Errorf("APIOrigin = %q, want custom override", cfg.APIOrigin)
 	}
 	// Other fields still use dev defaults
-	if cfg.PowerSyncEndpoint != "https://powersync.usetero.dev" {
-		t.Errorf("PowerSyncEndpoint = %q, want dev default", cfg.PowerSyncEndpoint)
+	if cfg.PowerSyncOrigin != "https://powersync.usetero.dev" {
+		t.Errorf("PowerSyncOrigin = %q, want dev default", cfg.PowerSyncOrigin)
 	}
 }
 
 func TestLoadCLIConfig_Debug(t *testing.T) {
 	t.Setenv("TERO_ENV", "prd")
-	t.Setenv("TERO_API_ENDPOINT", "")
-	t.Setenv("TERO_POWERSYNC_ENDPOINT", "")
-	t.Setenv("TERO_CHAT_ENDPOINT", "")
+	t.Setenv("TERO_API_ORIGIN", "")
+	t.Setenv("TERO_POWERSYNC_ORIGIN", "")
+	t.Setenv("TERO_CHAT_ORIGIN", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
 
 	t.Setenv("TERO_DEBUG", "true")

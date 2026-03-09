@@ -15,15 +15,21 @@ FROM conversations
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListConversations(ctx context.Context) ([]Conversation, error) {
+type ListConversationsRow struct {
+	ID        *string
+	Title     *string
+	CreatedAt *string
+}
+
+func (q *Queries) ListConversations(ctx context.Context) ([]ListConversationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listConversations)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Conversation
+	var items []ListConversationsRow
 	for rows.Next() {
-		var i Conversation
+		var i ListConversationsRow
 		if err := rows.Scan(&i.ID, &i.Title, &i.CreatedAt); err != nil {
 			return nil, err
 		}

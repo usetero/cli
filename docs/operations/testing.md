@@ -99,6 +99,7 @@ For explicit integration or correctness runs:
 
 ```bash
 task test:integration
+task test:integration:local
 task test:integration:live
 task test:correctness
 task test:correctness:powersync-replay
@@ -122,6 +123,8 @@ CI intentionally runs checks in parallel lanes instead of one monolithic
 
 Live integration tests are intentionally split into a separate lane:
 
+- `integration-local`: `task test:integration:local` against a required local
+  stack, intended for full executable end-to-end checks,
 - `integration-live`: `task test:integration:live` against non-production envs
   (nightly/manual), not required for every PR.
 

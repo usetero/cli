@@ -2,19 +2,31 @@ package onboarding
 
 import (
 	"charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/interfaces/tui/chrome"
+	"github.com/usetero/cli/internal/interfaces/tui/present"
 )
+
+func (m *Model) Layout() chrome.BodyLayout {
+	align := chrome.AlignBottom
+	if m.route == routeError {
+		align = chrome.AlignCenter
+	}
+	return chrome.BodyLayout{
+		WidthMode:     chrome.WidthIntrinsic,
+		HeightMode:    chrome.HeightIntrinsic,
+		VerticalAlign: align,
+		MaxWidth:      80,
+	}
+}
 
 func (m *Model) View() tea.View {
 	view := m.baseView()
 	if m.loadErr != nil && m.route != routeError {
-		view.Content = lipgloss.JoinVertical(
-			lipgloss.Left,
-			view.Content,
-			"",
-			m.theme.Text.Error.Render("Error: "+m.loadErr.Error()),
-		)
+		view = present.View(m.theme, present.StackGap(
+			1,
+			present.Raw(view.Content),
+			present.Error("Error: "+m.loadErr.Error()),
+		))
 	}
 	return view
 }
@@ -22,7 +34,7 @@ func (m *Model) View() tea.View {
 func (m *Model) baseView() tea.View {
 	switch m.route {
 	case routeLoading:
-		return tea.NewView(m.theme.Text.Muted.Render("Loading onboarding state..."))
+		return m.loading.View()
 	case routeRole:
 		return m.role.View()
 	case routeTenancy:
@@ -32,20 +44,15 @@ func (m *Model) baseView() tea.View {
 	case routePowerSyncReady:
 		return m.powersync.View()
 	case routeDone:
-		return tea.NewView(m.theme.Text.Section.Render("Welcome to Tero"))
+		return present.View(m.theme, present.Notice("Welcome to Tero", "Onboarding is complete."))
 	case routePlaceholder:
-		return tea.NewView(lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.theme.Text.Section.Render("Onboarding step: "+string(m.step)),
-			"",
-			m.theme.Text.Muted.Render("Not implemented yet."),
-		))
+		return present.View(m.theme, present.Notice("Onboarding step: "+string(m.step), "Not implemented yet."))
 	case routeError:
-		return tea.NewView(chrome.RenderErrorCard(
-			m.theme,
-			"Failed to load onboarding state.",
-			m.loadErr.Error(),
-		))
+		return present.View(m.theme, present.ErrorCard(present.BlockGap(
+			1,
+			present.Error("Failed to load onboarding state."),
+			present.Body(m.loadErr.Error()),
+		)))
 	default:
 		return tea.NewView(m.theme.Text.Error.Render("Unknown onboarding route"))
 	}

@@ -17,11 +17,16 @@ func TestRemoteWorkspaceService_MappingAndValidation(t *testing.T) {
 	}
 
 	var calledAccountID controlplane.AccountID
+	var calledDeleteID controlplane.WorkspaceID
 	now := time.Now().UTC()
 	mock := &apitest.Client{
 		ListWorkspacesFn: func(_ context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error) {
 			calledAccountID = accountID
 			return []controlplane.Workspace{{ID: "ws_1", Name: "Default", CreatedAt: now}}, nil
+		},
+		DeleteWorkspaceFn: func(_ context.Context, workspaceID controlplane.WorkspaceID) error {
+			calledDeleteID = workspaceID
+			return nil
 		},
 	}
 	svc = NewRemoteWorkspaceService(mock)
@@ -39,7 +44,13 @@ func TestRemoteWorkspaceService_MappingAndValidation(t *testing.T) {
 	if _, err := svc.Create(context.Background(), WorkspaceCreate{AccountID: "acc_1", Name: "Default"}); err == nil || !strings.Contains(err.Error(), "not implemented") {
 		t.Fatalf("expected not implemented create error, got %v", err)
 	}
-	if err := svc.Delete(context.Background(), "ws_1"); err == nil || !strings.Contains(err.Error(), "not implemented") {
-		t.Fatalf("expected not implemented delete error, got %v", err)
+	if err := svc.Delete(context.Background(), "ws_1"); err != nil {
+		t.Fatalf("delete workspace: %v", err)
+	}
+	if calledDeleteID != controlplane.WorkspaceID("ws_1") {
+		t.Fatalf("delete called with workspace=%q", calledDeleteID)
+	}
+	if err := svc.Delete(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
+		t.Fatalf("expected workspace id validation error, got %v", err)
 	}
 }

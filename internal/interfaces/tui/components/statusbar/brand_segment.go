@@ -3,13 +3,16 @@ package statusbar
 import (
 	"strings"
 
-	"github.com/usetero/cli/internal/interfaces/tui/theme"
+	"github.com/usetero/cli/internal/interfaces/tui/chrome"
 )
 
-func (m *Model) renderBrand(includeEnv bool) string {
-	brand := m.theme.Shell.HeaderLead.Render("╱╱ ") + m.theme.Shell.HeaderBrand.Render(strings.ToUpper(theme.AppName))
+func (m *Model) renderBrand() string {
+	return chrome.RenderAppWordmark(m.theme)
+}
+
+func (m *Model) renderEnv(includeEnv bool) string {
 	if !includeEnv || m.env == "" || m.env == productionEnv {
-		return brand
+		return ""
 	}
-	return brand + " " + m.theme.Text.Warning.Render(strings.ToUpper(m.env))
+	return m.theme.Shell.HeaderLead.Copy().Foreground(m.theme.Warning).Bold(true).Render(strings.ToUpper(m.env))
 }

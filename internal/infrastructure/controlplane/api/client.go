@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 )
 
 const defaultTimeout = 30 * time.Second
+const graphqlPath = "/graphql"
 
 // TokenProvider returns a control-plane bearer token for API requests.
 type TokenProvider interface {
@@ -124,21 +126,24 @@ type CreateDatadogAccountInput struct {
 
 // Client wraps typed genqlient operations for control-plane APIs.
 type Client struct {
-	endpoint string
-	http     *http.Client
-	token    TokenProvider
+	origin string
+	http   *http.Client
+	token  TokenProvider
 }
 
 // NewClient creates a new control-plane API client.
-func NewClient(endpoint string, token TokenProvider) *Client {
-	endpoint = strings.TrimSpace(endpoint)
-	if endpoint == "" {
-		panic("controlplane api client requires endpoint")
+func NewClient(origin string, token TokenProvider) *Client {
+	origin, err := normalizeOrigin(origin)
+	if err != nil {
+		panic(fmt.Sprintf("controlplane api client requires valid origin: %v", err))
+	}
+	if origin == "" {
+		panic("controlplane api client requires origin")
 	}
 	return &Client{
-		endpoint: endpoint,
-		http:     &http.Client{Timeout: defaultTimeout},
-		token:    token,
+		origin: origin,
+		http:   &http.Client{Timeout: defaultTimeout},
+		token:  token,
 	}
 }
 
@@ -231,13 +236,34 @@ func (c *Client) CreateAccount(ctx context.Context, organizationID OrganizationI
 	}, nil
 }
 
+// DeleteAccount deletes an account by ID.
+func (c *Client) DeleteAccount(ctx context.Context, accountID AccountID) error {
+	if accountID == "" {
+		return fmt.Errorf("account id is required")
+	}
+
+	client, err := c.gql(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := gen.DeleteAccount(ctx, client, accountID.String(), "DELETE")
+	if err != nil {
+		return err
+	}
+	if !resp.DeleteAccount {
+		return fmt.Errorf("delete account returned false")
+	}
+	return nil
+}
+
 // ListWorkspaces fetches workspaces for the given account.
 func (c *Client) ListWorkspaces(ctx context.Context, accountID AccountID) ([]Workspace, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
 
-	client, err := c.gql(ctx)
+	client, err := c.gqlForAccount(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -261,6 +287,27 @@ func (c *Client) ListWorkspaces(ctx context.Context, accountID AccountID) ([]Wor
 		})
 	}
 	return out, nil
+}
+
+// DeleteWorkspace deletes a workspace by ID.
+func (c *Client) DeleteWorkspace(ctx context.Context, workspaceID WorkspaceID) error {
+	if workspaceID == "" {
+		return fmt.Errorf("workspace id is required")
+	}
+
+	client, err := c.gql(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := gen.DeleteWorkspace(ctx, client, workspaceID.String(), "DELETE")
+	if err != nil {
+		return err
+	}
+	if !resp.DeleteWorkspace {
+		return fmt.Errorf("delete workspace returned false")
+	}
+	return nil
 }
 
 // CreateOrganizationAndBootstrap creates org/account/workspace in one mutation.
@@ -297,13 +344,34 @@ func (c *Client) CreateOrganizationAndBootstrap(ctx context.Context, name string
 	}, nil
 }
 
+// DeleteOrganization deletes an organization by ID.
+func (c *Client) DeleteOrganization(ctx context.Context, organizationID OrganizationID) error {
+	if organizationID == "" {
+		return fmt.Errorf("organization id is required")
+	}
+
+	client, err := c.gql(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := gen.DeleteOrganization(ctx, client, organizationID.String(), "DELETE")
+	if err != nil {
+		return err
+	}
+	if !resp.DeleteOrganization {
+		return fmt.Errorf("delete organization returned false")
+	}
+	return nil
+}
+
 // GetAccountDatadogAccount fetches Datadog integration metadata for an account.
 func (c *Client) GetAccountDatadogAccount(ctx context.Context, accountID AccountID) (*DatadogAccount, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account id is required")
 	}
 
-	client, err := c.gql(ctx)
+	client, err := c.gqlForAccount(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +447,7 @@ func (c *Client) CreateDatadogAccountWithCredentials(ctx context.Context, input 
 		return DatadogAccount{}, fmt.Errorf("app key is required")
 	}
 
-	client, err := c.gql(ctx)
+	client, err := c.gqlForAccount(ctx, input.AccountID)
 	if err != nil {
 		return DatadogAccount{}, err
 	}
@@ -434,9 +502,9 @@ func (c *Client) GetDatadogAccountStatus(ctx context.Context, datadogAccountID D
 			InactiveServices:     s.InactiveServices,
 			EventCount:           s.LogEventCount,
 			AnalyzedCount:        s.LogEventAnalyzedCount,
-			PendingPolicyCount:   s.PolicyPendingCount,
-			ApprovedPolicyCount:  s.PolicyApprovedCount,
-			DismissedPolicyCount: s.PolicyDismissedCount,
+			PendingPolicyCount:   s.PendingRecommendationCount,
+			ApprovedPolicyCount:  s.ApprovedRecommendationCount,
+			DismissedPolicyCount: s.DismissedRecommendationCount,
 		}, nil
 	}
 
@@ -444,6 +512,14 @@ func (c *Client) GetDatadogAccountStatus(ctx context.Context, datadogAccountID D
 }
 
 func (c *Client) gql(ctx context.Context) (genqlient.Client, error) {
+	return c.gqlScoped(ctx, "")
+}
+
+func (c *Client) gqlForAccount(ctx context.Context, accountID AccountID) (genqlient.Client, error) {
+	return c.gqlScoped(ctx, accountID.String())
+}
+
+func (c *Client) gqlScoped(ctx context.Context, accountID string) (genqlient.Client, error) {
 	token := ""
 	if c.token != nil {
 		t, err := c.token.GetAccessToken(ctx)
@@ -461,23 +537,62 @@ func (c *Client) gql(ctx context.Context) (genqlient.Client, error) {
 	httpClient := &http.Client{
 		Timeout: c.http.Timeout,
 		Transport: &authTransport{
-			token: token,
-			base:  transport,
+			token:     token,
+			accountID: accountID,
+			base:      transport,
 		},
 	}
 
-	return genqlient.NewClient(c.endpoint, httpClient), nil
+	return genqlient.NewClient(c.graphQLEndpoint(), httpClient), nil
+}
+
+func (c *Client) graphQLEndpoint() string {
+	return c.origin + graphqlPath
+}
+
+func normalizeOrigin(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("origin is required")
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("invalid origin %q", raw)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("origin must use http or https: %q", raw)
+	}
+	if u.Path != "" && u.Path != "/" {
+		return "", fmt.Errorf("origin must not include a path: %q", raw)
+	}
+	if u.RawQuery != "" {
+		return "", fmt.Errorf("origin must not include a query: %q", raw)
+	}
+	if u.Fragment != "" {
+		return "", fmt.Errorf("origin must not include a fragment: %q", raw)
+	}
+
+	u.Path = ""
+	u.RawPath = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
 }
 
 type authTransport struct {
-	token string
-	base  http.RoundTripper
+	token     string
+	accountID string
+	base      http.RoundTripper
 }
 
 func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	if t.token != "" {
 		req.Header.Set("Authorization", "Bearer "+t.token)
+	}
+	if t.accountID != "" {
+		req.Header.Set("X-Account-ID", t.accountID)
 	}
 	base := t.base
 	if base == nil {

@@ -3,16 +3,14 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	_ "embed"
 )
 
-//go:embed schema.sql
-var schemaSQL string
-
-// Migrate applies the embedded schema to the database.
+// Migrate applies local runtime migrations.
+//
+// PowerSync-projected tables are created by the embedded extension schema at
+// session start, not by replaying the reflected sqlc schema on every open.
 func Migrate(ctx context.Context, db *sql.DB) error {
-	if _, err := db.ExecContext(ctx, schemaSQL); err != nil {
-		return wrapErr("migrate", err)
-	}
+	_ = ctx
+	_ = db
 	return nil
 }

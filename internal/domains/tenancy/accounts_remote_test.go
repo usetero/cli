@@ -14,6 +14,7 @@ import (
 func TestRemoteAccountService_MappingAndValidation(t *testing.T) {
 	var calledListOrg controlplane.OrganizationID
 	var calledCreateOrg controlplane.OrganizationID
+	var calledDeleteID controlplane.AccountID
 	calledCreateName := ""
 	now := time.Now().UTC()
 	mock := &apitest.Client{
@@ -25,6 +26,10 @@ func TestRemoteAccountService_MappingAndValidation(t *testing.T) {
 			calledCreateOrg = organizationID
 			calledCreateName = name
 			return controlplane.Account{ID: "acc_new", Name: name, CreatedAt: now}, nil
+		},
+		DeleteAccountFn: func(_ context.Context, accountID controlplane.AccountID) error {
+			calledDeleteID = accountID
+			return nil
 		},
 	}
 
@@ -49,6 +54,15 @@ func TestRemoteAccountService_MappingAndValidation(t *testing.T) {
 	}
 	if calledCreateOrg != controlplane.OrganizationID("org_1") || calledCreateName != "Ops" {
 		t.Fatalf("create called with org=%q name=%q", calledCreateOrg, calledCreateName)
+	}
+	if err := svc.Delete(context.Background(), "acc_1"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if calledDeleteID != controlplane.AccountID("acc_1") {
+		t.Fatalf("delete called with account=%q", calledDeleteID)
+	}
+	if err := svc.Delete(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
+		t.Fatalf("expected account id validation error, got %v", err)
 	}
 
 	mock.ListAccountsFn = func(context.Context, controlplane.OrganizationID) ([]controlplane.Account, error) {

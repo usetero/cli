@@ -4,17 +4,20 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/usetero/cli/internal/infrastructure/sqlite"
+	"github.com/usetero/cli/internal/infrastructure/sqlite/sqlitetest"
 )
+
+func openTenancyTestDB(t *testing.T) *sqlite.DB {
+	t.Helper()
+	return sqlitetest.Open(t)
+}
 
 func TestLocalWorkspaceService_CRUD(t *testing.T) {
 	db := openTenancyTestDB(t)
-	accountSvc := NewLocalAccountService(db.Raw())
 	workspaceSvc := NewLocalWorkspaceService(db.Raw())
-
-	accountID, err := accountSvc.Create(context.Background(), AccountCreate{Name: "Primary"})
-	if err != nil {
-		t.Fatalf("create account: %v", err)
-	}
+	accountID := AccountID("acc_1")
 
 	workspaceID, err := workspaceSvc.Create(context.Background(), WorkspaceCreate{AccountID: accountID, Name: "Default"})
 	if err != nil {

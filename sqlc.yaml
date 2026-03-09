@@ -32,30 +32,10 @@ sql:
 
   - engine: "sqlite"
     schema: "internal/infrastructure/sqlite/schema.sql"
-    queries: "internal/domains/tenancy/db/accounts.sql"
-    gen:
-      go:
-        package: "accountsdb"
-        out: "internal/domains/tenancy/db/accountsgen"
-        emit_pointers_for_null_types: true
-        emit_interface: true
-
-  - engine: "sqlite"
-    schema: "internal/infrastructure/sqlite/schema.sql"
     queries: "internal/domains/tenancy/db/workspaces.sql"
     gen:
       go:
         package: "workspacesdb"
         out: "internal/domains/tenancy/db/workspacesgen"
-        emit_pointers_for_null_types: true
-        emit_interface: true
-
-  - engine: "sqlite"
-    schema: "internal/infrastructure/sqlite/schema.sql"
-    queries: "internal/domains/status/db/queries.sql"
-    gen:
-      go:
-        package: "statusdb"
-        out: "internal/domains/status/db/gen"
         emit_pointers_for_null_types: true
         emit_interface: true

@@ -146,7 +146,7 @@ func New(
 		services:    services,
 		userPrefs:   userPrefs,
 		orgPrefs:    orgPrefs,
-		statusBar:   statusbar.New(theme, scope, syncer, cfg.APIEndpoint, cfg.Env),
+		statusBar:   statusbar.New(theme, scope, syncer, cfg.APIOrigin, cfg.Env),
 		toast:       toast.New(theme),
 		keyBar:      keybar.New(theme, scope),
 		onboarding:  onboarding.New(ctx, theme, services, userPrefs, orgPrefs, authService, syncer, scope),

@@ -29,7 +29,7 @@ import (
 
 // Start runs the TUI mode.
 func Start(cfg config.RuntimeConfig, scope logging.Scope) error {
-	appTheme := theme.Default()
+	appTheme := theme.Resolve(cfg.Theme.Mode)
 
 	deps, err := newOnboardingDependencies(cfg, scope)
 	if err != nil {

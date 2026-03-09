@@ -15,11 +15,11 @@ VALUES (?, ?, ?, ?, ?)
 `
 
 type CreateParams struct {
-	ID             string
-	ConversationID string
-	Role           string
-	Content        string
-	CreatedAt      string
+	ID             *string
+	ConversationID *string
+	Role           *string
+	Content        *string
+	CreatedAt      *string
 }
 
 func (q *Queries) Create(ctx context.Context, arg CreateParams) error {
@@ -38,7 +38,7 @@ DELETE FROM messages
 WHERE id = ?
 `
 
-func (q *Queries) Delete(ctx context.Context, id string) error {
+func (q *Queries) Delete(ctx context.Context, id *string) error {
 	_, err := q.db.ExecContext(ctx, delete, id)
 	return err
 }
@@ -50,15 +50,23 @@ WHERE conversation_id = ?
 ORDER BY created_at ASC
 `
 
-func (q *Queries) ListByConversation(ctx context.Context, conversationID string) ([]Message, error) {
+type ListByConversationRow struct {
+	ID             *string
+	ConversationID *string
+	Role           *string
+	Content        *string
+	CreatedAt      *string
+}
+
+func (q *Queries) ListByConversation(ctx context.Context, conversationID *string) ([]ListByConversationRow, error) {
 	rows, err := q.db.QueryContext(ctx, listByConversation, conversationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []ListByConversationRow
 	for rows.Next() {
-		var i Message
+		var i ListByConversationRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ConversationID,

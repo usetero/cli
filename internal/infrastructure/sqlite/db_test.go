@@ -59,6 +59,30 @@ func TestOpenRejectsEmptyPath(t *testing.T) {
 	}
 }
 
+func TestOpenDoesNotReplayReflectedSchema(t *testing.T) {
+	t.Parallel()
+
+	SetExtensionPath("")
+
+	db, err := Open(context.Background(), filepath.Join(t.TempDir(), "open.sqlite"))
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer db.Close()
+
+	var count int
+	if err := db.QueryRow(context.Background(), `
+		SELECT COUNT(*)
+		FROM sqlite_master
+		WHERE type = 'table' AND name = 'conversations'
+	`).Scan(&count); err != nil {
+		t.Fatalf("query sqlite_master: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected open to avoid replaying reflected schema, found %d conversations tables", count)
+	}
+}
+
 func TestWithTxCommitsAndRollsBack(t *testing.T) {
 	t.Parallel()
 

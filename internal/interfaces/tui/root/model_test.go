@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/usetero/cli/internal/domains/integrations"
 	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
@@ -128,31 +129,90 @@ func TestModel_RendersOnboardingInFrame(t *testing.T) {
 	msg := model.Init()()
 	model.Update(msg)
 
-	view := model.View().Content
+	view := ansi.Strip(model.View().Content)
 	if !strings.Contains(view, "TERO") {
 		t.Fatalf("expected framed app name, got %q", view)
 	}
 	if !strings.Contains(view, "Select your role:") {
 		t.Fatalf("expected onboarding content, got %q", view)
 	}
-	if !strings.Contains(view, "quit") {
+	if !strings.Contains(view, "ctrl+c") || !strings.Contains(view, "esc") {
 		t.Fatalf("expected footer help content, got %q", view)
 	}
 }
 
-func TestModel_Quit(t *testing.T) {
+func TestModel_CtrlCQuitsImmediately(t *testing.T) {
 	appTheme := theme.New(false)
 	model := New(logging.Scope{}, newOnboardingModel(t), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
-	updated, cmd := model.Update(tea.KeyPressMsg{Text: "q", Code: 'q'})
+	updated, cmd := model.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	rootModel, ok := updated.(*Model)
 	if !ok {
 		t.Fatalf("expected *Model, got %T", updated)
 	}
 	if !rootModel.quit {
-		t.Fatal("expected quit=true after q key")
+		t.Fatal("expected quit=true after ctrl+c")
 	}
 	if cmd == nil {
 		t.Fatal("expected quit command")
+	}
+}
+
+func TestModel_EscapeOpensQuitDialog(t *testing.T) {
+	appTheme := theme.New(false)
+	model := New(logging.Scope{}, newOnboardingModel(t), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
+
+	updated, cmd := model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	rootModel, ok := updated.(*Model)
+	if !ok {
+		t.Fatalf("expected *Model, got %T", updated)
+	}
+	if cmd != nil {
+		t.Fatal("did not expect esc to quit immediately")
+	}
+	if rootModel.quitDialog == nil {
+		t.Fatal("expected quit dialog to open")
+	}
+
+	view := ansi.Strip(rootModel.View().Content)
+	if !strings.Contains(view, "Are you sure you want to quit?") {
+		t.Fatalf("expected quit dialog content, got %q", view)
+	}
+	if !strings.Contains(view, "Yes") || !strings.Contains(view, "No") {
+		t.Fatalf("expected quit dialog buttons, got %q", view)
+	}
+}
+
+func TestModel_EscapeThenEnterCancelsByDefault(t *testing.T) {
+	appTheme := theme.New(false)
+	model := New(logging.Scope{}, newOnboardingModel(t), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
+
+	updated, _ := model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	rootModel := updated.(*Model)
+	updated, cmd := rootModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	rootModel = updated.(*Model)
+	if cmd != nil {
+		t.Fatal("did not expect enter on default No selection to quit")
+	}
+	if rootModel.quitDialog != nil {
+		t.Fatal("expected quit dialog to close after cancel")
+	}
+}
+
+func TestModel_QuitDialogConfirmFlow(t *testing.T) {
+	appTheme := theme.New(false)
+	model := New(logging.Scope{}, newOnboardingModel(t), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
+
+	updated, _ := model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	rootModel := updated.(*Model)
+	updated, _ = rootModel.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	rootModel = updated.(*Model)
+	updated, cmd := rootModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	rootModel = updated.(*Model)
+	if !rootModel.quit {
+		t.Fatal("expected confirmed quit to mark model as quitting")
+	}
+	if cmd == nil {
+		t.Fatal("expected confirmed quit command")
 	}
 }
 
@@ -160,7 +220,7 @@ func TestModel_ChromeWrapsLoadingAndErrorScreens(t *testing.T) {
 	// Loading state before init response resolves.
 	appTheme := theme.New(false)
 	loadingModel := New(logging.Scope{}, newOnboardingModel(t), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
-	loadingView := loadingModel.View().Content
+	loadingView := ansi.Strip(loadingModel.View().Content)
 	if !strings.Contains(loadingView, "Loading onboarding state...") {
 		t.Fatalf("expected loading content in shell, got %q", loadingView)
 	}
@@ -171,7 +231,7 @@ func TestModel_ChromeWrapsLoadingAndErrorScreens(t *testing.T) {
 	}), statusbar.New(sessionRuntimeStub{}, "dev", appTheme), appTheme)
 	msg := errModel.Init()()
 	errModel.Update(msg)
-	errView := errModel.View().Content
+	errView := ansi.Strip(errModel.View().Content)
 	if !strings.Contains(errView, "Failed to load onboarding state.") {
 		t.Fatalf("expected error content in shell, got %q", errView)
 	}
@@ -195,9 +255,9 @@ func TestModel_StatusBarLifecycleProgression(t *testing.T) {
 	// Apply terminal size so status bar fitting logic is active.
 	model.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
-	offlineView := model.View().Content
-	if !strings.Contains(offlineView, "offline") {
-		t.Fatalf("expected offline status bar state, got %q", offlineView)
+	offlineView := ansi.Strip(model.View().Content)
+	if !strings.Contains(offlineView, "●") {
+		t.Fatalf("expected offline sync dot in status bar, got %q", offlineView)
 	}
 
 	session.status = sessionruntime.Status{
@@ -206,15 +266,18 @@ func TestModel_StatusBarLifecycleProgression(t *testing.T) {
 			Progress: &pssyncer.Progress{Downloaded: 3, Total: 10},
 		},
 	}
-	syncingView := model.View().Content
-	if !strings.Contains(syncingView, "sync 3/10") {
-		t.Fatalf("expected syncing status bar state, got %q", syncingView)
+	syncingView := ansi.Strip(model.View().Content)
+	if !strings.Contains(syncingView, "●") {
+		t.Fatalf("expected syncing sync dot in status bar, got %q", syncingView)
 	}
 
 	session.status = sessionruntime.Status{Running: true, Sync: &pssyncer.Ready{}}
-	readyView := model.View().Content
-	if !strings.Contains(readyView, "ready") {
-		t.Fatalf("expected ready status bar state, got %q", readyView)
+	readyView := ansi.Strip(model.View().Content)
+	if !strings.Contains(readyView, "●") {
+		t.Fatalf("expected ready sync dot in status bar, got %q", readyView)
+	}
+	if strings.Contains(readyView, "ready") || strings.Contains(readyView, "sync 3/10") || strings.Contains(readyView, "offline") {
+		t.Fatalf("did not expect textual sync labels in status bar, got %q", readyView)
 	}
 }
 

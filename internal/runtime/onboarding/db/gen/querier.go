@@ -9,7 +9,7 @@ import (
 )
 
 type Querier interface {
-	ListConversations(ctx context.Context) ([]Conversation, error)
+	ListConversations(ctx context.Context) ([]ListConversationsRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -1,93 +1,165 @@
 # System Overview
 
-The CLI is the presentation runtime for Tero, not the product authority.
+The CLI is the presentation runtime for Tero. It is not the product authority.
 That distinction is the most important mental model in this repository.
 
 The control plane owns business rules and authoritative state transitions. This
-codebase owns terminal UX, local runtime orchestration, and responsive rendering
-on top of a synced local projection.
+codebase owns terminal UX, local runtime orchestration, and responsive behavior
+on top of control-plane and sync-backed state.
 
-## What Runs Here
+## What this executable exposes
 
-One executable (`cmd/tero/main.go`) exposes three user-facing interfaces:
+One executable starts user-facing surfaces from [`cmd/tero/main.go`](../../cmd/tero/main.go):
 
-- the interactive TUI (`internal/app`)
-- direct commands (`internal/cmd`)
-- an MCP adapter surface (planned, intentionally thin)
+- the interactive TUI through [`internal/interfaces/tui`](../../internal/interfaces/tui),
+- direct command surfaces through [`internal/interfaces/cli`](../../internal/interfaces/cli),
+- an MCP surface through [`internal/interfaces/mcp`](../../internal/interfaces/mcp).
 
-All dependency composition happens at startup in `internal/cmd/root.go`. Feature
-packages should not self-compose service graphs.
+Composition happens at the top. Interface packages start surfaces, but they do
+not invent their own product logic.
 
-## How a Session Actually Flows
+## The core layer model
 
-A normal runtime starts in onboarding, not chat. The app gathers bootstrap facts
-through deterministic gates, then initializes the account-scoped runtime, then
-hands off to chat.
+The rebuilt app is easiest to understand as four layers:
 
-In code, that lifecycle starts at `cmd/tero/main.go`, is wired in
-`internal/cmd/root.go`, enters the app state machine in `internal/app/app.go`,
-drives onboarding orchestration, opens the runtime database, starts sync and
-uploader, and only then settles in the steady-state chat surface.
+1. `internal/domains`
+   Domain types, validation, and service contracts. This is where invariants
+   and business-shaped operations live.
+2. `internal/infrastructure`
+   Concrete adapters for HTTP, SQLite, PowerSync, WorkOS, preferences, and
+   logging. These are focused libraries, not orchestrators.
+3. `internal/runtime`
+   Long-running orchestration and state machines. Runtime packages coordinate
+   domain services and infrastructure over time.
+4. `internal/interfaces`
+   User-facing surfaces. These packages translate UI and command intent into
+   runtime or domain calls and render results.
 
-The important architectural point is the handoff boundary: onboarding is a
-bootstrap workflow; chat is a synced-runtime workflow. Do not blur them.
+If a change does not fit one of those four roles, stop and re-evaluate the
+boundary before writing code.
 
-## State Ownership
+```mermaid
+flowchart TD
+    CP[Control Plane<br/>Authoritative truth]
+    I[Interfaces<br/>TUI / CLI / MCP]
+    R[Runtime<br/>Long-running coordination]
+    D[Domains<br/>Typed operations and invariants]
+    INF[Infrastructure<br/>HTTP / SQLite / PowerSync / Auth]
 
-Authoritative truth remains remote. Local SQLite is a projection for fast local
-reads and immediate UI responsiveness. PowerSync and uploader converge local and
-remote state over time.
+    I --> R
+    I --> D
+    R --> D
+    R --> INF
+    INF --> D
+    INF <--> CP
+```
 
-Onboarding is the intentional exception: until account/runtime prerequisites are
-ready, it uses API-driven bootstrap. After completion, the UI should read from
-the local projection and write through the local mutation pipeline.
+## What each layer must not do
 
-## Package Boundaries
+`domains` must not depend on UI or concrete infrastructure.
 
-The boundaries are deliberately simple:
+`infrastructure` must not become product policy. It should implement contracts,
+not decide workflow semantics.
 
-- `cmd/` and `internal/cmd/` compose dependencies and start surfaces.
-- `internal/app/` and feature subpackages render and coordinate UI state.
-- `internal/core/bootstrap/` owns deterministic onboarding transition policy.
-- `internal/core/chat/` owns pure chat lifecycle/session policy.
-- service/domain packages (`internal/boundary/graphql`, `internal/boundary/chat`,
-  `internal/auth`, `internal/domain`, `internal/preferences`) expose contracts
-  and adapters.
-- data/sync packages (`internal/sqlite`, `internal/powersync`, `internal/upload`)
-  own projection storage and convergence mechanics.
+`runtime` must not render or know about terminal chrome. It owns lifecycle and
+state progression only.
 
-When in doubt, move policy inward and keep presentation code thin.
+`interfaces` must not become a second policy engine. They should compose,
+translate, route, and render.
 
-## Invariants That Must Stay True
+## How the app actually starts
 
-These are hard constraints, not style preferences:
+The entry flow is:
 
-- composition happens at the top (`cmd/`), not inside feature packages
-- presentation depends inward; core/service packages never depend on UI
-- cross-feature UI communication uses explicit typed messages
-- no blocking network/database work in `View` or hot synchronous `Update` paths
-- scoped clients are derived immutably (`WithAccountID(...)`), not mutated shared
-  globals
+1. [`cmd/tero/main.go`](../../cmd/tero/main.go) calls the CLI entrypoint.
+2. [`internal/interfaces/cli/execute.go`](../../internal/interfaces/cli/execute.go)
+   resolves config, logging, and the selected surface.
+3. The selected surface composes dependencies from domain, infrastructure, and
+   runtime packages.
+4. The surface runs its own event loop or command pipeline.
 
-## Environment and Tenant Safety
+That means the app does not have one giant "application" package anymore. The
+composition root is still top-level, but the system is intentionally split by
+layer and surface.
 
-Runtime state is environment-scoped and org-scoped. Config comes from
-`internal/config`, active organization comes from preferences, and local storage
-paths are isolated per org/environment. This is what prevents cross-tenant bleed
-in long-running terminal sessions.
+## Where truth lives
 
-## Where To Change Behavior
+Authoritative truth remains remote.
 
-Change this repository when the work is about UX flow, rendering, input behavior,
-runtime orchestration, or local developer ergonomics.
+Local state exists for three reasons:
 
-Change the control plane when the work is about product policy, business rules,
-authoritative state transitions, or semantics that should be true across all
-clients.
+- fast reads,
+- responsive terminal UX,
+- long-running sync/runtime behavior.
 
-## Common Failure Modes
+Onboarding is the deliberate exception. Before account-scoped runtime is ready,
+it uses control-plane APIs directly. After bootstrap, runtime services and
+local projection take over.
 
-Most regressions come from the same mistakes: putting business policy in UI
-handlers, treating SQLite as authority instead of projection, mutating shared
-scoped clients, doing blocking I/O in the event loop, or letting messages cross
-feature boundaries without clear ownership.
+## The architectural split that matters most
+
+There are two different application phases:
+
+1. bootstrap
+   API-first, deterministic, building enough scoped state to start runtime.
+2. steady-state runtime
+   account-scoped, long-running, sync-backed, and ready for the main product
+   surface.
+
+Most confusion in this repo comes from blurring those phases. If a flow needs a
+running sync/runtime session, it does not belong in bootstrap logic. If a flow
+must work before runtime exists, it should not depend on local projection.
+
+## What breaks when this model drifts
+
+These failures are predictable:
+
+- business rules leak into interfaces and become inconsistent across surfaces,
+- infrastructure starts coordinating workflows and becomes hard to test,
+- runtime depends on presentation details and turns lifecycle code brittle,
+- bootstrap flows assume account-scoped runtime already exists,
+- local projection is treated as authority and diverges from remote truth.
+
+If one of those shows up, the fix is usually to move ownership back to the
+proper layer, not to add another patch at the surface.
+
+## Invariants that must stay true
+
+- composition happens at the top, not inside feature packages
+- dependencies point inward: interfaces -> runtime -> domains, with
+  infrastructure implementing contracts underneath
+- UI and command surfaces do not encode product truth that should live in
+  domains or the control plane
+- runtimes own lifecycle and long-running orchestration
+- infrastructure packages stay narrow and concrete
+- no blocking network or database work in Bubble Tea `View` or synchronous hot
+  `Update` paths
+
+## Fast code entry points
+
+When you need to confirm the model in code, start here:
+
+- [`cmd/tero/main.go`](../../cmd/tero/main.go)
+- [`internal/interfaces/cli/execute.go`](../../internal/interfaces/cli/execute.go)
+- [`internal/interfaces/tui/app.go`](../../internal/interfaces/tui/app.go)
+- [`internal/runtime/onboarding`](../../internal/runtime/onboarding)
+- [`internal/runtime/session`](../../internal/runtime/session)
+- [`internal/infrastructure/controlplane/api`](../../internal/infrastructure/controlplane/api)
+- [`internal/infrastructure/powersync`](../../internal/infrastructure/powersync)
+
+## How to use this overview
+
+Use this page to decide ownership first.
+
+If the change is about lifecycle or coordination over time, read
+[runtime-architecture.md](runtime-architecture.md) next.
+
+If the change is about control-plane/bootstrap/runtime data movement, read
+[data-flow.md](data-flow.md).
+
+If the change is in the TUI, continue with:
+
+- [ui-runtime.md](ui-runtime.md)
+- [ui-messages.md](ui-messages.md)
+- [ui-layout.md](ui-layout.md)
+- [theme-and-chrome.md](theme-and-chrome.md)
