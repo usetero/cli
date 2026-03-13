@@ -1,21 +1,21 @@
-# Mutation to approve a log event policy for enforcement
-mutation ApproveLogEventPolicy($id: ID!) {
-    approveLogEventPolicy(id: $id) {
-        id
-        approvedAt
-        approvedBy
-        dismissedAt
-        dismissedBy
-    }
+# Mutation to approve a log event recommendation for enforcement
+mutation ApproveLogEventRecommendation($id: ID!, $targets: EnforcementTargetInput!) {
+  approveLogEventRecommendation(id: $id, targets: $targets) {
+    id
+    approvedAt
+    approvedBy
+    dismissedAt
+    dismissedBy
+  }
 }
 
-# Mutation to dismiss a log event policy from pending review
-mutation DismissLogEventPolicy($id: ID!) {
-    dismissLogEventPolicy(id: $id) {
-        id
-        dismissedAt
-        dismissedBy
-        approvedAt
-        approvedBy
-    }
+# Mutation to dismiss a log event recommendation from pending review
+mutation DismissLogEventRecommendation($id: ID!) {
+  dismissLogEventRecommendation(id: $id) {
+    id
+    dismissedAt
+    dismissedBy
+    approvedAt
+    approvedBy
+  }
 }

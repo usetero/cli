@@ -61,8 +61,8 @@ type Client interface {
 	DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
 
 	// Policy operations
-	ApproveLogEventPolicy(ctx context.Context, policyID string) (*gen.ApproveLogEventPolicyResponse, error)
-	DismissLogEventPolicy(ctx context.Context, policyID string) (*gen.DismissLogEventPolicyResponse, error)
+	ApproveLogEventRecommendation(ctx context.Context, recommendationID string, targets gen.EnforcementTargetInput) (*gen.ApproveLogEventRecommendationResponse, error)
+	DismissLogEventRecommendation(ctx context.Context, recommendationID string) (*gen.DismissLogEventRecommendationResponse, error)
 }
 
 // client is the concrete implementation of Client.
@@ -326,18 +326,18 @@ func (c *client) DisableService(ctx context.Context, serviceID string) (*gen.Dis
 
 // Policy operations
 
-func (c *client) ApproveLogEventPolicy(ctx context.Context, policyID string) (*gen.ApproveLogEventPolicyResponse, error) {
+func (c *client) ApproveLogEventRecommendation(ctx context.Context, recommendationID string, targets gen.EnforcementTargetInput) (*gen.ApproveLogEventRecommendationResponse, error) {
 	gql, err := c.gql(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return gen.ApproveLogEventPolicy(ctx, gql, policyID)
+	return gen.ApproveLogEventRecommendation(ctx, gql, recommendationID, targets)
 }
 
-func (c *client) DismissLogEventPolicy(ctx context.Context, policyID string) (*gen.DismissLogEventPolicyResponse, error) {
+func (c *client) DismissLogEventRecommendation(ctx context.Context, recommendationID string) (*gen.DismissLogEventRecommendationResponse, error) {
 	gql, err := c.gql(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return gen.DismissLogEventPolicy(ctx, gql, policyID)
+	return gen.DismissLogEventRecommendation(ctx, gql, recommendationID)
 }

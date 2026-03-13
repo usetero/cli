@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/usetero/cli/internal/boundary/graphql/gen"
 	"github.com/usetero/cli/internal/log"
 )
 
@@ -34,7 +35,7 @@ func NewPolicyService(client Client, scope log.Scope) *PolicyService {
 func (s *PolicyService) ApprovePolicy(ctx context.Context, id string) error {
 	s.scope.Debug("approving policy via API", "id", id)
 
-	_, err := s.client.ApproveLogEventPolicy(ctx, id)
+	_, err := s.client.ApproveLogEventRecommendation(ctx, id, gen.EnforcementTargetInput{})
 	if err != nil {
 		s.scope.Error("failed to approve policy", "error", err, "id", id)
 		if classified := classifyError(err); classified != nil {
@@ -51,7 +52,7 @@ func (s *PolicyService) ApprovePolicy(ctx context.Context, id string) error {
 func (s *PolicyService) DismissPolicy(ctx context.Context, id string) error {
 	s.scope.Debug("dismissing policy via API", "id", id)
 
-	_, err := s.client.DismissLogEventPolicy(ctx, id)
+	_, err := s.client.DismissLogEventRecommendation(ctx, id)
 	if err != nil {
 		s.scope.Error("failed to dismiss policy", "error", err, "id", id)
 		if classified := classifyError(err); classified != nil {

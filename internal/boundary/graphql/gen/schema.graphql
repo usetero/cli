@@ -865,7 +865,7 @@ type DatadogAccount implements Node {
   logIndexes: [DatadogLogIndex!]
 
   """
-  Status of this Datadog account in the discovery pipeline.
+  Status of this Datadog account in the catalog pipeline.
   Derived from the status of all services discovered from this account.
   Returns null if cache has not been populated yet.
   """
@@ -926,10 +926,6 @@ type DatadogAccountStatusCache implements Node {
   id: ID!
   datadogAccountID: ID!
   accountID: UUID!
-
-  """
-  Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-  """
   health: DatadogAccountStatusCacheHealth!
   readyForUse: Boolean!
   logEventAnalyzedCount: Int!
@@ -939,35 +935,31 @@ type DatadogAccountStatusCache implements Node {
   inactiveServices: Int!
   okServices: Int!
   logEventCount: Int!
-  policyPendingCount: Int!
-  policyApprovedCount: Int!
-  policyDismissedCount: Int!
+  recommendationCount: Int!
+  pendingRecommendationCount: Int!
+  approvedRecommendationCount: Int!
+  dismissedRecommendationCount: Int!
   policyPendingLowCount: Int!
   policyPendingMediumCount: Int!
   policyPendingHighCount: Int!
   policyPendingCriticalCount: Int!
-  serviceVolumePerHour: Float
-  serviceCostPerHourVolumeUsd: Float
-  logEventVolumePerHour: Float
-  logEventBytesPerHour: Float
-  logEventCostPerHourBytesUsd: Float
-  logEventCostPerHourVolumeUsd: Float
-  logEventCostPerHourUsd: Float
-  estimatedVolumeReductionPerHour: Float
-  estimatedBytesReductionPerHour: Float
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourUsd: Float
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourAfter: Float
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourAfter: Float
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterUsd: Float
+  currentServiceEventsPerHour: Float
+  currentServiceVolumeUsdPerHour: Float
+  currentEventsPerHour: Float
+  currentBytesPerHour: Float
+  currentBytesUsdPerHour: Float
+  currentVolumeUsdPerHour: Float
+  currentTotalUsdPerHour: Float
+  estimatedEventsPerHour: Float
+  estimatedBytesPerHour: Float
+  estimatedBytesUsdPerHour: Float
+  estimatedVolumeUsdPerHour: Float
+  estimatedTotalUsdPerHour: Float
+  impactEventsPerHour: Float
+  impactBytesPerHour: Float
+  impactBytesUsdPerHour: Float
+  impactVolumeUsdPerHour: Float
+  impactTotalUsdPerHour: Float
   refreshedAt: Time!
 }
 
@@ -1094,35 +1086,45 @@ input DatadogAccountStatusCacheWhereInput {
   logEventCountLT: Int
   logEventCountLTE: Int
 
-  """policy_pending_count field predicates"""
-  policyPendingCount: Int
-  policyPendingCountNEQ: Int
-  policyPendingCountIn: [Int!]
-  policyPendingCountNotIn: [Int!]
-  policyPendingCountGT: Int
-  policyPendingCountGTE: Int
-  policyPendingCountLT: Int
-  policyPendingCountLTE: Int
+  """recommendation_count field predicates"""
+  recommendationCount: Int
+  recommendationCountNEQ: Int
+  recommendationCountIn: [Int!]
+  recommendationCountNotIn: [Int!]
+  recommendationCountGT: Int
+  recommendationCountGTE: Int
+  recommendationCountLT: Int
+  recommendationCountLTE: Int
 
-  """policy_approved_count field predicates"""
-  policyApprovedCount: Int
-  policyApprovedCountNEQ: Int
-  policyApprovedCountIn: [Int!]
-  policyApprovedCountNotIn: [Int!]
-  policyApprovedCountGT: Int
-  policyApprovedCountGTE: Int
-  policyApprovedCountLT: Int
-  policyApprovedCountLTE: Int
+  """pending_recommendation_count field predicates"""
+  pendingRecommendationCount: Int
+  pendingRecommendationCountNEQ: Int
+  pendingRecommendationCountIn: [Int!]
+  pendingRecommendationCountNotIn: [Int!]
+  pendingRecommendationCountGT: Int
+  pendingRecommendationCountGTE: Int
+  pendingRecommendationCountLT: Int
+  pendingRecommendationCountLTE: Int
 
-  """policy_dismissed_count field predicates"""
-  policyDismissedCount: Int
-  policyDismissedCountNEQ: Int
-  policyDismissedCountIn: [Int!]
-  policyDismissedCountNotIn: [Int!]
-  policyDismissedCountGT: Int
-  policyDismissedCountGTE: Int
-  policyDismissedCountLT: Int
-  policyDismissedCountLTE: Int
+  """approved_recommendation_count field predicates"""
+  approvedRecommendationCount: Int
+  approvedRecommendationCountNEQ: Int
+  approvedRecommendationCountIn: [Int!]
+  approvedRecommendationCountNotIn: [Int!]
+  approvedRecommendationCountGT: Int
+  approvedRecommendationCountGTE: Int
+  approvedRecommendationCountLT: Int
+  approvedRecommendationCountLTE: Int
+
+  """dismissed_recommendation_count field predicates"""
+  dismissedRecommendationCount: Int
+  dismissedRecommendationCountNEQ: Int
+  dismissedRecommendationCountIn: [Int!]
+  dismissedRecommendationCountNotIn: [Int!]
+  dismissedRecommendationCountGT: Int
+  dismissedRecommendationCountGTE: Int
+  dismissedRecommendationCountLT: Int
+  dismissedRecommendationCountLTE: Int
 
   """policy_pending_low_count field predicates"""
   policyPendingLowCount: Int
@@ -1164,269 +1166,209 @@ input DatadogAccountStatusCacheWhereInput {
   policyPendingCriticalCountLT: Int
   policyPendingCriticalCountLTE: Int
 
-  """service_volume_per_hour field predicates"""
-  serviceVolumePerHour: Float
-  serviceVolumePerHourNEQ: Float
-  serviceVolumePerHourIn: [Float!]
-  serviceVolumePerHourNotIn: [Float!]
-  serviceVolumePerHourGT: Float
-  serviceVolumePerHourGTE: Float
-  serviceVolumePerHourLT: Float
-  serviceVolumePerHourLTE: Float
-  serviceVolumePerHourIsNil: Boolean
-  serviceVolumePerHourNotNil: Boolean
+  """current_service_events_per_hour field predicates"""
+  currentServiceEventsPerHour: Float
+  currentServiceEventsPerHourNEQ: Float
+  currentServiceEventsPerHourIn: [Float!]
+  currentServiceEventsPerHourNotIn: [Float!]
+  currentServiceEventsPerHourGT: Float
+  currentServiceEventsPerHourGTE: Float
+  currentServiceEventsPerHourLT: Float
+  currentServiceEventsPerHourLTE: Float
+  currentServiceEventsPerHourIsNil: Boolean
+  currentServiceEventsPerHourNotNil: Boolean
 
-  """service_cost_per_hour_volume_usd field predicates"""
-  serviceCostPerHourVolumeUsd: Float
-  serviceCostPerHourVolumeUsdNEQ: Float
-  serviceCostPerHourVolumeUsdIn: [Float!]
-  serviceCostPerHourVolumeUsdNotIn: [Float!]
-  serviceCostPerHourVolumeUsdGT: Float
-  serviceCostPerHourVolumeUsdGTE: Float
-  serviceCostPerHourVolumeUsdLT: Float
-  serviceCostPerHourVolumeUsdLTE: Float
-  serviceCostPerHourVolumeUsdIsNil: Boolean
-  serviceCostPerHourVolumeUsdNotNil: Boolean
+  """current_service_volume_usd_per_hour field predicates"""
+  currentServiceVolumeUsdPerHour: Float
+  currentServiceVolumeUsdPerHourNEQ: Float
+  currentServiceVolumeUsdPerHourIn: [Float!]
+  currentServiceVolumeUsdPerHourNotIn: [Float!]
+  currentServiceVolumeUsdPerHourGT: Float
+  currentServiceVolumeUsdPerHourGTE: Float
+  currentServiceVolumeUsdPerHourLT: Float
+  currentServiceVolumeUsdPerHourLTE: Float
+  currentServiceVolumeUsdPerHourIsNil: Boolean
+  currentServiceVolumeUsdPerHourNotNil: Boolean
 
-  """log_event_volume_per_hour field predicates"""
-  logEventVolumePerHour: Float
-  logEventVolumePerHourNEQ: Float
-  logEventVolumePerHourIn: [Float!]
-  logEventVolumePerHourNotIn: [Float!]
-  logEventVolumePerHourGT: Float
-  logEventVolumePerHourGTE: Float
-  logEventVolumePerHourLT: Float
-  logEventVolumePerHourLTE: Float
-  logEventVolumePerHourIsNil: Boolean
-  logEventVolumePerHourNotNil: Boolean
+  """current_events_per_hour field predicates"""
+  currentEventsPerHour: Float
+  currentEventsPerHourNEQ: Float
+  currentEventsPerHourIn: [Float!]
+  currentEventsPerHourNotIn: [Float!]
+  currentEventsPerHourGT: Float
+  currentEventsPerHourGTE: Float
+  currentEventsPerHourLT: Float
+  currentEventsPerHourLTE: Float
+  currentEventsPerHourIsNil: Boolean
+  currentEventsPerHourNotNil: Boolean
 
-  """log_event_bytes_per_hour field predicates"""
-  logEventBytesPerHour: Float
-  logEventBytesPerHourNEQ: Float
-  logEventBytesPerHourIn: [Float!]
-  logEventBytesPerHourNotIn: [Float!]
-  logEventBytesPerHourGT: Float
-  logEventBytesPerHourGTE: Float
-  logEventBytesPerHourLT: Float
-  logEventBytesPerHourLTE: Float
-  logEventBytesPerHourIsNil: Boolean
-  logEventBytesPerHourNotNil: Boolean
+  """current_bytes_per_hour field predicates"""
+  currentBytesPerHour: Float
+  currentBytesPerHourNEQ: Float
+  currentBytesPerHourIn: [Float!]
+  currentBytesPerHourNotIn: [Float!]
+  currentBytesPerHourGT: Float
+  currentBytesPerHourGTE: Float
+  currentBytesPerHourLT: Float
+  currentBytesPerHourLTE: Float
+  currentBytesPerHourIsNil: Boolean
+  currentBytesPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_bytes_usd field predicates"""
-  logEventCostPerHourBytesUsd: Float
-  logEventCostPerHourBytesUsdNEQ: Float
-  logEventCostPerHourBytesUsdIn: [Float!]
-  logEventCostPerHourBytesUsdNotIn: [Float!]
-  logEventCostPerHourBytesUsdGT: Float
-  logEventCostPerHourBytesUsdGTE: Float
-  logEventCostPerHourBytesUsdLT: Float
-  logEventCostPerHourBytesUsdLTE: Float
-  logEventCostPerHourBytesUsdIsNil: Boolean
-  logEventCostPerHourBytesUsdNotNil: Boolean
+  """current_bytes_usd_per_hour field predicates"""
+  currentBytesUsdPerHour: Float
+  currentBytesUsdPerHourNEQ: Float
+  currentBytesUsdPerHourIn: [Float!]
+  currentBytesUsdPerHourNotIn: [Float!]
+  currentBytesUsdPerHourGT: Float
+  currentBytesUsdPerHourGTE: Float
+  currentBytesUsdPerHourLT: Float
+  currentBytesUsdPerHourLTE: Float
+  currentBytesUsdPerHourIsNil: Boolean
+  currentBytesUsdPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_volume_usd field predicates"""
-  logEventCostPerHourVolumeUsd: Float
-  logEventCostPerHourVolumeUsdNEQ: Float
-  logEventCostPerHourVolumeUsdIn: [Float!]
-  logEventCostPerHourVolumeUsdNotIn: [Float!]
-  logEventCostPerHourVolumeUsdGT: Float
-  logEventCostPerHourVolumeUsdGTE: Float
-  logEventCostPerHourVolumeUsdLT: Float
-  logEventCostPerHourVolumeUsdLTE: Float
-  logEventCostPerHourVolumeUsdIsNil: Boolean
-  logEventCostPerHourVolumeUsdNotNil: Boolean
+  """current_volume_usd_per_hour field predicates"""
+  currentVolumeUsdPerHour: Float
+  currentVolumeUsdPerHourNEQ: Float
+  currentVolumeUsdPerHourIn: [Float!]
+  currentVolumeUsdPerHourNotIn: [Float!]
+  currentVolumeUsdPerHourGT: Float
+  currentVolumeUsdPerHourGTE: Float
+  currentVolumeUsdPerHourLT: Float
+  currentVolumeUsdPerHourLTE: Float
+  currentVolumeUsdPerHourIsNil: Boolean
+  currentVolumeUsdPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_usd field predicates"""
-  logEventCostPerHourUsd: Float
-  logEventCostPerHourUsdNEQ: Float
-  logEventCostPerHourUsdIn: [Float!]
-  logEventCostPerHourUsdNotIn: [Float!]
-  logEventCostPerHourUsdGT: Float
-  logEventCostPerHourUsdGTE: Float
-  logEventCostPerHourUsdLT: Float
-  logEventCostPerHourUsdLTE: Float
-  logEventCostPerHourUsdIsNil: Boolean
-  logEventCostPerHourUsdNotNil: Boolean
+  """current_total_usd_per_hour field predicates"""
+  currentTotalUsdPerHour: Float
+  currentTotalUsdPerHourNEQ: Float
+  currentTotalUsdPerHourIn: [Float!]
+  currentTotalUsdPerHourNotIn: [Float!]
+  currentTotalUsdPerHourGT: Float
+  currentTotalUsdPerHourGTE: Float
+  currentTotalUsdPerHourLT: Float
+  currentTotalUsdPerHourLTE: Float
+  currentTotalUsdPerHourIsNil: Boolean
+  currentTotalUsdPerHourNotNil: Boolean
 
-  """estimated_volume_reduction_per_hour field predicates"""
-  estimatedVolumeReductionPerHour: Float
-  estimatedVolumeReductionPerHourNEQ: Float
-  estimatedVolumeReductionPerHourIn: [Float!]
-  estimatedVolumeReductionPerHourNotIn: [Float!]
-  estimatedVolumeReductionPerHourGT: Float
-  estimatedVolumeReductionPerHourGTE: Float
-  estimatedVolumeReductionPerHourLT: Float
-  estimatedVolumeReductionPerHourLTE: Float
-  estimatedVolumeReductionPerHourIsNil: Boolean
-  estimatedVolumeReductionPerHourNotNil: Boolean
+  """estimated_events_per_hour field predicates"""
+  estimatedEventsPerHour: Float
+  estimatedEventsPerHourNEQ: Float
+  estimatedEventsPerHourIn: [Float!]
+  estimatedEventsPerHourNotIn: [Float!]
+  estimatedEventsPerHourGT: Float
+  estimatedEventsPerHourGTE: Float
+  estimatedEventsPerHourLT: Float
+  estimatedEventsPerHourLTE: Float
+  estimatedEventsPerHourIsNil: Boolean
+  estimatedEventsPerHourNotNil: Boolean
 
-  """estimated_bytes_reduction_per_hour field predicates"""
-  estimatedBytesReductionPerHour: Float
-  estimatedBytesReductionPerHourNEQ: Float
-  estimatedBytesReductionPerHourIn: [Float!]
-  estimatedBytesReductionPerHourNotIn: [Float!]
-  estimatedBytesReductionPerHourGT: Float
-  estimatedBytesReductionPerHourGTE: Float
-  estimatedBytesReductionPerHourLT: Float
-  estimatedBytesReductionPerHourLTE: Float
-  estimatedBytesReductionPerHourIsNil: Boolean
-  estimatedBytesReductionPerHourNotNil: Boolean
+  """estimated_bytes_per_hour field predicates"""
+  estimatedBytesPerHour: Float
+  estimatedBytesPerHourNEQ: Float
+  estimatedBytesPerHourIn: [Float!]
+  estimatedBytesPerHourNotIn: [Float!]
+  estimatedBytesPerHourGT: Float
+  estimatedBytesPerHourGTE: Float
+  estimatedBytesPerHourLT: Float
+  estimatedBytesPerHourLTE: Float
+  estimatedBytesPerHourIsNil: Boolean
+  estimatedBytesPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourBytesUsdNEQ: Float
-  estimatedCostReductionPerHourBytesUsdIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdGT: Float
-  estimatedCostReductionPerHourBytesUsdGTE: Float
-  estimatedCostReductionPerHourBytesUsdLT: Float
-  estimatedCostReductionPerHourBytesUsdLTE: Float
-  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
-  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+  """estimated_bytes_usd_per_hour field predicates"""
+  estimatedBytesUsdPerHour: Float
+  estimatedBytesUsdPerHourNEQ: Float
+  estimatedBytesUsdPerHourIn: [Float!]
+  estimatedBytesUsdPerHourNotIn: [Float!]
+  estimatedBytesUsdPerHourGT: Float
+  estimatedBytesUsdPerHourGTE: Float
+  estimatedBytesUsdPerHourLT: Float
+  estimatedBytesUsdPerHourLTE: Float
+  estimatedBytesUsdPerHourIsNil: Boolean
+  estimatedBytesUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourVolumeUsdNEQ: Float
-  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdGT: Float
-  estimatedCostReductionPerHourVolumeUsdGTE: Float
-  estimatedCostReductionPerHourVolumeUsdLT: Float
-  estimatedCostReductionPerHourVolumeUsdLTE: Float
-  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
-  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+  """estimated_volume_usd_per_hour field predicates"""
+  estimatedVolumeUsdPerHour: Float
+  estimatedVolumeUsdPerHourNEQ: Float
+  estimatedVolumeUsdPerHourIn: [Float!]
+  estimatedVolumeUsdPerHourNotIn: [Float!]
+  estimatedVolumeUsdPerHourGT: Float
+  estimatedVolumeUsdPerHourGTE: Float
+  estimatedVolumeUsdPerHourLT: Float
+  estimatedVolumeUsdPerHourLTE: Float
+  estimatedVolumeUsdPerHourIsNil: Boolean
+  estimatedVolumeUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_usd field predicates"""
-  estimatedCostReductionPerHourUsd: Float
-  estimatedCostReductionPerHourUsdNEQ: Float
-  estimatedCostReductionPerHourUsdIn: [Float!]
-  estimatedCostReductionPerHourUsdNotIn: [Float!]
-  estimatedCostReductionPerHourUsdGT: Float
-  estimatedCostReductionPerHourUsdGTE: Float
-  estimatedCostReductionPerHourUsdLT: Float
-  estimatedCostReductionPerHourUsdLTE: Float
-  estimatedCostReductionPerHourUsdIsNil: Boolean
-  estimatedCostReductionPerHourUsdNotNil: Boolean
+  """estimated_total_usd_per_hour field predicates"""
+  estimatedTotalUsdPerHour: Float
+  estimatedTotalUsdPerHourNEQ: Float
+  estimatedTotalUsdPerHourIn: [Float!]
+  estimatedTotalUsdPerHourNotIn: [Float!]
+  estimatedTotalUsdPerHourGT: Float
+  estimatedTotalUsdPerHourGTE: Float
+  estimatedTotalUsdPerHourLT: Float
+  estimatedTotalUsdPerHourLTE: Float
+  estimatedTotalUsdPerHourIsNil: Boolean
+  estimatedTotalUsdPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_before field predicates"""
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourBeforeNEQ: Float
-  observedVolumePerHourBeforeIn: [Float!]
-  observedVolumePerHourBeforeNotIn: [Float!]
-  observedVolumePerHourBeforeGT: Float
-  observedVolumePerHourBeforeGTE: Float
-  observedVolumePerHourBeforeLT: Float
-  observedVolumePerHourBeforeLTE: Float
-  observedVolumePerHourBeforeIsNil: Boolean
-  observedVolumePerHourBeforeNotNil: Boolean
+  """impact_events_per_hour field predicates"""
+  impactEventsPerHour: Float
+  impactEventsPerHourNEQ: Float
+  impactEventsPerHourIn: [Float!]
+  impactEventsPerHourNotIn: [Float!]
+  impactEventsPerHourGT: Float
+  impactEventsPerHourGTE: Float
+  impactEventsPerHourLT: Float
+  impactEventsPerHourLTE: Float
+  impactEventsPerHourIsNil: Boolean
+  impactEventsPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_after field predicates"""
-  observedVolumePerHourAfter: Float
-  observedVolumePerHourAfterNEQ: Float
-  observedVolumePerHourAfterIn: [Float!]
-  observedVolumePerHourAfterNotIn: [Float!]
-  observedVolumePerHourAfterGT: Float
-  observedVolumePerHourAfterGTE: Float
-  observedVolumePerHourAfterLT: Float
-  observedVolumePerHourAfterLTE: Float
-  observedVolumePerHourAfterIsNil: Boolean
-  observedVolumePerHourAfterNotNil: Boolean
+  """impact_bytes_per_hour field predicates"""
+  impactBytesPerHour: Float
+  impactBytesPerHourNEQ: Float
+  impactBytesPerHourIn: [Float!]
+  impactBytesPerHourNotIn: [Float!]
+  impactBytesPerHourGT: Float
+  impactBytesPerHourGTE: Float
+  impactBytesPerHourLT: Float
+  impactBytesPerHourLTE: Float
+  impactBytesPerHourIsNil: Boolean
+  impactBytesPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_before field predicates"""
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourBeforeNEQ: Float
-  observedBytesPerHourBeforeIn: [Float!]
-  observedBytesPerHourBeforeNotIn: [Float!]
-  observedBytesPerHourBeforeGT: Float
-  observedBytesPerHourBeforeGTE: Float
-  observedBytesPerHourBeforeLT: Float
-  observedBytesPerHourBeforeLTE: Float
-  observedBytesPerHourBeforeIsNil: Boolean
-  observedBytesPerHourBeforeNotNil: Boolean
+  """impact_bytes_usd_per_hour field predicates"""
+  impactBytesUsdPerHour: Float
+  impactBytesUsdPerHourNEQ: Float
+  impactBytesUsdPerHourIn: [Float!]
+  impactBytesUsdPerHourNotIn: [Float!]
+  impactBytesUsdPerHourGT: Float
+  impactBytesUsdPerHourGTE: Float
+  impactBytesUsdPerHourLT: Float
+  impactBytesUsdPerHourLTE: Float
+  impactBytesUsdPerHourIsNil: Boolean
+  impactBytesUsdPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_after field predicates"""
-  observedBytesPerHourAfter: Float
-  observedBytesPerHourAfterNEQ: Float
-  observedBytesPerHourAfterIn: [Float!]
-  observedBytesPerHourAfterNotIn: [Float!]
-  observedBytesPerHourAfterGT: Float
-  observedBytesPerHourAfterGTE: Float
-  observedBytesPerHourAfterLT: Float
-  observedBytesPerHourAfterLTE: Float
-  observedBytesPerHourAfterIsNil: Boolean
-  observedBytesPerHourAfterNotNil: Boolean
+  """impact_volume_usd_per_hour field predicates"""
+  impactVolumeUsdPerHour: Float
+  impactVolumeUsdPerHourNEQ: Float
+  impactVolumeUsdPerHourIn: [Float!]
+  impactVolumeUsdPerHourNotIn: [Float!]
+  impactVolumeUsdPerHourGT: Float
+  impactVolumeUsdPerHourGTE: Float
+  impactVolumeUsdPerHourLT: Float
+  impactVolumeUsdPerHourLTE: Float
+  impactVolumeUsdPerHourIsNil: Boolean
+  impactVolumeUsdPerHourNotNil: Boolean
 
-  """observed_cost_per_hour_before_bytes_usd field predicates"""
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeBytesUsdNEQ: Float
-  observedCostPerHourBeforeBytesUsdIn: [Float!]
-  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
-  observedCostPerHourBeforeBytesUsdGT: Float
-  observedCostPerHourBeforeBytesUsdGTE: Float
-  observedCostPerHourBeforeBytesUsdLT: Float
-  observedCostPerHourBeforeBytesUsdLTE: Float
-  observedCostPerHourBeforeBytesUsdIsNil: Boolean
-  observedCostPerHourBeforeBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_volume_usd field predicates"""
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeVolumeUsdNEQ: Float
-  observedCostPerHourBeforeVolumeUsdIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdGT: Float
-  observedCostPerHourBeforeVolumeUsdGTE: Float
-  observedCostPerHourBeforeVolumeUsdLT: Float
-  observedCostPerHourBeforeVolumeUsdLTE: Float
-  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
-  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_usd field predicates"""
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourBeforeUsdNEQ: Float
-  observedCostPerHourBeforeUsdIn: [Float!]
-  observedCostPerHourBeforeUsdNotIn: [Float!]
-  observedCostPerHourBeforeUsdGT: Float
-  observedCostPerHourBeforeUsdGTE: Float
-  observedCostPerHourBeforeUsdLT: Float
-  observedCostPerHourBeforeUsdLTE: Float
-  observedCostPerHourBeforeUsdIsNil: Boolean
-  observedCostPerHourBeforeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_bytes_usd field predicates"""
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterBytesUsdNEQ: Float
-  observedCostPerHourAfterBytesUsdIn: [Float!]
-  observedCostPerHourAfterBytesUsdNotIn: [Float!]
-  observedCostPerHourAfterBytesUsdGT: Float
-  observedCostPerHourAfterBytesUsdGTE: Float
-  observedCostPerHourAfterBytesUsdLT: Float
-  observedCostPerHourAfterBytesUsdLTE: Float
-  observedCostPerHourAfterBytesUsdIsNil: Boolean
-  observedCostPerHourAfterBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_volume_usd field predicates"""
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterVolumeUsdNEQ: Float
-  observedCostPerHourAfterVolumeUsdIn: [Float!]
-  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
-  observedCostPerHourAfterVolumeUsdGT: Float
-  observedCostPerHourAfterVolumeUsdGTE: Float
-  observedCostPerHourAfterVolumeUsdLT: Float
-  observedCostPerHourAfterVolumeUsdLTE: Float
-  observedCostPerHourAfterVolumeUsdIsNil: Boolean
-  observedCostPerHourAfterVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_usd field predicates"""
-  observedCostPerHourAfterUsd: Float
-  observedCostPerHourAfterUsdNEQ: Float
-  observedCostPerHourAfterUsdIn: [Float!]
-  observedCostPerHourAfterUsdNotIn: [Float!]
-  observedCostPerHourAfterUsdGT: Float
-  observedCostPerHourAfterUsdGTE: Float
-  observedCostPerHourAfterUsdLT: Float
-  observedCostPerHourAfterUsdLTE: Float
-  observedCostPerHourAfterUsdIsNil: Boolean
-  observedCostPerHourAfterUsdNotNil: Boolean
+  """impact_total_usd_per_hour field predicates"""
+  impactTotalUsdPerHour: Float
+  impactTotalUsdPerHourNEQ: Float
+  impactTotalUsdPerHourIn: [Float!]
+  impactTotalUsdPerHourNotIn: [Float!]
+  impactTotalUsdPerHourGT: Float
+  impactTotalUsdPerHourGTE: Float
+  impactTotalUsdPerHourLT: Float
+  impactTotalUsdPerHourLTE: Float
+  impactTotalUsdPerHourIsNil: Boolean
+  impactTotalUsdPerHourNotNil: Boolean
 
   """refreshed_at field predicates"""
   refreshedAt: Time
@@ -1672,6 +1614,10 @@ input DatadogLogIndexWhereInput {
   """datadog_account edge predicates"""
   hasDatadogAccount: Boolean
   hasDatadogAccountWith: [DatadogAccountWhereInput!]
+}
+
+input DatadogTargetInput {
+  accountIds: [ID!]
 }
 
 type EdgeApiKey implements Node {
@@ -2043,6 +1989,174 @@ input EdgeInstanceWhereInput {
   hasAccountWith: [AccountWhereInput!]
 }
 
+input EdgeTargetInput {
+  resourceSelectors: [ResourceSelectorInput!]
+}
+
+input EnforcementTargetInput {
+  edge: EdgeTargetInput
+  datadog: DatadogTargetInput
+}
+
+type Finding implements Node {
+  """Unique identifier"""
+  id: ID!
+
+  """Parent account this finding belongs to"""
+  accountID: ID!
+
+  """Finding kind identifier, e.g. noisy_404s."""
+  kind: String!
+
+  """
+  Specific detector profile within the finding kind, e.g. misconfigured_integration.
+  """
+  profile: String!
+
+  """
+  Version of the detector logic that most recently reconciled this finding.
+  """
+  detectorVersion: Int!
+
+  """
+  Stable detector-specific identity for this finding instance within an account.
+  """
+  fingerprint: String!
+
+  """When this finding row was created."""
+  createdAt: Time!
+
+  """When this finding row was last updated."""
+  updatedAt: Time!
+
+  """Account this finding belongs to"""
+  account: Account!
+}
+
+"""Ordering options for Finding connections"""
+input FindingOrder {
+  """The ordering direction."""
+  direction: OrderDirection! = ASC
+
+  """The field by which to order Findings."""
+  field: FindingOrderField!
+}
+
+"""Properties by which Finding connections can be ordered."""
+enum FindingOrderField {
+  KIND
+  PROFILE
+  DETECTOR_VERSION
+  FINGERPRINT
+  CREATED_AT
+  UPDATED_AT
+}
+
+"""
+FindingWhereInput is used for filtering Finding objects.
+Input was generated by ent.
+"""
+input FindingWhereInput {
+  not: FindingWhereInput
+  and: [FindingWhereInput!]
+  or: [FindingWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: ID
+  accountIDNEQ: ID
+  accountIDIn: [ID!]
+  accountIDNotIn: [ID!]
+
+  """kind field predicates"""
+  kind: String
+  kindNEQ: String
+  kindIn: [String!]
+  kindNotIn: [String!]
+  kindGT: String
+  kindGTE: String
+  kindLT: String
+  kindLTE: String
+  kindContains: String
+  kindHasPrefix: String
+  kindHasSuffix: String
+  kindEqualFold: String
+  kindContainsFold: String
+
+  """profile field predicates"""
+  profile: String
+  profileNEQ: String
+  profileIn: [String!]
+  profileNotIn: [String!]
+  profileGT: String
+  profileGTE: String
+  profileLT: String
+  profileLTE: String
+  profileContains: String
+  profileHasPrefix: String
+  profileHasSuffix: String
+  profileEqualFold: String
+  profileContainsFold: String
+
+  """detector_version field predicates"""
+  detectorVersion: Int
+  detectorVersionNEQ: Int
+  detectorVersionIn: [Int!]
+  detectorVersionNotIn: [Int!]
+  detectorVersionGT: Int
+  detectorVersionGTE: Int
+  detectorVersionLT: Int
+  detectorVersionLTE: Int
+
+  """fingerprint field predicates"""
+  fingerprint: String
+  fingerprintNEQ: String
+  fingerprintIn: [String!]
+  fingerprintNotIn: [String!]
+  fingerprintGT: String
+  fingerprintGTE: String
+  fingerprintLT: String
+  fingerprintLTE: String
+  fingerprintContains: String
+  fingerprintHasPrefix: String
+  fingerprintHasSuffix: String
+  fingerprintEqualFold: String
+  fingerprintContainsFold: String
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """account edge predicates"""
+  hasAccount: Boolean
+  hasAccountWith: [AccountWhereInput!]
+}
+
 type LogEvent implements Node {
   """Unique identifier of the log event"""
   id: ID!
@@ -2070,24 +2184,12 @@ type LogEvent implements Node {
   severity: LogEventSeverity
 
   """
-  What role this event serves: diagnostic (investigate incidents), operational
-  (system behavior), lifecycle (state transitions), ephemeral (transient state).
-  """
-  signalPurpose: LogEventSignalPurpose!
-
-  """
-  What this event records: system (internal mechanics), traffic (request flow),
-  activity (actor+action+resource), control (access/permission decisions).
-  """
-  eventNature: LogEventEventNature!
-
-  """
-  True when this event represents a multi-line fragment rather than a complete log entry. Set by the classifier.
+  True when this event represents a multi-line fragment rather than a complete log entry. Set during fingerprinting.
   """
   isFragment: Boolean!
 
   """
-  Sample log records captured during discovery, used for AI analysis and pattern validation
+  Sample log records captured during catalog loop collection, used for AI inference and pattern validation.
   """
   examples: [LogRecord!]!
 
@@ -2110,14 +2212,17 @@ type LogEvent implements Node {
   """Service that produces this event"""
   service: Service!
 
-  """Log sample that produced this event during classification"""
+  """Log sample that produced this event during fingerprinting."""
   logSample: LogSample!
 
   """Category-specific policies across workspaces"""
-  policies: [LogEventPolicy!]
+  policies: [LogEventRecommendation!]
 
   """Fields discovered in this event's example records"""
   logEventFields: [LogEventField!]
+
+  """Extensible typed facts attached to this log event"""
+  facts: [LogEventFact!]
 
   """
   Status of this log event.
@@ -2148,12 +2253,139 @@ type LogEventEdge {
   cursor: Cursor!
 }
 
-"""LogEventEventNature is enum for the field event_nature"""
-enum LogEventEventNature {
-  system
-  traffic
-  activity
-  control
+type LogEventFact implements Node {
+  """Unique identifier"""
+  id: ID!
+
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
+  """
+  accountID: UUID!
+
+  """The log event this fact belongs to"""
+  logEventID: ID!
+
+  """Fact namespace, e.g. catalog, quality, security."""
+  namespace: String!
+
+  """Fact type within the namespace, e.g. signal_purpose, body_kind."""
+  factType: String!
+
+  """When this fact was first recorded"""
+  createdAt: Time!
+
+  """When this fact was last refreshed"""
+  updatedAt: Time!
+
+  """The log event this fact belongs to"""
+  logEvent: LogEvent!
+}
+
+"""Ordering options for LogEventFact connections"""
+input LogEventFactOrder {
+  """The ordering direction."""
+  direction: OrderDirection! = ASC
+
+  """The field by which to order LogEventFacts."""
+  field: LogEventFactOrderField!
+}
+
+"""Properties by which LogEventFact connections can be ordered."""
+enum LogEventFactOrderField {
+  NAMESPACE
+  FACT_TYPE
+  CREATED_AT
+  UPDATED_AT
+}
+
+"""
+LogEventFactWhereInput is used for filtering LogEventFact objects.
+Input was generated by ent.
+"""
+input LogEventFactWhereInput {
+  not: LogEventFactWhereInput
+  and: [LogEventFactWhereInput!]
+  or: [LogEventFactWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
+  """log_event_id field predicates"""
+  logEventID: ID
+  logEventIDNEQ: ID
+  logEventIDIn: [ID!]
+  logEventIDNotIn: [ID!]
+
+  """namespace field predicates"""
+  namespace: String
+  namespaceNEQ: String
+  namespaceIn: [String!]
+  namespaceNotIn: [String!]
+  namespaceGT: String
+  namespaceGTE: String
+  namespaceLT: String
+  namespaceLTE: String
+  namespaceContains: String
+  namespaceHasPrefix: String
+  namespaceHasSuffix: String
+  namespaceEqualFold: String
+  namespaceContainsFold: String
+
+  """fact_type field predicates"""
+  factType: String
+  factTypeNEQ: String
+  factTypeIn: [String!]
+  factTypeNotIn: [String!]
+  factTypeGT: String
+  factTypeGTE: String
+  factTypeLT: String
+  factTypeLTE: String
+  factTypeContains: String
+  factTypeHasPrefix: String
+  factTypeHasSuffix: String
+  factTypeEqualFold: String
+  factTypeContainsFold: String
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """log_event edge predicates"""
+  hasLogEvent: Boolean
+  hasLogEventWith: [LogEventWhereInput!]
 }
 
 type LogEventField implements Node {
@@ -2184,6 +2416,144 @@ type LogEventField implements Node {
 
   """The log event this field belongs to"""
   logEvent: LogEvent!
+
+  """Typed facts attached to this log event field"""
+  facts: [LogEventFieldFact!]
+}
+
+type LogEventFieldFact implements Node {
+  """Unique identifier"""
+  id: ID!
+
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from log_event_field.account_id.
+  """
+  accountID: UUID!
+
+  """The log event field this fact belongs to"""
+  logEventFieldID: ID!
+
+  """Fact namespace, e.g. structure or semantic."""
+  namespace: String!
+
+  """Fact type within the namespace, e.g. value_profile or field_role."""
+  factType: String!
+
+  """When this fact was first recorded"""
+  createdAt: Time!
+
+  """When this fact was last refreshed"""
+  updatedAt: Time!
+
+  """The log event field this fact belongs to"""
+  logEventField: LogEventField!
+}
+
+"""Ordering options for LogEventFieldFact connections"""
+input LogEventFieldFactOrder {
+  """The ordering direction."""
+  direction: OrderDirection! = ASC
+
+  """The field by which to order LogEventFieldFacts."""
+  field: LogEventFieldFactOrderField!
+}
+
+"""Properties by which LogEventFieldFact connections can be ordered."""
+enum LogEventFieldFactOrderField {
+  NAMESPACE
+  FACT_TYPE
+  CREATED_AT
+  UPDATED_AT
+}
+
+"""
+LogEventFieldFactWhereInput is used for filtering LogEventFieldFact objects.
+Input was generated by ent.
+"""
+input LogEventFieldFactWhereInput {
+  not: LogEventFieldFactWhereInput
+  and: [LogEventFieldFactWhereInput!]
+  or: [LogEventFieldFactWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
+  """log_event_field_id field predicates"""
+  logEventFieldID: ID
+  logEventFieldIDNEQ: ID
+  logEventFieldIDIn: [ID!]
+  logEventFieldIDNotIn: [ID!]
+
+  """namespace field predicates"""
+  namespace: String
+  namespaceNEQ: String
+  namespaceIn: [String!]
+  namespaceNotIn: [String!]
+  namespaceGT: String
+  namespaceGTE: String
+  namespaceLT: String
+  namespaceLTE: String
+  namespaceContains: String
+  namespaceHasPrefix: String
+  namespaceHasSuffix: String
+  namespaceEqualFold: String
+  namespaceContainsFold: String
+
+  """fact_type field predicates"""
+  factType: String
+  factTypeNEQ: String
+  factTypeIn: [String!]
+  factTypeNotIn: [String!]
+  factTypeGT: String
+  factTypeGTE: String
+  factTypeLT: String
+  factTypeLTE: String
+  factTypeContains: String
+  factTypeHasPrefix: String
+  factTypeHasSuffix: String
+  factTypeEqualFold: String
+  factTypeContainsFold: String
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """log_event_field edge predicates"""
+  hasLogEventField: Boolean
+  hasLogEventFieldWith: [LogEventFieldWhereInput!]
 }
 
 """
@@ -2266,6 +2636,10 @@ input LogEventFieldWhereInput {
   """log_event edge predicates"""
   hasLogEvent: Boolean
   hasLogEventWith: [LogEventWhereInput!]
+
+  """facts edge predicates"""
+  hasFacts: Boolean
+  hasFactsWith: [LogEventFieldFactWhereInput!]
 }
 
 """Ordering options for LogEvent connections"""
@@ -2281,13 +2655,11 @@ input LogEventOrder {
 enum LogEventOrderField {
   NAME
   SEVERITY
-  SIGNAL_PURPOSE
-  EVENT_NATURE
   CREATED_AT
   UPDATED_AT
 }
 
-type LogEventPolicy implements Node {
+type LogEventRecommendation implements Node {
   """Unique identifier"""
   id: ID!
 
@@ -2309,7 +2681,7 @@ type LogEventPolicy implements Node {
   redundant_events, dead_weight. Quality: duplicate_fields,
   instrumentation_bloat, oversized_fields, wrong_level.
   """
-  category: LogEventPolicyCategory!
+  category: LogEventRecommendationCategory!
 
   """
   Whether this category requires AI judgment (true) vs mechanically verifiable
@@ -2321,19 +2693,19 @@ type LogEventPolicy implements Node {
   Type of problem: compliance (legal/security risk), waste (event-level cuts),
   or quality (field-level improvements). Auto-set via trigger from CategoryMeta.
   """
-  categoryType: LogEventPolicyCategoryType!
+  categoryType: LogEventRecommendationCategoryType!
 
   """
   Max compliance severity across sensitivity types. NULL for non-compliance categories. Auto-set via trigger.
   """
-  severity: LogEventPolicySeverity
+  severity: LogEventRecommendationSeverity
 
   """
   What this policy does when enforced: 'drop' (remove all events), 'sample'
   (keep at reduced rate), 'filter' (drop subset by field value), 'trim'
   (remove/truncate fields), 'none' (informational only). Auto-set via trigger.
   """
-  action: LogEventPolicyAction!
+  action: LogEventRecommendationAction!
 
   """When this policy was approved by a user"""
   approvedAt: Time
@@ -2366,12 +2738,12 @@ type LogEventPolicy implements Node {
   """The log event this policy applies to"""
   logEvent: LogEvent!
 
-  """The workspace that owns this policy"""
+  """The workspace that owns this recommendation"""
   workspace: Workspace!
 }
 
-"""LogEventPolicyAction is enum for the field action"""
-enum LogEventPolicyAction {
+"""LogEventRecommendationAction is enum for the field action"""
+enum LogEventRecommendationAction {
   drop
   sample
   filter
@@ -2379,8 +2751,8 @@ enum LogEventPolicyAction {
   none
 }
 
-"""LogEventPolicyCategory is enum for the field category"""
-enum LogEventPolicyCategory {
+"""LogEventRecommendationCategory is enum for the field category"""
+enum LogEventRecommendationCategory {
   pii_leakage
   secrets_leakage
   phi_leakage
@@ -2399,7 +2771,7 @@ enum LogEventPolicyCategory {
   wrong_level
 }
 
-type LogEventPolicyCategoryStatusCache implements Node {
+type LogEventRecommendationCategoryStatusCache implements Node {
   id: ID!
 
   """Account ID for tenant isolation"""
@@ -2411,7 +2783,7 @@ type LogEventPolicyCategoryStatusCache implements Node {
   """
   Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
   """
-  categoryType: LogEventPolicyCategoryStatusCacheCategoryType!
+  categoryType: LogEventRecommendationCategoryStatusCacheCategoryType!
 
   """Human-readable category name (e.g., 'PII Leakage')"""
   displayName: String!
@@ -2486,22 +2858,22 @@ type LogEventPolicyCategoryStatusCache implements Node {
 }
 
 """
-LogEventPolicyCategoryStatusCacheCategoryType is enum for the field category_type
+LogEventRecommendationCategoryStatusCacheCategoryType is enum for the field category_type
 """
-enum LogEventPolicyCategoryStatusCacheCategoryType {
+enum LogEventRecommendationCategoryStatusCacheCategoryType {
   compliance
   waste
   quality
 }
 
 """
-LogEventPolicyCategoryStatusCacheWhereInput is used for filtering LogEventPolicyCategoryStatusCache objects.
+LogEventRecommendationCategoryStatusCacheWhereInput is used for filtering LogEventRecommendationCategoryStatusCache objects.
 Input was generated by ent.
 """
-input LogEventPolicyCategoryStatusCacheWhereInput {
-  not: LogEventPolicyCategoryStatusCacheWhereInput
-  and: [LogEventPolicyCategoryStatusCacheWhereInput!]
-  or: [LogEventPolicyCategoryStatusCacheWhereInput!]
+input LogEventRecommendationCategoryStatusCacheWhereInput {
+  not: LogEventRecommendationCategoryStatusCacheWhereInput
+  and: [LogEventRecommendationCategoryStatusCacheWhereInput!]
+  or: [LogEventRecommendationCategoryStatusCacheWhereInput!]
 
   """id field predicates"""
   id: ID
@@ -2539,10 +2911,10 @@ input LogEventPolicyCategoryStatusCacheWhereInput {
   categoryContainsFold: String
 
   """category_type field predicates"""
-  categoryType: LogEventPolicyCategoryStatusCacheCategoryType
-  categoryTypeNEQ: LogEventPolicyCategoryStatusCacheCategoryType
-  categoryTypeIn: [LogEventPolicyCategoryStatusCacheCategoryType!]
-  categoryTypeNotIn: [LogEventPolicyCategoryStatusCacheCategoryType!]
+  categoryType: LogEventRecommendationCategoryStatusCacheCategoryType
+  categoryTypeNEQ: LogEventRecommendationCategoryStatusCacheCategoryType
+  categoryTypeIn: [LogEventRecommendationCategoryStatusCacheCategoryType!]
+  categoryTypeNotIn: [LogEventRecommendationCategoryStatusCacheCategoryType!]
 
   """display_name field predicates"""
   displayName: String
@@ -2771,17 +3143,17 @@ input LogEventPolicyCategoryStatusCacheWhereInput {
   refreshedAtLTE: Time
 }
 
-"""LogEventPolicyCategoryType is enum for the field category_type"""
-enum LogEventPolicyCategoryType {
+"""LogEventRecommendationCategoryType is enum for the field category_type"""
+enum LogEventRecommendationCategoryType {
   compliance
   waste
   quality
 }
 
 """A connection to a list of items."""
-type LogEventPolicyConnection {
+type LogEventRecommendationConnection {
   """A list of edges."""
-  edges: [LogEventPolicyEdge]
+  edges: [LogEventRecommendationEdge]
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -2791,25 +3163,25 @@ type LogEventPolicyConnection {
 }
 
 """An edge in a connection."""
-type LogEventPolicyEdge {
+type LogEventRecommendationEdge {
   """The item at the end of the edge."""
-  node: LogEventPolicy
+  node: LogEventRecommendation
 
   """A cursor for use in pagination."""
   cursor: Cursor!
 }
 
-"""Ordering options for LogEventPolicy connections"""
-input LogEventPolicyOrder {
+"""Ordering options for LogEventRecommendation connections"""
+input LogEventRecommendationOrder {
   """The ordering direction."""
   direction: OrderDirection! = ASC
 
-  """The field by which to order LogEventPolicies."""
-  field: LogEventPolicyOrderField!
+  """The field by which to order LogEventRecommendations."""
+  field: LogEventRecommendationOrderField!
 }
 
-"""Properties by which LogEventPolicy connections can be ordered."""
-enum LogEventPolicyOrderField {
+"""Properties by which LogEventRecommendation connections can be ordered."""
+enum LogEventRecommendationOrderField {
   CATEGORY
   SUBJECTIVE
   CATEGORY_TYPE
@@ -2821,22 +3193,22 @@ enum LogEventPolicyOrderField {
   UPDATED_AT
 }
 
-"""LogEventPolicySeverity is enum for the field severity"""
-enum LogEventPolicySeverity {
+"""LogEventRecommendationSeverity is enum for the field severity"""
+enum LogEventRecommendationSeverity {
   low
   medium
   high
   critical
 }
 
-type LogEventPolicyStatusCache implements Node {
+type LogEventRecommendationStatusCache implements Node {
   id: ID!
 
   """Account ID for tenant isolation"""
   accountID: UUID!
 
-  """The policy this status row represents"""
-  policyID: ID!
+  """The recommendation this status row represents"""
+  recommendationID: ID!
 
   """The log event this policy targets"""
   logEventID: UUID!
@@ -2853,7 +3225,7 @@ type LogEventPolicyStatusCache implements Node {
   User decision on this policy. PENDING (awaiting review), APPROVED (accepted
   for enforcement), DISMISSED (rejected by user).
   """
-  status: LogEventPolicyStatusCacheStatus!
+  status: LogEventRecommendationStatusCacheStatus!
 
   """
   Whether this category requires AI judgment (true) vs mechanically verifiable (false)
@@ -2863,12 +3235,12 @@ type LogEventPolicyStatusCache implements Node {
   """
   Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
   """
-  categoryType: LogEventPolicyStatusCacheCategoryType!
+  categoryType: LogEventRecommendationStatusCacheCategoryType!
 
   """
   Max compliance severity across sensitivity types. NULL for non-compliance categories.
   """
-  severity: LogEventPolicyStatusCacheSeverity
+  severity: LogEventRecommendationStatusCacheSeverity
 
   """When this policy was approved by a user"""
   approvedAt: Time
@@ -2890,20 +3262,50 @@ type LogEventPolicyStatusCache implements Node {
   """
   survivalRate: Float
 
-  """Events/hour saved if this policy applied alone. NULL if not estimable."""
-  estimatedVolumeReductionPerHour: Float
+  """Current events/hour baseline for this recommendation"""
+  currentEventsPerHour: Float
 
-  """Bytes/hour saved if this policy applied alone. NULL if not estimable."""
-  estimatedBytesReductionPerHour: Float
+  """Current bytes/hour baseline for this recommendation"""
+  currentBytesPerHour: Float
 
-  """Estimated ingestion savings in USD/hour from bytes reduction"""
-  estimatedCostReductionPerHourBytesUsd: Float
+  """Current bytes-billed USD/hour baseline"""
+  currentBytesUsdPerHour: Float
 
-  """Estimated indexing savings in USD/hour from volume reduction"""
-  estimatedCostReductionPerHourVolumeUsd: Float
+  """Current volume-billed USD/hour baseline"""
+  currentVolumeUsdPerHour: Float
 
-  """Estimated total savings in USD/hour (bytes + volume)"""
-  estimatedCostReductionPerHourUsd: Float
+  """Current total USD/hour baseline"""
+  currentTotalUsdPerHour: Float
+
+  """Estimated events/hour if this recommendation is applied alone"""
+  estimatedEventsPerHour: Float
+
+  """Estimated bytes/hour if this recommendation is applied alone"""
+  estimatedBytesPerHour: Float
+
+  """Estimated bytes-billed USD/hour if applied alone"""
+  estimatedBytesUsdPerHour: Float
+
+  """Estimated volume-billed USD/hour if applied alone"""
+  estimatedVolumeUsdPerHour: Float
+
+  """Estimated total USD/hour if applied alone"""
+  estimatedTotalUsdPerHour: Float
+
+  """Estimated impact in events/hour (estimated - current)"""
+  impactEventsPerHour: Float
+
+  """Estimated impact in bytes/hour (estimated - current)"""
+  impactBytesPerHour: Float
+
+  """Estimated impact in bytes-billed USD/hour (estimated - current)"""
+  impactBytesUsdPerHour: Float
+
+  """Estimated impact in volume-billed USD/hour (estimated - current)"""
+  impactVolumeUsdPerHour: Float
+
+  """Estimated impact in total USD/hour (estimated - current)"""
+  impactTotalUsdPerHour: Float
 
   """Service that produces the targeted log event (denormalized)"""
   serviceID: UUID
@@ -2913,47 +3315,43 @@ type LogEventPolicyStatusCache implements Node {
 
   """Name of the targeted log event (denormalized for display)"""
   logEventName: String
-
-  """Current throughput of the targeted log event in events/hour"""
-  volumePerHour: Float
-
-  """Current throughput of the targeted log event in bytes/hour"""
-  bytesPerHour: Float
   refreshedAt: Time!
 }
 
 """
-LogEventPolicyStatusCacheCategoryType is enum for the field category_type
+LogEventRecommendationStatusCacheCategoryType is enum for the field category_type
 """
-enum LogEventPolicyStatusCacheCategoryType {
+enum LogEventRecommendationStatusCacheCategoryType {
   compliance
   waste
   quality
 }
 
-"""LogEventPolicyStatusCacheSeverity is enum for the field severity"""
-enum LogEventPolicyStatusCacheSeverity {
+"""
+LogEventRecommendationStatusCacheSeverity is enum for the field severity
+"""
+enum LogEventRecommendationStatusCacheSeverity {
   low
   medium
   high
   critical
 }
 
-"""LogEventPolicyStatusCacheStatus is enum for the field status"""
-enum LogEventPolicyStatusCacheStatus {
+"""LogEventRecommendationStatusCacheStatus is enum for the field status"""
+enum LogEventRecommendationStatusCacheStatus {
   PENDING
   APPROVED
   DISMISSED
 }
 
 """
-LogEventPolicyStatusCacheWhereInput is used for filtering LogEventPolicyStatusCache objects.
+LogEventRecommendationStatusCacheWhereInput is used for filtering LogEventRecommendationStatusCache objects.
 Input was generated by ent.
 """
-input LogEventPolicyStatusCacheWhereInput {
-  not: LogEventPolicyStatusCacheWhereInput
-  and: [LogEventPolicyStatusCacheWhereInput!]
-  or: [LogEventPolicyStatusCacheWhereInput!]
+input LogEventRecommendationStatusCacheWhereInput {
+  not: LogEventRecommendationStatusCacheWhereInput
+  and: [LogEventRecommendationStatusCacheWhereInput!]
+  or: [LogEventRecommendationStatusCacheWhereInput!]
 
   """id field predicates"""
   id: ID
@@ -2975,11 +3373,11 @@ input LogEventPolicyStatusCacheWhereInput {
   accountIDLT: UUID
   accountIDLTE: UUID
 
-  """policy_id field predicates"""
-  policyID: ID
-  policyIDNEQ: ID
-  policyIDIn: [ID!]
-  policyIDNotIn: [ID!]
+  """recommendation_id field predicates"""
+  recommendationID: ID
+  recommendationIDNEQ: ID
+  recommendationIDIn: [ID!]
+  recommendationIDNotIn: [ID!]
 
   """log_event_id field predicates"""
   logEventID: UUID
@@ -3017,26 +3415,26 @@ input LogEventPolicyStatusCacheWhereInput {
   categoryContainsFold: String
 
   """status field predicates"""
-  status: LogEventPolicyStatusCacheStatus
-  statusNEQ: LogEventPolicyStatusCacheStatus
-  statusIn: [LogEventPolicyStatusCacheStatus!]
-  statusNotIn: [LogEventPolicyStatusCacheStatus!]
+  status: LogEventRecommendationStatusCacheStatus
+  statusNEQ: LogEventRecommendationStatusCacheStatus
+  statusIn: [LogEventRecommendationStatusCacheStatus!]
+  statusNotIn: [LogEventRecommendationStatusCacheStatus!]
 
   """subjective field predicates"""
   subjective: Boolean
   subjectiveNEQ: Boolean
 
   """category_type field predicates"""
-  categoryType: LogEventPolicyStatusCacheCategoryType
-  categoryTypeNEQ: LogEventPolicyStatusCacheCategoryType
-  categoryTypeIn: [LogEventPolicyStatusCacheCategoryType!]
-  categoryTypeNotIn: [LogEventPolicyStatusCacheCategoryType!]
+  categoryType: LogEventRecommendationStatusCacheCategoryType
+  categoryTypeNEQ: LogEventRecommendationStatusCacheCategoryType
+  categoryTypeIn: [LogEventRecommendationStatusCacheCategoryType!]
+  categoryTypeNotIn: [LogEventRecommendationStatusCacheCategoryType!]
 
   """severity field predicates"""
-  severity: LogEventPolicyStatusCacheSeverity
-  severityNEQ: LogEventPolicyStatusCacheSeverity
-  severityIn: [LogEventPolicyStatusCacheSeverity!]
-  severityNotIn: [LogEventPolicyStatusCacheSeverity!]
+  severity: LogEventRecommendationStatusCacheSeverity
+  severityNEQ: LogEventRecommendationStatusCacheSeverity
+  severityIn: [LogEventRecommendationStatusCacheSeverity!]
+  severityNotIn: [LogEventRecommendationStatusCacheSeverity!]
   severityIsNil: Boolean
   severityNotNil: Boolean
 
@@ -3103,65 +3501,185 @@ input LogEventPolicyStatusCacheWhereInput {
   survivalRateIsNil: Boolean
   survivalRateNotNil: Boolean
 
-  """estimated_volume_reduction_per_hour field predicates"""
-  estimatedVolumeReductionPerHour: Float
-  estimatedVolumeReductionPerHourNEQ: Float
-  estimatedVolumeReductionPerHourIn: [Float!]
-  estimatedVolumeReductionPerHourNotIn: [Float!]
-  estimatedVolumeReductionPerHourGT: Float
-  estimatedVolumeReductionPerHourGTE: Float
-  estimatedVolumeReductionPerHourLT: Float
-  estimatedVolumeReductionPerHourLTE: Float
-  estimatedVolumeReductionPerHourIsNil: Boolean
-  estimatedVolumeReductionPerHourNotNil: Boolean
+  """current_events_per_hour field predicates"""
+  currentEventsPerHour: Float
+  currentEventsPerHourNEQ: Float
+  currentEventsPerHourIn: [Float!]
+  currentEventsPerHourNotIn: [Float!]
+  currentEventsPerHourGT: Float
+  currentEventsPerHourGTE: Float
+  currentEventsPerHourLT: Float
+  currentEventsPerHourLTE: Float
+  currentEventsPerHourIsNil: Boolean
+  currentEventsPerHourNotNil: Boolean
 
-  """estimated_bytes_reduction_per_hour field predicates"""
-  estimatedBytesReductionPerHour: Float
-  estimatedBytesReductionPerHourNEQ: Float
-  estimatedBytesReductionPerHourIn: [Float!]
-  estimatedBytesReductionPerHourNotIn: [Float!]
-  estimatedBytesReductionPerHourGT: Float
-  estimatedBytesReductionPerHourGTE: Float
-  estimatedBytesReductionPerHourLT: Float
-  estimatedBytesReductionPerHourLTE: Float
-  estimatedBytesReductionPerHourIsNil: Boolean
-  estimatedBytesReductionPerHourNotNil: Boolean
+  """current_bytes_per_hour field predicates"""
+  currentBytesPerHour: Float
+  currentBytesPerHourNEQ: Float
+  currentBytesPerHourIn: [Float!]
+  currentBytesPerHourNotIn: [Float!]
+  currentBytesPerHourGT: Float
+  currentBytesPerHourGTE: Float
+  currentBytesPerHourLT: Float
+  currentBytesPerHourLTE: Float
+  currentBytesPerHourIsNil: Boolean
+  currentBytesPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourBytesUsdNEQ: Float
-  estimatedCostReductionPerHourBytesUsdIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdGT: Float
-  estimatedCostReductionPerHourBytesUsdGTE: Float
-  estimatedCostReductionPerHourBytesUsdLT: Float
-  estimatedCostReductionPerHourBytesUsdLTE: Float
-  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
-  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+  """current_bytes_usd_per_hour field predicates"""
+  currentBytesUsdPerHour: Float
+  currentBytesUsdPerHourNEQ: Float
+  currentBytesUsdPerHourIn: [Float!]
+  currentBytesUsdPerHourNotIn: [Float!]
+  currentBytesUsdPerHourGT: Float
+  currentBytesUsdPerHourGTE: Float
+  currentBytesUsdPerHourLT: Float
+  currentBytesUsdPerHourLTE: Float
+  currentBytesUsdPerHourIsNil: Boolean
+  currentBytesUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourVolumeUsdNEQ: Float
-  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdGT: Float
-  estimatedCostReductionPerHourVolumeUsdGTE: Float
-  estimatedCostReductionPerHourVolumeUsdLT: Float
-  estimatedCostReductionPerHourVolumeUsdLTE: Float
-  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
-  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+  """current_volume_usd_per_hour field predicates"""
+  currentVolumeUsdPerHour: Float
+  currentVolumeUsdPerHourNEQ: Float
+  currentVolumeUsdPerHourIn: [Float!]
+  currentVolumeUsdPerHourNotIn: [Float!]
+  currentVolumeUsdPerHourGT: Float
+  currentVolumeUsdPerHourGTE: Float
+  currentVolumeUsdPerHourLT: Float
+  currentVolumeUsdPerHourLTE: Float
+  currentVolumeUsdPerHourIsNil: Boolean
+  currentVolumeUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_usd field predicates"""
-  estimatedCostReductionPerHourUsd: Float
-  estimatedCostReductionPerHourUsdNEQ: Float
-  estimatedCostReductionPerHourUsdIn: [Float!]
-  estimatedCostReductionPerHourUsdNotIn: [Float!]
-  estimatedCostReductionPerHourUsdGT: Float
-  estimatedCostReductionPerHourUsdGTE: Float
-  estimatedCostReductionPerHourUsdLT: Float
-  estimatedCostReductionPerHourUsdLTE: Float
-  estimatedCostReductionPerHourUsdIsNil: Boolean
-  estimatedCostReductionPerHourUsdNotNil: Boolean
+  """current_total_usd_per_hour field predicates"""
+  currentTotalUsdPerHour: Float
+  currentTotalUsdPerHourNEQ: Float
+  currentTotalUsdPerHourIn: [Float!]
+  currentTotalUsdPerHourNotIn: [Float!]
+  currentTotalUsdPerHourGT: Float
+  currentTotalUsdPerHourGTE: Float
+  currentTotalUsdPerHourLT: Float
+  currentTotalUsdPerHourLTE: Float
+  currentTotalUsdPerHourIsNil: Boolean
+  currentTotalUsdPerHourNotNil: Boolean
+
+  """estimated_events_per_hour field predicates"""
+  estimatedEventsPerHour: Float
+  estimatedEventsPerHourNEQ: Float
+  estimatedEventsPerHourIn: [Float!]
+  estimatedEventsPerHourNotIn: [Float!]
+  estimatedEventsPerHourGT: Float
+  estimatedEventsPerHourGTE: Float
+  estimatedEventsPerHourLT: Float
+  estimatedEventsPerHourLTE: Float
+  estimatedEventsPerHourIsNil: Boolean
+  estimatedEventsPerHourNotNil: Boolean
+
+  """estimated_bytes_per_hour field predicates"""
+  estimatedBytesPerHour: Float
+  estimatedBytesPerHourNEQ: Float
+  estimatedBytesPerHourIn: [Float!]
+  estimatedBytesPerHourNotIn: [Float!]
+  estimatedBytesPerHourGT: Float
+  estimatedBytesPerHourGTE: Float
+  estimatedBytesPerHourLT: Float
+  estimatedBytesPerHourLTE: Float
+  estimatedBytesPerHourIsNil: Boolean
+  estimatedBytesPerHourNotNil: Boolean
+
+  """estimated_bytes_usd_per_hour field predicates"""
+  estimatedBytesUsdPerHour: Float
+  estimatedBytesUsdPerHourNEQ: Float
+  estimatedBytesUsdPerHourIn: [Float!]
+  estimatedBytesUsdPerHourNotIn: [Float!]
+  estimatedBytesUsdPerHourGT: Float
+  estimatedBytesUsdPerHourGTE: Float
+  estimatedBytesUsdPerHourLT: Float
+  estimatedBytesUsdPerHourLTE: Float
+  estimatedBytesUsdPerHourIsNil: Boolean
+  estimatedBytesUsdPerHourNotNil: Boolean
+
+  """estimated_volume_usd_per_hour field predicates"""
+  estimatedVolumeUsdPerHour: Float
+  estimatedVolumeUsdPerHourNEQ: Float
+  estimatedVolumeUsdPerHourIn: [Float!]
+  estimatedVolumeUsdPerHourNotIn: [Float!]
+  estimatedVolumeUsdPerHourGT: Float
+  estimatedVolumeUsdPerHourGTE: Float
+  estimatedVolumeUsdPerHourLT: Float
+  estimatedVolumeUsdPerHourLTE: Float
+  estimatedVolumeUsdPerHourIsNil: Boolean
+  estimatedVolumeUsdPerHourNotNil: Boolean
+
+  """estimated_total_usd_per_hour field predicates"""
+  estimatedTotalUsdPerHour: Float
+  estimatedTotalUsdPerHourNEQ: Float
+  estimatedTotalUsdPerHourIn: [Float!]
+  estimatedTotalUsdPerHourNotIn: [Float!]
+  estimatedTotalUsdPerHourGT: Float
+  estimatedTotalUsdPerHourGTE: Float
+  estimatedTotalUsdPerHourLT: Float
+  estimatedTotalUsdPerHourLTE: Float
+  estimatedTotalUsdPerHourIsNil: Boolean
+  estimatedTotalUsdPerHourNotNil: Boolean
+
+  """impact_events_per_hour field predicates"""
+  impactEventsPerHour: Float
+  impactEventsPerHourNEQ: Float
+  impactEventsPerHourIn: [Float!]
+  impactEventsPerHourNotIn: [Float!]
+  impactEventsPerHourGT: Float
+  impactEventsPerHourGTE: Float
+  impactEventsPerHourLT: Float
+  impactEventsPerHourLTE: Float
+  impactEventsPerHourIsNil: Boolean
+  impactEventsPerHourNotNil: Boolean
+
+  """impact_bytes_per_hour field predicates"""
+  impactBytesPerHour: Float
+  impactBytesPerHourNEQ: Float
+  impactBytesPerHourIn: [Float!]
+  impactBytesPerHourNotIn: [Float!]
+  impactBytesPerHourGT: Float
+  impactBytesPerHourGTE: Float
+  impactBytesPerHourLT: Float
+  impactBytesPerHourLTE: Float
+  impactBytesPerHourIsNil: Boolean
+  impactBytesPerHourNotNil: Boolean
+
+  """impact_bytes_usd_per_hour field predicates"""
+  impactBytesUsdPerHour: Float
+  impactBytesUsdPerHourNEQ: Float
+  impactBytesUsdPerHourIn: [Float!]
+  impactBytesUsdPerHourNotIn: [Float!]
+  impactBytesUsdPerHourGT: Float
+  impactBytesUsdPerHourGTE: Float
+  impactBytesUsdPerHourLT: Float
+  impactBytesUsdPerHourLTE: Float
+  impactBytesUsdPerHourIsNil: Boolean
+  impactBytesUsdPerHourNotNil: Boolean
+
+  """impact_volume_usd_per_hour field predicates"""
+  impactVolumeUsdPerHour: Float
+  impactVolumeUsdPerHourNEQ: Float
+  impactVolumeUsdPerHourIn: [Float!]
+  impactVolumeUsdPerHourNotIn: [Float!]
+  impactVolumeUsdPerHourGT: Float
+  impactVolumeUsdPerHourGTE: Float
+  impactVolumeUsdPerHourLT: Float
+  impactVolumeUsdPerHourLTE: Float
+  impactVolumeUsdPerHourIsNil: Boolean
+  impactVolumeUsdPerHourNotNil: Boolean
+
+  """impact_total_usd_per_hour field predicates"""
+  impactTotalUsdPerHour: Float
+  impactTotalUsdPerHourNEQ: Float
+  impactTotalUsdPerHourIn: [Float!]
+  impactTotalUsdPerHourNotIn: [Float!]
+  impactTotalUsdPerHourGT: Float
+  impactTotalUsdPerHourGTE: Float
+  impactTotalUsdPerHourLT: Float
+  impactTotalUsdPerHourLTE: Float
+  impactTotalUsdPerHourIsNil: Boolean
+  impactTotalUsdPerHourNotNil: Boolean
 
   """service_id field predicates"""
   serviceID: UUID
@@ -3209,30 +3727,6 @@ input LogEventPolicyStatusCacheWhereInput {
   logEventNameEqualFold: String
   logEventNameContainsFold: String
 
-  """volume_per_hour field predicates"""
-  volumePerHour: Float
-  volumePerHourNEQ: Float
-  volumePerHourIn: [Float!]
-  volumePerHourNotIn: [Float!]
-  volumePerHourGT: Float
-  volumePerHourGTE: Float
-  volumePerHourLT: Float
-  volumePerHourLTE: Float
-  volumePerHourIsNil: Boolean
-  volumePerHourNotNil: Boolean
-
-  """bytes_per_hour field predicates"""
-  bytesPerHour: Float
-  bytesPerHourNEQ: Float
-  bytesPerHourIn: [Float!]
-  bytesPerHourNotIn: [Float!]
-  bytesPerHourGT: Float
-  bytesPerHourGTE: Float
-  bytesPerHourLT: Float
-  bytesPerHourLTE: Float
-  bytesPerHourIsNil: Boolean
-  bytesPerHourNotNil: Boolean
-
   """refreshed_at field predicates"""
   refreshedAt: Time
   refreshedAtNEQ: Time
@@ -3245,13 +3739,13 @@ input LogEventPolicyStatusCacheWhereInput {
 }
 
 """
-LogEventPolicyWhereInput is used for filtering LogEventPolicy objects.
+LogEventRecommendationWhereInput is used for filtering LogEventRecommendation objects.
 Input was generated by ent.
 """
-input LogEventPolicyWhereInput {
-  not: LogEventPolicyWhereInput
-  and: [LogEventPolicyWhereInput!]
-  or: [LogEventPolicyWhereInput!]
+input LogEventRecommendationWhereInput {
+  not: LogEventRecommendationWhereInput
+  and: [LogEventRecommendationWhereInput!]
+  or: [LogEventRecommendationWhereInput!]
 
   """id field predicates"""
   id: ID
@@ -3286,34 +3780,34 @@ input LogEventPolicyWhereInput {
   workspaceIDNotIn: [ID!]
 
   """category field predicates"""
-  category: LogEventPolicyCategory
-  categoryNEQ: LogEventPolicyCategory
-  categoryIn: [LogEventPolicyCategory!]
-  categoryNotIn: [LogEventPolicyCategory!]
+  category: LogEventRecommendationCategory
+  categoryNEQ: LogEventRecommendationCategory
+  categoryIn: [LogEventRecommendationCategory!]
+  categoryNotIn: [LogEventRecommendationCategory!]
 
   """subjective field predicates"""
   subjective: Boolean
   subjectiveNEQ: Boolean
 
   """category_type field predicates"""
-  categoryType: LogEventPolicyCategoryType
-  categoryTypeNEQ: LogEventPolicyCategoryType
-  categoryTypeIn: [LogEventPolicyCategoryType!]
-  categoryTypeNotIn: [LogEventPolicyCategoryType!]
+  categoryType: LogEventRecommendationCategoryType
+  categoryTypeNEQ: LogEventRecommendationCategoryType
+  categoryTypeIn: [LogEventRecommendationCategoryType!]
+  categoryTypeNotIn: [LogEventRecommendationCategoryType!]
 
   """severity field predicates"""
-  severity: LogEventPolicySeverity
-  severityNEQ: LogEventPolicySeverity
-  severityIn: [LogEventPolicySeverity!]
-  severityNotIn: [LogEventPolicySeverity!]
+  severity: LogEventRecommendationSeverity
+  severityNEQ: LogEventRecommendationSeverity
+  severityIn: [LogEventRecommendationSeverity!]
+  severityNotIn: [LogEventRecommendationSeverity!]
   severityIsNil: Boolean
   severityNotNil: Boolean
 
   """action field predicates"""
-  action: LogEventPolicyAction
-  actionNEQ: LogEventPolicyAction
-  actionIn: [LogEventPolicyAction!]
-  actionNotIn: [LogEventPolicyAction!]
+  action: LogEventRecommendationAction
+  actionNEQ: LogEventRecommendationAction
+  actionIn: [LogEventRecommendationAction!]
+  actionNotIn: [LogEventRecommendationAction!]
 
   """approved_at field predicates"""
   approvedAt: Time
@@ -3450,14 +3944,6 @@ enum LogEventSeverity {
   other
 }
 
-"""LogEventSignalPurpose is enum for the field signal_purpose"""
-enum LogEventSignalPurpose {
-  diagnostic
-  operational
-  lifecycle
-  ephemeral
-}
-
 type LogEventStatusCache implements Node {
   id: ID!
   accountID: UUID!
@@ -3465,34 +3951,30 @@ type LogEventStatusCache implements Node {
   serviceID: UUID!
   hasVolumes: Boolean!
   hasBeenAnalyzed: Boolean!
-  policyCount: Int!
-  pendingPolicyCount: Int!
-  approvedPolicyCount: Int!
-  dismissedPolicyCount: Int!
+  effectivePolicyEnabled: Boolean!
+  recommendationCount: Int!
+  pendingRecommendationCount: Int!
+  approvedRecommendationCount: Int!
+  dismissedRecommendationCount: Int!
   policyPendingLowCount: Int!
   policyPendingMediumCount: Int!
   policyPendingHighCount: Int!
   policyPendingCriticalCount: Int!
-  estimatedVolumeReductionPerHour: Float
-  estimatedBytesReductionPerHour: Float
-  volumePerHour: Float
-  bytesPerHour: Float
-  costPerHourBytesUsd: Float
-  costPerHourVolumeUsd: Float
-  costPerHourUsd: Float
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourUsd: Float
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourAfter: Float
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourAfter: Float
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterUsd: Float
+  currentEventsPerHour: Float
+  currentBytesPerHour: Float
+  currentBytesUsdPerHour: Float
+  currentVolumeUsdPerHour: Float
+  currentTotalUsdPerHour: Float
+  estimatedEventsPerHour: Float
+  estimatedBytesPerHour: Float
+  estimatedBytesUsdPerHour: Float
+  estimatedVolumeUsdPerHour: Float
+  estimatedTotalUsdPerHour: Float
+  impactEventsPerHour: Float
+  impactBytesPerHour: Float
+  impactBytesUsdPerHour: Float
+  impactVolumeUsdPerHour: Float
+  impactTotalUsdPerHour: Float
   refreshedAt: Time!
 }
 
@@ -3549,45 +4031,49 @@ input LogEventStatusCacheWhereInput {
   hasBeenAnalyzed: Boolean
   hasBeenAnalyzedNEQ: Boolean
 
-  """policy_count field predicates"""
-  policyCount: Int
-  policyCountNEQ: Int
-  policyCountIn: [Int!]
-  policyCountNotIn: [Int!]
-  policyCountGT: Int
-  policyCountGTE: Int
-  policyCountLT: Int
-  policyCountLTE: Int
+  """effective_policy_enabled field predicates"""
+  effectivePolicyEnabled: Boolean
+  effectivePolicyEnabledNEQ: Boolean
 
-  """pending_policy_count field predicates"""
-  pendingPolicyCount: Int
-  pendingPolicyCountNEQ: Int
-  pendingPolicyCountIn: [Int!]
-  pendingPolicyCountNotIn: [Int!]
-  pendingPolicyCountGT: Int
-  pendingPolicyCountGTE: Int
-  pendingPolicyCountLT: Int
-  pendingPolicyCountLTE: Int
+  """recommendation_count field predicates"""
+  recommendationCount: Int
+  recommendationCountNEQ: Int
+  recommendationCountIn: [Int!]
+  recommendationCountNotIn: [Int!]
+  recommendationCountGT: Int
+  recommendationCountGTE: Int
+  recommendationCountLT: Int
+  recommendationCountLTE: Int
 
-  """approved_policy_count field predicates"""
-  approvedPolicyCount: Int
-  approvedPolicyCountNEQ: Int
-  approvedPolicyCountIn: [Int!]
-  approvedPolicyCountNotIn: [Int!]
-  approvedPolicyCountGT: Int
-  approvedPolicyCountGTE: Int
-  approvedPolicyCountLT: Int
-  approvedPolicyCountLTE: Int
+  """pending_recommendation_count field predicates"""
+  pendingRecommendationCount: Int
+  pendingRecommendationCountNEQ: Int
+  pendingRecommendationCountIn: [Int!]
+  pendingRecommendationCountNotIn: [Int!]
+  pendingRecommendationCountGT: Int
+  pendingRecommendationCountGTE: Int
+  pendingRecommendationCountLT: Int
+  pendingRecommendationCountLTE: Int
 
-  """dismissed_policy_count field predicates"""
-  dismissedPolicyCount: Int
-  dismissedPolicyCountNEQ: Int
-  dismissedPolicyCountIn: [Int!]
-  dismissedPolicyCountNotIn: [Int!]
-  dismissedPolicyCountGT: Int
-  dismissedPolicyCountGTE: Int
-  dismissedPolicyCountLT: Int
-  dismissedPolicyCountLTE: Int
+  """approved_recommendation_count field predicates"""
+  approvedRecommendationCount: Int
+  approvedRecommendationCountNEQ: Int
+  approvedRecommendationCountIn: [Int!]
+  approvedRecommendationCountNotIn: [Int!]
+  approvedRecommendationCountGT: Int
+  approvedRecommendationCountGTE: Int
+  approvedRecommendationCountLT: Int
+  approvedRecommendationCountLTE: Int
+
+  """dismissed_recommendation_count field predicates"""
+  dismissedRecommendationCount: Int
+  dismissedRecommendationCountNEQ: Int
+  dismissedRecommendationCountIn: [Int!]
+  dismissedRecommendationCountNotIn: [Int!]
+  dismissedRecommendationCountGT: Int
+  dismissedRecommendationCountGTE: Int
+  dismissedRecommendationCountLT: Int
+  dismissedRecommendationCountLTE: Int
 
   """policy_pending_low_count field predicates"""
   policyPendingLowCount: Int
@@ -3629,245 +4115,185 @@ input LogEventStatusCacheWhereInput {
   policyPendingCriticalCountLT: Int
   policyPendingCriticalCountLTE: Int
 
-  """estimated_volume_reduction_per_hour field predicates"""
-  estimatedVolumeReductionPerHour: Float
-  estimatedVolumeReductionPerHourNEQ: Float
-  estimatedVolumeReductionPerHourIn: [Float!]
-  estimatedVolumeReductionPerHourNotIn: [Float!]
-  estimatedVolumeReductionPerHourGT: Float
-  estimatedVolumeReductionPerHourGTE: Float
-  estimatedVolumeReductionPerHourLT: Float
-  estimatedVolumeReductionPerHourLTE: Float
-  estimatedVolumeReductionPerHourIsNil: Boolean
-  estimatedVolumeReductionPerHourNotNil: Boolean
+  """current_events_per_hour field predicates"""
+  currentEventsPerHour: Float
+  currentEventsPerHourNEQ: Float
+  currentEventsPerHourIn: [Float!]
+  currentEventsPerHourNotIn: [Float!]
+  currentEventsPerHourGT: Float
+  currentEventsPerHourGTE: Float
+  currentEventsPerHourLT: Float
+  currentEventsPerHourLTE: Float
+  currentEventsPerHourIsNil: Boolean
+  currentEventsPerHourNotNil: Boolean
 
-  """estimated_bytes_reduction_per_hour field predicates"""
-  estimatedBytesReductionPerHour: Float
-  estimatedBytesReductionPerHourNEQ: Float
-  estimatedBytesReductionPerHourIn: [Float!]
-  estimatedBytesReductionPerHourNotIn: [Float!]
-  estimatedBytesReductionPerHourGT: Float
-  estimatedBytesReductionPerHourGTE: Float
-  estimatedBytesReductionPerHourLT: Float
-  estimatedBytesReductionPerHourLTE: Float
-  estimatedBytesReductionPerHourIsNil: Boolean
-  estimatedBytesReductionPerHourNotNil: Boolean
+  """current_bytes_per_hour field predicates"""
+  currentBytesPerHour: Float
+  currentBytesPerHourNEQ: Float
+  currentBytesPerHourIn: [Float!]
+  currentBytesPerHourNotIn: [Float!]
+  currentBytesPerHourGT: Float
+  currentBytesPerHourGTE: Float
+  currentBytesPerHourLT: Float
+  currentBytesPerHourLTE: Float
+  currentBytesPerHourIsNil: Boolean
+  currentBytesPerHourNotNil: Boolean
 
-  """volume_per_hour field predicates"""
-  volumePerHour: Float
-  volumePerHourNEQ: Float
-  volumePerHourIn: [Float!]
-  volumePerHourNotIn: [Float!]
-  volumePerHourGT: Float
-  volumePerHourGTE: Float
-  volumePerHourLT: Float
-  volumePerHourLTE: Float
-  volumePerHourIsNil: Boolean
-  volumePerHourNotNil: Boolean
+  """current_bytes_usd_per_hour field predicates"""
+  currentBytesUsdPerHour: Float
+  currentBytesUsdPerHourNEQ: Float
+  currentBytesUsdPerHourIn: [Float!]
+  currentBytesUsdPerHourNotIn: [Float!]
+  currentBytesUsdPerHourGT: Float
+  currentBytesUsdPerHourGTE: Float
+  currentBytesUsdPerHourLT: Float
+  currentBytesUsdPerHourLTE: Float
+  currentBytesUsdPerHourIsNil: Boolean
+  currentBytesUsdPerHourNotNil: Boolean
 
-  """bytes_per_hour field predicates"""
-  bytesPerHour: Float
-  bytesPerHourNEQ: Float
-  bytesPerHourIn: [Float!]
-  bytesPerHourNotIn: [Float!]
-  bytesPerHourGT: Float
-  bytesPerHourGTE: Float
-  bytesPerHourLT: Float
-  bytesPerHourLTE: Float
-  bytesPerHourIsNil: Boolean
-  bytesPerHourNotNil: Boolean
+  """current_volume_usd_per_hour field predicates"""
+  currentVolumeUsdPerHour: Float
+  currentVolumeUsdPerHourNEQ: Float
+  currentVolumeUsdPerHourIn: [Float!]
+  currentVolumeUsdPerHourNotIn: [Float!]
+  currentVolumeUsdPerHourGT: Float
+  currentVolumeUsdPerHourGTE: Float
+  currentVolumeUsdPerHourLT: Float
+  currentVolumeUsdPerHourLTE: Float
+  currentVolumeUsdPerHourIsNil: Boolean
+  currentVolumeUsdPerHourNotNil: Boolean
 
-  """cost_per_hour_bytes_usd field predicates"""
-  costPerHourBytesUsd: Float
-  costPerHourBytesUsdNEQ: Float
-  costPerHourBytesUsdIn: [Float!]
-  costPerHourBytesUsdNotIn: [Float!]
-  costPerHourBytesUsdGT: Float
-  costPerHourBytesUsdGTE: Float
-  costPerHourBytesUsdLT: Float
-  costPerHourBytesUsdLTE: Float
-  costPerHourBytesUsdIsNil: Boolean
-  costPerHourBytesUsdNotNil: Boolean
+  """current_total_usd_per_hour field predicates"""
+  currentTotalUsdPerHour: Float
+  currentTotalUsdPerHourNEQ: Float
+  currentTotalUsdPerHourIn: [Float!]
+  currentTotalUsdPerHourNotIn: [Float!]
+  currentTotalUsdPerHourGT: Float
+  currentTotalUsdPerHourGTE: Float
+  currentTotalUsdPerHourLT: Float
+  currentTotalUsdPerHourLTE: Float
+  currentTotalUsdPerHourIsNil: Boolean
+  currentTotalUsdPerHourNotNil: Boolean
 
-  """cost_per_hour_volume_usd field predicates"""
-  costPerHourVolumeUsd: Float
-  costPerHourVolumeUsdNEQ: Float
-  costPerHourVolumeUsdIn: [Float!]
-  costPerHourVolumeUsdNotIn: [Float!]
-  costPerHourVolumeUsdGT: Float
-  costPerHourVolumeUsdGTE: Float
-  costPerHourVolumeUsdLT: Float
-  costPerHourVolumeUsdLTE: Float
-  costPerHourVolumeUsdIsNil: Boolean
-  costPerHourVolumeUsdNotNil: Boolean
+  """estimated_events_per_hour field predicates"""
+  estimatedEventsPerHour: Float
+  estimatedEventsPerHourNEQ: Float
+  estimatedEventsPerHourIn: [Float!]
+  estimatedEventsPerHourNotIn: [Float!]
+  estimatedEventsPerHourGT: Float
+  estimatedEventsPerHourGTE: Float
+  estimatedEventsPerHourLT: Float
+  estimatedEventsPerHourLTE: Float
+  estimatedEventsPerHourIsNil: Boolean
+  estimatedEventsPerHourNotNil: Boolean
 
-  """cost_per_hour_usd field predicates"""
-  costPerHourUsd: Float
-  costPerHourUsdNEQ: Float
-  costPerHourUsdIn: [Float!]
-  costPerHourUsdNotIn: [Float!]
-  costPerHourUsdGT: Float
-  costPerHourUsdGTE: Float
-  costPerHourUsdLT: Float
-  costPerHourUsdLTE: Float
-  costPerHourUsdIsNil: Boolean
-  costPerHourUsdNotNil: Boolean
+  """estimated_bytes_per_hour field predicates"""
+  estimatedBytesPerHour: Float
+  estimatedBytesPerHourNEQ: Float
+  estimatedBytesPerHourIn: [Float!]
+  estimatedBytesPerHourNotIn: [Float!]
+  estimatedBytesPerHourGT: Float
+  estimatedBytesPerHourGTE: Float
+  estimatedBytesPerHourLT: Float
+  estimatedBytesPerHourLTE: Float
+  estimatedBytesPerHourIsNil: Boolean
+  estimatedBytesPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourBytesUsdNEQ: Float
-  estimatedCostReductionPerHourBytesUsdIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdGT: Float
-  estimatedCostReductionPerHourBytesUsdGTE: Float
-  estimatedCostReductionPerHourBytesUsdLT: Float
-  estimatedCostReductionPerHourBytesUsdLTE: Float
-  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
-  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+  """estimated_bytes_usd_per_hour field predicates"""
+  estimatedBytesUsdPerHour: Float
+  estimatedBytesUsdPerHourNEQ: Float
+  estimatedBytesUsdPerHourIn: [Float!]
+  estimatedBytesUsdPerHourNotIn: [Float!]
+  estimatedBytesUsdPerHourGT: Float
+  estimatedBytesUsdPerHourGTE: Float
+  estimatedBytesUsdPerHourLT: Float
+  estimatedBytesUsdPerHourLTE: Float
+  estimatedBytesUsdPerHourIsNil: Boolean
+  estimatedBytesUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourVolumeUsdNEQ: Float
-  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdGT: Float
-  estimatedCostReductionPerHourVolumeUsdGTE: Float
-  estimatedCostReductionPerHourVolumeUsdLT: Float
-  estimatedCostReductionPerHourVolumeUsdLTE: Float
-  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
-  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+  """estimated_volume_usd_per_hour field predicates"""
+  estimatedVolumeUsdPerHour: Float
+  estimatedVolumeUsdPerHourNEQ: Float
+  estimatedVolumeUsdPerHourIn: [Float!]
+  estimatedVolumeUsdPerHourNotIn: [Float!]
+  estimatedVolumeUsdPerHourGT: Float
+  estimatedVolumeUsdPerHourGTE: Float
+  estimatedVolumeUsdPerHourLT: Float
+  estimatedVolumeUsdPerHourLTE: Float
+  estimatedVolumeUsdPerHourIsNil: Boolean
+  estimatedVolumeUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_usd field predicates"""
-  estimatedCostReductionPerHourUsd: Float
-  estimatedCostReductionPerHourUsdNEQ: Float
-  estimatedCostReductionPerHourUsdIn: [Float!]
-  estimatedCostReductionPerHourUsdNotIn: [Float!]
-  estimatedCostReductionPerHourUsdGT: Float
-  estimatedCostReductionPerHourUsdGTE: Float
-  estimatedCostReductionPerHourUsdLT: Float
-  estimatedCostReductionPerHourUsdLTE: Float
-  estimatedCostReductionPerHourUsdIsNil: Boolean
-  estimatedCostReductionPerHourUsdNotNil: Boolean
+  """estimated_total_usd_per_hour field predicates"""
+  estimatedTotalUsdPerHour: Float
+  estimatedTotalUsdPerHourNEQ: Float
+  estimatedTotalUsdPerHourIn: [Float!]
+  estimatedTotalUsdPerHourNotIn: [Float!]
+  estimatedTotalUsdPerHourGT: Float
+  estimatedTotalUsdPerHourGTE: Float
+  estimatedTotalUsdPerHourLT: Float
+  estimatedTotalUsdPerHourLTE: Float
+  estimatedTotalUsdPerHourIsNil: Boolean
+  estimatedTotalUsdPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_before field predicates"""
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourBeforeNEQ: Float
-  observedVolumePerHourBeforeIn: [Float!]
-  observedVolumePerHourBeforeNotIn: [Float!]
-  observedVolumePerHourBeforeGT: Float
-  observedVolumePerHourBeforeGTE: Float
-  observedVolumePerHourBeforeLT: Float
-  observedVolumePerHourBeforeLTE: Float
-  observedVolumePerHourBeforeIsNil: Boolean
-  observedVolumePerHourBeforeNotNil: Boolean
+  """impact_events_per_hour field predicates"""
+  impactEventsPerHour: Float
+  impactEventsPerHourNEQ: Float
+  impactEventsPerHourIn: [Float!]
+  impactEventsPerHourNotIn: [Float!]
+  impactEventsPerHourGT: Float
+  impactEventsPerHourGTE: Float
+  impactEventsPerHourLT: Float
+  impactEventsPerHourLTE: Float
+  impactEventsPerHourIsNil: Boolean
+  impactEventsPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_after field predicates"""
-  observedVolumePerHourAfter: Float
-  observedVolumePerHourAfterNEQ: Float
-  observedVolumePerHourAfterIn: [Float!]
-  observedVolumePerHourAfterNotIn: [Float!]
-  observedVolumePerHourAfterGT: Float
-  observedVolumePerHourAfterGTE: Float
-  observedVolumePerHourAfterLT: Float
-  observedVolumePerHourAfterLTE: Float
-  observedVolumePerHourAfterIsNil: Boolean
-  observedVolumePerHourAfterNotNil: Boolean
+  """impact_bytes_per_hour field predicates"""
+  impactBytesPerHour: Float
+  impactBytesPerHourNEQ: Float
+  impactBytesPerHourIn: [Float!]
+  impactBytesPerHourNotIn: [Float!]
+  impactBytesPerHourGT: Float
+  impactBytesPerHourGTE: Float
+  impactBytesPerHourLT: Float
+  impactBytesPerHourLTE: Float
+  impactBytesPerHourIsNil: Boolean
+  impactBytesPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_before field predicates"""
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourBeforeNEQ: Float
-  observedBytesPerHourBeforeIn: [Float!]
-  observedBytesPerHourBeforeNotIn: [Float!]
-  observedBytesPerHourBeforeGT: Float
-  observedBytesPerHourBeforeGTE: Float
-  observedBytesPerHourBeforeLT: Float
-  observedBytesPerHourBeforeLTE: Float
-  observedBytesPerHourBeforeIsNil: Boolean
-  observedBytesPerHourBeforeNotNil: Boolean
+  """impact_bytes_usd_per_hour field predicates"""
+  impactBytesUsdPerHour: Float
+  impactBytesUsdPerHourNEQ: Float
+  impactBytesUsdPerHourIn: [Float!]
+  impactBytesUsdPerHourNotIn: [Float!]
+  impactBytesUsdPerHourGT: Float
+  impactBytesUsdPerHourGTE: Float
+  impactBytesUsdPerHourLT: Float
+  impactBytesUsdPerHourLTE: Float
+  impactBytesUsdPerHourIsNil: Boolean
+  impactBytesUsdPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_after field predicates"""
-  observedBytesPerHourAfter: Float
-  observedBytesPerHourAfterNEQ: Float
-  observedBytesPerHourAfterIn: [Float!]
-  observedBytesPerHourAfterNotIn: [Float!]
-  observedBytesPerHourAfterGT: Float
-  observedBytesPerHourAfterGTE: Float
-  observedBytesPerHourAfterLT: Float
-  observedBytesPerHourAfterLTE: Float
-  observedBytesPerHourAfterIsNil: Boolean
-  observedBytesPerHourAfterNotNil: Boolean
+  """impact_volume_usd_per_hour field predicates"""
+  impactVolumeUsdPerHour: Float
+  impactVolumeUsdPerHourNEQ: Float
+  impactVolumeUsdPerHourIn: [Float!]
+  impactVolumeUsdPerHourNotIn: [Float!]
+  impactVolumeUsdPerHourGT: Float
+  impactVolumeUsdPerHourGTE: Float
+  impactVolumeUsdPerHourLT: Float
+  impactVolumeUsdPerHourLTE: Float
+  impactVolumeUsdPerHourIsNil: Boolean
+  impactVolumeUsdPerHourNotNil: Boolean
 
-  """observed_cost_per_hour_before_bytes_usd field predicates"""
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeBytesUsdNEQ: Float
-  observedCostPerHourBeforeBytesUsdIn: [Float!]
-  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
-  observedCostPerHourBeforeBytesUsdGT: Float
-  observedCostPerHourBeforeBytesUsdGTE: Float
-  observedCostPerHourBeforeBytesUsdLT: Float
-  observedCostPerHourBeforeBytesUsdLTE: Float
-  observedCostPerHourBeforeBytesUsdIsNil: Boolean
-  observedCostPerHourBeforeBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_volume_usd field predicates"""
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeVolumeUsdNEQ: Float
-  observedCostPerHourBeforeVolumeUsdIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdGT: Float
-  observedCostPerHourBeforeVolumeUsdGTE: Float
-  observedCostPerHourBeforeVolumeUsdLT: Float
-  observedCostPerHourBeforeVolumeUsdLTE: Float
-  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
-  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_usd field predicates"""
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourBeforeUsdNEQ: Float
-  observedCostPerHourBeforeUsdIn: [Float!]
-  observedCostPerHourBeforeUsdNotIn: [Float!]
-  observedCostPerHourBeforeUsdGT: Float
-  observedCostPerHourBeforeUsdGTE: Float
-  observedCostPerHourBeforeUsdLT: Float
-  observedCostPerHourBeforeUsdLTE: Float
-  observedCostPerHourBeforeUsdIsNil: Boolean
-  observedCostPerHourBeforeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_bytes_usd field predicates"""
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterBytesUsdNEQ: Float
-  observedCostPerHourAfterBytesUsdIn: [Float!]
-  observedCostPerHourAfterBytesUsdNotIn: [Float!]
-  observedCostPerHourAfterBytesUsdGT: Float
-  observedCostPerHourAfterBytesUsdGTE: Float
-  observedCostPerHourAfterBytesUsdLT: Float
-  observedCostPerHourAfterBytesUsdLTE: Float
-  observedCostPerHourAfterBytesUsdIsNil: Boolean
-  observedCostPerHourAfterBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_volume_usd field predicates"""
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterVolumeUsdNEQ: Float
-  observedCostPerHourAfterVolumeUsdIn: [Float!]
-  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
-  observedCostPerHourAfterVolumeUsdGT: Float
-  observedCostPerHourAfterVolumeUsdGTE: Float
-  observedCostPerHourAfterVolumeUsdLT: Float
-  observedCostPerHourAfterVolumeUsdLTE: Float
-  observedCostPerHourAfterVolumeUsdIsNil: Boolean
-  observedCostPerHourAfterVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_usd field predicates"""
-  observedCostPerHourAfterUsd: Float
-  observedCostPerHourAfterUsdNEQ: Float
-  observedCostPerHourAfterUsdIn: [Float!]
-  observedCostPerHourAfterUsdNotIn: [Float!]
-  observedCostPerHourAfterUsdGT: Float
-  observedCostPerHourAfterUsdGTE: Float
-  observedCostPerHourAfterUsdLT: Float
-  observedCostPerHourAfterUsdLTE: Float
-  observedCostPerHourAfterUsdIsNil: Boolean
-  observedCostPerHourAfterUsdNotNil: Boolean
+  """impact_total_usd_per_hour field predicates"""
+  impactTotalUsdPerHour: Float
+  impactTotalUsdPerHourNEQ: Float
+  impactTotalUsdPerHourIn: [Float!]
+  impactTotalUsdPerHourNotIn: [Float!]
+  impactTotalUsdPerHourGT: Float
+  impactTotalUsdPerHourGTE: Float
+  impactTotalUsdPerHourLT: Float
+  impactTotalUsdPerHourLTE: Float
+  impactTotalUsdPerHourIsNil: Boolean
+  impactTotalUsdPerHourNotNil: Boolean
 
   """refreshed_at field predicates"""
   refreshedAt: Time
@@ -3953,18 +4379,6 @@ input LogEventWhereInput {
   severityIsNil: Boolean
   severityNotNil: Boolean
 
-  """signal_purpose field predicates"""
-  signalPurpose: LogEventSignalPurpose
-  signalPurposeNEQ: LogEventSignalPurpose
-  signalPurposeIn: [LogEventSignalPurpose!]
-  signalPurposeNotIn: [LogEventSignalPurpose!]
-
-  """event_nature field predicates"""
-  eventNature: LogEventEventNature
-  eventNatureNEQ: LogEventEventNature
-  eventNatureIn: [LogEventEventNature!]
-  eventNatureNotIn: [LogEventEventNature!]
-
   """is_fragment field predicates"""
   isFragment: Boolean
   isFragmentNEQ: Boolean
@@ -4023,11 +4437,15 @@ input LogEventWhereInput {
 
   """policies edge predicates"""
   hasPolicies: Boolean
-  hasPoliciesWith: [LogEventPolicyWhereInput!]
+  hasPoliciesWith: [LogEventRecommendationWhereInput!]
 
   """log_event_fields edge predicates"""
   hasLogEventFields: Boolean
   hasLogEventFieldsWith: [LogEventFieldWhereInput!]
+
+  """facts edge predicates"""
+  hasFacts: Boolean
+  hasFactsWith: [LogEventFactWhereInput!]
 }
 
 """A normalized log record following OTEL conventions"""
@@ -4403,18 +4821,18 @@ input MessageWhereInput {
 type Mutation {
   createAccount(input: CreateAccountInput!): Account!
   updateAccount(id: ID!, input: UpdateAccountInput!): Account!
-  deleteAccount(id: ID!): Boolean!
+  deleteAccount(id: ID!, confirmation: String!): Boolean!
   createOrganization(input: CreateOrganizationInput!): Organization!
   createOrganizationAndBootstrap(input: CreateOrganizationInput!): OrganizationBootstrapResult!
   updateOrganization(id: ID!, input: UpdateOrganizationInput!): Organization!
-  deleteOrganization(id: ID!, confirmed: Boolean!): Boolean!
+  deleteOrganization(id: ID!, confirmation: String!): Boolean!
   createDatadogAccount(input: CreateDatadogAccountWithCredentialsInput!): DatadogAccount!
   updateDatadogAccount(id: ID!, input: UpdateDatadogAccountInput!): DatadogAccount!
   deleteDatadogAccount(id: ID!): Boolean!
   validateDatadogApiKey(input: ValidateDatadogApiKeyInput!): ValidateDatadogApiKeyResult!
   createWorkspace(input: CreateWorkspaceInput!): Workspace!
   updateWorkspace(id: ID!, input: UpdateWorkspaceInput!): Workspace!
-  deleteWorkspace(id: ID!): Boolean!
+  deleteWorkspace(id: ID!, confirmation: String!): Boolean!
   createTeam(input: CreateTeamInput!): Team!
   updateTeam(id: ID!, input: UpdateTeamInput!): Team!
   deleteTeam(id: ID!): Boolean!
@@ -4465,18 +4883,18 @@ type Mutation {
   Approve a log event policy, enabling it for enforcement.
   Clears any previous dismissal.
   """
-  approveLogEventPolicy(id: ID!): LogEventPolicy!
+  approveLogEventRecommendation(id: ID!, targets: EnforcementTargetInput!): LogEventRecommendation!
 
   """
   Dismiss a log event policy, hiding it from pending review.
   Clears any previous approval.
   """
-  dismissLogEventPolicy(id: ID!): LogEventPolicy!
+  dismissLogEventRecommendation(id: ID!): LogEventRecommendation!
 
   """
   Reset a log event policy to pending, clearing any approval or dismissal.
   """
-  resetLogEventPolicy(id: ID!): LogEventPolicy!
+  resetLogEventRecommendation(id: ID!): LogEventRecommendation!
 }
 
 """
@@ -4822,9 +5240,9 @@ type Query {
   ): LogEventConnection!
 
   """
-  Query log event policies. Each policy is a category-specific recommendation.
+  Query log event recommendations. Each recommendation is category-specific.
   """
-  logEventPolicies(
+  logEventRecommendations(
     """Returns the elements in the list that come after the specified cursor."""
     after: Cursor
 
@@ -4839,12 +5257,16 @@ type Query {
     """Returns the last _n_ elements from the list."""
     last: Int
 
-    """Ordering options for LogEventPolicies returned from the connection."""
-    orderBy: LogEventPolicyOrder
+    """
+    Ordering options for LogEventRecommendations returned from the connection.
+    """
+    orderBy: LogEventRecommendationOrder
 
-    """Filtering options for LogEventPolicies returned from the connection."""
-    where: LogEventPolicyWhereInput
-  ): LogEventPolicyConnection!
+    """
+    Filtering options for LogEventRecommendations returned from the connection.
+    """
+    where: LogEventRecommendationWhereInput
+  ): LogEventRecommendationConnection!
 
   """Query messages in chat conversations."""
   messages(
@@ -5020,6 +5442,11 @@ type Query {
   viewer: Viewer!
 }
 
+input ResourceSelectorInput {
+  key: String!
+  value: String!
+}
+
 type Service implements Node {
   """Unique identifier of the service"""
   id: ID!
@@ -5039,7 +5466,7 @@ type Service implements Node {
   enabled: Boolean!
 
   """
-  Approximate weekly log count from initial discovery (7-day period from Datadog)
+  Approximate weekly log count from initial catalog loop pass (7-day period from Datadog)
   """
   initialWeeklyLogCount: Int
 
@@ -5057,7 +5484,7 @@ type Service implements Node {
 
   """
   Status of this service from a specific Datadog account.
-  Shows where the service is in the discovery pipeline.
+  Shows where the service is in the catalog pipeline.
   Returns null if cache has not been populated yet.
   """
   status(datadogAccountID: ID!): ServiceStatusCache
@@ -5084,6 +5511,276 @@ type ServiceEdge {
   cursor: Cursor!
 }
 
+type ServiceLogField implements Node {
+  """Unique identifier"""
+  id: ID!
+
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from service.account_id.
+  """
+  accountID: ID!
+
+  """Service this shared field belongs to"""
+  serviceID: ID!
+
+  """Which shared field root this definition belongs to."""
+  fieldRoot: ServiceLogFieldFieldRoot!
+
+  """
+  Unambiguous path segments for the shared field, e.g. {resource_attributes, service, name}.
+  """
+  fieldPath: [String!]!
+
+  """When this shared field was last seen on a log event for the service."""
+  lastSeenAt: Time!
+
+  """When this shared field was first discovered."""
+  createdAt: Time!
+
+  """When this shared field metadata was last updated."""
+  updatedAt: Time!
+
+  """Account this shared field belongs to"""
+  account: Account!
+
+  """Service this shared field belongs to"""
+  service: Service!
+
+  """Typed facts attached to this shared service field"""
+  facts: [ServiceLogFieldFact!]
+}
+
+type ServiceLogFieldFact implements Node {
+  """Unique identifier"""
+  id: ID!
+
+  """
+  Denormalized for tenant isolation. Auto-set via trigger from service_log_field.account_id.
+  """
+  accountID: UUID!
+
+  """The shared service log field this fact belongs to"""
+  serviceLogFieldID: ID!
+
+  """Fact namespace, e.g. structure, semantic, or quality."""
+  namespace: String!
+
+  """Fact type within the namespace, e.g. field_role or value_profile."""
+  factType: String!
+
+  """When this fact was first recorded"""
+  createdAt: Time!
+
+  """When this fact was last refreshed"""
+  updatedAt: Time!
+
+  """The shared service log field this fact belongs to"""
+  serviceLogField: ServiceLogField!
+}
+
+"""Ordering options for ServiceLogFieldFact connections"""
+input ServiceLogFieldFactOrder {
+  """The ordering direction."""
+  direction: OrderDirection! = ASC
+
+  """The field by which to order ServiceLogFieldFacts."""
+  field: ServiceLogFieldFactOrderField!
+}
+
+"""Properties by which ServiceLogFieldFact connections can be ordered."""
+enum ServiceLogFieldFactOrderField {
+  NAMESPACE
+  FACT_TYPE
+  CREATED_AT
+  UPDATED_AT
+}
+
+"""
+ServiceLogFieldFactWhereInput is used for filtering ServiceLogFieldFact objects.
+Input was generated by ent.
+"""
+input ServiceLogFieldFactWhereInput {
+  not: ServiceLogFieldFactWhereInput
+  and: [ServiceLogFieldFactWhereInput!]
+  or: [ServiceLogFieldFactWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: UUID
+  accountIDNEQ: UUID
+  accountIDIn: [UUID!]
+  accountIDNotIn: [UUID!]
+  accountIDGT: UUID
+  accountIDGTE: UUID
+  accountIDLT: UUID
+  accountIDLTE: UUID
+
+  """service_log_field_id field predicates"""
+  serviceLogFieldID: ID
+  serviceLogFieldIDNEQ: ID
+  serviceLogFieldIDIn: [ID!]
+  serviceLogFieldIDNotIn: [ID!]
+
+  """namespace field predicates"""
+  namespace: String
+  namespaceNEQ: String
+  namespaceIn: [String!]
+  namespaceNotIn: [String!]
+  namespaceGT: String
+  namespaceGTE: String
+  namespaceLT: String
+  namespaceLTE: String
+  namespaceContains: String
+  namespaceHasPrefix: String
+  namespaceHasSuffix: String
+  namespaceEqualFold: String
+  namespaceContainsFold: String
+
+  """fact_type field predicates"""
+  factType: String
+  factTypeNEQ: String
+  factTypeIn: [String!]
+  factTypeNotIn: [String!]
+  factTypeGT: String
+  factTypeGTE: String
+  factTypeLT: String
+  factTypeLTE: String
+  factTypeContains: String
+  factTypeHasPrefix: String
+  factTypeHasSuffix: String
+  factTypeEqualFold: String
+  factTypeContainsFold: String
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """service_log_field edge predicates"""
+  hasServiceLogField: Boolean
+  hasServiceLogFieldWith: [ServiceLogFieldWhereInput!]
+}
+
+"""ServiceLogFieldFieldRoot is enum for the field field_root"""
+enum ServiceLogFieldFieldRoot {
+  resource_attributes
+  scope_attributes
+}
+
+"""
+ServiceLogFieldWhereInput is used for filtering ServiceLogField objects.
+Input was generated by ent.
+"""
+input ServiceLogFieldWhereInput {
+  not: ServiceLogFieldWhereInput
+  and: [ServiceLogFieldWhereInput!]
+  or: [ServiceLogFieldWhereInput!]
+
+  """id field predicates"""
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+
+  """account_id field predicates"""
+  accountID: ID
+  accountIDNEQ: ID
+  accountIDIn: [ID!]
+  accountIDNotIn: [ID!]
+
+  """service_id field predicates"""
+  serviceID: ID
+  serviceIDNEQ: ID
+  serviceIDIn: [ID!]
+  serviceIDNotIn: [ID!]
+
+  """field_root field predicates"""
+  fieldRoot: ServiceLogFieldFieldRoot
+  fieldRootNEQ: ServiceLogFieldFieldRoot
+  fieldRootIn: [ServiceLogFieldFieldRoot!]
+  fieldRootNotIn: [ServiceLogFieldFieldRoot!]
+
+  """field_path field predicates"""
+  fieldPath: [String!]
+  fieldPathNEQ: [String!]
+  fieldPathIn: [[String!]!]
+  fieldPathNotIn: [[String!]!]
+  fieldPathGT: [String!]
+  fieldPathGTE: [String!]
+  fieldPathLT: [String!]
+  fieldPathLTE: [String!]
+
+  """last_seen_at field predicates"""
+  lastSeenAt: Time
+  lastSeenAtNEQ: Time
+  lastSeenAtIn: [Time!]
+  lastSeenAtNotIn: [Time!]
+  lastSeenAtGT: Time
+  lastSeenAtGTE: Time
+  lastSeenAtLT: Time
+  lastSeenAtLTE: Time
+
+  """created_at field predicates"""
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+
+  """updated_at field predicates"""
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+
+  """account edge predicates"""
+  hasAccount: Boolean
+  hasAccountWith: [AccountWhereInput!]
+
+  """service edge predicates"""
+  hasService: Boolean
+  hasServiceWith: [ServiceWhereInput!]
+
+  """facts edge predicates"""
+  hasFacts: Boolean
+  hasFactsWith: [ServiceLogFieldFactWhereInput!]
+}
+
 """Ordering options for Service connections"""
 input ServiceOrder {
   """The ordering direction."""
@@ -5107,47 +5804,39 @@ type ServiceStatusCache implements Node {
   serviceID: ID!
   accountID: UUID!
   datadogAccountID: ID!
-
-  """
-  Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-  """
   health: ServiceStatusCacheHealth!
   logEventCount: Int!
   logEventAnalyzedCount: Int!
-  policyPendingCount: Int!
-  policyApprovedCount: Int!
-  policyDismissedCount: Int!
+  recommendationCount: Int!
+  pendingRecommendationCount: Int!
+  approvedRecommendationCount: Int!
+  dismissedRecommendationCount: Int!
   policyPendingLowCount: Int!
   policyPendingMediumCount: Int!
   policyPendingHighCount: Int!
   policyPendingCriticalCount: Int!
-  serviceVolumePerHour: Float
-  serviceDebugVolumePerHour: Float
-  serviceInfoVolumePerHour: Float
-  serviceWarnVolumePerHour: Float
-  serviceErrorVolumePerHour: Float
-  serviceOtherVolumePerHour: Float
-  serviceCostPerHourVolumeUsd: Float
-  logEventVolumePerHour: Float
-  logEventBytesPerHour: Float
-  logEventCostPerHourBytesUsd: Float
-  logEventCostPerHourVolumeUsd: Float
-  logEventCostPerHourUsd: Float
-  estimatedVolumeReductionPerHour: Float
-  estimatedBytesReductionPerHour: Float
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourUsd: Float
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourAfter: Float
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourAfter: Float
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterUsd: Float
+  currentServiceEventsPerHour: Float
+  currentServiceDebugEventsPerHour: Float
+  currentServiceInfoEventsPerHour: Float
+  currentServiceWarnEventsPerHour: Float
+  currentServiceErrorEventsPerHour: Float
+  currentServiceOtherEventsPerHour: Float
+  currentServiceVolumeUsdPerHour: Float
+  currentEventsPerHour: Float
+  currentBytesPerHour: Float
+  currentBytesUsdPerHour: Float
+  currentVolumeUsdPerHour: Float
+  currentTotalUsdPerHour: Float
+  estimatedEventsPerHour: Float
+  estimatedBytesPerHour: Float
+  estimatedBytesUsdPerHour: Float
+  estimatedVolumeUsdPerHour: Float
+  estimatedTotalUsdPerHour: Float
+  impactEventsPerHour: Float
+  impactBytesPerHour: Float
+  impactBytesUsdPerHour: Float
+  impactVolumeUsdPerHour: Float
+  impactTotalUsdPerHour: Float
   refreshedAt: Time!
 }
 
@@ -5226,35 +5915,45 @@ input ServiceStatusCacheWhereInput {
   logEventAnalyzedCountLT: Int
   logEventAnalyzedCountLTE: Int
 
-  """policy_pending_count field predicates"""
-  policyPendingCount: Int
-  policyPendingCountNEQ: Int
-  policyPendingCountIn: [Int!]
-  policyPendingCountNotIn: [Int!]
-  policyPendingCountGT: Int
-  policyPendingCountGTE: Int
-  policyPendingCountLT: Int
-  policyPendingCountLTE: Int
+  """recommendation_count field predicates"""
+  recommendationCount: Int
+  recommendationCountNEQ: Int
+  recommendationCountIn: [Int!]
+  recommendationCountNotIn: [Int!]
+  recommendationCountGT: Int
+  recommendationCountGTE: Int
+  recommendationCountLT: Int
+  recommendationCountLTE: Int
 
-  """policy_approved_count field predicates"""
-  policyApprovedCount: Int
-  policyApprovedCountNEQ: Int
-  policyApprovedCountIn: [Int!]
-  policyApprovedCountNotIn: [Int!]
-  policyApprovedCountGT: Int
-  policyApprovedCountGTE: Int
-  policyApprovedCountLT: Int
-  policyApprovedCountLTE: Int
+  """pending_recommendation_count field predicates"""
+  pendingRecommendationCount: Int
+  pendingRecommendationCountNEQ: Int
+  pendingRecommendationCountIn: [Int!]
+  pendingRecommendationCountNotIn: [Int!]
+  pendingRecommendationCountGT: Int
+  pendingRecommendationCountGTE: Int
+  pendingRecommendationCountLT: Int
+  pendingRecommendationCountLTE: Int
 
-  """policy_dismissed_count field predicates"""
-  policyDismissedCount: Int
-  policyDismissedCountNEQ: Int
-  policyDismissedCountIn: [Int!]
-  policyDismissedCountNotIn: [Int!]
-  policyDismissedCountGT: Int
-  policyDismissedCountGTE: Int
-  policyDismissedCountLT: Int
-  policyDismissedCountLTE: Int
+  """approved_recommendation_count field predicates"""
+  approvedRecommendationCount: Int
+  approvedRecommendationCountNEQ: Int
+  approvedRecommendationCountIn: [Int!]
+  approvedRecommendationCountNotIn: [Int!]
+  approvedRecommendationCountGT: Int
+  approvedRecommendationCountGTE: Int
+  approvedRecommendationCountLT: Int
+  approvedRecommendationCountLTE: Int
+
+  """dismissed_recommendation_count field predicates"""
+  dismissedRecommendationCount: Int
+  dismissedRecommendationCountNEQ: Int
+  dismissedRecommendationCountIn: [Int!]
+  dismissedRecommendationCountNotIn: [Int!]
+  dismissedRecommendationCountGT: Int
+  dismissedRecommendationCountGTE: Int
+  dismissedRecommendationCountLT: Int
+  dismissedRecommendationCountLTE: Int
 
   """policy_pending_low_count field predicates"""
   policyPendingLowCount: Int
@@ -5296,329 +5995,269 @@ input ServiceStatusCacheWhereInput {
   policyPendingCriticalCountLT: Int
   policyPendingCriticalCountLTE: Int
 
-  """service_volume_per_hour field predicates"""
-  serviceVolumePerHour: Float
-  serviceVolumePerHourNEQ: Float
-  serviceVolumePerHourIn: [Float!]
-  serviceVolumePerHourNotIn: [Float!]
-  serviceVolumePerHourGT: Float
-  serviceVolumePerHourGTE: Float
-  serviceVolumePerHourLT: Float
-  serviceVolumePerHourLTE: Float
-  serviceVolumePerHourIsNil: Boolean
-  serviceVolumePerHourNotNil: Boolean
+  """current_service_events_per_hour field predicates"""
+  currentServiceEventsPerHour: Float
+  currentServiceEventsPerHourNEQ: Float
+  currentServiceEventsPerHourIn: [Float!]
+  currentServiceEventsPerHourNotIn: [Float!]
+  currentServiceEventsPerHourGT: Float
+  currentServiceEventsPerHourGTE: Float
+  currentServiceEventsPerHourLT: Float
+  currentServiceEventsPerHourLTE: Float
+  currentServiceEventsPerHourIsNil: Boolean
+  currentServiceEventsPerHourNotNil: Boolean
 
-  """service_debug_volume_per_hour field predicates"""
-  serviceDebugVolumePerHour: Float
-  serviceDebugVolumePerHourNEQ: Float
-  serviceDebugVolumePerHourIn: [Float!]
-  serviceDebugVolumePerHourNotIn: [Float!]
-  serviceDebugVolumePerHourGT: Float
-  serviceDebugVolumePerHourGTE: Float
-  serviceDebugVolumePerHourLT: Float
-  serviceDebugVolumePerHourLTE: Float
-  serviceDebugVolumePerHourIsNil: Boolean
-  serviceDebugVolumePerHourNotNil: Boolean
+  """current_service_debug_events_per_hour field predicates"""
+  currentServiceDebugEventsPerHour: Float
+  currentServiceDebugEventsPerHourNEQ: Float
+  currentServiceDebugEventsPerHourIn: [Float!]
+  currentServiceDebugEventsPerHourNotIn: [Float!]
+  currentServiceDebugEventsPerHourGT: Float
+  currentServiceDebugEventsPerHourGTE: Float
+  currentServiceDebugEventsPerHourLT: Float
+  currentServiceDebugEventsPerHourLTE: Float
+  currentServiceDebugEventsPerHourIsNil: Boolean
+  currentServiceDebugEventsPerHourNotNil: Boolean
 
-  """service_info_volume_per_hour field predicates"""
-  serviceInfoVolumePerHour: Float
-  serviceInfoVolumePerHourNEQ: Float
-  serviceInfoVolumePerHourIn: [Float!]
-  serviceInfoVolumePerHourNotIn: [Float!]
-  serviceInfoVolumePerHourGT: Float
-  serviceInfoVolumePerHourGTE: Float
-  serviceInfoVolumePerHourLT: Float
-  serviceInfoVolumePerHourLTE: Float
-  serviceInfoVolumePerHourIsNil: Boolean
-  serviceInfoVolumePerHourNotNil: Boolean
+  """current_service_info_events_per_hour field predicates"""
+  currentServiceInfoEventsPerHour: Float
+  currentServiceInfoEventsPerHourNEQ: Float
+  currentServiceInfoEventsPerHourIn: [Float!]
+  currentServiceInfoEventsPerHourNotIn: [Float!]
+  currentServiceInfoEventsPerHourGT: Float
+  currentServiceInfoEventsPerHourGTE: Float
+  currentServiceInfoEventsPerHourLT: Float
+  currentServiceInfoEventsPerHourLTE: Float
+  currentServiceInfoEventsPerHourIsNil: Boolean
+  currentServiceInfoEventsPerHourNotNil: Boolean
 
-  """service_warn_volume_per_hour field predicates"""
-  serviceWarnVolumePerHour: Float
-  serviceWarnVolumePerHourNEQ: Float
-  serviceWarnVolumePerHourIn: [Float!]
-  serviceWarnVolumePerHourNotIn: [Float!]
-  serviceWarnVolumePerHourGT: Float
-  serviceWarnVolumePerHourGTE: Float
-  serviceWarnVolumePerHourLT: Float
-  serviceWarnVolumePerHourLTE: Float
-  serviceWarnVolumePerHourIsNil: Boolean
-  serviceWarnVolumePerHourNotNil: Boolean
+  """current_service_warn_events_per_hour field predicates"""
+  currentServiceWarnEventsPerHour: Float
+  currentServiceWarnEventsPerHourNEQ: Float
+  currentServiceWarnEventsPerHourIn: [Float!]
+  currentServiceWarnEventsPerHourNotIn: [Float!]
+  currentServiceWarnEventsPerHourGT: Float
+  currentServiceWarnEventsPerHourGTE: Float
+  currentServiceWarnEventsPerHourLT: Float
+  currentServiceWarnEventsPerHourLTE: Float
+  currentServiceWarnEventsPerHourIsNil: Boolean
+  currentServiceWarnEventsPerHourNotNil: Boolean
 
-  """service_error_volume_per_hour field predicates"""
-  serviceErrorVolumePerHour: Float
-  serviceErrorVolumePerHourNEQ: Float
-  serviceErrorVolumePerHourIn: [Float!]
-  serviceErrorVolumePerHourNotIn: [Float!]
-  serviceErrorVolumePerHourGT: Float
-  serviceErrorVolumePerHourGTE: Float
-  serviceErrorVolumePerHourLT: Float
-  serviceErrorVolumePerHourLTE: Float
-  serviceErrorVolumePerHourIsNil: Boolean
-  serviceErrorVolumePerHourNotNil: Boolean
+  """current_service_error_events_per_hour field predicates"""
+  currentServiceErrorEventsPerHour: Float
+  currentServiceErrorEventsPerHourNEQ: Float
+  currentServiceErrorEventsPerHourIn: [Float!]
+  currentServiceErrorEventsPerHourNotIn: [Float!]
+  currentServiceErrorEventsPerHourGT: Float
+  currentServiceErrorEventsPerHourGTE: Float
+  currentServiceErrorEventsPerHourLT: Float
+  currentServiceErrorEventsPerHourLTE: Float
+  currentServiceErrorEventsPerHourIsNil: Boolean
+  currentServiceErrorEventsPerHourNotNil: Boolean
 
-  """service_other_volume_per_hour field predicates"""
-  serviceOtherVolumePerHour: Float
-  serviceOtherVolumePerHourNEQ: Float
-  serviceOtherVolumePerHourIn: [Float!]
-  serviceOtherVolumePerHourNotIn: [Float!]
-  serviceOtherVolumePerHourGT: Float
-  serviceOtherVolumePerHourGTE: Float
-  serviceOtherVolumePerHourLT: Float
-  serviceOtherVolumePerHourLTE: Float
-  serviceOtherVolumePerHourIsNil: Boolean
-  serviceOtherVolumePerHourNotNil: Boolean
+  """current_service_other_events_per_hour field predicates"""
+  currentServiceOtherEventsPerHour: Float
+  currentServiceOtherEventsPerHourNEQ: Float
+  currentServiceOtherEventsPerHourIn: [Float!]
+  currentServiceOtherEventsPerHourNotIn: [Float!]
+  currentServiceOtherEventsPerHourGT: Float
+  currentServiceOtherEventsPerHourGTE: Float
+  currentServiceOtherEventsPerHourLT: Float
+  currentServiceOtherEventsPerHourLTE: Float
+  currentServiceOtherEventsPerHourIsNil: Boolean
+  currentServiceOtherEventsPerHourNotNil: Boolean
 
-  """service_cost_per_hour_volume_usd field predicates"""
-  serviceCostPerHourVolumeUsd: Float
-  serviceCostPerHourVolumeUsdNEQ: Float
-  serviceCostPerHourVolumeUsdIn: [Float!]
-  serviceCostPerHourVolumeUsdNotIn: [Float!]
-  serviceCostPerHourVolumeUsdGT: Float
-  serviceCostPerHourVolumeUsdGTE: Float
-  serviceCostPerHourVolumeUsdLT: Float
-  serviceCostPerHourVolumeUsdLTE: Float
-  serviceCostPerHourVolumeUsdIsNil: Boolean
-  serviceCostPerHourVolumeUsdNotNil: Boolean
+  """current_service_volume_usd_per_hour field predicates"""
+  currentServiceVolumeUsdPerHour: Float
+  currentServiceVolumeUsdPerHourNEQ: Float
+  currentServiceVolumeUsdPerHourIn: [Float!]
+  currentServiceVolumeUsdPerHourNotIn: [Float!]
+  currentServiceVolumeUsdPerHourGT: Float
+  currentServiceVolumeUsdPerHourGTE: Float
+  currentServiceVolumeUsdPerHourLT: Float
+  currentServiceVolumeUsdPerHourLTE: Float
+  currentServiceVolumeUsdPerHourIsNil: Boolean
+  currentServiceVolumeUsdPerHourNotNil: Boolean
 
-  """log_event_volume_per_hour field predicates"""
-  logEventVolumePerHour: Float
-  logEventVolumePerHourNEQ: Float
-  logEventVolumePerHourIn: [Float!]
-  logEventVolumePerHourNotIn: [Float!]
-  logEventVolumePerHourGT: Float
-  logEventVolumePerHourGTE: Float
-  logEventVolumePerHourLT: Float
-  logEventVolumePerHourLTE: Float
-  logEventVolumePerHourIsNil: Boolean
-  logEventVolumePerHourNotNil: Boolean
+  """current_events_per_hour field predicates"""
+  currentEventsPerHour: Float
+  currentEventsPerHourNEQ: Float
+  currentEventsPerHourIn: [Float!]
+  currentEventsPerHourNotIn: [Float!]
+  currentEventsPerHourGT: Float
+  currentEventsPerHourGTE: Float
+  currentEventsPerHourLT: Float
+  currentEventsPerHourLTE: Float
+  currentEventsPerHourIsNil: Boolean
+  currentEventsPerHourNotNil: Boolean
 
-  """log_event_bytes_per_hour field predicates"""
-  logEventBytesPerHour: Float
-  logEventBytesPerHourNEQ: Float
-  logEventBytesPerHourIn: [Float!]
-  logEventBytesPerHourNotIn: [Float!]
-  logEventBytesPerHourGT: Float
-  logEventBytesPerHourGTE: Float
-  logEventBytesPerHourLT: Float
-  logEventBytesPerHourLTE: Float
-  logEventBytesPerHourIsNil: Boolean
-  logEventBytesPerHourNotNil: Boolean
+  """current_bytes_per_hour field predicates"""
+  currentBytesPerHour: Float
+  currentBytesPerHourNEQ: Float
+  currentBytesPerHourIn: [Float!]
+  currentBytesPerHourNotIn: [Float!]
+  currentBytesPerHourGT: Float
+  currentBytesPerHourGTE: Float
+  currentBytesPerHourLT: Float
+  currentBytesPerHourLTE: Float
+  currentBytesPerHourIsNil: Boolean
+  currentBytesPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_bytes_usd field predicates"""
-  logEventCostPerHourBytesUsd: Float
-  logEventCostPerHourBytesUsdNEQ: Float
-  logEventCostPerHourBytesUsdIn: [Float!]
-  logEventCostPerHourBytesUsdNotIn: [Float!]
-  logEventCostPerHourBytesUsdGT: Float
-  logEventCostPerHourBytesUsdGTE: Float
-  logEventCostPerHourBytesUsdLT: Float
-  logEventCostPerHourBytesUsdLTE: Float
-  logEventCostPerHourBytesUsdIsNil: Boolean
-  logEventCostPerHourBytesUsdNotNil: Boolean
+  """current_bytes_usd_per_hour field predicates"""
+  currentBytesUsdPerHour: Float
+  currentBytesUsdPerHourNEQ: Float
+  currentBytesUsdPerHourIn: [Float!]
+  currentBytesUsdPerHourNotIn: [Float!]
+  currentBytesUsdPerHourGT: Float
+  currentBytesUsdPerHourGTE: Float
+  currentBytesUsdPerHourLT: Float
+  currentBytesUsdPerHourLTE: Float
+  currentBytesUsdPerHourIsNil: Boolean
+  currentBytesUsdPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_volume_usd field predicates"""
-  logEventCostPerHourVolumeUsd: Float
-  logEventCostPerHourVolumeUsdNEQ: Float
-  logEventCostPerHourVolumeUsdIn: [Float!]
-  logEventCostPerHourVolumeUsdNotIn: [Float!]
-  logEventCostPerHourVolumeUsdGT: Float
-  logEventCostPerHourVolumeUsdGTE: Float
-  logEventCostPerHourVolumeUsdLT: Float
-  logEventCostPerHourVolumeUsdLTE: Float
-  logEventCostPerHourVolumeUsdIsNil: Boolean
-  logEventCostPerHourVolumeUsdNotNil: Boolean
+  """current_volume_usd_per_hour field predicates"""
+  currentVolumeUsdPerHour: Float
+  currentVolumeUsdPerHourNEQ: Float
+  currentVolumeUsdPerHourIn: [Float!]
+  currentVolumeUsdPerHourNotIn: [Float!]
+  currentVolumeUsdPerHourGT: Float
+  currentVolumeUsdPerHourGTE: Float
+  currentVolumeUsdPerHourLT: Float
+  currentVolumeUsdPerHourLTE: Float
+  currentVolumeUsdPerHourIsNil: Boolean
+  currentVolumeUsdPerHourNotNil: Boolean
 
-  """log_event_cost_per_hour_usd field predicates"""
-  logEventCostPerHourUsd: Float
-  logEventCostPerHourUsdNEQ: Float
-  logEventCostPerHourUsdIn: [Float!]
-  logEventCostPerHourUsdNotIn: [Float!]
-  logEventCostPerHourUsdGT: Float
-  logEventCostPerHourUsdGTE: Float
-  logEventCostPerHourUsdLT: Float
-  logEventCostPerHourUsdLTE: Float
-  logEventCostPerHourUsdIsNil: Boolean
-  logEventCostPerHourUsdNotNil: Boolean
+  """current_total_usd_per_hour field predicates"""
+  currentTotalUsdPerHour: Float
+  currentTotalUsdPerHourNEQ: Float
+  currentTotalUsdPerHourIn: [Float!]
+  currentTotalUsdPerHourNotIn: [Float!]
+  currentTotalUsdPerHourGT: Float
+  currentTotalUsdPerHourGTE: Float
+  currentTotalUsdPerHourLT: Float
+  currentTotalUsdPerHourLTE: Float
+  currentTotalUsdPerHourIsNil: Boolean
+  currentTotalUsdPerHourNotNil: Boolean
 
-  """estimated_volume_reduction_per_hour field predicates"""
-  estimatedVolumeReductionPerHour: Float
-  estimatedVolumeReductionPerHourNEQ: Float
-  estimatedVolumeReductionPerHourIn: [Float!]
-  estimatedVolumeReductionPerHourNotIn: [Float!]
-  estimatedVolumeReductionPerHourGT: Float
-  estimatedVolumeReductionPerHourGTE: Float
-  estimatedVolumeReductionPerHourLT: Float
-  estimatedVolumeReductionPerHourLTE: Float
-  estimatedVolumeReductionPerHourIsNil: Boolean
-  estimatedVolumeReductionPerHourNotNil: Boolean
+  """estimated_events_per_hour field predicates"""
+  estimatedEventsPerHour: Float
+  estimatedEventsPerHourNEQ: Float
+  estimatedEventsPerHourIn: [Float!]
+  estimatedEventsPerHourNotIn: [Float!]
+  estimatedEventsPerHourGT: Float
+  estimatedEventsPerHourGTE: Float
+  estimatedEventsPerHourLT: Float
+  estimatedEventsPerHourLTE: Float
+  estimatedEventsPerHourIsNil: Boolean
+  estimatedEventsPerHourNotNil: Boolean
 
-  """estimated_bytes_reduction_per_hour field predicates"""
-  estimatedBytesReductionPerHour: Float
-  estimatedBytesReductionPerHourNEQ: Float
-  estimatedBytesReductionPerHourIn: [Float!]
-  estimatedBytesReductionPerHourNotIn: [Float!]
-  estimatedBytesReductionPerHourGT: Float
-  estimatedBytesReductionPerHourGTE: Float
-  estimatedBytesReductionPerHourLT: Float
-  estimatedBytesReductionPerHourLTE: Float
-  estimatedBytesReductionPerHourIsNil: Boolean
-  estimatedBytesReductionPerHourNotNil: Boolean
+  """estimated_bytes_per_hour field predicates"""
+  estimatedBytesPerHour: Float
+  estimatedBytesPerHourNEQ: Float
+  estimatedBytesPerHourIn: [Float!]
+  estimatedBytesPerHourNotIn: [Float!]
+  estimatedBytesPerHourGT: Float
+  estimatedBytesPerHourGTE: Float
+  estimatedBytesPerHourLT: Float
+  estimatedBytesPerHourLTE: Float
+  estimatedBytesPerHourIsNil: Boolean
+  estimatedBytesPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_bytes_usd field predicates"""
-  estimatedCostReductionPerHourBytesUsd: Float
-  estimatedCostReductionPerHourBytesUsdNEQ: Float
-  estimatedCostReductionPerHourBytesUsdIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdNotIn: [Float!]
-  estimatedCostReductionPerHourBytesUsdGT: Float
-  estimatedCostReductionPerHourBytesUsdGTE: Float
-  estimatedCostReductionPerHourBytesUsdLT: Float
-  estimatedCostReductionPerHourBytesUsdLTE: Float
-  estimatedCostReductionPerHourBytesUsdIsNil: Boolean
-  estimatedCostReductionPerHourBytesUsdNotNil: Boolean
+  """estimated_bytes_usd_per_hour field predicates"""
+  estimatedBytesUsdPerHour: Float
+  estimatedBytesUsdPerHourNEQ: Float
+  estimatedBytesUsdPerHourIn: [Float!]
+  estimatedBytesUsdPerHourNotIn: [Float!]
+  estimatedBytesUsdPerHourGT: Float
+  estimatedBytesUsdPerHourGTE: Float
+  estimatedBytesUsdPerHourLT: Float
+  estimatedBytesUsdPerHourLTE: Float
+  estimatedBytesUsdPerHourIsNil: Boolean
+  estimatedBytesUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_volume_usd field predicates"""
-  estimatedCostReductionPerHourVolumeUsd: Float
-  estimatedCostReductionPerHourVolumeUsdNEQ: Float
-  estimatedCostReductionPerHourVolumeUsdIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdNotIn: [Float!]
-  estimatedCostReductionPerHourVolumeUsdGT: Float
-  estimatedCostReductionPerHourVolumeUsdGTE: Float
-  estimatedCostReductionPerHourVolumeUsdLT: Float
-  estimatedCostReductionPerHourVolumeUsdLTE: Float
-  estimatedCostReductionPerHourVolumeUsdIsNil: Boolean
-  estimatedCostReductionPerHourVolumeUsdNotNil: Boolean
+  """estimated_volume_usd_per_hour field predicates"""
+  estimatedVolumeUsdPerHour: Float
+  estimatedVolumeUsdPerHourNEQ: Float
+  estimatedVolumeUsdPerHourIn: [Float!]
+  estimatedVolumeUsdPerHourNotIn: [Float!]
+  estimatedVolumeUsdPerHourGT: Float
+  estimatedVolumeUsdPerHourGTE: Float
+  estimatedVolumeUsdPerHourLT: Float
+  estimatedVolumeUsdPerHourLTE: Float
+  estimatedVolumeUsdPerHourIsNil: Boolean
+  estimatedVolumeUsdPerHourNotNil: Boolean
 
-  """estimated_cost_reduction_per_hour_usd field predicates"""
-  estimatedCostReductionPerHourUsd: Float
-  estimatedCostReductionPerHourUsdNEQ: Float
-  estimatedCostReductionPerHourUsdIn: [Float!]
-  estimatedCostReductionPerHourUsdNotIn: [Float!]
-  estimatedCostReductionPerHourUsdGT: Float
-  estimatedCostReductionPerHourUsdGTE: Float
-  estimatedCostReductionPerHourUsdLT: Float
-  estimatedCostReductionPerHourUsdLTE: Float
-  estimatedCostReductionPerHourUsdIsNil: Boolean
-  estimatedCostReductionPerHourUsdNotNil: Boolean
+  """estimated_total_usd_per_hour field predicates"""
+  estimatedTotalUsdPerHour: Float
+  estimatedTotalUsdPerHourNEQ: Float
+  estimatedTotalUsdPerHourIn: [Float!]
+  estimatedTotalUsdPerHourNotIn: [Float!]
+  estimatedTotalUsdPerHourGT: Float
+  estimatedTotalUsdPerHourGTE: Float
+  estimatedTotalUsdPerHourLT: Float
+  estimatedTotalUsdPerHourLTE: Float
+  estimatedTotalUsdPerHourIsNil: Boolean
+  estimatedTotalUsdPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_before field predicates"""
-  observedVolumePerHourBefore: Float
-  observedVolumePerHourBeforeNEQ: Float
-  observedVolumePerHourBeforeIn: [Float!]
-  observedVolumePerHourBeforeNotIn: [Float!]
-  observedVolumePerHourBeforeGT: Float
-  observedVolumePerHourBeforeGTE: Float
-  observedVolumePerHourBeforeLT: Float
-  observedVolumePerHourBeforeLTE: Float
-  observedVolumePerHourBeforeIsNil: Boolean
-  observedVolumePerHourBeforeNotNil: Boolean
+  """impact_events_per_hour field predicates"""
+  impactEventsPerHour: Float
+  impactEventsPerHourNEQ: Float
+  impactEventsPerHourIn: [Float!]
+  impactEventsPerHourNotIn: [Float!]
+  impactEventsPerHourGT: Float
+  impactEventsPerHourGTE: Float
+  impactEventsPerHourLT: Float
+  impactEventsPerHourLTE: Float
+  impactEventsPerHourIsNil: Boolean
+  impactEventsPerHourNotNil: Boolean
 
-  """observed_volume_per_hour_after field predicates"""
-  observedVolumePerHourAfter: Float
-  observedVolumePerHourAfterNEQ: Float
-  observedVolumePerHourAfterIn: [Float!]
-  observedVolumePerHourAfterNotIn: [Float!]
-  observedVolumePerHourAfterGT: Float
-  observedVolumePerHourAfterGTE: Float
-  observedVolumePerHourAfterLT: Float
-  observedVolumePerHourAfterLTE: Float
-  observedVolumePerHourAfterIsNil: Boolean
-  observedVolumePerHourAfterNotNil: Boolean
+  """impact_bytes_per_hour field predicates"""
+  impactBytesPerHour: Float
+  impactBytesPerHourNEQ: Float
+  impactBytesPerHourIn: [Float!]
+  impactBytesPerHourNotIn: [Float!]
+  impactBytesPerHourGT: Float
+  impactBytesPerHourGTE: Float
+  impactBytesPerHourLT: Float
+  impactBytesPerHourLTE: Float
+  impactBytesPerHourIsNil: Boolean
+  impactBytesPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_before field predicates"""
-  observedBytesPerHourBefore: Float
-  observedBytesPerHourBeforeNEQ: Float
-  observedBytesPerHourBeforeIn: [Float!]
-  observedBytesPerHourBeforeNotIn: [Float!]
-  observedBytesPerHourBeforeGT: Float
-  observedBytesPerHourBeforeGTE: Float
-  observedBytesPerHourBeforeLT: Float
-  observedBytesPerHourBeforeLTE: Float
-  observedBytesPerHourBeforeIsNil: Boolean
-  observedBytesPerHourBeforeNotNil: Boolean
+  """impact_bytes_usd_per_hour field predicates"""
+  impactBytesUsdPerHour: Float
+  impactBytesUsdPerHourNEQ: Float
+  impactBytesUsdPerHourIn: [Float!]
+  impactBytesUsdPerHourNotIn: [Float!]
+  impactBytesUsdPerHourGT: Float
+  impactBytesUsdPerHourGTE: Float
+  impactBytesUsdPerHourLT: Float
+  impactBytesUsdPerHourLTE: Float
+  impactBytesUsdPerHourIsNil: Boolean
+  impactBytesUsdPerHourNotNil: Boolean
 
-  """observed_bytes_per_hour_after field predicates"""
-  observedBytesPerHourAfter: Float
-  observedBytesPerHourAfterNEQ: Float
-  observedBytesPerHourAfterIn: [Float!]
-  observedBytesPerHourAfterNotIn: [Float!]
-  observedBytesPerHourAfterGT: Float
-  observedBytesPerHourAfterGTE: Float
-  observedBytesPerHourAfterLT: Float
-  observedBytesPerHourAfterLTE: Float
-  observedBytesPerHourAfterIsNil: Boolean
-  observedBytesPerHourAfterNotNil: Boolean
+  """impact_volume_usd_per_hour field predicates"""
+  impactVolumeUsdPerHour: Float
+  impactVolumeUsdPerHourNEQ: Float
+  impactVolumeUsdPerHourIn: [Float!]
+  impactVolumeUsdPerHourNotIn: [Float!]
+  impactVolumeUsdPerHourGT: Float
+  impactVolumeUsdPerHourGTE: Float
+  impactVolumeUsdPerHourLT: Float
+  impactVolumeUsdPerHourLTE: Float
+  impactVolumeUsdPerHourIsNil: Boolean
+  impactVolumeUsdPerHourNotNil: Boolean
 
-  """observed_cost_per_hour_before_bytes_usd field predicates"""
-  observedCostPerHourBeforeBytesUsd: Float
-  observedCostPerHourBeforeBytesUsdNEQ: Float
-  observedCostPerHourBeforeBytesUsdIn: [Float!]
-  observedCostPerHourBeforeBytesUsdNotIn: [Float!]
-  observedCostPerHourBeforeBytesUsdGT: Float
-  observedCostPerHourBeforeBytesUsdGTE: Float
-  observedCostPerHourBeforeBytesUsdLT: Float
-  observedCostPerHourBeforeBytesUsdLTE: Float
-  observedCostPerHourBeforeBytesUsdIsNil: Boolean
-  observedCostPerHourBeforeBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_volume_usd field predicates"""
-  observedCostPerHourBeforeVolumeUsd: Float
-  observedCostPerHourBeforeVolumeUsdNEQ: Float
-  observedCostPerHourBeforeVolumeUsdIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdNotIn: [Float!]
-  observedCostPerHourBeforeVolumeUsdGT: Float
-  observedCostPerHourBeforeVolumeUsdGTE: Float
-  observedCostPerHourBeforeVolumeUsdLT: Float
-  observedCostPerHourBeforeVolumeUsdLTE: Float
-  observedCostPerHourBeforeVolumeUsdIsNil: Boolean
-  observedCostPerHourBeforeVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_before_usd field predicates"""
-  observedCostPerHourBeforeUsd: Float
-  observedCostPerHourBeforeUsdNEQ: Float
-  observedCostPerHourBeforeUsdIn: [Float!]
-  observedCostPerHourBeforeUsdNotIn: [Float!]
-  observedCostPerHourBeforeUsdGT: Float
-  observedCostPerHourBeforeUsdGTE: Float
-  observedCostPerHourBeforeUsdLT: Float
-  observedCostPerHourBeforeUsdLTE: Float
-  observedCostPerHourBeforeUsdIsNil: Boolean
-  observedCostPerHourBeforeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_bytes_usd field predicates"""
-  observedCostPerHourAfterBytesUsd: Float
-  observedCostPerHourAfterBytesUsdNEQ: Float
-  observedCostPerHourAfterBytesUsdIn: [Float!]
-  observedCostPerHourAfterBytesUsdNotIn: [Float!]
-  observedCostPerHourAfterBytesUsdGT: Float
-  observedCostPerHourAfterBytesUsdGTE: Float
-  observedCostPerHourAfterBytesUsdLT: Float
-  observedCostPerHourAfterBytesUsdLTE: Float
-  observedCostPerHourAfterBytesUsdIsNil: Boolean
-  observedCostPerHourAfterBytesUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_volume_usd field predicates"""
-  observedCostPerHourAfterVolumeUsd: Float
-  observedCostPerHourAfterVolumeUsdNEQ: Float
-  observedCostPerHourAfterVolumeUsdIn: [Float!]
-  observedCostPerHourAfterVolumeUsdNotIn: [Float!]
-  observedCostPerHourAfterVolumeUsdGT: Float
-  observedCostPerHourAfterVolumeUsdGTE: Float
-  observedCostPerHourAfterVolumeUsdLT: Float
-  observedCostPerHourAfterVolumeUsdLTE: Float
-  observedCostPerHourAfterVolumeUsdIsNil: Boolean
-  observedCostPerHourAfterVolumeUsdNotNil: Boolean
-
-  """observed_cost_per_hour_after_usd field predicates"""
-  observedCostPerHourAfterUsd: Float
-  observedCostPerHourAfterUsdNEQ: Float
-  observedCostPerHourAfterUsdIn: [Float!]
-  observedCostPerHourAfterUsdNotIn: [Float!]
-  observedCostPerHourAfterUsdGT: Float
-  observedCostPerHourAfterUsdGTE: Float
-  observedCostPerHourAfterUsdLT: Float
-  observedCostPerHourAfterUsdLTE: Float
-  observedCostPerHourAfterUsdIsNil: Boolean
-  observedCostPerHourAfterUsdNotNil: Boolean
+  """impact_total_usd_per_hour field predicates"""
+  impactTotalUsdPerHour: Float
+  impactTotalUsdPerHourNEQ: Float
+  impactTotalUsdPerHourIn: [Float!]
+  impactTotalUsdPerHourNotIn: [Float!]
+  impactTotalUsdPerHourGT: Float
+  impactTotalUsdPerHourGTE: Float
+  impactTotalUsdPerHourLT: Float
+  impactTotalUsdPerHourLTE: Float
+  impactTotalUsdPerHourIsNil: Boolean
+  impactTotalUsdPerHourNotNil: Boolean
 
   """refreshed_at field predicates"""
   refreshedAt: Time
@@ -6456,8 +7095,8 @@ type Workspace implements Node {
   """Chat conversations in this workspace"""
   conversations: [Conversation!]
 
-  """Log event policies for this workspace"""
-  logEventPolicies: [LogEventPolicy!]
+  """Log event recommendations for this workspace"""
+  logEventRecommendations: [LogEventRecommendation!]
 }
 
 """A connection to a list of items."""
@@ -6583,8 +7222,8 @@ input WorkspaceWhereInput {
   hasConversations: Boolean
   hasConversationsWith: [ConversationWhereInput!]
 
-  """log_event_policies edge predicates"""
-  hasLogEventPolicies: Boolean
-  hasLogEventPoliciesWith: [LogEventPolicyWhereInput!]
+  """log_event_recommendations edge predicates"""
+  hasLogEventRecommendations: Boolean
+  hasLogEventRecommendationsWith: [LogEventRecommendationWhereInput!]
 }
 

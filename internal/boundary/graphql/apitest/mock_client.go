@@ -28,8 +28,8 @@ type MockClient struct {
 	CreateMessageFunc                       func(ctx context.Context, input gen.CreateMessageInput) (*gen.CreateMessageResponse, error)
 	EnableServiceFunc                       func(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
 	DisableServiceFunc                      func(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
-	ApproveLogEventPolicyFunc               func(ctx context.Context, policyID string) (*gen.ApproveLogEventPolicyResponse, error)
-	DismissLogEventPolicyFunc               func(ctx context.Context, policyID string) (*gen.DismissLogEventPolicyResponse, error)
+	ApproveLogEventRecommendationFunc       func(ctx context.Context, recommendationID string, targets gen.EnforcementTargetInput) (*gen.ApproveLogEventRecommendationResponse, error)
+	DismissLogEventRecommendationFunc       func(ctx context.Context, recommendationID string) (*gen.DismissLogEventRecommendationResponse, error)
 }
 
 // NewMockClient creates a MockClient with sensible defaults.
@@ -165,16 +165,16 @@ func (m *MockClient) DisableService(ctx context.Context, serviceID string) (*gen
 	return nil, nil
 }
 
-func (m *MockClient) ApproveLogEventPolicy(ctx context.Context, policyID string) (*gen.ApproveLogEventPolicyResponse, error) {
-	if m.ApproveLogEventPolicyFunc != nil {
-		return m.ApproveLogEventPolicyFunc(ctx, policyID)
+func (m *MockClient) ApproveLogEventRecommendation(ctx context.Context, recommendationID string, targets gen.EnforcementTargetInput) (*gen.ApproveLogEventRecommendationResponse, error) {
+	if m.ApproveLogEventRecommendationFunc != nil {
+		return m.ApproveLogEventRecommendationFunc(ctx, recommendationID, targets)
 	}
 	return nil, nil
 }
 
-func (m *MockClient) DismissLogEventPolicy(ctx context.Context, policyID string) (*gen.DismissLogEventPolicyResponse, error) {
-	if m.DismissLogEventPolicyFunc != nil {
-		return m.DismissLogEventPolicyFunc(ctx, policyID)
+func (m *MockClient) DismissLogEventRecommendation(ctx context.Context, recommendationID string) (*gen.DismissLogEventRecommendationResponse, error) {
+	if m.DismissLogEventRecommendationFunc != nil {
+		return m.DismissLogEventRecommendationFunc(ctx, recommendationID)
 	}
 	return nil, nil
 }
