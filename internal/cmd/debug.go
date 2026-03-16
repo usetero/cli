@@ -60,6 +60,8 @@ func newDebugStatusCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comm
 			if err != nil {
 				return err
 			}
+			// Datadog status queries require account scoping via X-Account-ID.
+			services = services.WithAccountID(accountID)
 
 			// Get the datadog account for this account
 			ddAccount, err := services.DatadogAccounts.GetAccount(cmd.Context(), accountID)

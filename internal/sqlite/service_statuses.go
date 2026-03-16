@@ -92,14 +92,23 @@ func mapServiceStatus(
 	svcCostVolume *float64,
 	volume, bytes, costUSD, costBytes, costVolume *float64,
 	estVolume, estBytes, estCostUSD, estCostBytes, estCostVolume *float64,
-	obsVolBefore, obsVolAfter, obsBytesBefore, obsBytesAfter *float64,
+	obsVolBefore *float64,
+	obsVolAfter interface{},
+	obsBytesBefore *float64,
+	obsBytesAfter interface{},
 	obsCostBefore, obsCostBeforeBytes, obsCostBeforeVolume *float64,
-	obsCostAfter, obsCostAfterBytes, obsCostAfterVolume *float64,
+	obsCostAfter, obsCostAfterBytes, obsCostAfterVolume interface{},
 ) domain.ServiceStatus {
 	name := ""
 	if serviceName != nil {
 		name = *serviceName
 	}
+	obsVolAfterF := anyToFloatPtr(obsVolAfter)
+	obsBytesAfterF := anyToFloatPtr(obsBytesAfter)
+	obsCostAfterF := anyToFloatPtr(obsCostAfter)
+	obsCostAfterBytesF := anyToFloatPtr(obsCostAfterBytes)
+	obsCostAfterVolumeF := anyToFloatPtr(obsCostAfterVolume)
+
 	return domain.ServiceStatus{
 		Name:   name,
 		Health: domain.ServiceHealth(health),
@@ -136,14 +145,22 @@ func mapServiceStatus(
 		EstimatedCostReductionPerHourVolume: estCostVolume,
 
 		ObservedVolumePerHourBefore:        obsVolBefore,
-		ObservedVolumePerHourAfter:         obsVolAfter,
+		ObservedVolumePerHourAfter:         obsVolAfterF,
 		ObservedBytesPerHourBefore:         obsBytesBefore,
-		ObservedBytesPerHourAfter:          obsBytesAfter,
+		ObservedBytesPerHourAfter:          obsBytesAfterF,
 		ObservedCostPerHourBeforeUSD:       obsCostBefore,
 		ObservedCostPerHourBeforeBytesUSD:  obsCostBeforeBytes,
 		ObservedCostPerHourBeforeVolumeUSD: obsCostBeforeVolume,
-		ObservedCostPerHourAfterUSD:        obsCostAfter,
-		ObservedCostPerHourAfterBytesUSD:   obsCostAfterBytes,
-		ObservedCostPerHourAfterVolumeUSD:  obsCostAfterVolume,
+		ObservedCostPerHourAfterUSD:        obsCostAfterF,
+		ObservedCostPerHourAfterBytesUSD:   obsCostAfterBytesF,
+		ObservedCostPerHourAfterVolumeUSD:  obsCostAfterVolumeF,
 	}
+}
+
+func anyToFloatPtr(v interface{}) *float64 {
+	f, ok := toFloat64(v)
+	if !ok {
+		return nil
+	}
+	return &f
 }

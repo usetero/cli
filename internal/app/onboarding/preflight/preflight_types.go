@@ -1,6 +1,7 @@
 package preflight
 
 import (
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -11,6 +12,7 @@ type preflightResolutionCompletedMsg struct {
 
 type preflightAuthCheckCompletedMsg struct {
 	hasValidAuth bool
+	user         *auth.User
 }
 
 type preflightOrganizationsLoadedMsg struct {

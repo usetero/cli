@@ -2,6 +2,8 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/sqlite/gen"
@@ -64,17 +66,43 @@ func (l *logEventPolicyStatusesImpl) fieldSizes(ctx context.Context, logEventID 
 
 	sizes := make(map[string]float64, len(rows))
 	for _, row := range rows {
-		if row.BaselineAvgBytes != nil {
-			fp := domain.ParseFieldPathPg(row.FieldPath)
-			if !fp.IsEmpty() {
-				sizes[fp.Key()] = *row.BaselineAvgBytes
-			}
+		baseline, ok := toFloat64(row.BaselineAvgBytes)
+		if !ok {
+			continue
+		}
+		fp := domain.ParseFieldPathPg(row.FieldPath)
+		if !fp.IsEmpty() {
+			sizes[fp.Key()] = baseline
 		}
 	}
 	if len(sizes) == 0 {
 		return nil
 	}
 	return sizes
+}
+
+func toFloat64(v interface{}) (float64, bool) {
+	switch t := v.(type) {
+	case nil:
+		return 0, false
+	case float64:
+		return t, true
+	case float32:
+		return float64(t), true
+	case int64:
+		return float64(t), true
+	case int:
+		return float64(t), true
+	case []byte:
+		n, err := strconv.ParseFloat(string(t), 64)
+		return n, err == nil
+	case string:
+		n, err := strconv.ParseFloat(t, 64)
+		return n, err == nil
+	default:
+		n, err := strconv.ParseFloat(fmt.Sprint(t), 64)
+		return n, err == nil
+	}
 }
 
 func (l *logEventPolicyStatusesImpl) ListTopPendingPoliciesByCategory(ctx context.Context, category domain.PolicyCategory, limit int64) ([]domain.WastePolicy, error) {

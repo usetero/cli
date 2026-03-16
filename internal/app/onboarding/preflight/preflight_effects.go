@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -13,14 +14,22 @@ import (
 func (m *Model) checkAuth() tea.Cmd {
 	return func() tea.Msg {
 		hasValidAuth := false
+		var user *auth.User
 		if m.auth.IsAuthenticated() {
 			if _, err := m.auth.GetAccessToken(m.ctx); err == nil {
 				hasValidAuth = true
+				if userID, err := m.auth.GetUserID(m.ctx); err == nil && userID != "" {
+					user = &auth.User{ID: userID}
+				} else {
+					// Avoid getting stuck in sync with a valid token but no user identity.
+					_ = m.auth.ClearTokens()
+					hasValidAuth = false
+				}
 			} else {
 				_ = m.auth.ClearTokens()
 			}
 		}
-		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth}
+		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth, user: user}
 	}
 }
 

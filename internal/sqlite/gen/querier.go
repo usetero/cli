@@ -9,10 +9,8 @@ import (
 )
 
 type Querier interface {
-	ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEventPolicyParams) error
 	CountConversations(ctx context.Context) (int64, error)
 	CountFixedPIIPolicies(ctx context.Context) (int64, error)
-	CountLogEventPolicies(ctx context.Context) (int64, error)
 	CountLogEvents(ctx context.Context) (int64, error)
 	CountMessages(ctx context.Context) (int64, error)
 	CountMessagesByConversation(ctx context.Context, conversationID *string) (int64, error)
@@ -20,16 +18,15 @@ type Querier interface {
 	CountObservedPoliciesByComplianceCategory(ctx context.Context) ([]CountObservedPoliciesByComplianceCategoryRow, error)
 	CountServices(ctx context.Context) (int64, error)
 	DeleteMessage(ctx context.Context, id *string) error
-	DismissLogEventPolicy(ctx context.Context, arg DismissLogEventPolicyParams) error
 	GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, error)
 	GetConversation(ctx context.Context, id *string) (Conversation, error)
 	GetLatestConversationByAccount(ctx context.Context, accountID *string) (Conversation, error)
 	GetLatestMessageByConversation(ctx context.Context, conversationID *string) (Message, error)
 	GetMessage(ctx context.Context, id *string) (Message, error)
 	// Fetches a single policy with all context needed for rich card rendering.
-	// Main table: log_event_policy_statuses_cache (denormalized policy + metrics).
+	// Main table: recommendation_statuses_cache (denormalized recommendation + metrics).
 	// JOINs enrich with: category display name, AI analysis, log examples, baselines.
-	GetPolicyCard(ctx context.Context, policyID *string) (GetPolicyCardRow, error)
+	GetPolicyCard(ctx context.Context, recommendationID *string) (GetPolicyCardRow, error)
 	GetService(ctx context.Context, id *string) (Service, error)
 	InsertConversation(ctx context.Context, arg InsertConversationParams) error
 	InsertMessage(ctx context.Context, arg InsertMessageParams) error
@@ -40,7 +37,7 @@ type Querier interface {
 	ListEnabledServiceStatuses(ctx context.Context, rowLimit int64) ([]ListEnabledServiceStatusesRow, error)
 	// Returns per-field metadata for a log event, used to show per-field byte impact
 	// in quality policies (instrumentation_bloat, oversized_fields, duplicate_fields).
-	ListFieldsByLogEvent(ctx context.Context, logEventID *string) ([]ListFieldsByLogEventRow, error)
+	ListFieldsByLogEvent(ctx context.Context, id *string) ([]ListFieldsByLogEventRow, error)
 	ListLogEventStatusesByService(ctx context.Context, arg ListLogEventStatusesByServiceParams) ([]ListLogEventStatusesByServiceRow, error)
 	ListMessagesByConversation(ctx context.Context, conversationID *string) ([]Message, error)
 	ListMessagesByConversationDesc(ctx context.Context, conversationID *string) ([]Message, error)

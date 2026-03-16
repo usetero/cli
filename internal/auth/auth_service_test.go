@@ -10,6 +10,7 @@ import (
 
 	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/auth/authtest"
+	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
 )
 
@@ -106,6 +107,52 @@ func TestService_GetAccessToken(t *testing.T) {
 		_, err := svc.GetAccessToken(context.Background())
 		if err == nil {
 			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("preserves org scope when refreshing expired token", func(t *testing.T) {
+		t.Parallel()
+		expiredOrgToken := makeTestTokenWithOrg(time.Now().Add(-10*time.Minute), "org_123")
+		newToken := makeTestTokenWithOrg(time.Now().Add(10*time.Minute), "org_123")
+
+		storage := &authtest.MockSecureStorage{
+			GetFunc: func(key string) (string, error) {
+				switch key {
+				case "access_token":
+					return expiredOrgToken, nil
+				case "refresh_token":
+					return "refresh_token_value", nil
+				}
+				return "", nil
+			},
+		}
+
+		provider := &authtest.MockOAuthProvider{
+			RefreshTokenWithOrganizationFunc: func(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error) {
+				if refreshToken != "refresh_token_value" {
+					t.Errorf("unexpected refresh token: %s", refreshToken)
+				}
+				if organizationID != "org_123" {
+					t.Errorf("unexpected organization ID: %s", organizationID)
+				}
+				return &auth.RefreshResponse{
+					AccessToken:  newToken,
+					RefreshToken: "new_refresh_token",
+				}, nil
+			},
+			RefreshTokenFunc: func(ctx context.Context, refreshToken string) (*auth.RefreshResponse, error) {
+				t.Fatal("expected org-scoped refresh path")
+				return nil, nil
+			},
+		}
+
+		svc := auth.NewService(provider, storage, logtest.NewScope(t))
+		token, err := svc.GetAccessToken(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if token != newToken {
+			t.Errorf("got %q, want %q", token, newToken)
 		}
 	})
 }
@@ -218,6 +265,52 @@ func TestService_ForceRefreshAccessToken(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+
+	t.Run("preserves org scope on force refresh", func(t *testing.T) {
+		t.Parallel()
+		currentOrgToken := makeTestTokenWithOrg(time.Now().Add(10*time.Minute), "org_abc")
+		newToken := makeTestTokenWithOrg(time.Now().Add(20*time.Minute), "org_abc")
+
+		storage := &authtest.MockSecureStorage{
+			GetFunc: func(key string) (string, error) {
+				switch key {
+				case "access_token":
+					return currentOrgToken, nil
+				case "refresh_token":
+					return "refresh_token_value", nil
+				}
+				return "", nil
+			},
+		}
+
+		provider := &authtest.MockOAuthProvider{
+			RefreshTokenWithOrganizationFunc: func(ctx context.Context, refreshToken string, organizationID domain.WorkosOrganizationID) (*auth.RefreshResponse, error) {
+				if refreshToken != "refresh_token_value" {
+					t.Errorf("unexpected refresh token: %s", refreshToken)
+				}
+				if organizationID != "org_abc" {
+					t.Errorf("unexpected organization ID: %s", organizationID)
+				}
+				return &auth.RefreshResponse{
+					AccessToken:  newToken,
+					RefreshToken: "new_refresh_token",
+				}, nil
+			},
+			RefreshTokenFunc: func(ctx context.Context, refreshToken string) (*auth.RefreshResponse, error) {
+				t.Fatal("expected org-scoped refresh path")
+				return nil, nil
+			},
+		}
+
+		svc := auth.NewService(provider, storage, logtest.NewScope(t))
+		token, err := svc.ForceRefreshAccessToken(context.Background())
+		if err != nil {
+			t.Fatalf("ForceRefreshAccessToken error: %v", err)
+		}
+		if token != newToken {
+			t.Errorf("got %q, want %q", token, newToken)
+		}
+	})
 }
 
 func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
@@ -295,6 +388,17 @@ func TestService_RefreshTokenWithoutOrganization(t *testing.T) {
 func makeTestToken(exp time.Time) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`))
 	payload, _ := json.Marshal(map[string]int64{"exp": exp.Unix()})
+	payloadEnc := base64.RawURLEncoding.EncodeToString(payload)
+	sig := base64.RawURLEncoding.EncodeToString([]byte("signature"))
+	return header + "." + payloadEnc + "." + sig
+}
+
+func makeTestTokenWithOrg(exp time.Time, orgID string) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`))
+	payload, _ := json.Marshal(map[string]interface{}{
+		"exp":    exp.Unix(),
+		"org_id": orgID,
+	})
 	payloadEnc := base64.RawURLEncoding.EncodeToString(payload)
 	sig := base64.RawURLEncoding.EncodeToString([]byte("signature"))
 	return header + "." + payloadEnc + "." + sig

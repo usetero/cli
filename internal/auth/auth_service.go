@@ -200,8 +200,13 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 		return "", errors.New("no access token found")
 	}
 
+	workosOrgID := domain.WorkosOrganizationID("")
+
 	// Check if token is expired
 	claims, err := ParseToken(accessToken)
+	if err == nil && claims.OrgID != "" {
+		workosOrgID = domain.WorkosOrganizationID(claims.OrgID)
+	}
 	if err != nil || claims.IsExpired() {
 		s.scope.Debug("access token expired, refreshing")
 		refreshToken, err := s.storage.Get("refresh_token")
@@ -213,7 +218,7 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 			return "", errors.New("no refresh token found")
 		}
 
-		resp, err := s.provider.RefreshToken(ctx, refreshToken)
+		resp, err := s.refreshTokenForScope(ctx, refreshToken, workosOrgID)
 		if err != nil {
 			s.scope.Error("failed to refresh token", "error", err)
 			return "", err
@@ -237,6 +242,13 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 func (s *Service) ForceRefreshAccessToken(ctx context.Context) (string, error) {
 	s.scope.Debug("force-refreshing access token")
 
+	workosOrgID := domain.WorkosOrganizationID("")
+	if accessToken, err := s.storage.Get("access_token"); err == nil && accessToken != "" {
+		if claims, parseErr := ParseToken(accessToken); parseErr == nil && claims.OrgID != "" {
+			workosOrgID = domain.WorkosOrganizationID(claims.OrgID)
+		}
+	}
+
 	refreshToken, err := s.storage.Get("refresh_token")
 	if err != nil {
 		s.scope.Error("failed to get refresh token", "error", err)
@@ -246,7 +258,7 @@ func (s *Service) ForceRefreshAccessToken(ctx context.Context) (string, error) {
 		return "", errors.New("no refresh token found")
 	}
 
-	resp, err := s.provider.RefreshToken(ctx, refreshToken)
+	resp, err := s.refreshTokenForScope(ctx, refreshToken, workosOrgID)
 	if err != nil {
 		s.scope.Error("failed to refresh token", "error", err)
 		return "", err
@@ -344,4 +356,12 @@ func (s *Service) saveTokens(accessToken, refreshToken string) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Service) refreshTokenForScope(ctx context.Context, refreshToken string, workosOrgID domain.WorkosOrganizationID) (*RefreshResponse, error) {
+	if workosOrgID != "" {
+		s.scope.Debug("refreshing token with preserved organization scope", "workos_org_id", workosOrgID)
+		return s.provider.RefreshTokenWithOrganization(ctx, refreshToken, workosOrgID)
+	}
+	return s.provider.RefreshToken(ctx, refreshToken)
 }

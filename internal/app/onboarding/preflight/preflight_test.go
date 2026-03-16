@@ -5,8 +5,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/usetero/cli/internal/auth/authtest"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
+	"github.com/usetero/cli/internal/log/logtest"
+	"github.com/usetero/cli/internal/preferences/preferencestest"
+	"github.com/usetero/cli/internal/styles"
 )
 
 func TestResolveOrg(t *testing.T) {
@@ -68,5 +73,69 @@ func TestPreflightOutcomeForError(t *testing.T) {
 	outcome, _ = preflightOutcomeForError(errors.New("boom"))
 	if outcome != bootstrap.PreflightOutcomeInconclusive {
 		t.Fatalf("expected inconclusive outcome for generic error, got %v", outcome)
+	}
+}
+
+func TestCheckAuthHydratesUserWhenTokenValid(t *testing.T) {
+	t.Parallel()
+
+	auth := &authtest.MockAuth{
+		IsAuthenticatedFunc: func() bool { return true },
+		GetAccessTokenFunc:  func(context.Context) (string, error) { return "token", nil },
+		GetUserIDFunc:       func(context.Context) (string, error) { return "user-1", nil },
+	}
+
+	m := New(
+		context.Background(),
+		styles.NewTheme(true),
+		graphql.ServiceSet{},
+		auth,
+		preferencestest.NewMockUserPreferences(),
+		preferencestest.NewMockOrgPreferences(),
+		logtest.NewScope(t),
+	)
+
+	msg := m.checkAuth()().(preflightAuthCheckCompletedMsg)
+	if !msg.hasValidAuth {
+		t.Fatal("expected valid auth")
+	}
+	if msg.user == nil || msg.user.ID != "user-1" {
+		t.Fatalf("expected hydrated user id user-1, got %#v", msg.user)
+	}
+}
+
+func TestCheckAuthClearsInvalidAuthWhenUserIDMissing(t *testing.T) {
+	t.Parallel()
+
+	cleared := false
+	auth := &authtest.MockAuth{
+		IsAuthenticatedFunc: func() bool { return true },
+		GetAccessTokenFunc:  func(context.Context) (string, error) { return "token", nil },
+		GetUserIDFunc:       func(context.Context) (string, error) { return "", errors.New("missing sub") },
+		ClearTokensFunc: func() error {
+			cleared = true
+			return nil
+		},
+	}
+
+	m := New(
+		context.Background(),
+		styles.NewTheme(true),
+		graphql.ServiceSet{},
+		auth,
+		preferencestest.NewMockUserPreferences(),
+		preferencestest.NewMockOrgPreferences(),
+		logtest.NewScope(t),
+	)
+
+	msg := m.checkAuth()().(preflightAuthCheckCompletedMsg)
+	if msg.hasValidAuth {
+		t.Fatal("expected invalid auth when user id cannot be resolved")
+	}
+	if msg.user != nil {
+		t.Fatalf("expected nil user, got %#v", msg.user)
+	}
+	if !cleared {
+		t.Fatal("expected tokens to be cleared")
 	}
 }

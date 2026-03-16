@@ -34,47 +34,43 @@ type DatadogAccount struct {
 }
 
 type DatadogAccountStatusesCache struct {
-	ID                                     *string
-	AccountID                              *string
-	DatadogAccountID                       *string
-	DisabledServices                       *int64
-	EstimatedBytesReductionPerHour         *float64
-	EstimatedCostReductionPerHourBytesUsd  *float64
-	EstimatedCostReductionPerHourUsd       *float64
-	EstimatedCostReductionPerHourVolumeUsd *float64
-	EstimatedVolumeReductionPerHour        *float64
-	Health                                 *string
-	InactiveServices                       *int64
-	LogActiveServices                      *int64
-	LogEventAnalyzedCount                  *int64
-	LogEventBytesPerHour                   *float64
-	LogEventCostPerHourBytesUsd            *float64
-	LogEventCostPerHourUsd                 *float64
-	LogEventCostPerHourVolumeUsd           *float64
-	LogEventCount                          *int64
-	LogEventVolumePerHour                  *float64
-	LogServiceCount                        *int64
-	ObservedBytesPerHourAfter              *float64
-	ObservedBytesPerHourBefore             *float64
-	ObservedCostPerHourAfterBytesUsd       *float64
-	ObservedCostPerHourAfterUsd            *float64
-	ObservedCostPerHourAfterVolumeUsd      *float64
-	ObservedCostPerHourBeforeBytesUsd      *float64
-	ObservedCostPerHourBeforeUsd           *float64
-	ObservedCostPerHourBeforeVolumeUsd     *float64
-	ObservedVolumePerHourAfter             *float64
-	ObservedVolumePerHourBefore            *float64
-	OkServices                             *int64
-	PolicyApprovedCount                    *int64
-	PolicyDismissedCount                   *int64
-	PolicyPendingCount                     *int64
-	PolicyPendingCriticalCount             *int64
-	PolicyPendingHighCount                 *int64
-	PolicyPendingLowCount                  *int64
-	PolicyPendingMediumCount               *int64
-	ReadyForUse                            *int64
-	ServiceCostPerHourVolumeUsd            *float64
-	ServiceVolumePerHour                   *float64
+	ID                             *string
+	AccountID                      *string
+	ApprovedRecommendationCount    *int64
+	CurrentBytesPerHour            *float64
+	CurrentBytesUsdPerHour         *float64
+	CurrentEventsPerHour           *float64
+	CurrentServiceEventsPerHour    *float64
+	CurrentServiceVolumeUsdPerHour *float64
+	CurrentTotalUsdPerHour         *float64
+	CurrentVolumeUsdPerHour        *float64
+	DatadogAccountID               *string
+	DisabledServices               *int64
+	DismissedRecommendationCount   *int64
+	EstimatedBytesPerHour          *float64
+	EstimatedBytesUsdPerHour       *float64
+	EstimatedEventsPerHour         *float64
+	EstimatedTotalUsdPerHour       *float64
+	EstimatedVolumeUsdPerHour      *float64
+	Health                         *string
+	ImpactBytesPerHour             *float64
+	ImpactBytesUsdPerHour          *float64
+	ImpactEventsPerHour            *float64
+	ImpactTotalUsdPerHour          *float64
+	ImpactVolumeUsdPerHour         *float64
+	InactiveServices               *int64
+	LogActiveServices              *int64
+	LogEventAnalyzedCount          *int64
+	LogEventCount                  *int64
+	LogServiceCount                *int64
+	OkServices                     *int64
+	PendingRecommendationCount     *int64
+	PolicyPendingCriticalCount     *int64
+	PolicyPendingHighCount         *int64
+	PolicyPendingLowCount          *int64
+	PolicyPendingMediumCount       *int64
+	ReadyForUse                    *int64
+	RecommendationCount            *int64
 }
 
 type DatadogLogIndex struct {
@@ -102,17 +98,7 @@ type LogEvent struct {
 	SignalPurpose         *string
 }
 
-type LogEventField struct {
-	ID                *string
-	AccountID         *string
-	BaselineAvgBytes  *float64
-	CreatedAt         *string
-	FieldPath         *string
-	LogEventID        *string
-	ValueDistribution *string
-}
-
-type LogEventPolicy struct {
+type LogEventRecommendation struct {
 	ID                            *string
 	AccountID                     *string
 	Action                        *string
@@ -132,7 +118,51 @@ type LogEventPolicy struct {
 	WorkspaceID                   *string
 }
 
-type LogEventPolicyCategoryStatusesCache struct {
+type LogEventStatusesCache struct {
+	ID                           *string
+	AccountID                    *string
+	ApprovedRecommendationCount  *int64
+	CurrentBytesPerHour          *float64
+	CurrentBytesUsdPerHour       *float64
+	CurrentEventsPerHour         *float64
+	CurrentTotalUsdPerHour       *float64
+	CurrentVolumeUsdPerHour      *float64
+	DismissedRecommendationCount *int64
+	EffectivePolicyEnabled       *int64
+	EstimatedBytesPerHour        *float64
+	EstimatedBytesUsdPerHour     *float64
+	EstimatedEventsPerHour       *float64
+	EstimatedTotalUsdPerHour     *float64
+	EstimatedVolumeUsdPerHour    *float64
+	HasBeenAnalyzed              *int64
+	HasVolumes                   *int64
+	ImpactBytesPerHour           *float64
+	ImpactBytesUsdPerHour        *float64
+	ImpactEventsPerHour          *float64
+	ImpactTotalUsdPerHour        *float64
+	ImpactVolumeUsdPerHour       *float64
+	LogEventID                   *string
+	PendingRecommendationCount   *int64
+	PolicyPendingCriticalCount   *int64
+	PolicyPendingHighCount       *int64
+	PolicyPendingLowCount        *int64
+	PolicyPendingMediumCount     *int64
+	RecommendationCount          *int64
+	ServiceID                    *string
+}
+
+type Message struct {
+	ID             *string
+	AccountID      *string
+	Content        *string
+	ConversationID *string
+	CreatedAt      *string
+	Model          *string
+	Role           *string
+	StopReason     *string
+}
+
+type RecommendationCategoryStatusesCache struct {
 	ID                                     *string
 	AccountID                              *string
 	Action                                 *string
@@ -158,80 +188,40 @@ type LogEventPolicyCategoryStatusesCache struct {
 	TotalEventCount                        *int64
 }
 
-type LogEventPolicyStatusesCache struct {
-	ID                                     *string
-	AccountID                              *string
-	Action                                 *string
-	ApprovedAt                             *string
-	BytesPerHour                           *float64
-	Category                               *string
-	CategoryType                           *string
-	CreatedAt                              *string
-	DismissedAt                            *string
-	EstimatedBytesReductionPerHour         *float64
-	EstimatedCostReductionPerHourBytesUsd  *float64
-	EstimatedCostReductionPerHourUsd       *float64
-	EstimatedCostReductionPerHourVolumeUsd *float64
-	EstimatedVolumeReductionPerHour        *float64
-	LogEventID                             *string
-	LogEventName                           *string
-	PolicyID                               *string
-	ServiceID                              *string
-	ServiceName                            *string
-	Severity                               *string
-	Status                                 *string
-	Subjective                             *int64
-	SurvivalRate                           *float64
-	VolumePerHour                          *float64
-	WorkspaceID                            *string
-}
-
-type LogEventStatusesCache struct {
-	ID                                     *string
-	AccountID                              *string
-	ApprovedPolicyCount                    *int64
-	BytesPerHour                           *float64
-	CostPerHourBytesUsd                    *float64
-	CostPerHourUsd                         *float64
-	CostPerHourVolumeUsd                   *float64
-	DismissedPolicyCount                   *int64
-	EstimatedBytesReductionPerHour         *float64
-	EstimatedCostReductionPerHourBytesUsd  *float64
-	EstimatedCostReductionPerHourUsd       *float64
-	EstimatedCostReductionPerHourVolumeUsd *float64
-	EstimatedVolumeReductionPerHour        *float64
-	HasBeenAnalyzed                        *int64
-	HasVolumes                             *int64
-	LogEventID                             *string
-	ObservedBytesPerHourAfter              *float64
-	ObservedBytesPerHourBefore             *float64
-	ObservedCostPerHourAfterBytesUsd       *float64
-	ObservedCostPerHourAfterUsd            *float64
-	ObservedCostPerHourAfterVolumeUsd      *float64
-	ObservedCostPerHourBeforeBytesUsd      *float64
-	ObservedCostPerHourBeforeUsd           *float64
-	ObservedCostPerHourBeforeVolumeUsd     *float64
-	ObservedVolumePerHourAfter             *float64
-	ObservedVolumePerHourBefore            *float64
-	PendingPolicyCount                     *int64
-	PolicyCount                            *int64
-	PolicyPendingCriticalCount             *int64
-	PolicyPendingHighCount                 *int64
-	PolicyPendingLowCount                  *int64
-	PolicyPendingMediumCount               *int64
-	ServiceID                              *string
-	VolumePerHour                          *float64
-}
-
-type Message struct {
-	ID             *string
-	AccountID      *string
-	Content        *string
-	ConversationID *string
-	CreatedAt      *string
-	Model          *string
-	Role           *string
-	StopReason     *string
+type RecommendationStatusesCache struct {
+	ID                        *string
+	AccountID                 *string
+	Action                    *string
+	ApprovedAt                *string
+	Category                  *string
+	CategoryType              *string
+	CreatedAt                 *string
+	CurrentBytesPerHour       *float64
+	CurrentBytesUsdPerHour    *float64
+	CurrentEventsPerHour      *float64
+	CurrentTotalUsdPerHour    *float64
+	CurrentVolumeUsdPerHour   *float64
+	DismissedAt               *string
+	EstimatedBytesPerHour     *float64
+	EstimatedBytesUsdPerHour  *float64
+	EstimatedEventsPerHour    *float64
+	EstimatedTotalUsdPerHour  *float64
+	EstimatedVolumeUsdPerHour *float64
+	ImpactBytesPerHour        *float64
+	ImpactBytesUsdPerHour     *float64
+	ImpactEventsPerHour       *float64
+	ImpactTotalUsdPerHour     *float64
+	ImpactVolumeUsdPerHour    *float64
+	LogEventID                *string
+	LogEventName              *string
+	RecommendationID          *string
+	ServiceID                 *string
+	ServiceName               *string
+	Severity                  *string
+	Status                    *string
+	Subjective                *int64
+	SurvivalRate              *float64
+	WorkspaceID               *string
 }
 
 type Service struct {
@@ -245,47 +235,43 @@ type Service struct {
 }
 
 type ServiceStatusesCache struct {
-	ID                                     *string
-	AccountID                              *string
-	DatadogAccountID                       *string
-	EstimatedBytesReductionPerHour         *float64
-	EstimatedCostReductionPerHourBytesUsd  *float64
-	EstimatedCostReductionPerHourUsd       *float64
-	EstimatedCostReductionPerHourVolumeUsd *float64
-	EstimatedVolumeReductionPerHour        *float64
-	Health                                 *string
-	LogEventAnalyzedCount                  *int64
-	LogEventBytesPerHour                   *float64
-	LogEventCostPerHourBytesUsd            *float64
-	LogEventCostPerHourUsd                 *float64
-	LogEventCostPerHourVolumeUsd           *float64
-	LogEventCount                          *int64
-	LogEventVolumePerHour                  *float64
-	ObservedBytesPerHourAfter              *float64
-	ObservedBytesPerHourBefore             *float64
-	ObservedCostPerHourAfterBytesUsd       *float64
-	ObservedCostPerHourAfterUsd            *float64
-	ObservedCostPerHourAfterVolumeUsd      *float64
-	ObservedCostPerHourBeforeBytesUsd      *float64
-	ObservedCostPerHourBeforeUsd           *float64
-	ObservedCostPerHourBeforeVolumeUsd     *float64
-	ObservedVolumePerHourAfter             *float64
-	ObservedVolumePerHourBefore            *float64
-	PolicyApprovedCount                    *int64
-	PolicyDismissedCount                   *int64
-	PolicyPendingCount                     *int64
-	PolicyPendingCriticalCount             *int64
-	PolicyPendingHighCount                 *int64
-	PolicyPendingLowCount                  *int64
-	PolicyPendingMediumCount               *int64
-	ServiceCostPerHourVolumeUsd            *float64
-	ServiceDebugVolumePerHour              *float64
-	ServiceErrorVolumePerHour              *float64
-	ServiceID                              *string
-	ServiceInfoVolumePerHour               *float64
-	ServiceOtherVolumePerHour              *float64
-	ServiceVolumePerHour                   *float64
-	ServiceWarnVolumePerHour               *float64
+	ID                               *string
+	AccountID                        *string
+	ApprovedRecommendationCount      *int64
+	CurrentBytesPerHour              *float64
+	CurrentBytesUsdPerHour           *float64
+	CurrentEventsPerHour             *float64
+	CurrentServiceDebugEventsPerHour *float64
+	CurrentServiceErrorEventsPerHour *float64
+	CurrentServiceEventsPerHour      *float64
+	CurrentServiceInfoEventsPerHour  *float64
+	CurrentServiceOtherEventsPerHour *float64
+	CurrentServiceVolumeUsdPerHour   *float64
+	CurrentServiceWarnEventsPerHour  *float64
+	CurrentTotalUsdPerHour           *float64
+	CurrentVolumeUsdPerHour          *float64
+	DatadogAccountID                 *string
+	DismissedRecommendationCount     *int64
+	EstimatedBytesPerHour            *float64
+	EstimatedBytesUsdPerHour         *float64
+	EstimatedEventsPerHour           *float64
+	EstimatedTotalUsdPerHour         *float64
+	EstimatedVolumeUsdPerHour        *float64
+	Health                           *string
+	ImpactBytesPerHour               *float64
+	ImpactBytesUsdPerHour            *float64
+	ImpactEventsPerHour              *float64
+	ImpactTotalUsdPerHour            *float64
+	ImpactVolumeUsdPerHour           *float64
+	LogEventAnalyzedCount            *int64
+	LogEventCount                    *int64
+	PendingRecommendationCount       *int64
+	PolicyPendingCriticalCount       *int64
+	PolicyPendingHighCount           *int64
+	PolicyPendingLowCount            *int64
+	PolicyPendingMediumCount         *int64
+	RecommendationCount              *int64
+	ServiceID                        *string
 }
 
 type Team struct {
