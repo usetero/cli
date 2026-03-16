@@ -20,7 +20,7 @@ SELECT
   CAST(COALESCE(policy_pending_high_count, 0) AS INTEGER) AS policy_pending_high_count,
   CAST(COALESCE(policy_pending_medium_count, 0) AS INTEGER) AS policy_pending_medium_count,
   CAST(COALESCE(policy_pending_low_count, 0) AS INTEGER) AS policy_pending_low_count
-FROM log_event_policy_category_statuses_cache
+FROM recommendation_category_statuses_cache
 WHERE category IS NOT NULL AND category != ''
   AND category_type = ?1
 ORDER BY estimated_cost_reduction_per_hour_usd DESC NULLS LAST, pending_count DESC;

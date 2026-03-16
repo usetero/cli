@@ -29,43 +29,31 @@ SELECT
   CAST(COALESCE(SUM(log_event_analyzed_count), 0) AS INTEGER) AS analyzed_count,
 
   -- policies
-  CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,
-  CAST(COALESCE(SUM(policy_approved_count), 0) AS INTEGER) AS approved_policy_count,
-  CAST(COALESCE(SUM(policy_dismissed_count), 0) AS INTEGER) AS dismissed_policy_count,
+  CAST(COALESCE(SUM(pending_recommendation_count), 0) AS INTEGER) AS pending_policy_count,
+  CAST(COALESCE(SUM(approved_recommendation_count), 0) AS INTEGER) AS approved_policy_count,
+  CAST(COALESCE(SUM(dismissed_recommendation_count), 0) AS INTEGER) AS dismissed_policy_count,
   CAST(COALESCE(SUM(policy_pending_critical_count), 0) AS INTEGER) AS policy_pending_critical_count,
   CAST(COALESCE(SUM(policy_pending_high_count), 0) AS INTEGER) AS policy_pending_high_count,
   CAST(COALESCE(SUM(policy_pending_medium_count), 0) AS INTEGER) AS policy_pending_medium_count,
   CAST(COALESCE(SUM(policy_pending_low_count), 0) AS INTEGER) AS policy_pending_low_count,
 
   -- estimated savings
-  SUM(estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,
-  SUM(estimated_cost_reduction_per_hour_bytes_usd) AS estimated_cost_per_hour_bytes,
-  SUM(estimated_cost_reduction_per_hour_volume_usd) AS estimated_cost_per_hour_volume,
-  SUM(estimated_volume_reduction_per_hour) AS estimated_volume_per_hour,
-  SUM(estimated_bytes_reduction_per_hour) AS estimated_bytes_per_hour,
-
-  -- observed impact
-  SUM(observed_cost_per_hour_before_usd) AS observed_cost_before,
-  SUM(observed_cost_per_hour_before_bytes_usd) AS observed_cost_before_bytes,
-  SUM(observed_cost_per_hour_before_volume_usd) AS observed_cost_before_volume,
-  SUM(observed_cost_per_hour_after_usd) AS observed_cost_after,
-  SUM(observed_cost_per_hour_after_bytes_usd) AS observed_cost_after_bytes,
-  SUM(observed_cost_per_hour_after_volume_usd) AS observed_cost_after_volume,
-  SUM(observed_volume_per_hour_before) AS observed_volume_before,
-  SUM(observed_volume_per_hour_after) AS observed_volume_after,
-  SUM(observed_bytes_per_hour_before) AS observed_bytes_before,
-  SUM(observed_bytes_per_hour_after) AS observed_bytes_after,
+  SUM(impact_total_usd_per_hour) AS estimated_cost_per_hour,
+  SUM(impact_bytes_usd_per_hour) AS estimated_cost_per_hour_bytes,
+  SUM(impact_volume_usd_per_hour) AS estimated_cost_per_hour_volume,
+  SUM(impact_events_per_hour) AS estimated_volume_per_hour,
+  SUM(impact_bytes_per_hour) AS estimated_bytes_per_hour,
 
   -- totals
-  SUM(log_event_cost_per_hour_usd) AS total_cost_per_hour,
-  SUM(log_event_cost_per_hour_bytes_usd) AS total_cost_per_hour_bytes,
-  SUM(log_event_cost_per_hour_volume_usd) AS total_cost_per_hour_volume,
-  SUM(log_event_volume_per_hour) AS total_volume_per_hour,
-  SUM(log_event_bytes_per_hour) AS total_bytes_per_hour,
+  SUM(current_total_usd_per_hour) AS total_cost_per_hour,
+  SUM(current_bytes_usd_per_hour) AS total_cost_per_hour_bytes,
+  SUM(current_volume_usd_per_hour) AS total_cost_per_hour_volume,
+  SUM(current_events_per_hour) AS total_volume_per_hour,
+  SUM(current_bytes_per_hour) AS total_bytes_per_hour,
 
   -- service-level throughput
-  SUM(service_volume_per_hour) AS total_service_volume_per_hour,
-  SUM(service_cost_per_hour_volume_usd) AS total_service_cost_per_hour
+  SUM(current_service_events_per_hour) AS total_service_volume_per_hour,
+  SUM(current_service_volume_usd_per_hour) AS total_service_cost_per_hour
 FROM datadog_account_statuses_cache
 `
 
@@ -91,16 +79,6 @@ type GetAccountSummaryRow struct {
 	EstimatedCostPerHourVolume *float64
 	EstimatedVolumePerHour     *float64
 	EstimatedBytesPerHour      *float64
-	ObservedCostBefore         *float64
-	ObservedCostBeforeBytes    *float64
-	ObservedCostBeforeVolume   *float64
-	ObservedCostAfter          *float64
-	ObservedCostAfterBytes     *float64
-	ObservedCostAfterVolume    *float64
-	ObservedVolumeBefore       *float64
-	ObservedVolumeAfter        *float64
-	ObservedBytesBefore        *float64
-	ObservedBytesAfter         *float64
 	TotalCostPerHour           *float64
 	TotalCostPerHourBytes      *float64
 	TotalCostPerHourVolume     *float64
@@ -135,16 +113,6 @@ func (q *Queries) GetAccountSummary(ctx context.Context) (GetAccountSummaryRow, 
 		&i.EstimatedCostPerHourVolume,
 		&i.EstimatedVolumePerHour,
 		&i.EstimatedBytesPerHour,
-		&i.ObservedCostBefore,
-		&i.ObservedCostBeforeBytes,
-		&i.ObservedCostBeforeVolume,
-		&i.ObservedCostAfter,
-		&i.ObservedCostAfterBytes,
-		&i.ObservedCostAfterVolume,
-		&i.ObservedVolumeBefore,
-		&i.ObservedVolumeAfter,
-		&i.ObservedBytesBefore,
-		&i.ObservedBytesAfter,
 		&i.TotalCostPerHour,
 		&i.TotalCostPerHourBytes,
 		&i.TotalCostPerHourVolume,

@@ -57,18 +57,17 @@ func (l *logEventPolicyStatusesImpl) GetPolicyCard(ctx context.Context, policyID
 // fieldSizes fetches per-field byte sizes for a log event and returns them
 // keyed by dot-path. Returns nil if no data is available.
 func (l *logEventPolicyStatusesImpl) fieldSizes(ctx context.Context, logEventID string) map[string]float64 {
-	rows, err := l.queries.ListFieldsByLogEvent(ctx, &logEventID)
+	_ = logEventID
+	rows, err := l.queries.ListFieldsByLogEvent(ctx)
 	if err != nil || len(rows) == 0 {
 		return nil
 	}
 
 	sizes := make(map[string]float64, len(rows))
 	for _, row := range rows {
-		if row.BaselineAvgBytes != nil {
-			fp := domain.ParseFieldPathPg(row.FieldPath)
-			if !fp.IsEmpty() {
-				sizes[fp.Key()] = *row.BaselineAvgBytes
-			}
+		fp := domain.ParseFieldPathPg(row.FieldPath)
+		if !fp.IsEmpty() {
+			sizes[fp.Key()] = row.BaselineAvgBytes
 		}
 	}
 	if len(sizes) == 0 {

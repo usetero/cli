@@ -39,10 +39,6 @@ func (s *serviceStatusesImpl) ListAllServiceStatuses(ctx context.Context) ([]dom
 			row.LogEventCostPerHourUsd, row.LogEventCostPerHourBytesUsd, row.LogEventCostPerHourVolumeUsd,
 			row.EstimatedVolumeReductionPerHour, row.EstimatedBytesReductionPerHour,
 			row.EstimatedCostReductionPerHourUsd, row.EstimatedCostReductionPerHourBytesUsd, row.EstimatedCostReductionPerHourVolumeUsd,
-			row.ObservedVolumePerHourBefore, row.ObservedVolumePerHourAfter,
-			row.ObservedBytesPerHourBefore, row.ObservedBytesPerHourAfter,
-			row.ObservedCostPerHourBeforeUsd, row.ObservedCostPerHourBeforeBytesUsd, row.ObservedCostPerHourBeforeVolumeUsd,
-			row.ObservedCostPerHourAfterUsd, row.ObservedCostPerHourAfterBytesUsd, row.ObservedCostPerHourAfterVolumeUsd,
 		)
 	}
 	return result, nil
@@ -71,10 +67,6 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 			row.LogEventCostPerHourUsd, row.LogEventCostPerHourBytesUsd, row.LogEventCostPerHourVolumeUsd,
 			row.EstimatedVolumeReductionPerHour, row.EstimatedBytesReductionPerHour,
 			row.EstimatedCostReductionPerHourUsd, row.EstimatedCostReductionPerHourBytesUsd, row.EstimatedCostReductionPerHourVolumeUsd,
-			row.ObservedVolumePerHourBefore, row.ObservedVolumePerHourAfter,
-			row.ObservedBytesPerHourBefore, row.ObservedBytesPerHourAfter,
-			row.ObservedCostPerHourBeforeUsd, row.ObservedCostPerHourBeforeBytesUsd, row.ObservedCostPerHourBeforeVolumeUsd,
-			row.ObservedCostPerHourAfterUsd, row.ObservedCostPerHourAfterBytesUsd, row.ObservedCostPerHourAfterVolumeUsd,
 		)
 	}
 	return result, nil
@@ -92,9 +84,6 @@ func mapServiceStatus(
 	svcCostVolume *float64,
 	volume, bytes, costUSD, costBytes, costVolume *float64,
 	estVolume, estBytes, estCostUSD, estCostBytes, estCostVolume *float64,
-	obsVolBefore, obsVolAfter, obsBytesBefore, obsBytesAfter *float64,
-	obsCostBefore, obsCostBeforeBytes, obsCostBeforeVolume *float64,
-	obsCostAfter, obsCostAfterBytes, obsCostAfterVolume *float64,
 ) domain.ServiceStatus {
 	name := ""
 	if serviceName != nil {
@@ -134,16 +123,5 @@ func mapServiceStatus(
 		EstimatedCostReductionPerHourUSD:    estCostUSD,
 		EstimatedCostReductionPerHourBytes:  estCostBytes,
 		EstimatedCostReductionPerHourVolume: estCostVolume,
-
-		ObservedVolumePerHourBefore:        obsVolBefore,
-		ObservedVolumePerHourAfter:         obsVolAfter,
-		ObservedBytesPerHourBefore:         obsBytesBefore,
-		ObservedBytesPerHourAfter:          obsBytesAfter,
-		ObservedCostPerHourBeforeUSD:       obsCostBefore,
-		ObservedCostPerHourBeforeBytesUSD:  obsCostBeforeBytes,
-		ObservedCostPerHourBeforeVolumeUSD: obsCostBeforeVolume,
-		ObservedCostPerHourAfterUSD:        obsCostAfter,
-		ObservedCostPerHourAfterBytesUSD:   obsCostAfterBytes,
-		ObservedCostPerHourAfterVolumeUSD:  obsCostAfterVolume,
 	}
 }

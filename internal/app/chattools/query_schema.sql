@@ -33,49 +33,45 @@ CREATE TABLE conversations (
     workspace_id TEXT -- Workspace this conversation belongs to
 );
 
--- Cache table for datadog_account_statuses view. Refreshed by cron service.
+-- Cache table for canonical datadog_account_statuses view. Refreshed by worker-owned status loops.
 CREATE TABLE datadog_account_statuses_cache (
     id TEXT,
-    account_id TEXT, -- Account ID (denormalized from Datadog account)
-    datadog_account_id TEXT, -- The Datadog account this status belongs to
-    disabled_services INTEGER, -- Services with DISABLED health
-    estimated_bytes_reduction_per_hour REAL, -- Account-wide estimated bytes reduction
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Account-wide estimated bytes-based USD/hour savings
-    estimated_cost_reduction_per_hour_usd REAL, -- Account-wide estimated total USD/hour savings
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Account-wide estimated volume-based USD/hour savings
-    estimated_volume_reduction_per_hour REAL, -- Account-wide estimated volume reduction
-    health TEXT, -- Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-    inactive_services INTEGER, -- Services with INACTIVE health
-    log_active_services INTEGER, -- Services not DISABLED or INACTIVE
-    log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
-    log_event_bytes_per_hour REAL, -- Discovered log event throughput in bytes/hour across all services
-    log_event_cost_per_hour_bytes_usd REAL, -- Discovered log event ingestion cost in USD/hour across all services
-    log_event_cost_per_hour_usd REAL, -- Discovered log event total cost in USD/hour across all services
-    log_event_cost_per_hour_volume_usd REAL, -- Discovered log event indexing cost in USD/hour across all services
-    log_event_count INTEGER, -- Total log events across all services
-    log_event_volume_per_hour REAL, -- Discovered log event throughput in events/hour across all services
-    log_service_count INTEGER, -- Total number of services
-    observed_bytes_per_hour_after REAL, -- Account-wide observed current bytes
-    observed_bytes_per_hour_before REAL, -- Account-wide observed pre-approval bytes
-    observed_cost_per_hour_after_bytes_usd REAL, -- Account-wide measured bytes-based USD/hour cost after approval
-    observed_cost_per_hour_after_usd REAL, -- Account-wide measured total USD/hour cost after approval
-    observed_cost_per_hour_after_volume_usd REAL, -- Account-wide measured volume-based USD/hour cost after approval
-    observed_cost_per_hour_before_bytes_usd REAL, -- Account-wide measured bytes-based USD/hour cost before approval
-    observed_cost_per_hour_before_usd REAL, -- Account-wide measured total USD/hour cost before approval
-    observed_cost_per_hour_before_volume_usd REAL, -- Account-wide measured volume-based USD/hour cost before approval
-    observed_volume_per_hour_after REAL, -- Account-wide observed current volume
-    observed_volume_per_hour_before REAL, -- Account-wide observed pre-approval volume
-    ok_services INTEGER, -- Services with OK health
-    policy_approved_count INTEGER, -- Policies approved by user
-    policy_dismissed_count INTEGER, -- Policies dismissed by user
-    policy_pending_count INTEGER, -- Policies awaiting user action
-    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
-    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
-    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
-    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    ready_for_use INTEGER, -- True when at least 1 log event has been analyzed
-    service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour across all services
-    service_volume_per_hour REAL -- Ground-truth throughput in events/hour from service_log_volumes across all services
+    account_id TEXT,
+    approved_recommendation_count INTEGER,
+    current_bytes_per_hour REAL,
+    current_bytes_usd_per_hour REAL,
+    current_events_per_hour REAL,
+    current_service_events_per_hour REAL,
+    current_service_volume_usd_per_hour REAL,
+    current_total_usd_per_hour REAL,
+    current_volume_usd_per_hour REAL,
+    datadog_account_id TEXT,
+    disabled_services INTEGER,
+    dismissed_recommendation_count INTEGER,
+    estimated_bytes_per_hour REAL,
+    estimated_bytes_usd_per_hour REAL,
+    estimated_events_per_hour REAL,
+    estimated_total_usd_per_hour REAL,
+    estimated_volume_usd_per_hour REAL,
+    health TEXT, -- Values: DISABLED, INACTIVE, ERROR, OK.
+    impact_bytes_per_hour REAL,
+    impact_bytes_usd_per_hour REAL,
+    impact_events_per_hour REAL,
+    impact_total_usd_per_hour REAL,
+    impact_volume_usd_per_hour REAL,
+    inactive_services INTEGER,
+    log_active_services INTEGER,
+    log_event_analyzed_count INTEGER,
+    log_event_count INTEGER,
+    log_service_count INTEGER,
+    ok_services INTEGER,
+    pending_recommendation_count INTEGER,
+    policy_pending_critical_count INTEGER,
+    policy_pending_high_count INTEGER,
+    policy_pending_low_count INTEGER,
+    policy_pending_medium_count INTEGER,
+    ready_for_use INTEGER,
+    recommendation_count INTEGER
 );
 
 -- Datadog integration configuration for an account, one per account
@@ -98,21 +94,8 @@ CREATE TABLE datadog_log_indexes (
     name TEXT -- Index name from Datadog (e.g., 'main', 'security', 'compliance') - this is the stable identifier
 );
 
--- Ground truth record for a field in a log event. Accumulates metadata as more production data is observed.
-CREATE TABLE log_event_fields (
-    id TEXT, -- Unique identifier
-    account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from log_event.account_id.
-    baseline_avg_bytes REAL, -- Current trailing 7-day volume-weighted average bytes for this attribute. Refreshed on volume ingestion.
-    created_at TEXT, -- When this field was first discovered
-    field_path TEXT, -- Unambiguous path segments, e.g. {attributes, http, status}
-    log_event_id TEXT, -- The log event this field belongs to
-    -- Top-N observed values with proportions. Populated on-demand for fields that need faceting (e.g., user agents for bot detection).
-    -- Opaque JSON data. Query using SQLite json_extract() or json_each().
-    value_distribution TEXT
-);
-
 -- AI-generated recommendation for a specific quality category on a log event, scoped to a workspace for approval
-CREATE TABLE log_event_policies (
+CREATE TABLE log_event_recommendations (
     id TEXT, -- Unique identifier
     account_id TEXT, -- Denormalized for tenant isolation. Auto-set via trigger from workspace.account_id.
     action TEXT, -- What this policy does when enforced: 'drop' (remove all events), 'sample' (keep at reduced rate), 'filter' (drop subset by field value), 'trim' (remove/truncate fields), 'none' (informational only). Auto-set via trigger.
@@ -170,98 +153,38 @@ CREATE TABLE log_event_policies (
     workspace_id TEXT -- The workspace that owns this policy
 );
 
--- Cache table for per-category policy aggregations. Refreshed by cron service.
-CREATE TABLE log_event_policy_category_statuses_cache (
-    id TEXT,
-    account_id TEXT, -- Account ID for tenant isolation
-    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
-    approved_count INTEGER, -- Policies approved by user in this category
-    boundary TEXT, -- Where this category stops applying — what NOT to flag
-    category TEXT, -- Quality issue category (e.g., pii_leakage, noise, health_checks)
-    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
-    dismissed_count INTEGER, -- Policies dismissed by user in this category
-    display_name TEXT, -- Human-readable category name (e.g., 'PII Leakage')
-    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all pending policies in this category combined
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour from pending policies in this category
-    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour from pending policies in this category
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour from pending policies in this category
-    estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all pending policies in this category combined
-    events_with_volumes INTEGER, -- Log events in this category that have volume data (subset of total_event_count)
-    pending_count INTEGER, -- Policies awaiting user review in this category
-    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
-    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
-    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
-    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    principle TEXT, -- What this category detects — the fundamental test for membership
-    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
-    total_event_count INTEGER -- Total log events that have a policy in this category
-);
-
--- Cache table for log_event_policy_statuses view. Refreshed by cron service.
-CREATE TABLE log_event_policy_statuses_cache (
-    id TEXT,
-    account_id TEXT, -- Account ID for tenant isolation
-    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
-    approved_at TEXT, -- When this policy was approved by a user
-    bytes_per_hour REAL, -- Current throughput of the targeted log event in bytes/hour
-    category TEXT, -- Quality issue category this policy addresses (e.g., pii_leakage, noise, health_checks)
-    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
-    created_at TEXT, -- When this policy was created
-    dismissed_at TEXT, -- When this policy was dismissed by a user
-    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved if this policy applied alone. NULL if not estimable.
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour from bytes reduction
-    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour (bytes + volume)
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour from volume reduction
-    estimated_volume_reduction_per_hour REAL, -- Events/hour saved if this policy applied alone. NULL if not estimable.
-    log_event_id TEXT, -- The log event this policy targets
-    log_event_name TEXT, -- Name of the targeted log event (denormalized for display)
-    policy_id TEXT, -- The policy this status row represents
-    service_id TEXT, -- Service that produces the targeted log event (denormalized)
-    service_name TEXT, -- Name of the service (denormalized for display)
-    severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Values: low, medium, high, critical.
-    status TEXT, -- User decision on this policy. PENDING (awaiting review), APPROVED (accepted for enforcement), DISMISSED (rejected by user).
-    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
-    survival_rate REAL, -- Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
-    volume_per_hour REAL, -- Current throughput of the targeted log event in events/hour
-    workspace_id TEXT -- The workspace that owns this policy
-);
-
--- Cache table for log_event_statuses view. Refreshed by cron service.
+-- Cache table for canonical log_event_statuses view. Refreshed by worker-owned status loops.
 CREATE TABLE log_event_statuses_cache (
     id TEXT,
-    account_id TEXT, -- Account ID for tenant isolation
-    approved_policy_count INTEGER, -- Policies approved by user
-    bytes_per_hour REAL, -- Current throughput in bytes/hour (rolling 7-day)
-    cost_per_hour_bytes_usd REAL, -- Current ingestion cost in USD/hour
-    cost_per_hour_usd REAL, -- Current total cost in USD/hour (bytes + volume)
-    cost_per_hour_volume_usd REAL, -- Current indexing cost in USD/hour
-    dismissed_policy_count INTEGER, -- Policies dismissed by user
-    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all policies combined
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour
-    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour (bytes + volume)
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour
-    estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all policies combined
-    has_been_analyzed INTEGER, -- Whether AI has analyzed this log event
-    has_volumes INTEGER, -- Whether volume data exists for this log event
-    log_event_id TEXT, -- The log event this status belongs to
-    observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval (current)
-    observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval
-    observed_cost_per_hour_after_bytes_usd REAL, -- Measured ingestion cost after approval (current)
-    observed_cost_per_hour_after_usd REAL, -- Measured total cost after approval (current)
-    observed_cost_per_hour_after_volume_usd REAL, -- Measured indexing cost after approval (current)
-    observed_cost_per_hour_before_bytes_usd REAL, -- Measured ingestion cost before approval
-    observed_cost_per_hour_before_usd REAL, -- Measured total cost before approval
-    observed_cost_per_hour_before_volume_usd REAL, -- Measured indexing cost before approval
-    observed_volume_per_hour_after REAL, -- Measured events/hour after policy approval (current)
-    observed_volume_per_hour_before REAL, -- Measured events/hour before first policy approval
-    pending_policy_count INTEGER, -- Policies awaiting user action
-    policy_count INTEGER, -- Total non-dismissed policies
-    policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
-    policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
-    policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
-    policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    service_id TEXT, -- Service ID (denormalized from log_event)
-    volume_per_hour REAL -- Current throughput in events/hour (rolling 7-day)
+    account_id TEXT,
+    approved_recommendation_count INTEGER,
+    current_bytes_per_hour REAL,
+    current_bytes_usd_per_hour REAL,
+    current_events_per_hour REAL,
+    current_total_usd_per_hour REAL,
+    current_volume_usd_per_hour REAL,
+    dismissed_recommendation_count INTEGER,
+    effective_policy_enabled INTEGER,
+    estimated_bytes_per_hour REAL,
+    estimated_bytes_usd_per_hour REAL,
+    estimated_events_per_hour REAL,
+    estimated_total_usd_per_hour REAL,
+    estimated_volume_usd_per_hour REAL,
+    has_been_analyzed INTEGER,
+    has_volumes INTEGER,
+    impact_bytes_per_hour REAL,
+    impact_bytes_usd_per_hour REAL,
+    impact_events_per_hour REAL,
+    impact_total_usd_per_hour REAL,
+    impact_volume_usd_per_hour REAL,
+    log_event_id TEXT,
+    pending_recommendation_count INTEGER,
+    policy_pending_critical_count INTEGER,
+    policy_pending_high_count INTEGER,
+    policy_pending_low_count INTEGER,
+    policy_pending_medium_count INTEGER,
+    recommendation_count INTEGER,
+    service_id TEXT
 );
 
 -- Distinct log message pattern discovered within a service. Defines how to parse and match logs using codecs and matchers.
@@ -272,8 +195,7 @@ CREATE TABLE log_events (
     baseline_volume_per_hour REAL, -- Current trailing 7-day average events/hour. Refreshed on volume ingestion.
     created_at TEXT, -- When the log event was created
     description TEXT, -- What the event is and what data instances carry. Helps engineers decide whether to look here.
-    event_nature TEXT, -- What this event records: system (internal mechanics), traffic (request flow), activity (actor+action+resource), control (access/permission decisions).
-    -- Sample log records captured during discovery, used for AI analysis and pattern validation
+    -- Sample log records captured during catalog loop collection, used for AI inference and pattern validation.
     -- JSON array of objects. Each element:
     -- $[0].timestamp                 - When the log event occurred (RFC3339)
     -- $[0].body                      string     - Log message content
@@ -299,8 +221,7 @@ CREATE TABLE log_events (
     matchers TEXT,
     name TEXT, -- Snake_case identifier unique per service, e.g. nginx_access_log
     service_id TEXT, -- Service that produces this event
-    severity TEXT, -- Predominant log severity level, derived from example records. Nullable when examples have no severity info. Values: debug, info, warn, error, other.
-    signal_purpose TEXT -- What role this event serves: diagnostic (investigate incidents), operational (system behavior), lifecycle (state transitions), ephemeral (transient state).
+    severity TEXT -- Predominant log severity level, derived from example records. Nullable when examples have no severity info. Values: debug, info, warn, error, other.
 );
 
 -- Single message in a chat conversation. Append-only — never updated or deleted.
@@ -333,49 +254,109 @@ CREATE TABLE messages (
     stop_reason TEXT -- Why the assistant stopped generating. end_turn: completed response, tool_use: paused to call a tool. Null for user messages.
 );
 
--- Cache table for service_statuses view. Refreshed by cron service.
-CREATE TABLE service_statuses_cache (
+-- Cache table for per-category recommendation aggregations. Refreshed by worker-owned status loops.
+CREATE TABLE recommendation_category_statuses_cache (
     id TEXT,
-    account_id TEXT, -- Account ID (denormalized from service)
-    datadog_account_id TEXT, -- The Datadog account performing discovery
-    estimated_bytes_reduction_per_hour REAL, -- Estimated bytes reduction from active policies
-    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated bytes-based USD/hour savings from active policies
-    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total USD/hour savings from active policies
-    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated volume-based USD/hour savings from active policies
-    estimated_volume_reduction_per_hour REAL, -- Estimated volume reduction from active policies
-    health TEXT, -- Overall health of the service. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-    log_event_analyzed_count INTEGER, -- Number of log events that have been analyzed
-    log_event_bytes_per_hour REAL, -- Discovered log event throughput in bytes/hour from rolling 7-day window
-    log_event_cost_per_hour_bytes_usd REAL, -- Discovered log event ingestion cost in USD/hour
-    log_event_cost_per_hour_usd REAL, -- Discovered log event total cost in USD/hour (bytes + volume)
-    log_event_cost_per_hour_volume_usd REAL, -- Discovered log event indexing cost in USD/hour
-    log_event_count INTEGER, -- Total number of log events discovered for this service
-    log_event_volume_per_hour REAL, -- Discovered log event throughput in events/hour from rolling 7-day window
-    observed_bytes_per_hour_after REAL, -- Measured bytes/hour after policy approval
-    observed_bytes_per_hour_before REAL, -- Measured bytes/hour before first policy approval
-    observed_cost_per_hour_after_bytes_usd REAL, -- Measured bytes-based USD/hour cost after approval
-    observed_cost_per_hour_after_usd REAL, -- Measured total USD/hour cost after approval
-    observed_cost_per_hour_after_volume_usd REAL, -- Measured volume-based USD/hour cost after approval
-    observed_cost_per_hour_before_bytes_usd REAL, -- Measured bytes-based USD/hour cost before approval
-    observed_cost_per_hour_before_usd REAL, -- Measured total USD/hour cost before approval
-    observed_cost_per_hour_before_volume_usd REAL, -- Measured volume-based USD/hour cost before approval
-    observed_volume_per_hour_after REAL, -- Measured events/hour after policy approval
-    observed_volume_per_hour_before REAL, -- Measured events/hour before first policy approval
-    policy_approved_count INTEGER, -- Policies approved by user
-    policy_dismissed_count INTEGER, -- Policies dismissed by user
-    policy_pending_count INTEGER, -- Policies awaiting user action
+    account_id TEXT, -- Account ID for tenant isolation
+    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
+    approved_count INTEGER, -- Policies approved by user in this category
+    boundary TEXT, -- Where this category stops applying — what NOT to flag
+    category TEXT, -- Quality issue category (e.g., pii_leakage, noise, health_checks)
+    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
+    dismissed_count INTEGER, -- Policies dismissed by user in this category
+    display_name TEXT, -- Human-readable category name (e.g., 'PII Leakage')
+    estimated_bytes_reduction_per_hour REAL, -- Bytes/hour saved by all pending policies in this category combined
+    estimated_cost_reduction_per_hour_bytes_usd REAL, -- Estimated ingestion savings in USD/hour from pending policies in this category
+    estimated_cost_reduction_per_hour_usd REAL, -- Estimated total savings in USD/hour from pending policies in this category
+    estimated_cost_reduction_per_hour_volume_usd REAL, -- Estimated indexing savings in USD/hour from pending policies in this category
+    estimated_volume_reduction_per_hour REAL, -- Events/hour saved by all pending policies in this category combined
+    events_with_volumes INTEGER, -- Log events in this category that have volume data (subset of total_event_count)
+    pending_count INTEGER, -- Policies awaiting user review in this category
     policy_pending_critical_count INTEGER, -- Pending policies with critical compliance severity
     policy_pending_high_count INTEGER, -- Pending policies with high compliance severity
     policy_pending_low_count INTEGER, -- Pending policies with low compliance severity
     policy_pending_medium_count INTEGER, -- Pending policies with medium compliance severity
-    service_cost_per_hour_volume_usd REAL, -- Service-level indexing cost in USD/hour based on total service volume
-    service_debug_volume_per_hour REAL, -- Debug-level events/hour from rolling 7-day window
-    service_error_volume_per_hour REAL, -- Error-level events/hour from rolling 7-day window
-    service_id TEXT, -- The service this status belongs to
-    service_info_volume_per_hour REAL, -- Info-level events/hour from rolling 7-day window
-    service_other_volume_per_hour REAL, -- Other-level events/hour (trace, fatal, critical, unknown) from rolling 7-day window
-    service_volume_per_hour REAL, -- Ground-truth service throughput in events/hour from service_log_volumes rolling 7-day window
-    service_warn_volume_per_hour REAL -- Warn-level events/hour from rolling 7-day window
+    principle TEXT, -- What this category detects — the fundamental test for membership
+    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
+    total_event_count INTEGER -- Total log events that have a policy in this category
+);
+
+-- Cache table for recommendation_statuses view. Refreshed by worker-owned status loops.
+CREATE TABLE recommendation_statuses_cache (
+    id TEXT,
+    account_id TEXT, -- Account ID for tenant isolation
+    action TEXT, -- What the policy does: drop (remove events), sample (reduce rate), filter (drop subset), trim (modify fields), none (informational)
+    approved_at TEXT, -- When this policy was approved by a user
+    category TEXT, -- Quality issue category this policy addresses (e.g., pii_leakage, noise, health_checks)
+    category_type TEXT, -- Type of problem: compliance (legal/security risk), waste (event-level cuts), quality (field-level improvements).
+    created_at TEXT, -- When this policy was created
+    current_bytes_per_hour REAL, -- Current bytes/hour baseline for this recommendation
+    current_bytes_usd_per_hour REAL, -- Current bytes-billed USD/hour baseline
+    current_events_per_hour REAL, -- Current events/hour baseline for this recommendation
+    current_total_usd_per_hour REAL, -- Current total USD/hour baseline
+    current_volume_usd_per_hour REAL, -- Current volume-billed USD/hour baseline
+    dismissed_at TEXT, -- When this policy was dismissed by a user
+    estimated_bytes_per_hour REAL, -- Estimated bytes/hour if this recommendation is applied alone
+    estimated_bytes_usd_per_hour REAL, -- Estimated bytes-billed USD/hour if applied alone
+    estimated_events_per_hour REAL, -- Estimated events/hour if this recommendation is applied alone
+    estimated_total_usd_per_hour REAL, -- Estimated total USD/hour if applied alone
+    estimated_volume_usd_per_hour REAL, -- Estimated volume-billed USD/hour if applied alone
+    impact_bytes_per_hour REAL, -- Estimated impact in bytes/hour (estimated - current)
+    impact_bytes_usd_per_hour REAL, -- Estimated impact in bytes-billed USD/hour (estimated - current)
+    impact_events_per_hour REAL, -- Estimated impact in events/hour (estimated - current)
+    impact_total_usd_per_hour REAL, -- Estimated impact in total USD/hour (estimated - current)
+    impact_volume_usd_per_hour REAL, -- Estimated impact in volume-billed USD/hour (estimated - current)
+    log_event_id TEXT, -- The log event this policy targets
+    log_event_name TEXT, -- Name of the targeted log event (denormalized for display)
+    recommendation_id TEXT, -- The recommendation this status row represents
+    service_id TEXT, -- Service that produces the targeted log event (denormalized)
+    service_name TEXT, -- Name of the service (denormalized for display)
+    severity TEXT, -- Max compliance severity across sensitivity types. NULL for non-compliance categories. Values: low, medium, high, critical.
+    status TEXT, -- User decision on this policy. PENDING (awaiting review), APPROVED (accepted for enforcement), DISMISSED (rejected by user).
+    subjective INTEGER, -- Whether this category requires AI judgment (true) vs mechanically verifiable (false)
+    survival_rate REAL, -- Fraction of events that survive this policy (0.0 = all dropped, 1.0 = all kept). NULL if not estimable.
+    workspace_id TEXT -- The workspace that owns this policy
+);
+
+-- Cache table for canonical service_statuses view. Refreshed by worker-owned status loops.
+CREATE TABLE service_statuses_cache (
+    id TEXT,
+    account_id TEXT,
+    approved_recommendation_count INTEGER,
+    current_bytes_per_hour REAL,
+    current_bytes_usd_per_hour REAL,
+    current_events_per_hour REAL,
+    current_service_debug_events_per_hour REAL,
+    current_service_error_events_per_hour REAL,
+    current_service_events_per_hour REAL,
+    current_service_info_events_per_hour REAL,
+    current_service_other_events_per_hour REAL,
+    current_service_volume_usd_per_hour REAL,
+    current_service_warn_events_per_hour REAL,
+    current_total_usd_per_hour REAL,
+    current_volume_usd_per_hour REAL,
+    datadog_account_id TEXT,
+    dismissed_recommendation_count INTEGER,
+    estimated_bytes_per_hour REAL,
+    estimated_bytes_usd_per_hour REAL,
+    estimated_events_per_hour REAL,
+    estimated_total_usd_per_hour REAL,
+    estimated_volume_usd_per_hour REAL,
+    health TEXT, -- Values: DISABLED, INACTIVE, ERROR, OK.
+    impact_bytes_per_hour REAL,
+    impact_bytes_usd_per_hour REAL,
+    impact_events_per_hour REAL,
+    impact_total_usd_per_hour REAL,
+    impact_volume_usd_per_hour REAL,
+    log_event_analyzed_count INTEGER,
+    log_event_count INTEGER,
+    pending_recommendation_count INTEGER,
+    policy_pending_critical_count INTEGER,
+    policy_pending_high_count INTEGER,
+    policy_pending_low_count INTEGER,
+    policy_pending_medium_count INTEGER,
+    recommendation_count INTEGER,
+    service_id TEXT
 );
 
 -- Application or microservice that produces logs. Central entity in the data catalog.
@@ -385,7 +366,7 @@ CREATE TABLE services (
     created_at TEXT, -- When the service was created
     description TEXT, -- AI-generated description of what this service does and its telemetry characteristics
     enabled INTEGER, -- Whether log analysis and policy generation is active for this service
-    initial_weekly_log_count INTEGER, -- Approximate weekly log count from initial discovery (7-day period from Datadog)
+    initial_weekly_log_count INTEGER, -- Approximate weekly log count from initial catalog loop pass (7-day period from Datadog)
     name TEXT -- Service identifier in telemetry (e.g., 'checkout-service')
 );
 

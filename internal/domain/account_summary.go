@@ -60,18 +60,6 @@ type AccountSummary struct {
 	EstimatedCostPerHourVolume *float64
 	EstimatedVolumePerHour     *float64
 	EstimatedBytesPerHour      *float64
-
-	// Observed impact from approved policies (before/after). Nil when unmeasured.
-	ObservedCostBefore       *float64
-	ObservedCostBeforeBytes  *float64
-	ObservedCostBeforeVolume *float64
-	ObservedCostAfter        *float64
-	ObservedCostAfterBytes   *float64
-	ObservedCostAfterVolume  *float64
-	ObservedVolumeBefore     *float64
-	ObservedVolumeAfter      *float64
-	ObservedBytesBefore      *float64
-	ObservedBytesAfter       *float64
 }
 
 // AnalysisReady returns true when enough discovered events have been

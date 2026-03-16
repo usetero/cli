@@ -54,9 +54,9 @@ tasks:
   generate:schema:
     desc: Generate PowerSync and SQLite schema (uses local control plane)
     cmds:
-      - go generate ./internal/powersync
-      - go generate ./internal/sqlite
-      - sed '/^-- Auto-generated/d; /^-- Run .task generate/d' ../control-plane/internal/powersync/schema.sql > internal/chat/tools/query_schema.sql
+      - doppler run -- go generate ./internal/powersync
+      - doppler run -- go generate ./internal/sqlite
+      - sed '/^-- Auto-generated/d; /^-- Run .task generate/d' ../control-plane/internal/infra/powersync/schema.sql > internal/app/chattools/query_schema.sql
 
   # ===========================================================================
   # Build

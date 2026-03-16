@@ -159,10 +159,6 @@ func (m *Model) buildStateKey(s domain.AccountSummary, cats []domain.PolicyCateg
 			EstimatedCostPerHourVol: s.EstimatedCostPerHourVolume,
 			EstimatedVolumePerHour:  s.EstimatedVolumePerHour,
 			EstimatedBytesPerHour:   s.EstimatedBytesPerHour,
-			ObservedCostBefore:      s.ObservedCostBefore,
-			ObservedCostAfter:       s.ObservedCostAfter,
-			ObservedVolumeBefore:    s.ObservedVolumeBefore,
-			ObservedVolumeAfter:     s.ObservedVolumeAfter,
 			TotalCostPerHour:        s.TotalCostPerHour,
 			TotalVolumePerHour:      s.TotalVolumePerHour,
 			TotalBytesPerHour:       s.TotalBytesPerHour,
@@ -206,10 +202,6 @@ type wasteSummaryKey struct {
 	EstimatedCostPerHourVol *float64 `json:"estimated_cost_per_hour_volume"`
 	EstimatedVolumePerHour  *float64 `json:"estimated_volume_per_hour"`
 	EstimatedBytesPerHour   *float64 `json:"estimated_bytes_per_hour"`
-	ObservedCostBefore      *float64 `json:"observed_cost_before"`
-	ObservedCostAfter       *float64 `json:"observed_cost_after"`
-	ObservedVolumeBefore    *float64 `json:"observed_volume_before"`
-	ObservedVolumeAfter     *float64 `json:"observed_volume_after"`
 	TotalCostPerHour        *float64 `json:"total_cost_per_hour"`
 	TotalVolumePerHour      *float64 `json:"total_volume_per_hour"`
 	TotalBytesPerHour       *float64 `json:"total_bytes_per_hour"`
@@ -274,12 +266,6 @@ func (m *Model) CompactView() string {
 	sep := muted.Render(" · ")
 
 	var segments []string
-
-	// Observed savings from approved policies (always shown — these are measured).
-	if saving := formatObservedSaving(s); saving != "" {
-		savingStyle := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-		segments = append(segments, savingStyle.Render("saving "+saving))
-	}
 
 	if s.AnalysisReady() {
 		// Waste percentage with pending count.
@@ -349,12 +335,6 @@ func (m *Model) renderWasteHeadline() string {
 	sep := muted.Render(" · ")
 
 	var parts []string
-
-	// Observed savings from approved policies (always shown — these are measured).
-	if saving := formatObservedSaving(s); saving != "" {
-		savingStyle := lipgloss.NewStyle().Foreground(colors.Success).Background(colors.Bg)
-		parts = append(parts, savingStyle.Render("saving "+saving))
-	}
 
 	// Pending count + waste %. Count first for consistency with other tabs.
 	if s.PendingPolicyCount > 0 {
@@ -504,24 +484,6 @@ func formatCategoryCost(c domain.PolicyCategoryStatus, totalCostPerHour float64,
 func (m *Model) cursorPrinciple() string {
 	if m.core.Cursor() < len(m.categories) {
 		return m.categories[m.core.Cursor()].Principle
-	}
-	return ""
-}
-
-// formatObservedSaving returns the observed savings from approved policies.
-func formatObservedSaving(s domain.AccountSummary) string {
-	if s.ObservedCostBefore != nil && s.ObservedCostAfter != nil {
-		diff := *s.ObservedCostBefore - *s.ObservedCostAfter
-		if diff > 0 {
-			return format.YearlyCost(diff)
-		}
-		return ""
-	}
-	if s.ObservedVolumeBefore != nil && s.ObservedVolumeAfter != nil {
-		diff := *s.ObservedVolumeBefore - *s.ObservedVolumeAfter
-		if diff > 0 {
-			return format.Volume(diff) + " evt/hr"
-		}
 	}
 	return ""
 }

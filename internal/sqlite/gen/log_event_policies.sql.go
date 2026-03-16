@@ -10,7 +10,7 @@ import (
 )
 
 const approveLogEventPolicy = `-- name: ApproveLogEventPolicy :exec
-UPDATE log_event_policies
+UPDATE log_event_recommendations
 SET approved_at = ?, approved_by = ?
 WHERE id = ?
 `
@@ -27,7 +27,7 @@ func (q *Queries) ApproveLogEventPolicy(ctx context.Context, arg ApproveLogEvent
 }
 
 const countLogEventPolicies = `-- name: CountLogEventPolicies :one
-SELECT COUNT(*) FROM log_event_policies
+SELECT COUNT(*) FROM log_event_recommendations
 `
 
 func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
@@ -38,7 +38,7 @@ func (q *Queries) CountLogEventPolicies(ctx context.Context) (int64, error) {
 }
 
 const dismissLogEventPolicy = `-- name: DismissLogEventPolicy :exec
-UPDATE log_event_policies
+UPDATE log_event_recommendations
 SET dismissed_at = ?, dismissed_by = ?
 WHERE id = ?
 `

@@ -16,8 +16,8 @@ SELECT
     SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
     FROM json_each(json_extract(lep.analysis, '$.' || leps.category || '.fields')) f
   ), 0) = 1 THEN 1 ELSE 0 END) AS INTEGER) AS observed_count
-FROM log_event_policy_statuses_cache leps
-LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+FROM recommendation_statuses_cache leps
+LEFT JOIN log_event_recommendations lep ON lep.id = leps.recommendation_id
 WHERE leps.category_type = 'compliance' AND leps.status = 'PENDING'
 GROUP BY leps.category
 `
@@ -57,18 +57,18 @@ SELECT
   COALESCE(s.name, '') AS service_name,
   COALESCE(le.name, '') AS log_event_name,
   COALESCE(lep.analysis, '') AS analysis,
-  les.volume_per_hour,
+  les.current_events_per_hour AS volume_per_hour,
   CAST(COALESCE((
     SELECT MAX(CASE json_extract(f.value, '$.observed') WHEN 1 THEN 1 ELSE 0 END)
     FROM json_each(json_extract(lep.analysis, '$.' || ?1 || '.fields')) f
   ), 0) AS INTEGER) AS any_observed
-FROM log_event_policy_statuses_cache leps
+FROM recommendation_statuses_cache leps
 JOIN log_events le ON le.id = leps.log_event_id
 JOIN services s ON s.id = le.service_id
-LEFT JOIN log_event_policies lep ON lep.id = leps.policy_id
+LEFT JOIN log_event_recommendations lep ON lep.id = leps.recommendation_id
 LEFT JOIN log_event_statuses_cache les ON les.log_event_id = leps.log_event_id
 WHERE leps.category = ?1 AND leps.status = 'PENDING'
-ORDER BY any_observed DESC, les.volume_per_hour DESC
+ORDER BY any_observed DESC, les.current_events_per_hour DESC
 LIMIT ?2
 `
 

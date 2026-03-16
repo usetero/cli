@@ -47,31 +47,12 @@ query GetDatadogAccountStatus($id: ID!) {
                     disabledServices
                     inactiveServices
                     okServices
-                    policyPendingCount
-                    policyApprovedCount
-                    policyDismissedCount
-                    serviceVolumePerHour
-                    serviceCostPerHourVolumeUsd
-                    logEventVolumePerHour
-                    logEventBytesPerHour
-                    logEventCostPerHourBytesUsd
-                    logEventCostPerHourVolumeUsd
-                    logEventCostPerHourUsd
-                    estimatedVolumeReductionPerHour
-                    estimatedBytesReductionPerHour
-                    estimatedCostReductionPerHourBytesUsd
-                    estimatedCostReductionPerHourVolumeUsd
-                    estimatedCostReductionPerHourUsd
-                    observedVolumePerHourBefore
-                    observedVolumePerHourAfter
-                    observedBytesPerHourBefore
-                    observedBytesPerHourAfter
-                    observedCostPerHourBeforeBytesUsd
-                    observedCostPerHourBeforeVolumeUsd
-                    observedCostPerHourBeforeUsd
-                    observedCostPerHourAfterBytesUsd
-                    observedCostPerHourAfterVolumeUsd
-                    observedCostPerHourAfterUsd
+                    approvedRecommendationCount
+                    dismissedRecommendationCount
+                    policyPendingLowCount
+                    policyPendingMediumCount
+                    policyPendingHighCount
+                    policyPendingCriticalCount
                 }
             }
         }

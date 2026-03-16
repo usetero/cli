@@ -292,16 +292,21 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 								Node: &gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount{
 									Id: "dd-123",
 									Status: &gen.GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache{
-										Health:                gen.DatadogAccountStatusCacheHealthOk,
-										ReadyForUse:           true,
-										LogServiceCount:       10,
-										LogActiveServices:     8,
-										OkServices:            7,
-										DisabledServices:      1,
-										InactiveServices:      1,
-										LogEventCount:         200,
-										LogEventAnalyzedCount: 180,
-										PolicyPendingCount:    12,
+										Health:                       gen.DatadogAccountStatusCacheHealthOk,
+										ReadyForUse:                  true,
+										LogServiceCount:              10,
+										LogActiveServices:            8,
+										OkServices:                   7,
+										DisabledServices:             1,
+										InactiveServices:             1,
+										LogEventCount:                200,
+										LogEventAnalyzedCount:        180,
+										PolicyPendingLowCount:        3,
+										PolicyPendingMediumCount:     4,
+										PolicyPendingHighCount:       5,
+										PolicyPendingCriticalCount:   0,
+										ApprovedRecommendationCount:  9,
+										DismissedRecommendationCount: 2,
 									},
 								},
 							},
@@ -337,6 +342,12 @@ func TestDatadogAccountService_GetStatus(t *testing.T) {
 		}
 		if status.PendingPolicyCount != 12 {
 			t.Errorf("PendingPolicyCount = %d, want 12", status.PendingPolicyCount)
+		}
+		if status.ApprovedPolicyCount != 9 {
+			t.Errorf("ApprovedPolicyCount = %d, want 9", status.ApprovedPolicyCount)
+		}
+		if status.DismissedPolicyCount != 2 {
+			t.Errorf("DismissedPolicyCount = %d, want 2", status.DismissedPolicyCount)
 		}
 	})
 

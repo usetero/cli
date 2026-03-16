@@ -52,16 +52,4 @@ type ServiceStatus struct {
 	EstimatedCostReductionPerHourUSD    *float64
 	EstimatedCostReductionPerHourBytes  *float64
 	EstimatedCostReductionPerHourVolume *float64
-
-	// Observed impact from approved policies (before/after). Nil when unmeasured.
-	ObservedVolumePerHourBefore        *float64
-	ObservedVolumePerHourAfter         *float64
-	ObservedBytesPerHourBefore         *float64
-	ObservedBytesPerHourAfter          *float64
-	ObservedCostPerHourBeforeUSD       *float64
-	ObservedCostPerHourBeforeBytesUSD  *float64
-	ObservedCostPerHourBeforeVolumeUSD *float64
-	ObservedCostPerHourAfterUSD        *float64
-	ObservedCostPerHourAfterBytesUSD   *float64
-	ObservedCostPerHourAfterVolumeUSD  *float64
 }

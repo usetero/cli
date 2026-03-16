@@ -226,9 +226,9 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 		InactiveServices:     statusNode.InactiveServices,
 		EventCount:           statusNode.LogEventCount,
 		AnalyzedCount:        statusNode.LogEventAnalyzedCount,
-		PendingPolicyCount:   statusNode.PolicyPendingCount,
-		ApprovedPolicyCount:  statusNode.PolicyApprovedCount,
-		DismissedPolicyCount: statusNode.PolicyDismissedCount,
+		PendingPolicyCount:   statusNode.PolicyPendingLowCount + statusNode.PolicyPendingMediumCount + statusNode.PolicyPendingHighCount + statusNode.PolicyPendingCriticalCount,
+		ApprovedPolicyCount:  statusNode.ApprovedRecommendationCount,
+		DismissedPolicyCount: statusNode.DismissedRecommendationCount,
 	}
 
 	s.scope.Debug("fetched datadog account status",

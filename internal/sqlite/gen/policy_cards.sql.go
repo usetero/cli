@@ -11,18 +11,18 @@ import (
 
 const getPolicyCard = `-- name: GetPolicyCard :one
 SELECT
-  COALESCE(ps.policy_id, '') AS policy_id,
+  COALESCE(ps.recommendation_id, '') AS policy_id,
   COALESCE(ps.service_name, '') AS service_name,
   COALESCE(ps.log_event_name, '') AS log_event_name,
   COALESCE(ps.category, '') AS category,
   COALESCE(ps.category_type, '') AS category_type,
   COALESCE(ps.action, '') AS "action",
   COALESCE(ps.status, '') AS status,
-  ps.volume_per_hour,
-  ps.bytes_per_hour,
-  ps.estimated_cost_reduction_per_hour_usd AS estimated_cost_per_hour,
-  ps.estimated_volume_reduction_per_hour AS estimated_volume_per_hour,
-  ps.estimated_bytes_reduction_per_hour AS estimated_bytes_per_hour,
+  ps.current_events_per_hour AS volume_per_hour,
+  ps.current_bytes_per_hour AS bytes_per_hour,
+  ps.impact_total_usd_per_hour AS estimated_cost_per_hour,
+  ps.impact_events_per_hour AS estimated_volume_per_hour,
+  ps.impact_bytes_per_hour AS estimated_bytes_per_hour,
   COALESCE(ps.severity, '') AS severity,
   ps.survival_rate,
   COALESCE(cat.display_name, '') AS category_display_name,
@@ -31,11 +31,11 @@ SELECT
   le.baseline_avg_bytes AS event_baseline_avg_bytes,
   le.baseline_volume_per_hour AS event_baseline_volume_per_hour,
   COALESCE(ps.log_event_id, '') AS log_event_id
-FROM log_event_policy_statuses_cache ps
-LEFT JOIN log_event_policy_category_statuses_cache cat ON cat.category = ps.category
-LEFT JOIN log_event_policies lep ON lep.id = ps.policy_id
+FROM recommendation_statuses_cache ps
+LEFT JOIN recommendation_category_statuses_cache cat ON cat.category = ps.category
+LEFT JOIN log_event_recommendations lep ON lep.id = ps.recommendation_id
 LEFT JOIN log_events le ON le.id = ps.log_event_id
-WHERE ps.policy_id = ?1
+WHERE ps.recommendation_id = ?1
 `
 
 type GetPolicyCardRow struct {
@@ -62,10 +62,10 @@ type GetPolicyCardRow struct {
 }
 
 // Fetches a single policy with all context needed for rich card rendering.
-// Main table: log_event_policy_statuses_cache (denormalized policy + metrics).
+// Main table: recommendation_statuses_cache (denormalized policy + metrics).
 // JOINs enrich with: category display name, AI analysis, log examples, baselines.
-func (q *Queries) GetPolicyCard(ctx context.Context, policyID *string) (GetPolicyCardRow, error) {
-	row := q.db.QueryRowContext(ctx, getPolicyCard, policyID)
+func (q *Queries) GetPolicyCard(ctx context.Context, recommendationID *string) (GetPolicyCardRow, error) {
+	row := q.db.QueryRowContext(ctx, getPolicyCard, recommendationID)
 	var i GetPolicyCardRow
 	err := row.Scan(
 		&i.PolicyID,
@@ -94,22 +94,20 @@ func (q *Queries) GetPolicyCard(ctx context.Context, policyID *string) (GetPolic
 
 const listFieldsByLogEvent = `-- name: ListFieldsByLogEvent :many
 SELECT
-  COALESCE(field_path, '') AS field_path,
-  baseline_avg_bytes
-FROM log_event_fields
-WHERE log_event_id = ?1
-ORDER BY baseline_avg_bytes DESC
+  CAST('' AS TEXT) AS field_path,
+  CAST(0 AS REAL) AS baseline_avg_bytes
+WHERE 1 = 0
 `
 
 type ListFieldsByLogEventRow struct {
 	FieldPath        string
-	BaselineAvgBytes *float64
+	BaselineAvgBytes float64
 }
 
 // Returns per-field metadata for a log event, used to show per-field byte impact
 // in quality policies (instrumentation_bloat, oversized_fields, duplicate_fields).
-func (q *Queries) ListFieldsByLogEvent(ctx context.Context, logEventID *string) ([]ListFieldsByLogEventRow, error) {
-	rows, err := q.db.QueryContext(ctx, listFieldsByLogEvent, logEventID)
+func (q *Queries) ListFieldsByLogEvent(ctx context.Context) ([]ListFieldsByLogEventRow, error) {
+	rows, err := q.db.QueryContext(ctx, listFieldsByLogEvent)
 	if err != nil {
 		return nil, err
 	}
