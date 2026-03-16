@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -13,14 +14,27 @@ import (
 func (m *Model) checkAuth() tea.Cmd {
 	return func() tea.Msg {
 		hasValidAuth := false
+		var user *auth.User
 		if m.auth.IsAuthenticated() {
-			if _, err := m.auth.GetAccessToken(m.ctx); err == nil {
+			if token, err := m.auth.GetAccessToken(m.ctx); err == nil {
 				hasValidAuth = true
+				user = userFromAccessToken(token)
 			} else {
 				_ = m.auth.ClearTokens()
 			}
 		}
-		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth}
+		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth, user: user}
+	}
+}
+
+func userFromAccessToken(token string) *auth.User {
+	claims, err := auth.ParseToken(token)
+	if err != nil || claims.Sub == "" {
+		return nil
+	}
+	return &auth.User{
+		ID:    claims.Sub,
+		Email: claims.Email,
 	}
 }
 

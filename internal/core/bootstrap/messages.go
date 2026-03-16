@@ -86,6 +86,7 @@ type OnboardingComplete struct {
 type PreflightState struct {
 	Outcome            PreflightOutcome
 	HasValidAuth       bool
+	User               *auth.User
 	Role               string
 	ActiveOrgID        domain.OrganizationID
 	DefaultAccountID   domain.AccountID
