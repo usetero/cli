@@ -2,14 +2,11 @@ package onboarding
 
 import (
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
 // State is the onboarding truth projection used to derive the next step.
 type State struct {
-	Role preferences.Role
-
 	Organizations        []tenancy.Organization
 	SelectedOrganization *tenancy.Organization
 

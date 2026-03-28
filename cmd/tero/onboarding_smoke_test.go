@@ -10,7 +10,7 @@ import (
 	"github.com/usetero/cli/cmd/tero/terotest"
 )
 
-func TestIntegration_Tero_BootsToRoleSelection(t *testing.T) {
+func TestIntegration_Tero_BootsToOrganizationCreation(t *testing.T) {
 	services := terotest.StartFakeServices(t)
 	homeDir := t.TempDir()
 	secretStorePath := terotest.SecretStorePath(homeDir, "local")
@@ -30,9 +30,7 @@ func TestIntegration_Tero_BootsToRoleSelection(t *testing.T) {
 	})
 	defer app.Stop()
 
-	app.WaitFor("Select your role:", 5*time.Second)
-	app.Press(terotest.KeyEnter)
-	app.WaitFor("Create your organization:", 5*time.Second)
+	app.WaitFor("Create your organization.", 5*time.Second)
 
 	if strings.Contains(app.Snapshot(), "Failed to load onboarding state.") {
 		t.Fatalf("unexpected onboarding error:\n%s", app.Snapshot())

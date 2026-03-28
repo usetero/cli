@@ -82,7 +82,7 @@ func (w *Workflow) Refresh(ctx context.Context) (State, error) {
 }
 
 func (w *Workflow) projectState(ctx context.Context, pref preferences.Snapshot) (State, error) {
-	state := State{Role: pref.Role}
+	state := State{}
 
 	orgs, err := w.orgs.List(ctx)
 	if err != nil {

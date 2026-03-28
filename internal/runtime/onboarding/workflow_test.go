@@ -121,7 +121,7 @@ func TestWorkflow_CreateOrganizationAppliesBootstrapScope(t *testing.T) {
 
 	workflow, _, _, setScopeCalls := newTestWorkflow(
 		t,
-		preferences.Snapshot{Role: preferences.RoleEngineer},
+		preferences.Snapshot{},
 		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
 		map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
@@ -160,7 +160,7 @@ func TestWorkflow_IgnoresStaleOrganizationPreference(t *testing.T) {
 
 	workflow, _, _, _ := newTestWorkflow(
 		t,
-		preferences.Snapshot{Role: preferences.RoleEngineer, Organization: "org_stale"},
+		preferences.Snapshot{Organization: "org_stale"},
 		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}, {ID: "org_2", Name: "Org 2"}},
 		nil,
 		nil,
@@ -187,7 +187,6 @@ func TestWorkflow_InvalidDatadogKeyReturnsErrorAndPreservesState(t *testing.T) {
 	workflow, _, datadog, _ := newTestWorkflow(
 		t,
 		preferences.Snapshot{
-			Role:         preferences.RoleEngineer,
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
@@ -238,7 +237,6 @@ func TestWorkflow_PowerSyncReadinessGatesDone(t *testing.T) {
 	workflow, _, _, _ := newTestWorkflow(
 		t,
 		preferences.Snapshot{
-			Role:         preferences.RoleEngineer,
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
@@ -270,7 +268,6 @@ func TestWorkflow_PowerSyncReadinessGatesDone(t *testing.T) {
 	workflow, _, _, _ = newTestWorkflow(
 		t,
 		preferences.Snapshot{
-			Role:         preferences.RoleEngineer,
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",

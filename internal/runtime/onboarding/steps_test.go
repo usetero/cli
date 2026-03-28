@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
@@ -17,21 +16,13 @@ func TestNextStep(t *testing.T) {
 		want  Step
 	}{
 		{
-			name:  "role first",
+			name:  "organization create when none exist",
 			state: State{},
-			want:  StepRoleSelect,
-		},
-		{
-			name: "organization create when none exist",
-			state: State{
-				Role: preferences.RoleEngineer,
-			},
-			want: StepOrganizationCreate,
+			want:  StepOrganizationCreate,
 		},
 		{
 			name: "organization select when choices exist",
 			state: State{
-				Role:          preferences.RoleEngineer,
 				Organizations: []tenancy.Organization{{ID: "org_1"}},
 			},
 			want: StepOrganizationSelect,
@@ -39,7 +30,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "account create when org selected and no accounts",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 			},
 			want: StepAccountCreate,
@@ -47,7 +37,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "account select when choices exist",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				Accounts:             []tenancy.Account{{ID: "acct_1"}},
 			},
@@ -56,7 +45,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "workspace select after account",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 			},
@@ -65,7 +53,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "datadog region before site chosen",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},
@@ -75,7 +62,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "datadog api key after site",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},
@@ -86,7 +72,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "datadog app key after validated api key",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},
@@ -97,7 +82,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "datadog discovery until ready",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},
@@ -109,7 +93,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "powersync ready after datadog ready",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},
@@ -121,7 +104,6 @@ func TestNextStep(t *testing.T) {
 		{
 			name: "done when everything is ready",
 			state: State{
-				Role:                 preferences.RoleEngineer,
 				SelectedOrganization: &tenancy.Organization{ID: "org_1"},
 				SelectedAccount:      &tenancy.Account{ID: "acct_1"},
 				SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1"},

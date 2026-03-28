@@ -4,7 +4,6 @@ package onboarding
 type Step string
 
 const (
-	StepRoleSelect         Step = "role.select"
 	StepOrganizationSelect Step = "organization.select"
 	StepOrganizationCreate Step = "organization.create"
 	StepAccountSelect      Step = "account.select"
@@ -19,9 +18,6 @@ const (
 )
 
 func nextStep(state State) Step {
-	if state.Role == "" {
-		return StepRoleSelect
-	}
 	if state.SelectedOrganization == nil {
 		if len(state.Organizations) == 0 {
 			return StepOrganizationCreate
