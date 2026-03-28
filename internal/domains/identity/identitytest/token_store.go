@@ -11,6 +11,10 @@ type TokenStore struct {
 
 var _ identity.TokenStore = (*TokenStore)(nil)
 
+func NewTokenStore() *TokenStore {
+	return &TokenStore{}
+}
+
 func (s *TokenStore) AccessToken() (identity.AccessToken, error) {
 	return s.AccessTokenValue, nil
 }

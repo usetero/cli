@@ -22,6 +22,10 @@ type TokenSource struct {
 
 var _ pssyncer.TokenSource = (*TokenSource)(nil)
 
+func NewTokenSource() *TokenSource {
+	return &TokenSource{}
+}
+
 func (s *TokenSource) GetAccessToken(context.Context) (pssyncer.AccessToken, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -27,20 +27,19 @@ func TestToolset_DefinitionsAndRun(t *testing.T) {
 	}
 
 	tools := Toolset{
-		Query: NewQueryTool(db),
-		Show:  NewShowTool(db),
+		Query: NewQueryTool(db.Raw()),
+		Show:  NewShowTool(db.Raw()),
 		EnableService: NewEnableServiceTool(
 			func(context.Context, ServiceID) error { return nil },
 			func(context.Context, ServiceID) error { return nil },
 		),
-		ApprovePolicy: NewApprovePolicyTool(func(context.Context, PolicyID) error { return nil }),
 	}
 	defs := tools.Definitions()
-	if len(defs) != 4 {
-		t.Fatalf("expected 4 definitions, got %d", len(defs))
+	if len(defs) != 3 {
+		t.Fatalf("expected 3 definitions, got %d", len(defs))
 	}
-	gotNames := []Name{defs[0].Name, defs[1].Name, defs[2].Name, defs[3].Name}
-	wantNames := []Name{QueryToolName, ShowToolName, EnableServiceToolName, ApprovePolicyToolName}
+	gotNames := []Name{defs[0].Name, defs[1].Name, defs[2].Name}
+	wantNames := []Name{QueryToolName, ShowToolName, EnableServiceToolName}
 	if !slices.Equal(gotNames, wantNames) {
 		t.Fatalf("definitions names = %v, want %v", gotNames, wantNames)
 	}
@@ -62,11 +61,6 @@ func TestToolset_DefinitionsAndRun(t *testing.T) {
 	_, err, ok = tools.Run(context.Background(), EnableServiceToolName, json.RawMessage(`{"service_id":"svc_1","enabled":true}`))
 	if err != nil || !ok {
 		t.Fatalf("expected enable service tool run success, ok=%v err=%v", ok, err)
-	}
-
-	_, err, ok = tools.Run(context.Background(), ApprovePolicyToolName, json.RawMessage(`{"policy_id":"pol_1"}`))
-	if err != nil || !ok {
-		t.Fatalf("expected approve policy tool run success, ok=%v err=%v", ok, err)
 	}
 
 	_, _, ok = tools.Run(context.Background(), Name("unknown_tool"), json.RawMessage(`{}`))

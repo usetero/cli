@@ -30,12 +30,54 @@ type Store struct {
 	db *sqlite.DB
 }
 
+const bootstrapStateDDL = `
+CREATE TABLE IF NOT EXISTS runtime_bootstrap_state (
+	id INTEGER PRIMARY KEY CHECK (id = 1),
+	initial_sync_completed_at TEXT
+)`
+
 // NewStore builds a PowerSync DB store on top of an initialized SQLite DB.
 func NewStore(db *sqlite.DB) *Store {
 	if db == nil {
 		panic("powersync db store requires db")
 	}
 	return &Store{db: db}
+}
+
+// HasCompletedInitialSync reports whether this account-local database has
+// completed first sync at least once.
+func (s *Store) HasCompletedInitialSync(ctx context.Context) (bool, error) {
+	if err := s.ensureBootstrapState(ctx); err != nil {
+		return false, err
+	}
+
+	var completed sql.NullString
+	err := s.db.QueryRow(ctx, "SELECT initial_sync_completed_at FROM runtime_bootstrap_state WHERE id = 1").Scan(&completed)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, wrap("read initial sync state", err)
+	}
+	return completed.Valid && completed.String != "", nil
+}
+
+// MarkInitialSyncComplete persists that this account-local database has
+// completed first sync at least once.
+func (s *Store) MarkInitialSyncComplete(ctx context.Context) error {
+	if err := s.ensureBootstrapState(ctx); err != nil {
+		return err
+	}
+
+	if _, err := s.db.Exec(
+		ctx,
+		`INSERT INTO runtime_bootstrap_state (id, initial_sync_completed_at)
+		 VALUES (1, CURRENT_TIMESTAMP)
+		 ON CONFLICT(id) DO UPDATE SET initial_sync_completed_at = excluded.initial_sync_completed_at`,
+	); err != nil {
+		return wrap("mark initial sync complete", err)
+	}
+	return nil
 }
 
 // HasPendingMutations reports whether ps_crud has queued rows.
@@ -234,4 +276,11 @@ func parseMutation(row crudRow) (*Mutation, error) {
 		Old:      payload.Old,
 		Metadata: payload.Metadata,
 	}, nil
+}
+
+func (s *Store) ensureBootstrapState(ctx context.Context) error {
+	if _, err := s.db.Exec(ctx, bootstrapStateDDL); err != nil {
+		return wrap("ensure bootstrap state", err)
+	}
+	return nil
 }

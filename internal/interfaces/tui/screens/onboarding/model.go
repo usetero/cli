@@ -2,355 +2,378 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/domains/identity"
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/preferences"
 	"github.com/usetero/cli/internal/domains/tenancy"
-	"github.com/usetero/cli/internal/interfaces/tui/components/loading"
-	"github.com/usetero/cli/internal/interfaces/tui/screen"
-	integrationsflow "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/integrations"
-	powersyncscreen "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/powersync"
-	"github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/role"
-	tenancyflow "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/tenancy"
-	"github.com/usetero/cli/internal/interfaces/tui/theme"
-	onboardingruntime "github.com/usetero/cli/internal/runtime/onboarding"
-	sessionruntime "github.com/usetero/cli/internal/runtime/session"
+	"github.com/usetero/cli/internal/infrastructure/logging"
+	"github.com/usetero/cli/internal/interfaces/tui/core"
+	"github.com/usetero/cli/internal/interfaces/tui/events"
+	accountcreate "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/account/create"
+	accountselect "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/account/select"
+	"github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/auth"
+	datadogapikey "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/datadog/apikey"
+	datadogappkey "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/datadog/appkey"
+	datadogdiscovery "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/datadog/discovery"
+	datadogregion "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/datadog/region"
+	"github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/organization/create"
+	organizationselect "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/organization/select"
+	powersyncready "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/powersync"
+	workspaceselect "github.com/usetero/cli/internal/interfaces/tui/screens/onboarding/workspace/select"
+	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
+	accountruntime "github.com/usetero/cli/internal/runtime/account"
+	runtimeonboarding "github.com/usetero/cli/internal/runtime/onboarding"
 )
 
-type route int
-
-const (
-	routeLoading route = iota
-	routeRole
-	routeTenancy
-	routeIntegrations
-	routePowerSyncReady
-	routeDone
-	routePlaceholder
-	routeError
-)
-
-type childID string
-
-const (
-	childRole         childID = "role"
-	childTenancy      childID = "tenancy"
-	childIntegrations childID = "integrations"
-	childPowerSync    childID = "powersync"
-)
-
-const powersyncPollInterval = 500 * time.Millisecond
-
-type Runtime interface {
-	State(ctx context.Context) (onboardingruntime.State, error)
-	SetRole(ctx context.Context, selection preferences.RoleSelection) (onboardingruntime.State, error)
-	SelectOrganization(ctx context.Context, selection preferences.OrganizationSelection) (onboardingruntime.State, error)
-	CreateOrganization(ctx context.Context, create tenancy.OrganizationCreate) (onboardingruntime.State, error)
-	SelectAccount(ctx context.Context, selection preferences.AccountSelection) (onboardingruntime.State, error)
-	CreateAccount(ctx context.Context, create tenancy.AccountCreate) (onboardingruntime.State, error)
-	SelectWorkspace(ctx context.Context, selection preferences.WorkspaceSelection) (onboardingruntime.State, error)
-	SetDatadogSite(ctx context.Context, site integrations.DatadogSite) (onboardingruntime.State, error)
-	SubmitDatadogAPIKey(ctx context.Context, submission integrations.DatadogAPIKeySubmission) (onboardingruntime.State, error)
-	SubmitDatadogAppKey(ctx context.Context, submission integrations.DatadogAppKeySubmission) (onboardingruntime.State, error)
+type stateLoadedMsg struct {
+	State runtimeonboarding.State
+	Err   error
 }
 
-type Session interface {
-	Ensure(ctx context.Context, scope sessionruntime.Scope) error
-	Status() sessionruntime.Status
-}
+type refreshRequestedMsg struct{}
 
-type stateResolvedMsg struct {
-	state onboardingruntime.State
-	err   error
-}
-
-type sessionEnsuredMsg struct {
-	err error
-}
-
-type pollStateTickMsg struct{}
-
-// Model owns onboarding flow orchestration and delegates phase behavior.
+// Model owns the onboarding body flow.
 type Model struct {
-	route route
+	core.Router
 
-	theme   theme.Theme
-	runtime Runtime
-	session Session
-	step    onboardingruntime.Step
-	loadErr error
-	router  screen.Router[childID]
-	loading *loading.Model
-
-	role         *role.Model
-	tenancy      *tenancyflow.Model
-	integrations *integrationsflow.Model
-	powersync    *powersyncscreen.Model
+	scope       logging.Scope
+	identity    *identity.Service
+	workflow    *runtimeonboarding.Workflow
+	auth        *auth.Model
+	orgSelect   *organizationselect.Model
+	orgCreate   *create.Model
+	acctSelect  *accountselect.Model
+	acctCreate  *accountcreate.Model
+	wsSelect    *workspaceselect.Model
+	ddDiscovery *datadogdiscovery.Model
+	ddRegion    *datadogregion.Model
+	ddAPIKey    *datadogapikey.Model
+	ddAppKey    *datadogappkey.Model
+	psReady     *powersyncready.Model
+	loading     bool
+	busy        *core.Busy
+	state       runtimeonboarding.State
+	account     accountruntime.Status
+	placeholder *core.Input
 }
 
-// New constructs the onboarding flow model.
-func New(
-	runtime Runtime,
-	session Session,
-	roleModel *role.Model,
-	tenancyModel *tenancyflow.Model,
-	integrationsModel *integrationsflow.Model,
-	powersyncModel *powersyncscreen.Model,
-	appTheme theme.Theme,
-) *Model {
-	switch {
-	case runtime == nil:
-		panic("onboarding runtime is required")
-	case session == nil:
-		panic("onboarding session runtime is required")
-	case roleModel == nil:
-		panic("onboarding role model is required")
-	case tenancyModel == nil:
-		panic("onboarding tenancy model is required")
-	case integrationsModel == nil:
-		panic("onboarding integrations model is required")
-	case powersyncModel == nil:
-		panic("onboarding powersync model is required")
+var _ core.Model = (*Model)(nil)
+var _ core.BusyProvider = (*Model)(nil)
+var _ core.InputProvider = (*Model)(nil)
+var _ core.HelpProvider = (*Model)(nil)
+
+func New(scope logging.Scope, identityService *identity.Service, workflow *runtimeonboarding.Workflow, appTheme theme.Theme) *Model {
+	if workflow == nil {
+		panic("onboarding model requires workflow")
 	}
 
-	model := &Model{
-		route:        routeLoading,
-		theme:        appTheme,
-		runtime:      runtime,
-		session:      session,
-		loading:      loading.NewThinking(appTheme, "Loading onboarding state..."),
-		role:         roleModel,
-		tenancy:      tenancyModel,
-		integrations: integrationsModel,
-		powersync:    powersyncModel,
+	authModel := auth.New(scope.Child("auth"), identityService, appTheme)
+	orgSelect := organizationselect.New(appTheme)
+	orgCreate := create.New(appTheme)
+	acctSelect := accountselect.New(appTheme)
+	acctCreate := accountcreate.New(appTheme)
+	wsSelect := workspaceselect.New(appTheme)
+	ddDiscovery := datadogdiscovery.New(appTheme)
+	ddRegion := datadogregion.New(appTheme)
+	ddAPIKey := datadogapikey.New(appTheme)
+	ddAppKey := datadogappkey.New(appTheme)
+	psReady := powersyncready.New(appTheme)
+
+	return &Model{
+		Router:      core.Router{},
+		scope:       scope,
+		identity:    identityService,
+		workflow:    workflow,
+		auth:        authModel,
+		orgSelect:   orgSelect,
+		orgCreate:   orgCreate,
+		acctSelect:  acctSelect,
+		acctCreate:  acctCreate,
+		wsSelect:    wsSelect,
+		ddDiscovery: ddDiscovery,
+		ddRegion:    ddRegion,
+		ddAPIKey:    ddAPIKey,
+		ddAppKey:    ddAppKey,
+		psReady:     psReady,
+		placeholder: &core.Input{
+			Label: "Next onboarding steps are not built yet.",
+		},
 	}
-	model.router.Register(childRole, model.role)
-	model.router.Register(childTenancy, model.tenancy)
-	model.router.Register(childIntegrations, model.integrations)
-	model.router.Register(childPowerSync, model.powersync)
-	return model
 }
 
-func (m *Model) Init() tea.Cmd { return m.loadStateCmd() }
+func (m *Model) Init() tea.Cmd {
+	m.showAuth()
+	if m.identity != nil && m.identity.IsAuthenticated() {
+		m.loading = true
+		return m.loadState()
+	}
+	return m.Router.Init()
+}
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var loadingCmd tea.Cmd
-	if m.route == routeLoading {
-		next, cmd := m.loading.Update(msg)
-		if model, ok := next.(*loading.Model); ok {
-			m.loading = model
+	switch typed := msg.(type) {
+	case stateLoadedMsg:
+		m.loading = false
+		m.busy = nil
+		if typed.Err != nil {
+			m.scope.Error("load onboarding state", "error", typed.Err)
+			return m, nil
 		}
-		loadingCmd = cmd
-	}
-
-	switch msg := msg.(type) {
-	case role.SubmittedMsg:
-		return m, batch(loadingCmd, m.setRoleCmd(msg.Role))
-	case tenancyflow.OrganizationSelectedMsg:
-		return m, batch(loadingCmd, m.selectOrganizationCmd(msg.OrganizationID))
-	case tenancyflow.OrganizationCreatedMsg:
-		return m, batch(loadingCmd, m.createOrganizationCmd(msg.Create))
-	case tenancyflow.AccountSelectedMsg:
-		return m, batch(loadingCmd, m.selectAccountCmd(msg.AccountID))
-	case tenancyflow.AccountCreatedMsg:
-		return m, batch(loadingCmd, m.createAccountCmd(msg.Create))
-	case tenancyflow.WorkspaceSelectedMsg:
-		return m, batch(loadingCmd, m.selectWorkspaceCmd(msg.WorkspaceID))
-	case integrationsflow.SetDatadogSiteMsg:
-		return m, batch(loadingCmd, m.setDatadogSiteCmd(msg.Site))
-	case integrationsflow.SubmitDatadogAPIKeyMsg:
-		return m, batch(loadingCmd, m.submitDatadogAPIKeyCmd(msg.Submission))
-	case integrationsflow.SubmitDatadogAppKeyMsg:
-		return m, batch(loadingCmd, m.submitDatadogAppKeyCmd(msg.Submission))
-	case integrationsflow.RefreshRequestedMsg:
-		return m, batch(loadingCmd, m.loadStateCmd())
-	case stateResolvedMsg:
-		if msg.err != nil {
-			m.loadErr = msg.err
-			if m.route == routeLoading {
-				m.route = routeError
-				m.router.ClearActive()
-			}
-			return m, loadingCmd
+		return m, m.applyState(typed.State)
+	case refreshRequestedMsg:
+		if !m.shouldRefresh() {
+			return m, nil
 		}
-		previousRoute := m.route
-		m.loadErr = nil
-		m.applyState(msg.state)
-		cmds := []tea.Cmd{
-			m.ensureSessionCmd(msg.state),
+		return m, m.loadState()
+	case events.AccountRuntimeUpdatedMsg:
+		m.account = typed.Status
+		m.psReady.SetStatus(typed.Status)
+		if m.state.NextStep == runtimeonboarding.StepDone || m.Active() == m.psReady {
+			return m, m.routeState(m.state)
 		}
-		if m.route == routePowerSyncReady {
-			if previousRoute != routePowerSyncReady {
-				cmds = append(cmds, m.powersync.Init())
-			}
-			cmds = append(cmds, m.pollStateCmd())
+		return m, nil
+	case organizationselect.SelectedMsg:
+		m.busy = &core.Busy{Label: "Selecting Organization"}
+		return m, m.selectOrganization(typed.OrganizationID)
+	case create.CreatedMsg:
+		m.busy = &core.Busy{Label: "Creating Organization"}
+		return m, m.createOrganization(typed.Name)
+	case accountselect.SelectedMsg:
+		m.busy = &core.Busy{Label: "Selecting Account"}
+		return m, m.selectAccount(typed.AccountID)
+	case accountcreate.CreatedMsg:
+		m.busy = &core.Busy{Label: "Creating Account"}
+		return m, m.createAccount(typed.Name)
+	case workspaceselect.SelectedMsg:
+		m.busy = &core.Busy{Label: "Selecting Workspace"}
+		return m, m.selectWorkspace(typed.WorkspaceID)
+	case datadogregion.SelectedMsg:
+		m.busy = &core.Busy{Label: "Saving Datadog Region"}
+		return m, m.setDatadogSite(typed.Site)
+	case datadogapikey.SubmittedMsg:
+		m.busy = &core.Busy{Label: "Validating Datadog API Key"}
+		return m, m.submitDatadogAPIKey(typed.APIKey)
+	case datadogappkey.SubmittedMsg:
+		m.busy = &core.Busy{Label: "Saving Datadog App Key"}
+		return m, m.submitDatadogAppKey(typed.AppKey)
+	}
+
+	switch m.Active() {
+	case m.auth:
+		cmd := m.Router.Update(msg)
+		if m.auth.Authenticated() && !m.loading {
+			m.loading = true
+			return m, tea.Batch(cmd, m.loadState())
 		}
-		return m, batch(append([]tea.Cmd{loadingCmd}, cmds...)...)
-	case sessionEnsuredMsg:
-		if msg.err != nil {
-			m.loadErr = msg.err
-			if m.route == routeLoading {
-				m.route = routeError
-				m.router.ClearActive()
-			}
+		return m, cmd
+	case m.orgSelect, m.orgCreate, m.acctSelect, m.acctCreate, m.wsSelect, m.ddDiscovery, m.ddRegion, m.ddAPIKey, m.ddAppKey, m.psReady:
+		return m, m.Router.Update(msg)
+	default:
+		return m, nil
+	}
+}
+
+func (m *Model) loadState() tea.Cmd {
+	return func() tea.Msg {
+		state, err := m.workflow.State(context.Background())
+		return stateLoadedMsg{State: state, Err: err}
+	}
+}
+
+func (m *Model) applyState(state runtimeonboarding.State) tea.Cmd {
+	m.state = state
+
+	var cmds []tea.Cmd
+	if state.SelectedOrganization != nil {
+		org := *state.SelectedOrganization
+		cmds = append(cmds, func() tea.Msg { return events.OrganizationSelectedMsg{Organization: org} })
+	}
+	if state.SelectedOrganization != nil && state.SelectedAccount != nil {
+		account := *state.SelectedAccount
+		scope := accountruntime.Scope{
+			Organization: *state.SelectedOrganization,
+			Account:      account,
 		}
-		return m, loadingCmd
-	case pollStateTickMsg:
-		if m.route != routePowerSyncReady {
-			return m, loadingCmd
+		if state.SelectedWorkspace != nil {
+			scope.Workspace = *state.SelectedWorkspace
 		}
-		return m, batch(loadingCmd, m.loadStateCmd(), m.pollStateCmd())
+		cmds = append(cmds, func() tea.Msg { return events.AccountSelectedMsg{Scope: scope} })
 	}
 
-	return m, batch(loadingCmd, m.router.Forward(msg))
+	cmds = append(cmds, m.routeState(state))
+	return tea.Batch(cmds...)
 }
 
-func (m *Model) loadStateCmd() tea.Cmd {
-	return func() tea.Msg {
-		if m.runtime == nil {
-			return stateResolvedMsg{err: fmt.Errorf("onboarding runtime is not configured")}
+func (m *Model) routeState(state runtimeonboarding.State) tea.Cmd {
+	var cmds []tea.Cmd
+
+	switch state.NextStep {
+	case runtimeonboarding.StepOrganizationSelect:
+		m.orgSelect.SetOrganizations(state.Organizations)
+		m.showOrganizationSelect()
+	case runtimeonboarding.StepOrganizationCreate:
+		m.showOrganizationCreate()
+	case runtimeonboarding.StepAccountSelect:
+		m.acctSelect.SetAccounts(state.Accounts)
+		m.showAccountSelect()
+	case runtimeonboarding.StepAccountCreate:
+		m.showAccountCreate()
+	case runtimeonboarding.StepWorkspaceSelect:
+		m.wsSelect.SetWorkspaces(state.Workspaces)
+		m.showWorkspaceSelect()
+	case runtimeonboarding.StepDatadogDiscovery:
+		m.ddDiscovery.SetStatus(state.DatadogStatus)
+		m.showDatadogDiscovery()
+		cmds = append(cmds, m.refreshAfter(2*time.Second))
+	case runtimeonboarding.StepDatadogRegion:
+		m.showDatadogRegion()
+	case runtimeonboarding.StepDatadogAPIKey:
+		m.ddAPIKey.SetSite(state.DatadogDraft.Site)
+		m.showDatadogAPIKey()
+	case runtimeonboarding.StepDatadogAppKey:
+		m.ddAppKey.SetSite(state.DatadogDraft.Site)
+		m.showDatadogAppKey()
+	case runtimeonboarding.StepPowerSyncReady:
+		m.psReady.SetStatus(m.account)
+		m.showPowerSyncReady()
+	case runtimeonboarding.StepDone:
+		if m.shouldWaitForInitialSync(state) {
+			m.psReady.SetStatus(m.account)
+			m.showPowerSyncReady()
+		} else {
+			m.clear()
 		}
-		state, err := m.runtime.State(context.Background())
-		return stateResolvedMsg{state: state, err: err}
+	default:
+		m.clear()
 	}
+
+	return tea.Batch(cmds...)
 }
 
-func (m *Model) setRoleCmd(selected preferences.Role) tea.Cmd {
+func (m *Model) selectOrganization(id tenancy.OrganizationID) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SetRole(context.Background(), preferences.RoleSelection{Role: selected})
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SelectOrganization(context.Background(), organizationselect.Selection(string(id)))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) selectOrganizationCmd(selected tenancy.OrganizationID) tea.Cmd {
+func (m *Model) createOrganization(name string) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SelectOrganization(context.Background(), preferences.OrganizationSelection{OrganizationID: selected})
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.CreateOrganization(context.Background(), create.Submission(name))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) createOrganizationCmd(create tenancy.OrganizationCreate) tea.Cmd {
+func (m *Model) selectAccount(id tenancy.AccountID) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.CreateOrganization(context.Background(), create)
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SelectAccount(context.Background(), accountselect.Selection(string(id)))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) selectAccountCmd(selected tenancy.AccountID) tea.Cmd {
+func (m *Model) createAccount(name string) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SelectAccount(context.Background(), preferences.AccountSelection{AccountID: selected})
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.CreateAccount(context.Background(), accountcreate.Submission(name))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) createAccountCmd(create tenancy.AccountCreate) tea.Cmd {
+func (m *Model) selectWorkspace(id tenancy.WorkspaceID) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.CreateAccount(context.Background(), create)
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SelectWorkspace(context.Background(), workspaceselect.Selection(string(id)))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) selectWorkspaceCmd(selected tenancy.WorkspaceID) tea.Cmd {
+func (m *Model) setDatadogSite(site integrations.DatadogSite) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SelectWorkspace(context.Background(), preferences.WorkspaceSelection{WorkspaceID: selected})
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SetDatadogSite(context.Background(), site)
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) setDatadogSiteCmd(site integrations.DatadogSite) tea.Cmd {
+func (m *Model) submitDatadogAPIKey(value string) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SetDatadogSite(context.Background(), site)
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SubmitDatadogAPIKey(context.Background(), datadogapikey.Submission(value))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) submitDatadogAPIKeyCmd(submission integrations.DatadogAPIKeySubmission) tea.Cmd {
+func (m *Model) submitDatadogAppKey(value string) tea.Cmd {
 	return func() tea.Msg {
-		state, err := m.runtime.SubmitDatadogAPIKey(context.Background(), submission)
-		return stateResolvedMsg{state: state, err: err}
+		state, err := m.workflow.SubmitDatadogAppKey(context.Background(), datadogappkey.Submission(value))
+		return stateLoadedMsg{State: state, Err: err}
 	}
 }
 
-func (m *Model) submitDatadogAppKeyCmd(submission integrations.DatadogAppKeySubmission) tea.Cmd {
-	return func() tea.Msg {
-		state, err := m.runtime.SubmitDatadogAppKey(context.Background(), submission)
-		return stateResolvedMsg{state: state, err: err}
+func (m *Model) showAuth() {
+	m.Router.SetActive(m.auth)
+}
+
+func (m *Model) showOrganizationSelect() {
+	m.Router.SetActive(m.orgSelect)
+}
+
+func (m *Model) showOrganizationCreate() {
+	m.Router.SetActive(m.orgCreate)
+}
+
+func (m *Model) showAccountSelect() {
+	m.Router.SetActive(m.acctSelect)
+}
+
+func (m *Model) showAccountCreate() {
+	m.Router.SetActive(m.acctCreate)
+}
+
+func (m *Model) showWorkspaceSelect() {
+	m.Router.SetActive(m.wsSelect)
+}
+
+func (m *Model) showDatadogDiscovery() {
+	m.Router.SetActive(m.ddDiscovery)
+}
+
+func (m *Model) showDatadogRegion() {
+	m.Router.SetActive(m.ddRegion)
+}
+
+func (m *Model) showDatadogAPIKey() {
+	m.Router.SetActive(m.ddAPIKey)
+}
+
+func (m *Model) showDatadogAppKey() {
+	m.Router.SetActive(m.ddAppKey)
+}
+
+func (m *Model) showPowerSyncReady() {
+	m.Router.SetActive(m.psReady)
+}
+
+func (m *Model) clear() {
+	m.Router.SetActive(nil)
+}
+
+func (m *Model) shouldRefresh() bool {
+	switch m.Active() {
+	case m.ddDiscovery:
+		return true
+	default:
+		return false
 	}
 }
 
-func (m *Model) ensureSessionCmd(state onboardingruntime.State) tea.Cmd {
-	if state.SelectedOrganization == nil || state.SelectedAccount == nil {
-		return nil
-	}
-	scope := sessionruntime.Scope{
-		Organization: *state.SelectedOrganization,
-		Account:      *state.SelectedAccount,
-	}
-	if state.SelectedWorkspace != nil {
-		scope.Workspace = *state.SelectedWorkspace
-	}
-	return func() tea.Msg {
-		return sessionEnsuredMsg{err: m.session.Ensure(context.Background(), scope)}
-	}
-}
-
-func (m *Model) pollStateCmd() tea.Cmd {
-	return tea.Tick(powersyncPollInterval, func(time.Time) tea.Msg {
-		return pollStateTickMsg{}
+func (m *Model) refreshAfter(delay time.Duration) tea.Cmd {
+	return tea.Tick(delay, func(time.Time) tea.Msg {
+		return refreshRequestedMsg{}
 	})
 }
 
-func batch(cmds ...tea.Cmd) tea.Cmd {
-	filtered := make([]tea.Cmd, 0, len(cmds))
-	for _, cmd := range cmds {
-		if cmd != nil {
-			filtered = append(filtered, cmd)
-		}
+func (m *Model) shouldWaitForInitialSync(state runtimeonboarding.State) bool {
+	if state.SelectedAccount == nil {
+		return false
 	}
-	if len(filtered) == 0 {
-		return nil
-	}
-	return tea.Batch(filtered...)
-}
-
-func (m *Model) applyState(state onboardingruntime.State) {
-	m.step = state.NextStep
-	switch state.NextStep {
-	case onboardingruntime.StepRoleSelect:
-		m.route = routeRole
-		m.router.ActivateOnly(childRole)
-	case onboardingruntime.StepPowerSyncReady:
-		m.route = routePowerSyncReady
-		m.router.ActivateOnly(childPowerSync)
-	case onboardingruntime.StepDone:
-		m.route = routeDone
-		m.router.ClearActive()
-	default:
-		if m.tenancy.ApplyState(state) {
-			m.route = routeTenancy
-			m.router.ActivateOnly(childTenancy)
-			return
-		}
-		if m.integrations.ApplyState(state) {
-			m.route = routeIntegrations
-			m.router.ActivateOnly(childIntegrations)
-			return
-		}
-		m.route = routePlaceholder
-		m.router.ClearActive()
-	}
-}
-
-// ShortHelp returns the active onboarding step key bindings.
-func (m *Model) ShortHelp() []key.Binding {
-	return m.router.ShortHelp()
-}
-
-// SetSize applies the shell body size to all onboarding children.
-func (m *Model) SetSize(width, height int) {
-	m.router.SetSizeAll(width, height)
+	return !m.account.HasCompletedInitialSync
 }

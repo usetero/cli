@@ -10,11 +10,10 @@ type Toolset struct {
 	Query         *QueryTool
 	Show          *ShowTool
 	EnableService *EnableServiceTool
-	ApprovePolicy *ApprovePolicyTool
 }
 
 func (s Toolset) Definitions() []Definition {
-	out := make([]Definition, 0, 4)
+	out := make([]Definition, 0, 3)
 	if s.Query != nil {
 		out = append(out, s.Query.Definition())
 	}
@@ -23,9 +22,6 @@ func (s Toolset) Definitions() []Definition {
 	}
 	if s.EnableService != nil {
 		out = append(out, s.EnableService.Definition())
-	}
-	if s.ApprovePolicy != nil {
-		out = append(out, s.ApprovePolicy.Definition())
 	}
 	return out
 }
@@ -49,12 +45,6 @@ func (s Toolset) Run(ctx context.Context, name Name, input json.RawMessage) (jso
 			return nil, nil, false
 		}
 		out, err := s.EnableService.Run(ctx, input)
-		return out, err, true
-	case ApprovePolicyToolName:
-		if s.ApprovePolicy == nil {
-			return nil, nil, false
-		}
-		out, err := s.ApprovePolicy.Run(ctx, input)
 		return out, err, true
 	}
 	return nil, nil, false

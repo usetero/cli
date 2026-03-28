@@ -47,13 +47,18 @@ query GetDatadogAccountStatus($id: ID!) {
                     disabledServices
                     inactiveServices
                     okServices
-                    pendingRecommendationCount
-                    approvedRecommendationCount
-                    dismissedRecommendationCount
-                    policyPendingLowCount
-                    policyPendingMediumCount
-                    policyPendingHighCount
-                    policyPendingCriticalCount
+                    previewLogEventCount
+                    effectiveLogEventCount
+                    currentEventsPerHour
+                    currentBytesPerHour
+                    currentTotalUsdPerHour
+                    previewSavedEventsPerHour
+                    previewSavedBytesPerHour
+                    previewSavedTotalUsdPerHour
+                    effectiveSavedEventsPerHour
+                    effectiveSavedBytesPerHour
+                    effectiveSavedTotalUsdPerHour
+                    refreshedAt
                 }
             }
         }

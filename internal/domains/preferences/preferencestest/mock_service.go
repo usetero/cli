@@ -19,6 +19,10 @@ type MockService struct {
 
 var _ preferences.PreferenceService = (*MockService)(nil)
 
+func NewMockService() *MockService {
+	return &MockService{}
+}
+
 func (m *MockService) Snapshot(ctx context.Context) (preferences.Snapshot, error) {
 	if m.SnapshotFn == nil {
 		return preferences.Snapshot{}, nil

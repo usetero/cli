@@ -44,14 +44,14 @@ func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
 		},
 		GetDatadogAccountStatusFn: func(context.Context, controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error) {
 			return &controlplane.DatadogAccountStatus{
-				Health:              controlplane.DatadogAccountHealthOK,
-				ReadyForUse:         true,
-				ServiceCount:        3,
-				ActiveServices:      2,
-				EventCount:          10,
-				AnalyzedCount:       9,
-				PendingPolicyCount:  1,
-				ApprovedPolicyCount: 2,
+				Health:                 controlplane.DatadogAccountHealthOK,
+				ReadyForUse:            true,
+				ServiceCount:           3,
+				ActiveServices:         2,
+				EventCount:             10,
+				AnalyzedCount:          9,
+				PreviewLogEventCount:   8,
+				EffectiveLogEventCount: 6,
 			}, nil
 		},
 	}

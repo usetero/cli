@@ -37,6 +37,10 @@ var _ interface {
 	GetDatadogAccountStatus(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
 } = (*Client)(nil)
 
+func NewClient() *Client {
+	return &Client{}
+}
+
 func (c *Client) ListOrganizations(ctx context.Context) ([]controlplane.Organization, error) {
 	if c.ListOrganizationsFn == nil {
 		return nil, nil

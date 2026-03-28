@@ -15,6 +15,10 @@ var _ interface {
 	Stream(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error)
 } = (*Client)(nil)
 
+func NewClient() *Client {
+	return &Client{}
+}
+
 func (c Client) Stream(ctx context.Context, req infrachat.Request, onEvent func(infrachat.Event)) (infrachat.StreamResult, error) {
 	if c.StreamFn == nil {
 		return infrachat.StreamResult{}, nil

@@ -1,6 +1,7 @@
 package terotest
 
 import (
+	"context"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -11,7 +12,7 @@ func Build(t testing.TB) string {
 	t.Helper()
 
 	outputPath := filepath.Join(t.TempDir(), "tero")
-	cmd := exec.Command("go", "build", "-o", outputPath, ".")
+	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", outputPath, ".")
 	cmd.Dir = cmdDir(t)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

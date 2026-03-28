@@ -34,17 +34,6 @@ func toMessagesDBRole(role Role) string {
 	return string(role)
 }
 
-func fromConversationsDBConversation(row conversationsdb.Conversation) Conversation {
-	conversation := Conversation{
-		ID:    ConversationID(derefString(row.ID)),
-		Title: row.Title,
-	}
-	if t, err := time.Parse(time.RFC3339, derefString(row.CreatedAt)); err == nil {
-		conversation.CreatedAt = t
-	}
-	return conversation
-}
-
 func fromConversationsDBListRow(row conversationsdb.ListRow) Conversation {
 	conversation := Conversation{
 		ID:    ConversationID(derefString(row.ID)),
@@ -54,19 +43,6 @@ func fromConversationsDBListRow(row conversationsdb.ListRow) Conversation {
 		conversation.CreatedAt = t
 	}
 	return conversation
-}
-
-func fromMessagesDBMessage(row messagesdb.Message) Message {
-	message := Message{
-		ID:             MessageID(derefString(row.ID)),
-		ConversationID: ConversationID(derefString(row.ConversationID)),
-		Role:           Role(derefString(row.Role)),
-		Content:        derefString(row.Content),
-	}
-	if t, err := time.Parse(time.RFC3339, derefString(row.CreatedAt)); err == nil {
-		message.CreatedAt = t
-	}
-	return message
 }
 
 func fromMessagesDBListRow(row messagesdb.ListByConversationRow) Message {

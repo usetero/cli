@@ -27,7 +27,7 @@ func TestShowTool_Run(t *testing.T) {
 		t.Fatalf("insert row: %v", err)
 	}
 
-	tool := NewShowTool(db)
+	tool := NewShowTool(db.Raw())
 	out, err := tool.Run(context.Background(), json.RawMessage(`{"entity":"thing","sql":"select id from things where id='thing_1'"}`))
 	if err != nil {
 		t.Fatalf("run show: %v", err)
@@ -51,7 +51,7 @@ func TestShowTool_RequiresIDOrSQL(t *testing.T) {
 	}
 	defer db.Close()
 
-	tool := NewShowTool(db)
+	tool := NewShowTool(db.Raw())
 	_, err = tool.Run(context.Background(), json.RawMessage(`{"entity":"thing"}`))
 	if err == nil || !strings.Contains(err.Error(), "either id or sql is required") {
 		t.Fatalf("expected missing id/sql error, got %v", err)

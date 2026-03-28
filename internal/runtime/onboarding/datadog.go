@@ -6,76 +6,100 @@ import (
 	"fmt"
 
 	"github.com/usetero/cli/internal/domains/integrations"
+	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
-func (s *Service) SetDatadogSite(ctx context.Context, site integrations.DatadogSite) (State, error) {
-	if !site.Valid() {
-		return State{}, fmt.Errorf("invalid datadog site: %q", site)
+// DatadogDraft stores in-progress Datadog setup while onboarding is incomplete.
+type DatadogDraft struct {
+	Site      integrations.DatadogSite
+	HasAPIKey bool
+	apiKey    integrations.DatadogAPIKey
+}
+
+func (w *Workflow) currentDraft(accountID tenancy.AccountID) DatadogDraft {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.bound != "" && accountID != "" && w.bound != accountID {
+		w.draft = DatadogDraft{}
 	}
-	s.setDraft(func(d *DatadogDraft) {
+	w.bound = accountID
+	return w.draft
+}
+
+func (w *Workflow) setDraft(update func(d *DatadogDraft)) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	update(&w.draft)
+}
+
+func (w *Workflow) SetDatadogSite(ctx context.Context, site integrations.DatadogSite) (State, error) {
+	if !site.Valid() {
+		return w.currentStateWithError(ctx, fmt.Errorf("invalid datadog site: %q", site))
+	}
+	w.setDraft(func(d *DatadogDraft) {
 		d.Site = site
 		d.HasAPIKey = false
 		d.apiKey = ""
 	})
-	return s.State(ctx)
+	return w.State(ctx)
 }
 
-func (s *Service) SubmitDatadogAPIKey(ctx context.Context, submission integrations.DatadogAPIKeySubmission) (State, error) {
+func (w *Workflow) SubmitDatadogAPIKey(ctx context.Context, submission integrations.DatadogAPIKeySubmission) (State, error) {
 	validatedSubmission, err := submission.Validate()
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
-	state, err := s.State(ctx)
+	state, err := w.State(ctx)
 	if err != nil {
 		return State{}, err
 	}
 	if state.SelectedAccount == nil {
-		return State{}, fmt.Errorf("account must be selected before datadog setup")
+		return w.currentStateWithError(ctx, fmt.Errorf("account must be selected before datadog setup"))
 	}
 	if !state.DatadogDraft.Site.Valid() {
-		return State{}, fmt.Errorf("datadog site must be selected first")
+		return w.currentStateWithError(ctx, fmt.Errorf("datadog site must be selected first"))
 	}
-	valid, message, err := s.datadog.ValidateAPIKey(ctx, integrations.DatadogAPIKeyValidation{
+	valid, message, err := w.datadog.ValidateAPIKey(ctx, integrations.DatadogAPIKeyValidation{
 		Site:   state.DatadogDraft.Site,
 		APIKey: validatedSubmission.APIKey,
 	})
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
 	if !valid {
 		if message == "" {
 			message = "datadog api key is invalid"
 		}
-		return State{}, errors.New(message)
+		return w.currentStateWithError(ctx, errors.New(message))
 	}
 
-	s.setDraft(func(d *DatadogDraft) {
+	w.setDraft(func(d *DatadogDraft) {
 		d.HasAPIKey = true
 		d.apiKey = validatedSubmission.APIKey
 	})
-	return s.State(ctx)
+	return w.State(ctx)
 }
 
-func (s *Service) SubmitDatadogAppKey(ctx context.Context, submission integrations.DatadogAppKeySubmission) (State, error) {
+func (w *Workflow) SubmitDatadogAppKey(ctx context.Context, submission integrations.DatadogAppKeySubmission) (State, error) {
 	validatedSubmission, err := submission.Validate()
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
-	state, err := s.State(ctx)
+	state, err := w.State(ctx)
 	if err != nil {
 		return State{}, err
 	}
 	if state.SelectedAccount == nil {
-		return State{}, fmt.Errorf("account must be selected before datadog setup")
+		return w.currentStateWithError(ctx, fmt.Errorf("account must be selected before datadog setup"))
 	}
 	if !state.DatadogDraft.Site.Valid() {
-		return State{}, fmt.Errorf("datadog site must be selected first")
+		return w.currentStateWithError(ctx, fmt.Errorf("datadog site must be selected first"))
 	}
 	if !state.DatadogDraft.HasAPIKey {
-		return State{}, fmt.Errorf("datadog api key must be validated first")
+		return w.currentStateWithError(ctx, fmt.Errorf("datadog api key must be validated first"))
 	}
 
-	_, err = s.datadog.Create(ctx, integrations.DatadogAccountCreate{
+	_, err = w.datadog.Create(ctx, integrations.DatadogAccountCreate{
 		AccountID: state.SelectedAccount.ID,
 		Name:      validatedSubmission.Name,
 		Site:      state.DatadogDraft.Site,
@@ -83,11 +107,11 @@ func (s *Service) SubmitDatadogAppKey(ctx context.Context, submission integratio
 		AppKey:    validatedSubmission.AppKey,
 	})
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
 
-	s.setDraft(func(d *DatadogDraft) {
+	w.setDraft(func(d *DatadogDraft) {
 		*d = DatadogDraft{}
 	})
-	return s.State(ctx)
+	return w.State(ctx)
 }

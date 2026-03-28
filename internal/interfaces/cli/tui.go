@@ -7,5 +7,9 @@ type TUI struct{}
 
 // Run starts TUI mode.
 func (m *TUI) Run(exec *runner) error {
-	return tui.Start(exec.cfg, exec.scope.Child("tui"))
+	deps, err := newTUIDependencies(exec)
+	if err != nil {
+		return err
+	}
+	return tui.Start(deps)
 }

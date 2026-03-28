@@ -2,6 +2,7 @@ package terotest
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -75,7 +76,7 @@ func Start(t testing.TB, binary string, opts Options) *App {
 		opts.WindowHeight = defaultHeight
 	}
 
-	cmd := exec.Command(binary, opts.Args...)
+	cmd := exec.CommandContext(context.Background(), binary, opts.Args...)
 	cmd.Dir = cmdDir(t)
 	cmd.Env = buildEnv(opts)
 

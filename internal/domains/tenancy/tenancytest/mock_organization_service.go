@@ -14,6 +14,10 @@ type MockOrganizationService struct {
 
 var _ tenancy.OrganizationService = (*MockOrganizationService)(nil)
 
+func NewMockOrganizationService() *MockOrganizationService {
+	return &MockOrganizationService{}
+}
+
 func (m *MockOrganizationService) List(ctx context.Context) ([]tenancy.Organization, error) {
 	if m.ListFn == nil {
 		return nil, nil

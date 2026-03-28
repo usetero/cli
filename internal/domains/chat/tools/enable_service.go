@@ -40,7 +40,7 @@ func NewEnableServiceTool(
 func (t *EnableServiceTool) Definition() Definition {
 	return Definition{
 		Name:        EnableServiceToolName,
-		Description: "Enable or disable service analysis.",
+		Description: "Enable or disable deeper catalog processing for a service.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

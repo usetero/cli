@@ -58,7 +58,7 @@ tasks:
         '
 
   generate:schema:
-    desc: Generate PowerSync schema.json and SQLite reflected schema/sqlc
+    desc: Generate PowerSync schema.json and copy the authored SQLite schema/jsonb schema/sqlc
     cmds:
       - ./scripts/with-env.sh go generate ./internal/infrastructure/powersync/extension
       - ./scripts/with-env.sh go generate ./internal/infrastructure/sqlite
@@ -102,12 +102,17 @@ tasks:
 
   lint:
     desc: Run all linters
-    deps: [lint:go, lint:scripts, lint:naming, lint:architecture]
+    deps: [lint:go, lint:repo]
 
   lint:go:
     desc: Run golangci-lint
     cmds:
       - golangci-lint run ./...
+
+  lint:repo:
+    desc: Run repo-owned architecture and runtime guardrails
+    cmds:
+      - go run ./scripts/lint/cmd/lint --suite repo
 
   lint:scripts:
     desc: Lint shell scripts with shellcheck

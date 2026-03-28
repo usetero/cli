@@ -15,6 +15,10 @@ type MockAccountService struct {
 
 var _ tenancy.AccountService = (*MockAccountService)(nil)
 
+func NewMockAccountService() *MockAccountService {
+	return &MockAccountService{}
+}
+
 func (m *MockAccountService) Create(ctx context.Context, create tenancy.AccountCreate) (tenancy.AccountID, error) {
 	if m.CreateFn == nil {
 		return "", nil

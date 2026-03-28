@@ -2,16 +2,17 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/usetero/cli/internal/infrastructure/sqlite"
 )
 
 type ShowTool struct {
-	db *sqlite.DB
+	db interface {
+		QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	}
 }
 
 type ShowInput struct {
@@ -27,7 +28,9 @@ type ShowResult struct {
 	Title  string `json:"title,omitempty"`
 }
 
-func NewShowTool(db *sqlite.DB) *ShowTool {
+func NewShowTool(db interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}) *ShowTool {
 	if db == nil {
 		panic("show tool requires db")
 	}
@@ -82,10 +85,10 @@ func (t *ShowTool) Run(ctx context.Context, input json.RawMessage) (json.RawMess
 }
 
 func (t *ShowTool) resolveIDFromSQL(ctx context.Context, sqlText string) (string, error) {
-	qctx, cancel := sqlite.WithTimeout(ctx, 3*time.Second)
+	qctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	rows, err := t.db.Raw().QueryContext(qctx, sqlText)
+	rows, err := t.db.QueryContext(qctx, sqlText)
 	if err != nil {
 		return "", err
 	}

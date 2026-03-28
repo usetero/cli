@@ -6,24 +6,17 @@ import (
 	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
-// DatadogDraft stores in-progress integration data while onboarding is incomplete.
-type DatadogDraft struct {
-	Site      integrations.DatadogSite
-	HasAPIKey bool
-	apiKey    integrations.DatadogAPIKey
-}
-
 // State is the onboarding truth projection used to derive the next step.
 type State struct {
 	Role preferences.Role
 
-	Organizations        Organizations
+	Organizations        []tenancy.Organization
 	SelectedOrganization *tenancy.Organization
 
-	Accounts        Accounts
+	Accounts        []tenancy.Account
 	SelectedAccount *tenancy.Account
 
-	Workspaces        Workspaces
+	Workspaces        []tenancy.Workspace
 	SelectedWorkspace *tenancy.Workspace
 
 	DatadogAccount *integrations.DatadogAccount
@@ -34,50 +27,44 @@ type State struct {
 	NextStep       Step
 }
 
-type Organizations []tenancy.Organization
-
-type Accounts []tenancy.Account
-
-type Workspaces []tenancy.Workspace
-
-func (o Organizations) Select(preferred tenancy.OrganizationID) *tenancy.Organization {
+func selectOrganization(values []tenancy.Organization, preferred tenancy.OrganizationID) *tenancy.Organization {
 	if preferred != "" {
-		for i := range o {
-			if o[i].ID == preferred {
-				return &o[i]
+		for i := range values {
+			if values[i].ID == preferred {
+				return &values[i]
 			}
 		}
 	}
-	if len(o) == 1 {
-		return &o[0]
+	if len(values) == 1 {
+		return &values[0]
 	}
 	return nil
 }
 
-func (a Accounts) Select(preferred tenancy.AccountID) *tenancy.Account {
+func selectAccount(values []tenancy.Account, preferred tenancy.AccountID) *tenancy.Account {
 	if preferred != "" {
-		for i := range a {
-			if a[i].ID == preferred {
-				return &a[i]
+		for i := range values {
+			if values[i].ID == preferred {
+				return &values[i]
 			}
 		}
 	}
-	if len(a) == 1 {
-		return &a[0]
+	if len(values) == 1 {
+		return &values[0]
 	}
 	return nil
 }
 
-func (w Workspaces) Select(preferred tenancy.WorkspaceID) *tenancy.Workspace {
+func selectWorkspace(values []tenancy.Workspace, preferred tenancy.WorkspaceID) *tenancy.Workspace {
 	if preferred != "" {
-		for i := range w {
-			if w[i].ID == preferred {
-				return &w[i]
+		for i := range values {
+			if values[i].ID == preferred {
+				return &values[i]
 			}
 		}
 	}
-	if len(w) == 1 {
-		return &w[0]
+	if len(values) == 1 {
+		return &values[0]
 	}
 	return nil
 }

@@ -303,6 +303,33 @@ func TestStoreCheckHealth(t *testing.T) {
 	})
 }
 
+func TestStoreInitialSyncState(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := db.NewStore(openTestDB(t))
+
+	completed, err := store.HasCompletedInitialSync(ctx)
+	if err != nil {
+		t.Fatalf("HasCompletedInitialSync() error = %v", err)
+	}
+	if completed {
+		t.Fatal("expected initial sync to be incomplete")
+	}
+
+	if err := store.MarkInitialSyncComplete(ctx); err != nil {
+		t.Fatalf("MarkInitialSyncComplete() error = %v", err)
+	}
+
+	completed, err = store.HasCompletedInitialSync(ctx)
+	if err != nil {
+		t.Fatalf("HasCompletedInitialSync() error = %v", err)
+	}
+	if !completed {
+		t.Fatal("expected initial sync to be complete")
+	}
+}
+
 func openTestDB(t *testing.T) *sqlite.DB {
 	t.Helper()
 	if err := extension.Register(); err != nil {

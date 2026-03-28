@@ -2,13 +2,12 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/usetero/cli/internal/infrastructure/sqlite"
 )
 
 const (
@@ -22,7 +21,9 @@ const (
 var querySchema string
 
 type QueryTool struct {
-	db *sqlite.DB
+	db interface {
+		QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	}
 }
 
 type QueryInput struct {
@@ -34,7 +35,9 @@ type QueryResult struct {
 	RowsDropped int              `json:"rows_dropped,omitempty"`
 }
 
-func NewQueryTool(db *sqlite.DB) *QueryTool {
+func NewQueryTool(db interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}) *QueryTool {
 	if db == nil {
 		panic("query tool requires db")
 	}
@@ -82,10 +85,10 @@ func (t *QueryTool) Run(ctx context.Context, input json.RawMessage) (json.RawMes
 		return nil, fmt.Errorf("only read-only SELECT queries are allowed")
 	}
 
-	qctx, cancel := sqlite.WithTimeout(ctx, queryTimeout)
+	qctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
-	rows, err := t.db.Raw().QueryContext(qctx, sqlText)
+	rows, err := t.db.QueryContext(qctx, sqlText)
 	if err != nil {
 		return nil, err
 	}

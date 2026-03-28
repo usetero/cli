@@ -6,13 +6,13 @@ import (
 	"github.com/usetero/cli/internal/domains/preferences"
 )
 
-func (s *Service) SetRole(ctx context.Context, selection preferences.RoleSelection) (State, error) {
+func (w *Workflow) SetRole(ctx context.Context, selection preferences.RoleSelection) (State, error) {
 	validated, err := selection.Validate()
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
-	if err := s.preferences.SetRole(ctx, validated); err != nil {
-		return State{}, err
+	if err := w.preferences.SetRole(ctx, validated); err != nil {
+		return w.currentStateWithError(ctx, err)
 	}
-	return s.State(ctx)
+	return w.State(ctx)
 }

@@ -15,6 +15,10 @@ type MockWorkspaceService struct {
 
 var _ tenancy.WorkspaceService = (*MockWorkspaceService)(nil)
 
+func NewMockWorkspaceService() *MockWorkspaceService {
+	return &MockWorkspaceService{}
+}
+
 func (m *MockWorkspaceService) Create(ctx context.Context, create tenancy.WorkspaceCreate) (tenancy.WorkspaceID, error) {
 	if m.CreateFn == nil {
 		return "", nil

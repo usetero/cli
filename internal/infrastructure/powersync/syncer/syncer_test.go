@@ -2,6 +2,7 @@ package syncer_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -229,7 +230,7 @@ func TestSyncerStartWhileRunningReturnsAlreadyStarted(t *testing.T) {
 	}
 	defer s.Stop()
 
-	if err := s.Start(context.Background(), database, syncer.AccountID("acc-1"), nil); err != syncer.ErrAlreadyStarted {
+	if err := s.Start(context.Background(), database, syncer.AccountID("acc-1"), nil); !errors.Is(err, syncer.ErrAlreadyStarted) {
 		t.Fatalf("second Start() error = %v, want ErrAlreadyStarted", err)
 	}
 }

@@ -3,14 +3,20 @@ package helpbar
 import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
-	"github.com/usetero/cli/internal/interfaces/tui/theme"
+	tea "charm.land/bubbletea/v2"
+	"github.com/usetero/cli/internal/interfaces/tui/core"
+	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
 )
 
 // Model renders the app short-help row.
 type Model struct {
 	help  help.Model
 	theme theme.Theme
+	keys  []key.Binding
+	width int
 }
+
+var _ core.Model = (*Model)(nil)
 
 // New creates a help bar model.
 func New(appTheme theme.Theme) *Model {
@@ -23,16 +29,13 @@ func New(appTheme theme.Theme) *Model {
 	return &Model{help: h, theme: appTheme}
 }
 
-// SetWidth configures help layout width.
-func (m *Model) SetWidth(width int) {
-	m.help.SetWidth(width)
-}
+// Init satisfies tea.Model.
+func (m *Model) Init() tea.Cmd { return nil }
 
-// Short renders short help for the provided bindings.
-func (m *Model) Short(bindings []key.Binding) string {
-	content := m.help.ShortHelpView(bindings)
-	if content == "" {
-		return ""
-	}
-	return content
+// Update satisfies tea.Model. The help bar currently has no local event-loop state.
+func (m *Model) Update(tea.Msg) (tea.Model, tea.Cmd) { return m, nil }
+
+// SetBindings sets the bindings rendered in the help bar.
+func (m *Model) SetBindings(bindings []key.Binding) {
+	m.keys = append([]key.Binding(nil), bindings...)
 }

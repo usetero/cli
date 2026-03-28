@@ -22,6 +22,10 @@ type ControlPlane struct {
 
 var _ pssyncer.ControlPlane = (*ControlPlane)(nil)
 
+func NewControlPlane() *ControlPlane {
+	return &ControlPlane{}
+}
+
 func (c *ControlPlane) Start(context.Context, extension.StartRequest) ([]extension.Instruction, error) {
 	return c.StartInstructions, nil
 }

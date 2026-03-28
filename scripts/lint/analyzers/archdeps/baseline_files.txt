@@ -1,0 +1,10 @@
+# Current architecture drift to ratchet down over time.
+internal/domains/integrations/adapters_remote.go
+internal/domains/integrations/contracts.go
+internal/domains/integrations/datadog_remote.go
+internal/domains/tenancy/accounts_remote.go
+internal/domains/tenancy/adapters_remote.go
+internal/domains/tenancy/contracts.go
+internal/domains/tenancy/organizations_remote.go
+internal/domains/tenancy/workspaces_remote.go
+internal/infrastructure/powersync/extension/generate/main.go

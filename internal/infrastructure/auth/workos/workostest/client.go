@@ -19,6 +19,10 @@ var _ interface {
 	RefreshToken(ctx context.Context, refreshToken, workosOrgID string) (workos.RefreshResult, error)
 } = (*Client)(nil)
 
+func NewClient() *Client {
+	return &Client{}
+}
+
 func (c *Client) StartDeviceAuthorization(ctx context.Context) (workos.DeviceAuthorization, error) {
 	if c.StartDeviceAuthorizationFn == nil {
 		return workos.DeviceAuthorization{}, nil

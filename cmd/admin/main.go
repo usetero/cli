@@ -110,7 +110,7 @@ func setup() (*workosadmin.Client, string, error) {
 	return workosadmin.NewClient(apiKey), userID, nil
 }
 
-func currentTokenStore() (*identity.KeyringTokenStore, error) {
+func currentTokenStore() (identity.TokenStore, error) {
 	env := os.Getenv("TERO_ENV")
 	if env == "" {
 		env = "local"
@@ -119,7 +119,7 @@ func currentTokenStore() (*identity.KeyringTokenStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return identity.NewKeyringTokenStore(store), nil
+	return authkeyring.NewTokenStore(store), nil
 }
 
 type tokenClaims struct {

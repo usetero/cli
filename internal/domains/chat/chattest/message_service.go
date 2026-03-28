@@ -14,6 +14,10 @@ type MessageService struct {
 
 var _ domainchat.MessageService = (*MessageService)(nil)
 
+func NewMessageService() *MessageService {
+	return &MessageService{}
+}
+
 func (s *MessageService) CreateUserMessage(ctx context.Context, create domainchat.UserMessageCreate) (domainchat.MessageID, error) {
 	if s.CreateUserMessageFn == nil {
 		return "", nil

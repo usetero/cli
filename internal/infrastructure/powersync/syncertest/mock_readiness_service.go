@@ -13,6 +13,10 @@ type MockReadinessService struct {
 
 var _ pssyncer.ReadinessService = (*MockReadinessService)(nil)
 
+func NewMockReadinessService() *MockReadinessService {
+	return &MockReadinessService{}
+}
+
 func (m MockReadinessService) Ready(ctx context.Context) (bool, error) {
 	if m.ReadyFn == nil {
 		return false, nil

@@ -14,6 +14,10 @@ type ConversationService struct {
 
 var _ domainchat.ConversationService = (*ConversationService)(nil)
 
+func NewConversationService() *ConversationService {
+	return &ConversationService{}
+}
+
 func (s *ConversationService) Create(ctx context.Context, create domainchat.ConversationCreate) (domainchat.ConversationID, error) {
 	if s.CreateFn == nil {
 		return "", nil

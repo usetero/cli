@@ -6,13 +6,13 @@ import (
 	"github.com/usetero/cli/internal/domains/preferences"
 )
 
-func (s *Service) SelectWorkspace(ctx context.Context, selection preferences.WorkspaceSelection) (State, error) {
+func (w *Workflow) SelectWorkspace(ctx context.Context, selection preferences.WorkspaceSelection) (State, error) {
 	validated, err := selection.Validate()
 	if err != nil {
-		return State{}, err
+		return w.currentStateWithError(ctx, err)
 	}
-	if err := s.preferences.SetWorkspace(ctx, validated); err != nil {
-		return State{}, err
+	if err := w.preferences.SetWorkspace(ctx, validated); err != nil {
+		return w.currentStateWithError(ctx, err)
 	}
-	return s.State(ctx)
+	return w.State(ctx)
 }

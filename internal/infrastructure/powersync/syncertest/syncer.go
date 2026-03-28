@@ -24,6 +24,10 @@ var _ interface {
 	NotifyUploadCompleted(ctx context.Context) error
 } = (*Mock)(nil)
 
+func NewMock() *Mock {
+	return &Mock{}
+}
+
 func (m *Mock) Start(ctx context.Context, db *sqlite.DB, accountID pssyncer.AccountID, onFirstSync func()) error {
 	if m.StartFn == nil {
 		if onFirstSync != nil {

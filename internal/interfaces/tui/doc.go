@@ -1,2 +1,2 @@
-// Package tui is the Bubble Tea interface surface.
+// Package tui exposes the public terminal UI entrypoint.
 package tui

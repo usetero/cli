@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"context"
+	"time"
 
 	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/domains/validation"
@@ -46,18 +47,27 @@ const (
 )
 
 type DatadogStatus struct {
-	Health               DatadogAccountHealth
-	ReadyForUse          bool
-	ServiceCount         int
-	ActiveServices       int
-	OKServices           int
-	DisabledServices     int
-	InactiveServices     int
-	EventCount           int
-	AnalyzedCount        int
-	PendingPolicyCount   int
-	ApprovedPolicyCount  int
-	DismissedPolicyCount int
+	Health                        DatadogAccountHealth
+	ReadyForUse                   bool
+	ServiceCount                  int
+	ActiveServices                int
+	OKServices                    int
+	DisabledServices              int
+	InactiveServices              int
+	EventCount                    int
+	AnalyzedCount                 int
+	PreviewLogEventCount          int
+	EffectiveLogEventCount        int
+	CurrentEventsPerHour          *float64
+	CurrentBytesPerHour           *float64
+	CurrentTotalUSDPerHour        *float64
+	PreviewSavedEventsPerHour     *float64
+	PreviewSavedBytesPerHour      *float64
+	PreviewSavedTotalUSDPerHour   *float64
+	EffectiveSavedEventsPerHour   *float64
+	EffectiveSavedBytesPerHour    *float64
+	EffectiveSavedTotalUSDPerHour *float64
+	RefreshedAt                   time.Time
 }
 
 // DatadogAPIKeySubmission is the onboarding API key submission input.

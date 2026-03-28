@@ -17,6 +17,10 @@ type Client struct {
 
 var _ pssyncer.Client = (*Client)(nil)
 
+func NewClient() *Client {
+	return &Client{}
+}
+
 func (c *Client) SyncStream(ctx context.Context, req *psclient.SyncStreamRequest, handler psclient.LineHandler) error {
 	if c.SyncStreamFn == nil {
 		return nil

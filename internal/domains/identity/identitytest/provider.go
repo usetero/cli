@@ -14,6 +14,10 @@ type Provider struct {
 
 var _ identity.Provider = (*Provider)(nil)
 
+func NewProvider() *Provider {
+	return &Provider{}
+}
+
 func (p Provider) StartDeviceAuth(ctx context.Context) (identity.DeviceFlow, error) {
 	if p.StartDeviceAuthFn == nil {
 		return identity.DeviceFlow{}, nil

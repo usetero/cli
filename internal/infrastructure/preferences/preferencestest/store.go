@@ -16,6 +16,10 @@ type Store struct {
 
 var _ domainprefs.Store = (*Store)(nil)
 
+func NewStore() *Store {
+	return &Store{}
+}
+
 func (s *Store) Load(context.Context) (domainprefs.Snapshot, error) {
 	if s.LoadErr != nil {
 		return domainprefs.Snapshot{}, s.LoadErr

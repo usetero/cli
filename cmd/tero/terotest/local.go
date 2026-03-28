@@ -159,7 +159,10 @@ func requireReachable(t testing.TB, name, origin string) {
 			address += ":80"
 		}
 	}
-	conn, err := net.DialTimeout("tcp", address, 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	dialer := &net.Dialer{Timeout: 2 * time.Second}
+	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		t.Fatalf("%s at %s is unreachable: %v", name, origin, err)
 	}

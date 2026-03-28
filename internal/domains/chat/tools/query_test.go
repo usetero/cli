@@ -27,7 +27,7 @@ func TestQueryTool_Run(t *testing.T) {
 		t.Fatalf("insert rows: %v", err)
 	}
 
-	tool := NewQueryTool(db)
+	tool := NewQueryTool(db.Raw())
 	out, err := tool.Run(context.Background(), json.RawMessage(`{"sql":"SELECT id, name FROM items ORDER BY id"}`))
 	if err != nil {
 		t.Fatalf("run query: %v", err)
@@ -51,7 +51,7 @@ func TestQueryTool_RejectsMutations(t *testing.T) {
 		t.Fatalf("open db: %v", err)
 	}
 	defer db.Close()
-	tool := NewQueryTool(db)
+	tool := NewQueryTool(db.Raw())
 	_, err = tool.Run(context.Background(), json.RawMessage(`{"sql":"DELETE FROM items"}`))
 	if err == nil || !strings.Contains(err.Error(), "read-only SELECT") {
 		t.Fatalf("expected read-only rejection, got %v", err)

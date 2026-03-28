@@ -33,6 +33,10 @@ Then, if you are working in the TUI:
 6. [ui-layout.md](ui-layout.md)
 7. [theme-and-chrome.md](theme-and-chrome.md)
 
+For repository guardrails and what should be enforced mechanically:
+
+8. [linting.md](linting.md)
+
 That sequence mirrors the system itself:
 
 - ownership first,

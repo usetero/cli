@@ -7,7 +7,6 @@ const (
 	QueryToolName         Name = "query"
 	ShowToolName          Name = "show"
 	EnableServiceToolName Name = "enable_service"
-	ApprovePolicyToolName Name = "approve_policy"
 )
 
 // Definition is the tool contract sent to the chat API.

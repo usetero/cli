@@ -17,6 +17,10 @@ type MockDatadogService struct {
 
 var _ integrations.DatadogService = (*MockDatadogService)(nil)
 
+func NewMockDatadogService() *MockDatadogService {
+	return &MockDatadogService{}
+}
+
 func (m *MockDatadogService) GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error) {
 	if m.GetByAccountFn == nil {
 		return nil, nil

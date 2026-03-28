@@ -2,16 +2,6 @@ version: "2"
 sql:
   - engine: "sqlite"
     schema: "internal/infrastructure/sqlite/schema.sql"
-    queries: "internal/runtime/onboarding/db/queries.sql"
-    gen:
-      go:
-        package: "onboardingdb"
-        out: "internal/runtime/onboarding/db/gen"
-        emit_pointers_for_null_types: true
-        emit_interface: true
-
-  - engine: "sqlite"
-    schema: "internal/infrastructure/sqlite/schema.sql"
     queries: "internal/domains/chat/db/conversations.sql"
     gen:
       go:
@@ -27,6 +17,36 @@ sql:
       go:
         package: "messagesdb"
         out: "internal/domains/chat/db/messagesgen"
+        emit_pointers_for_null_types: true
+        emit_interface: true
+
+  - engine: "sqlite"
+    schema: "internal/infrastructure/sqlite/schema.sql"
+    queries: "internal/domains/catalog/db/services.sql"
+    gen:
+      go:
+        package: "servicesdb"
+        out: "internal/domains/catalog/db/servicesgen"
+        emit_pointers_for_null_types: true
+        emit_interface: true
+
+  - engine: "sqlite"
+    schema: "internal/infrastructure/sqlite/schema.sql"
+    queries: "internal/domains/catalog/db/log_events.sql"
+    gen:
+      go:
+        package: "logeventsdb"
+        out: "internal/domains/catalog/db/logeventsgen"
+        emit_pointers_for_null_types: true
+        emit_interface: true
+
+  - engine: "sqlite"
+    schema: "internal/infrastructure/sqlite/schema.sql"
+    queries: "internal/domains/change/db/findings.sql"
+    gen:
+      go:
+        package: "findingsdb"
+        out: "internal/domains/change/db/findingsgen"
         emit_pointers_for_null_types: true
         emit_interface: true
 

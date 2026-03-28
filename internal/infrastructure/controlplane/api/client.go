@@ -95,25 +95,34 @@ type DatadogAccount struct {
 type DatadogAccountHealth string
 
 const (
-	DatadogAccountHealthDisabled DatadogAccountHealth = DatadogAccountHealth(gen.DatadogAccountStatusCacheHealthDisabled)
-	DatadogAccountHealthInactive DatadogAccountHealth = DatadogAccountHealth(gen.DatadogAccountStatusCacheHealthInactive)
-	DatadogAccountHealthError    DatadogAccountHealth = DatadogAccountHealth(gen.DatadogAccountStatusCacheHealthError)
-	DatadogAccountHealthOK       DatadogAccountHealth = DatadogAccountHealth(gen.DatadogAccountStatusCacheHealthOk)
+	DatadogAccountHealthDisabled DatadogAccountHealth = DatadogAccountHealth(gen.StatusHealthDisabled)
+	DatadogAccountHealthInactive DatadogAccountHealth = DatadogAccountHealth(gen.StatusHealthInactive)
+	DatadogAccountHealthError    DatadogAccountHealth = DatadogAccountHealth(gen.StatusHealthError)
+	DatadogAccountHealthOK       DatadogAccountHealth = DatadogAccountHealth(gen.StatusHealthOk)
 )
 
 type DatadogAccountStatus struct {
-	Health               DatadogAccountHealth
-	ReadyForUse          bool
-	ServiceCount         int
-	ActiveServices       int
-	OKServices           int
-	DisabledServices     int
-	InactiveServices     int
-	EventCount           int
-	AnalyzedCount        int
-	PendingPolicyCount   int
-	ApprovedPolicyCount  int
-	DismissedPolicyCount int
+	Health                        DatadogAccountHealth
+	ReadyForUse                   bool
+	ServiceCount                  int
+	ActiveServices                int
+	OKServices                    int
+	DisabledServices              int
+	InactiveServices              int
+	EventCount                    int
+	AnalyzedCount                 int
+	PreviewLogEventCount          int
+	EffectiveLogEventCount        int
+	CurrentEventsPerHour          *float64
+	CurrentBytesPerHour           *float64
+	CurrentTotalUSDPerHour        *float64
+	PreviewSavedEventsPerHour     *float64
+	PreviewSavedBytesPerHour      *float64
+	PreviewSavedTotalUSDPerHour   *float64
+	EffectiveSavedEventsPerHour   *float64
+	EffectiveSavedBytesPerHour    *float64
+	EffectiveSavedTotalUSDPerHour *float64
+	RefreshedAt                   time.Time
 }
 
 type CreateDatadogAccountInput struct {
@@ -493,18 +502,27 @@ func (c *Client) GetDatadogAccountStatus(ctx context.Context, datadogAccountID D
 		}
 		s := edge.Node.Status
 		return &DatadogAccountStatus{
-			Health:               DatadogAccountHealth(s.Health),
-			ReadyForUse:          s.ReadyForUse,
-			ServiceCount:         s.LogServiceCount,
-			ActiveServices:       s.LogActiveServices,
-			OKServices:           s.OkServices,
-			DisabledServices:     s.DisabledServices,
-			InactiveServices:     s.InactiveServices,
-			EventCount:           s.LogEventCount,
-			AnalyzedCount:        s.LogEventAnalyzedCount,
-			PendingPolicyCount:   s.PendingRecommendationCount,
-			ApprovedPolicyCount:  s.ApprovedRecommendationCount,
-			DismissedPolicyCount: s.DismissedRecommendationCount,
+			Health:                        DatadogAccountHealth(s.Health),
+			ReadyForUse:                   s.ReadyForUse,
+			ServiceCount:                  s.LogServiceCount,
+			ActiveServices:                s.LogActiveServices,
+			OKServices:                    s.OkServices,
+			DisabledServices:              s.DisabledServices,
+			InactiveServices:              s.InactiveServices,
+			EventCount:                    s.LogEventCount,
+			AnalyzedCount:                 s.LogEventAnalyzedCount,
+			PreviewLogEventCount:          s.PreviewLogEventCount,
+			EffectiveLogEventCount:        s.EffectiveLogEventCount,
+			CurrentEventsPerHour:          s.CurrentEventsPerHour,
+			CurrentBytesPerHour:           s.CurrentBytesPerHour,
+			CurrentTotalUSDPerHour:        s.CurrentTotalUsdPerHour,
+			PreviewSavedEventsPerHour:     s.PreviewSavedEventsPerHour,
+			PreviewSavedBytesPerHour:      s.PreviewSavedBytesPerHour,
+			PreviewSavedTotalUSDPerHour:   s.PreviewSavedTotalUsdPerHour,
+			EffectiveSavedEventsPerHour:   s.EffectiveSavedEventsPerHour,
+			EffectiveSavedBytesPerHour:    s.EffectiveSavedBytesPerHour,
+			EffectiveSavedTotalUSDPerHour: s.EffectiveSavedTotalUsdPerHour,
+			RefreshedAt:                   s.RefreshedAt,
 		}, nil
 	}
 
