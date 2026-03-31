@@ -21,7 +21,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
@@ -37,7 +50,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
@@ -53,7 +79,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
@@ -69,7 +108,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
@@ -99,7 +151,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
@@ -120,7 +185,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.TERO_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.TERO_BOT_PRIVATE_SIGNING_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Configure Git for private Hermit sources
+        run: git config --global url.https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/.insteadOf https://github.com/
 
       - name: Setup Hermit
         uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # v1
