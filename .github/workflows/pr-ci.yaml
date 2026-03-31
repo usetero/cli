@@ -2,9 +2,9 @@ name: PR CI
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, arch-reset]
   merge_group:
-    branches: [master]
+    branches: [master, arch-reset]
   workflow_dispatch:
 
 concurrency:

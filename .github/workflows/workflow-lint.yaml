@@ -2,7 +2,7 @@ name: Workflow Lint
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, arch-reset]
     paths:
       - .github/workflows/**
       - .github/actions/**

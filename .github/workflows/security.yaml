@@ -2,7 +2,7 @@ name: Security
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, arch-reset]
   schedule:
     - cron: "30 7 * * 1"
   workflow_dispatch:
