@@ -179,7 +179,6 @@ type CreateConversationInput struct {
 	AccountID *string `json:"accountID"`
 	// Legacy workspace-scoped create path used by older clients.
 	WorkspaceID *string `json:"workspaceID"`
-	ViewID      *string `json:"viewID"`
 	// Optional client-provided UUID for offline-first sync.
 	// If provided and a conversation with this ID exists, returns the existing record.
 	Id *string `json:"id"`
@@ -193,9 +192,6 @@ func (v *CreateConversationInput) GetAccountID() *string { return v.AccountID }
 
 // GetWorkspaceID returns CreateConversationInput.WorkspaceID, and is useful for accessing the field via an interface.
 func (v *CreateConversationInput) GetWorkspaceID() *string { return v.WorkspaceID }
-
-// GetViewID returns CreateConversationInput.ViewID, and is useful for accessing the field via an interface.
-func (v *CreateConversationInput) GetViewID() *string { return v.ViewID }
 
 // GetId returns CreateConversationInput.Id, and is useful for accessing the field via an interface.
 func (v *CreateConversationInput) GetId() *string { return v.Id }
@@ -2185,8 +2181,6 @@ type UpdateConversationInput struct {
 	// AI-generated title, set after first exchange
 	Title      *string `json:"title"`
 	ClearTitle *bool   `json:"clearTitle"`
-	ViewID     *string `json:"viewID"`
-	ClearView  *bool   `json:"clearView"`
 }
 
 // GetTitle returns UpdateConversationInput.Title, and is useful for accessing the field via an interface.
@@ -2194,12 +2188,6 @@ func (v *UpdateConversationInput) GetTitle() *string { return v.Title }
 
 // GetClearTitle returns UpdateConversationInput.ClearTitle, and is useful for accessing the field via an interface.
 func (v *UpdateConversationInput) GetClearTitle() *bool { return v.ClearTitle }
-
-// GetViewID returns UpdateConversationInput.ViewID, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetViewID() *string { return v.ViewID }
-
-// GetClearView returns UpdateConversationInput.ClearView, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetClearView() *bool { return v.ClearView }
 
 // UpdateConversationResponse is returned by UpdateConversation on success.
 type UpdateConversationResponse struct {

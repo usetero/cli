@@ -17,42 +17,43 @@ SELECT
   CAST(COALESCE(SUM(log_event_count), 0) AS INTEGER) AS event_count,
   CAST(COALESCE(SUM(log_event_analyzed_count), 0) AS INTEGER) AS analyzed_count,
 
-  -- policies
-  CAST(COALESCE(SUM(policy_pending_count), 0) AS INTEGER) AS pending_policy_count,
-  CAST(COALESCE(SUM(policy_approved_count), 0) AS INTEGER) AS approved_policy_count,
-  CAST(COALESCE(SUM(policy_dismissed_count), 0) AS INTEGER) AS dismissed_policy_count,
-  CAST(COALESCE(SUM(policy_pending_critical_count), 0) AS INTEGER) AS policy_pending_critical_count,
-  CAST(COALESCE(SUM(policy_pending_high_count), 0) AS INTEGER) AS policy_pending_high_count,
-  CAST(COALESCE(SUM(policy_pending_medium_count), 0) AS INTEGER) AS policy_pending_medium_count,
-  CAST(COALESCE(SUM(policy_pending_low_count), 0) AS INTEGER) AS policy_pending_low_count,
+  -- policy-summary UI is still legacy-shaped; preserve zero values until it moves
+  -- to findings-backed aggregates.
+  CAST(0 AS INTEGER) AS pending_policy_count,
+  CAST(0 AS INTEGER) AS approved_policy_count,
+  CAST(0 AS INTEGER) AS dismissed_policy_count,
+  CAST(0 AS INTEGER) AS policy_pending_critical_count,
+  CAST(0 AS INTEGER) AS policy_pending_high_count,
+  CAST(0 AS INTEGER) AS policy_pending_medium_count,
+  CAST(0 AS INTEGER) AS policy_pending_low_count,
 
   -- estimated savings
-  SUM(estimated_cost_reduction_per_hour_usd) AS estimated_cost_per_hour,
-  SUM(estimated_cost_reduction_per_hour_bytes_usd) AS estimated_cost_per_hour_bytes,
-  SUM(estimated_cost_reduction_per_hour_volume_usd) AS estimated_cost_per_hour_volume,
-  SUM(estimated_volume_reduction_per_hour) AS estimated_volume_per_hour,
-  SUM(estimated_bytes_reduction_per_hour) AS estimated_bytes_per_hour,
+  SUM(preview_saved_total_usd_per_hour) AS estimated_cost_per_hour,
+  SUM(preview_saved_bytes_usd_per_hour) AS estimated_cost_per_hour_bytes,
+  SUM(preview_saved_volume_usd_per_hour) AS estimated_cost_per_hour_volume,
+  SUM(preview_saved_events_per_hour) AS estimated_volume_per_hour,
+  SUM(preview_saved_bytes_per_hour) AS estimated_bytes_per_hour,
 
   -- observed impact
-  SUM(observed_cost_per_hour_before_usd) AS observed_cost_before,
-  SUM(observed_cost_per_hour_before_bytes_usd) AS observed_cost_before_bytes,
-  SUM(observed_cost_per_hour_before_volume_usd) AS observed_cost_before_volume,
-  SUM(observed_cost_per_hour_after_usd) AS observed_cost_after,
-  SUM(observed_cost_per_hour_after_bytes_usd) AS observed_cost_after_bytes,
-  SUM(observed_cost_per_hour_after_volume_usd) AS observed_cost_after_volume,
-  SUM(observed_volume_per_hour_before) AS observed_volume_before,
-  SUM(observed_volume_per_hour_after) AS observed_volume_after,
-  SUM(observed_bytes_per_hour_before) AS observed_bytes_before,
-  SUM(observed_bytes_per_hour_after) AS observed_bytes_after,
+  SUM(current_total_usd_per_hour) AS observed_cost_before,
+  SUM(current_bytes_usd_per_hour) AS observed_cost_before_bytes,
+  SUM(current_volume_usd_per_hour) AS observed_cost_before_volume,
+  SUM(effective_total_usd_per_hour) AS observed_cost_after,
+  SUM(effective_bytes_usd_per_hour) AS observed_cost_after_bytes,
+  SUM(effective_volume_usd_per_hour) AS observed_cost_after_volume,
+  SUM(current_events_per_hour) AS observed_volume_before,
+  SUM(effective_events_per_hour) AS observed_volume_after,
+  SUM(current_bytes_per_hour) AS observed_bytes_before,
+  SUM(effective_bytes_per_hour) AS observed_bytes_after,
 
   -- totals
-  SUM(log_event_cost_per_hour_usd) AS total_cost_per_hour,
-  SUM(log_event_cost_per_hour_bytes_usd) AS total_cost_per_hour_bytes,
-  SUM(log_event_cost_per_hour_volume_usd) AS total_cost_per_hour_volume,
-  SUM(log_event_volume_per_hour) AS total_volume_per_hour,
-  SUM(log_event_bytes_per_hour) AS total_bytes_per_hour,
+  SUM(current_total_usd_per_hour) AS total_cost_per_hour,
+  SUM(current_bytes_usd_per_hour) AS total_cost_per_hour_bytes,
+  SUM(current_volume_usd_per_hour) AS total_cost_per_hour_volume,
+  SUM(current_events_per_hour) AS total_volume_per_hour,
+  SUM(current_bytes_per_hour) AS total_bytes_per_hour,
 
   -- service-level throughput
-  SUM(service_volume_per_hour) AS total_service_volume_per_hour,
-  SUM(service_cost_per_hour_volume_usd) AS total_service_cost_per_hour
+  SUM(current_service_events_per_hour) AS total_service_volume_per_hour,
+  SUM(current_service_volume_usd_per_hour) AS total_service_cost_per_hour
 FROM datadog_account_statuses_cache;
