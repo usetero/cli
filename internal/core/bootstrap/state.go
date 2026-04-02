@@ -32,6 +32,9 @@ func ApplyPreflight(state State, resolved PreflightState) (State, Gate) {
 	if resolved.Account != nil {
 		state.Account = resolved.Account
 	}
+	if resolved.User != nil {
+		state.User = resolved.User
+	}
 
 	return state, next
 }

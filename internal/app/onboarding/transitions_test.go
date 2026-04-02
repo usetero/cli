@@ -99,6 +99,27 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 	}
 }
 
+func TestHandleTransitionPreflightResolvedCarriesUserState(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t)
+	user := ptrUser("user-1")
+
+	cmd := m.handleTransition(bootstrap.PreflightResolved{State: bootstrap.PreflightState{
+		HasValidAuth: true,
+		User:         user,
+		Role:         bootstrap.RolePlatform,
+		Org:          ptrOrg("org-1"),
+		Account:      ptrAccount("acc-1"),
+	}})
+	if cmd == nil {
+		t.Fatal("expected command")
+	}
+	if m.state.User == nil || m.state.User.ID != user.ID {
+		t.Fatalf("user state = %+v, want %s", m.state.User, user.ID)
+	}
+}
+
 func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 	t.Parallel()
 
