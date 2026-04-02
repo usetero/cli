@@ -47,6 +47,7 @@ func (h *conversationHandler) Handle(ctx context.Context, entry *db.CrudEntry, e
 }
 
 func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry) error {
+	accountID, _ := entry.Data["account_id"].(string)
 	workspaceID, _ := entry.Data["workspace_id"].(string)
 	title, _ := entry.Data["title"].(string)
 
@@ -57,6 +58,7 @@ func (h *conversationHandler) handlePut(ctx context.Context, entry *db.CrudEntry
 
 	_, err = h.conversations.Create(ctx, graphql.CreateConversationInput{
 		ID:          id,
+		AccountID:   domain.AccountID(accountID),
 		WorkspaceID: domain.WorkspaceID(workspaceID),
 		Title:       title,
 	})

@@ -68,9 +68,9 @@ var clientIndexes = map[string][]SchemaIndex{
 	},
 }
 
-// applyClientIndexes merges client-side indexes into fetched schema tables.
+// ApplyClientIndexes merges client-side indexes into schema tables.
 // Tables without indexes get an empty slice so JSON encodes as [] not null.
-func applyClientIndexes(tables []SchemaTable) []SchemaTable {
+func ApplyClientIndexes(tables []SchemaTable) []SchemaTable {
 	for i, table := range tables {
 		if indexes, ok := clientIndexes[table.Name]; ok {
 			tables[i].Indexes = indexes
@@ -79,4 +79,8 @@ func applyClientIndexes(tables []SchemaTable) []SchemaTable {
 		}
 	}
 	return tables
+}
+
+func applyClientIndexes(tables []SchemaTable) []SchemaTable {
+	return ApplyClientIndexes(tables)
 }

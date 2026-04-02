@@ -90,7 +90,7 @@ func ApplyRuntimeReady(state State, org domain.Organization, account domain.Acco
 }
 
 func ApplyDatadogReady(state State) (State, Gate) {
-	return state, GateWorkspaceSelect
+	return state, GateSync
 }
 
 func ApplyDatadogNeeded(state State) (State, Gate) {
@@ -113,7 +113,7 @@ func ApplyDatadogAccountCreated(state State, datadogAccountID domain.DatadogAcco
 }
 
 func ApplyDatadogDiscoveryComplete(state State) (State, Gate) {
-	return state, GateWorkspaceSelect
+	return state, GateSync
 }
 
 func ApplyWorkspaceSelected(state State, workspace domain.Workspace) (State, Gate) {

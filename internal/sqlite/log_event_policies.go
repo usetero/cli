@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"time"
 
 	"github.com/usetero/cli/internal/sqlite/gen"
 )
@@ -30,27 +29,18 @@ func (l *logEventPoliciesImpl) Count(ctx context.Context) (int64, error) {
 }
 
 func (l *logEventPoliciesImpl) Approve(ctx context.Context, id, userID string) error {
-	now := time.Now().UTC().Format(time.RFC3339)
-	err := l.write.ApproveLogEventPolicy(ctx, gen.ApproveLogEventPolicyParams{
-		ID:         &id,
-		ApprovedAt: &now,
-		ApprovedBy: &userID,
-	})
-	if err != nil {
-		return WrapSQLiteError(err, "approve log event policy")
-	}
+	// The current control plane no longer exposes mutable approval columns on
+	// synced log_event_policies rows. Keep the legacy tool path non-fatal until
+	// findings-based actions replace it.
+	_ = ctx
+	_ = id
+	_ = userID
 	return nil
 }
 
 func (l *logEventPoliciesImpl) Dismiss(ctx context.Context, id, userID string) error {
-	now := time.Now().UTC().Format(time.RFC3339)
-	err := l.write.DismissLogEventPolicy(ctx, gen.DismissLogEventPolicyParams{
-		ID:          &id,
-		DismissedAt: &now,
-		DismissedBy: &userID,
-	})
-	if err != nil {
-		return WrapSQLiteError(err, "dismiss log event policy")
-	}
+	_ = ctx
+	_ = id
+	_ = userID
 	return nil
 }

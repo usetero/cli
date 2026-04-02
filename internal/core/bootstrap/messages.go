@@ -77,10 +77,9 @@ type WorkspaceSelected struct {
 type SyncComplete struct{}
 
 type OnboardingComplete struct {
-	User      *auth.User
-	Org       domain.Organization
-	Account   domain.Account
-	Workspace domain.Workspace
+	User    *auth.User
+	Org     domain.Organization
+	Account domain.Account
 }
 
 type PreflightState struct {

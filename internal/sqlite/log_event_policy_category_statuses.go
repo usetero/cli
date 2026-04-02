@@ -44,16 +44,16 @@ func (l *logEventPolicyCategoryStatusesImpl) CountObservedByComplianceCategory(c
 
 	result := make(map[domain.PolicyCategory]int64, len(rows))
 	for _, row := range rows {
-		if row.Category != nil {
-			result[domain.PolicyCategory(*row.Category)] = row.ObservedCount
+		if row.Category != "" {
+			result[domain.PolicyCategory(row.Category)] = row.ObservedCount
 		}
 	}
 	return result, nil
 }
 
 func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, categoryType domain.CategoryType) ([]domain.PolicyCategoryStatus, error) {
-	ct := string(categoryType)
-	rows, err := l.queries.ListCategoryStatusesByCostAndType(ctx, &ct)
+	_ = categoryType
+	rows, err := l.queries.ListCategoryStatusesByCostAndType(ctx)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list policy category statuses by type")
 	}
@@ -71,9 +71,9 @@ func (l *logEventPolicyCategoryStatusesImpl) listByType(ctx context.Context, cat
 			PolicyPendingHighCount:     row.PolicyPendingHighCount,
 			PolicyPendingMediumCount:   row.PolicyPendingMediumCount,
 			PolicyPendingLowCount:      row.PolicyPendingLowCount,
-			EstimatedVolumePerHour:     row.EstimatedVolumeReductionPerHour,
-			EstimatedBytesPerHour:      row.EstimatedBytesReductionPerHour,
-			EstimatedCostPerHour:       row.EstimatedCostReductionPerHourUsd,
+			EstimatedVolumePerHour:     float64Ptr(row.EstimatedVolumeReductionPerHour),
+			EstimatedBytesPerHour:      float64Ptr(row.EstimatedBytesReductionPerHour),
+			EstimatedCostPerHour:       float64Ptr(row.EstimatedCostReductionPerHourUsd),
 			EventsWithVolumes:          row.EventsWithVolumes,
 			TotalEvents:                row.TotalEventCount,
 			Action:                     domain.PolicyAction(row.PolicyAction),

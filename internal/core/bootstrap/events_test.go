@@ -29,10 +29,9 @@ func TestApplyEventSyncComplete(t *testing.T) {
 	t.Parallel()
 
 	state := State{
-		User:      &auth.User{ID: "user-1"},
-		Org:       &domain.Organization{ID: "org-1"},
-		Account:   &domain.Account{ID: "acc-1"},
-		Workspace: &domain.Workspace{ID: "ws-1"},
+		User:    &auth.User{ID: "user-1"},
+		Org:     &domain.Organization{ID: "org-1"},
+		Account: &domain.Account{ID: "acc-1"},
 	}
 	got := ApplyEvent(state, Event{Kind: EventSyncComplete})
 	if got.Kind != TransitionComplete {
@@ -41,7 +40,7 @@ func TestApplyEventSyncComplete(t *testing.T) {
 	if got.Completion.User == nil || got.Completion.User.ID != "user-1" {
 		t.Fatalf("completion user = %#v", got.Completion.User)
 	}
-	if got.Completion.Org.ID != "org-1" || got.Completion.Account.ID != "acc-1" || got.Completion.Workspace.ID != "ws-1" {
+	if got.Completion.Org.ID != "org-1" || got.Completion.Account.ID != "acc-1" {
 		t.Fatalf("unexpected completion payload: %#v", got.Completion)
 	}
 }

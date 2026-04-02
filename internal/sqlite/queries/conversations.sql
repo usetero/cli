@@ -16,8 +16,8 @@ LIMIT 1;
 SELECT COUNT(*) FROM conversations;
 
 -- name: InsertConversation :exec
-INSERT INTO conversations (id, account_id, workspace_id, created_at)
-VALUES (?, ?, ?, ?);
+INSERT INTO conversations (id, account_id, created_at)
+VALUES (?, ?, ?);
 
 -- name: UpdateConversationTitle :exec
 UPDATE conversations SET title = ? WHERE id = ?;

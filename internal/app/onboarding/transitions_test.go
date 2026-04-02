@@ -107,9 +107,9 @@ func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 		msg      any
 		wantGate Gate
 	}{
-		{name: "datadog ready goes to workspace select", msg: bootstrap.DatadogReady{}, wantGate: bootstrap.GateWorkspaceSelect},
+		{name: "datadog ready goes to sync", msg: bootstrap.DatadogReady{}, wantGate: bootstrap.GateSync},
 		{name: "datadog needed goes to region", msg: bootstrap.DatadogNeeded{}, wantGate: bootstrap.GateDatadogRegion},
-		{name: "discovery complete goes to workspace select", msg: bootstrap.DatadogDiscoveryComplete{}, wantGate: bootstrap.GateWorkspaceSelect},
+		{name: "discovery complete goes to sync", msg: bootstrap.DatadogDiscoveryComplete{}, wantGate: bootstrap.GateSync},
 	}
 
 	for _, tc := range tests {
@@ -233,7 +233,6 @@ func TestHandleTransitionSyncComplete(t *testing.T) {
 	m.state.User = ptrUser("user-1")
 	m.state.Org = ptrOrg("org-1")
 	m.state.Account = ptrAccount("acc-1")
-	m.state.Workspace = ptrWorkspace("ws-1")
 
 	cmd := m.handleTransition(bootstrap.SyncComplete{})
 	if cmd == nil {
@@ -244,7 +243,7 @@ func TestHandleTransitionSyncComplete(t *testing.T) {
 	if !ok {
 		t.Fatalf("message type = %T, want bootstrap.OnboardingComplete", msg)
 	}
-	if complete.Org.ID != "org-1" || complete.Account.ID != "acc-1" || complete.Workspace.ID != "ws-1" || complete.User.ID != "user-1" {
+	if complete.Org.ID != "org-1" || complete.Account.ID != "acc-1" || complete.User.ID != "user-1" {
 		t.Fatalf("unexpected completion payload: %+v", complete)
 	}
 }
@@ -255,7 +254,7 @@ func TestHandleTransitionSyncCompleteMissingStateNoops(t *testing.T) {
 	m := newTestModel(t)
 	m.state.User = ptrUser("user-1")
 	m.state.Org = ptrOrg("org-1")
-	// Missing account/workspace should not panic or emit completion payload.
+	// Missing account should not panic or emit completion payload.
 
 	cmd := m.handleTransition(bootstrap.SyncComplete{})
 	if cmd != nil {

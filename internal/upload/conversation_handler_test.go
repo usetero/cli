@@ -27,6 +27,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		testID := uuid.New()
 		var calledWith struct {
 			id          uuid.UUID
+			accountID   domain.AccountID
 			workspaceID domain.WorkspaceID
 			title       string
 		}
@@ -34,6 +35,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 		mock := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
 				calledWith.id = input.ID
+				calledWith.accountID = input.AccountID
 				calledWith.workspaceID = input.WorkspaceID
 				calledWith.title = input.Title
 				return &domain.Conversation{ID: domain.ConversationID(input.ID.String())}, nil
@@ -46,6 +48,7 @@ func TestConversationHandler_Handle(t *testing.T) {
 			Op:    db.OpPut,
 			RowID: testID.String(),
 			Data: map[string]any{
+				"account_id":   "acc-1",
 				"workspace_id": "ws-1",
 				"title":        "Test Conversation",
 			},
@@ -58,6 +61,9 @@ func TestConversationHandler_Handle(t *testing.T) {
 
 		if calledWith.id != testID {
 			t.Errorf("Create called with id = %v, want %v", calledWith.id, testID)
+		}
+		if calledWith.accountID != "acc-1" {
+			t.Errorf("Create called with accountID = %q, want %q", calledWith.accountID, "acc-1")
 		}
 		if calledWith.workspaceID != "ws-1" {
 			t.Errorf("Create called with workspaceID = %q, want %q", calledWith.workspaceID, "ws-1")

@@ -30,7 +30,6 @@ func TestEmptyStatePollDoesNotMutateSynchronously(t *testing.T) {
 	m := New(
 		nil,
 		domain.Account{ID: "acct-1"},
-		domain.Workspace{ID: "ws-1"},
 		styles.NewTheme(true),
 		mockDB,
 		usecase.RuntimeDeps{},
@@ -58,7 +57,6 @@ func TestEmptyStateSummaryMessageUpdatesState(t *testing.T) {
 	m := New(
 		nil,
 		domain.Account{ID: "acct-1"},
-		domain.Workspace{ID: "ws-1"},
 		styles.NewTheme(true),
 		mockDB,
 		usecase.RuntimeDeps{},

@@ -15,7 +15,7 @@ func TestRequirementForGate(t *testing.T) {
 		{gate: GateDatadogAPIKey, want: GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true}},
 		{gate: GateDatadogAppKey, want: GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true, NeedsDDAPIKey: true}},
 		{gate: GateDatadogDiscovery, want: GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDAccount: true}},
-		{gate: GateSync, want: GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsWorkspace: true}},
+		{gate: GateSync, want: GateRequirement{NeedsOrg: true, NeedsAccount: true}},
 	}
 
 	for _, tc := range cases {

@@ -23,14 +23,12 @@ func (m *Model) commandForTransition(event bootstrap.Event, transition bootstrap
 		m.scope.Info("onboarding complete",
 			slog.String("org_id", transition.Completion.Org.ID.String()),
 			slog.String("account_id", transition.Completion.Account.ID.String()),
-			slog.String("workspace_id", string(transition.Completion.Workspace.ID)),
 		)
 		return func() tea.Msg {
 			return bootstrap.OnboardingComplete{
-				User:      transition.Completion.User,
-				Org:       transition.Completion.Org,
-				Account:   transition.Completion.Account,
-				Workspace: transition.Completion.Workspace,
+				User:    transition.Completion.User,
+				Org:     transition.Completion.Org,
+				Account: transition.Completion.Account,
 			}
 		}
 	case bootstrap.TransitionNoop:

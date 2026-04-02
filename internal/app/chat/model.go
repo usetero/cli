@@ -57,14 +57,13 @@ type Model struct {
 	conversationID domain.ConversationID
 	session        *corechat.Session
 
-	user      *auth.User
-	account   domain.Account
-	workspace domain.Workspace
-	theme     styles.Theme
-	width     int
-	height    int
-	originX   int
-	originY   int
+	user    *auth.User
+	account domain.Account
+	theme   styles.Theme
+	width   int
+	height  int
+	originX int
+	originY int
 
 	// Empty state
 	policySummary *domain.AccountSummary
@@ -88,7 +87,6 @@ type emptyStateSummaryLoadedMsg struct {
 func New(
 	user *auth.User,
 	account domain.Account,
-	workspace domain.Workspace,
 	theme styles.Theme,
 	db sqlite.DB,
 	runtimeDeps usecase.RuntimeDeps,
@@ -103,7 +101,6 @@ func New(
 		messageList:  messagelist.New(theme, runtimeDeps, toolRegistry, scope),
 		user:         user,
 		account:      account,
-		workspace:    workspace,
 		theme:        theme,
 		db:           db,
 		runtimeDeps:  runtimeDeps,

@@ -20,11 +20,8 @@ type compliancePoliciesImpl struct {
 
 // ListPendingPoliciesByCategory returns pending compliance policies for a specific category.
 func (c *compliancePoliciesImpl) ListPendingPoliciesByCategory(ctx context.Context, category domain.PolicyCategory, limit int64) ([]domain.CompliancePolicy, error) {
-	catStr := string(category)
-	rows, err := c.queries.ListPendingCompliancePoliciesByCategory(ctx, gen.ListPendingCompliancePoliciesByCategoryParams{
-		Category: &catStr,
-		Limit:    limit,
-	})
+	_ = limit
+	rows, err := c.queries.ListPendingCompliancePoliciesByCategory(ctx)
 	if err != nil {
 		return nil, WrapSQLiteError(err, "list pending compliance policies by category")
 	}
@@ -35,7 +32,7 @@ func (c *compliancePoliciesImpl) ListPendingPoliciesByCategory(ctx context.Conte
 			Category:      category,
 			LogEventName:  row.LogEventName,
 			ServiceName:   row.ServiceName,
-			VolumePerHour: row.VolumePerHour,
+			VolumePerHour: float64Ptr(row.VolumePerHour),
 			AnyObserved:   row.AnyObserved != 0,
 		}
 

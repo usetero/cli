@@ -38,11 +38,11 @@ func TestRewindGate(t *testing.T) {
 			want:   GateDatadogAPIKey,
 		},
 		{
-			name:   "sync requirement rewinds to workspace when workspace missing",
+			name:   "sync requirement stays on sync once org and account are present",
 			target: GateSync,
-			req:    GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsWorkspace: true},
+			req:    GateRequirement{NeedsOrg: true, NeedsAccount: true},
 			state:  State{Org: &domain.Organization{ID: "org-1"}, Account: &domain.Account{ID: "acc-1"}},
-			want:   GateWorkspaceSelect,
+			want:   GateSync,
 		},
 	}
 

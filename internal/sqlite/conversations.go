@@ -12,7 +12,7 @@ import (
 // Conversations provides type-safe access to conversations.
 type Conversations interface {
 	Count(ctx context.Context) (int64, error)
-	Create(ctx context.Context, accountID domain.AccountID, workspaceID domain.WorkspaceID) (domain.ConversationID, error)
+	Create(ctx context.Context, accountID domain.AccountID) (domain.ConversationID, error)
 	UpdateTitle(ctx context.Context, id domain.ConversationID, title string) error
 	List(ctx context.Context, accountID domain.AccountID) ([]gen.Conversation, error)
 	Get(ctx context.Context, id domain.ConversationID) (gen.Conversation, error)
@@ -34,17 +34,15 @@ func (c *conversationsImpl) Count(ctx context.Context) (int64, error) {
 }
 
 // Create creates a new conversation and returns its ID.
-func (c *conversationsImpl) Create(ctx context.Context, accountID domain.AccountID, workspaceID domain.WorkspaceID) (domain.ConversationID, error) {
+func (c *conversationsImpl) Create(ctx context.Context, accountID domain.AccountID) (domain.ConversationID, error) {
 	convID := uuid.New().String()
 	now := time.Now().UTC().Format(time.RFC3339)
 	accountIDStr := accountID.String()
-	workspaceIDStr := workspaceID.String()
 
 	err := c.write.InsertConversation(ctx, gen.InsertConversationParams{
-		ID:          &convID,
-		AccountID:   &accountIDStr,
-		WorkspaceID: &workspaceIDStr,
-		CreatedAt:   &now,
+		ID:        &convID,
+		AccountID: &accountIDStr,
+		CreatedAt: &now,
 	})
 	if err != nil {
 		return "", WrapSQLiteError(err, "insert conversation")

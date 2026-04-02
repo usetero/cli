@@ -37,7 +37,6 @@ func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 		convID, err := m.db.Conversations().Create(
 			ctx,
 			m.account.ID,
-			m.workspace.ID,
 		)
 		if err != nil {
 			m.scope.Error("failed to create conversation", "error", err)

@@ -21,8 +21,7 @@ func TestRewindGateFor(t *testing.T) {
 		{name: "datadog api rewinds to region when site missing", target: bootstrap.GateDatadogAPIKey, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1")}, want: bootstrap.GateDatadogRegion},
 		{name: "datadog app rewinds to api key when api key missing", target: bootstrap.GateDatadogAppKey, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1"), DDSite: "US1"}, want: bootstrap.GateDatadogAPIKey},
 		{name: "discovery rewinds to datadog check without dd account", target: bootstrap.GateDatadogDiscovery, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1")}, want: bootstrap.GateDatadogCheck},
-		{name: "sync rewinds to workspace", target: bootstrap.GateSync, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1")}, want: bootstrap.GateWorkspaceSelect},
-		{name: "sync stays when requirements met", target: bootstrap.GateSync, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1"), Workspace: ptrWorkspace("ws-1")}, want: bootstrap.GateSync},
+		{name: "sync stays when account is selected", target: bootstrap.GateSync, state: bootstrap.State{Org: ptrOrg("org-1"), Account: ptrAccount("acc-1")}, want: bootstrap.GateSync},
 	}
 
 	for _, tc := range tests {

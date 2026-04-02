@@ -39,6 +39,8 @@ dist/
 
 # Development tools
 .task/
+.gocache/
+.gomodcache/
 
 # Private documentation
 docs/VISION.md

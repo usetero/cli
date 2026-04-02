@@ -13,7 +13,9 @@ import (
 
 // CreateConversationInput contains the fields for creating a conversation.
 type CreateConversationInput struct {
-	ID          uuid.UUID
+	ID        uuid.UUID
+	AccountID domain.AccountID
+	// WorkspaceID is kept only for legacy server compatibility.
 	WorkspaceID domain.WorkspaceID
 	Title       string
 }
@@ -50,12 +52,16 @@ func NewConversationService(client Client, scope log.Scope) *ConversationService
 
 // Create creates a new conversation with the given client-provided ID.
 func (s *ConversationService) Create(ctx context.Context, input CreateConversationInput) (*domain.Conversation, error) {
-	s.scope.Debug("creating conversation via API", "id", input.ID.String(), "workspaceID", input.WorkspaceID.String(), "title", input.Title)
+	s.scope.Debug("creating conversation via API", "id", input.ID.String(), "accountID", input.AccountID.String(), "workspaceID", input.WorkspaceID.String(), "title", input.Title)
 
 	genInput := gen.CreateConversationInput{
-		Id:          ptr(input.ID.String()),
-		WorkspaceID: input.WorkspaceID.String(),
-		Title:       ptr(input.Title),
+		Id:    ptr(input.ID.String()),
+		Title: ptr(input.Title),
+	}
+	if input.AccountID != "" {
+		genInput.AccountID = ptr(input.AccountID.String())
+	} else if input.WorkspaceID != "" {
+		genInput.WorkspaceID = ptr(input.WorkspaceID.String())
 	}
 
 	resp, err := s.client.CreateConversation(ctx, genInput)
@@ -68,9 +74,8 @@ func (s *ConversationService) Create(ctx context.Context, input CreateConversati
 	}
 
 	conversation := &domain.Conversation{
-		ID:          domain.ConversationID(resp.CreateConversation.Id),
-		WorkspaceID: input.WorkspaceID,
-		Title:       input.Title,
+		ID:    domain.ConversationID(resp.CreateConversation.Id),
+		Title: input.Title,
 	}
 
 	s.scope.Debug("created conversation via API", "id", conversation.ID)

@@ -97,7 +97,7 @@ func TestUploader_Run(t *testing.T) {
 		}
 
 		convID := uuid.New().String()
-		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
@@ -164,8 +164,8 @@ func TestUploader_Run(t *testing.T) {
 
 		convID1 := uuid.New().String()
 		convID2 := uuid.New().String()
-		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID1+`","data":{"workspace_id":"ws-1","title":"First"}}`)
-		dbtest.InsertCrudEntry(t, testDB, 2, nil, `{"op":"PUT","type":"conversations","id":"`+convID2+`","data":{"workspace_id":"ws-1","title":"Second"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID1+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"First"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 2, nil, `{"op":"PUT","type":"conversations","id":"`+convID2+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"Second"}}`)
 
 		conversations := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
@@ -221,7 +221,7 @@ func TestUploader_Run(t *testing.T) {
 		}
 
 		convID := uuid.New().String()
-		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
@@ -280,7 +280,7 @@ func TestUploader_Run(t *testing.T) {
 		}
 
 		convID := uuid.New().String()
-		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"Test"}}`)
 
 		conversations := &apitest.MockConversations{
 			CreateFunc: func(ctx context.Context, input graphql.CreateConversationInput) (*domain.Conversation, error) {
@@ -393,7 +393,7 @@ func TestUploader_Run(t *testing.T) {
 		}
 
 		convID := uuid.New().String()
-		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"workspace_id":"ws-1","title":"Test"}}`)
+		dbtest.InsertCrudEntry(t, testDB, 1, nil, `{"op":"PUT","type":"conversations","id":"`+convID+`","data":{"account_id":"acc-1","workspace_id":"ws-1","title":"Test"}}`)
 
 		callCount := 0
 		conversations := &apitest.MockConversations{

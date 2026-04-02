@@ -39,9 +39,9 @@ func (s *serviceStatusesImpl) ListAllServiceStatuses(ctx context.Context) ([]dom
 			row.LogEventCostPerHourUsd, row.LogEventCostPerHourBytesUsd, row.LogEventCostPerHourVolumeUsd,
 			row.EstimatedVolumeReductionPerHour, row.EstimatedBytesReductionPerHour,
 			row.EstimatedCostReductionPerHourUsd, row.EstimatedCostReductionPerHourBytesUsd, row.EstimatedCostReductionPerHourVolumeUsd,
-			row.ObservedVolumePerHourBefore, row.ObservedVolumePerHourAfter,
-			row.ObservedBytesPerHourBefore, row.ObservedBytesPerHourAfter,
-			row.ObservedCostPerHourBeforeUsd, row.ObservedCostPerHourBeforeBytesUsd, row.ObservedCostPerHourBeforeVolumeUsd,
+			float64Ptr(row.ObservedVolumePerHourBefore), row.ObservedVolumePerHourAfter,
+			float64Ptr(row.ObservedBytesPerHourBefore), row.ObservedBytesPerHourAfter,
+			float64Ptr(row.ObservedCostPerHourBeforeUsd), float64Ptr(row.ObservedCostPerHourBeforeBytesUsd), float64Ptr(row.ObservedCostPerHourBeforeVolumeUsd),
 			row.ObservedCostPerHourAfterUsd, row.ObservedCostPerHourAfterBytesUsd, row.ObservedCostPerHourAfterVolumeUsd,
 		)
 	}
@@ -71,9 +71,9 @@ func (s *serviceStatusesImpl) ListEnabledServiceStatuses(ctx context.Context, li
 			row.LogEventCostPerHourUsd, row.LogEventCostPerHourBytesUsd, row.LogEventCostPerHourVolumeUsd,
 			row.EstimatedVolumeReductionPerHour, row.EstimatedBytesReductionPerHour,
 			row.EstimatedCostReductionPerHourUsd, row.EstimatedCostReductionPerHourBytesUsd, row.EstimatedCostReductionPerHourVolumeUsd,
-			row.ObservedVolumePerHourBefore, row.ObservedVolumePerHourAfter,
-			row.ObservedBytesPerHourBefore, row.ObservedBytesPerHourAfter,
-			row.ObservedCostPerHourBeforeUsd, row.ObservedCostPerHourBeforeBytesUsd, row.ObservedCostPerHourBeforeVolumeUsd,
+			float64Ptr(row.ObservedVolumePerHourBefore), row.ObservedVolumePerHourAfter,
+			float64Ptr(row.ObservedBytesPerHourBefore), row.ObservedBytesPerHourAfter,
+			float64Ptr(row.ObservedCostPerHourBeforeUsd), float64Ptr(row.ObservedCostPerHourBeforeBytesUsd), float64Ptr(row.ObservedCostPerHourBeforeVolumeUsd),
 			row.ObservedCostPerHourAfterUsd, row.ObservedCostPerHourAfterBytesUsd, row.ObservedCostPerHourAfterVolumeUsd,
 		)
 	}
