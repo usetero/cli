@@ -29,6 +29,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 func (m *Model) handleAuthChecked(msg preflightAuthCheckCompletedMsg) tea.Cmd {
 	m.state.HasValidAuth = msg.hasValidAuth
+	m.state.User = msg.user
 	if !m.state.HasValidAuth {
 		return m.emitResult()
 	}
