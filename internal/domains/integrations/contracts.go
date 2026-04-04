@@ -4,5 +4,5 @@ import controlplane "github.com/usetero/cli/internal/infrastructure/controlplane
 
 var (
 	_ DatadogService      = (*RemoteDatadogService)(nil)
-	_ remoteDatadogClient = (*controlplane.Client)(nil)
+	_ remoteDatadogClient = (*controlplane.AccountClient)(nil)
 )

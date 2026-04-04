@@ -13,10 +13,10 @@ const (
 	darkMutedText      = Zinc400
 	lightSubtleText    = Zinc500
 	darkSubtleText     = Zinc500
-	lightAccent        = Emerald600
-	darkAccent         = Emerald300
-	lightAccentAlt     = Cyan600
-	darkAccentAlt      = Cyan300
+	lightBrand         = Emerald500
+	darkBrand          = Emerald400
+	lightAccent        = Cyan500
+	darkAccent         = Cyan400
 	lightErrorText     = Red600
 	darkErrorText      = Red400
 	lightWarningText   = Amber600

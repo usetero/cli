@@ -15,8 +15,8 @@ type Palette struct {
 	Text          color.Color
 	TextMuted     color.Color
 	TextSubtle    color.Color
+	Brand         color.Color
 	Accent        color.Color
-	AccentAlt     color.Color
 	GradientStart color.Color
 	GradientEnd   color.Color
 	Success       color.Color

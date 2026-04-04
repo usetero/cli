@@ -59,6 +59,11 @@ func newTestable(ctx context.Context, scope Scope, deps testableDeps, log loggin
 		return nil, err
 	}
 
+	syncer, err := deps.newSyncer()
+	if err != nil {
+		return nil, err
+	}
+
 	db, err := deps.openDB(ctx, path)
 	if err != nil {
 		return nil, err
@@ -72,11 +77,6 @@ func newTestable(ctx context.Context, scope Scope, deps testableDeps, log loggin
 
 	store := psdb.NewStore(db)
 	hasCompletedInitialSync, err := store.HasCompletedInitialSync(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	syncer, err := deps.newSyncer()
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/infrastructure/logging"
+	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 	"github.com/usetero/cli/internal/interfaces/tui/core"
 	"github.com/usetero/cli/internal/interfaces/tui/events"
 	accountruntime "github.com/usetero/cli/internal/runtime/account"
@@ -74,7 +75,12 @@ func (m *Model) replace(ctx context.Context, scope accountruntime.Scope) tea.Cmd
 	runtime, err := m.factory.New(ctx, scope)
 	if err != nil {
 		m.scope.Error("start account runtime", "error", err)
-		return nil
+		m.runtime = nil
+		m.status = accountruntime.Status{
+			Scope: scope,
+			Sync:  &pssyncer.Error{Err: err},
+		}
+		return m.publishStatus()
 	}
 	m.runtime = runtime
 	m.refreshStatus()

@@ -38,8 +38,8 @@ func New(isDark bool) Theme {
 	text := pick(lightText, darkText)
 	muted := pick(lightMutedText, darkMutedText)
 	subtle := pick(lightSubtleText, darkSubtleText)
+	brand := pick(lightBrand, darkBrand)
 	accent := pick(lightAccent, darkAccent)
-	accentAlt := pick(lightAccentAlt, darkAccentAlt)
 	errorText := pick(lightErrorText, darkErrorText)
 	warningText := pick(lightWarningText, darkWarningText)
 	success := pick(lightSuccess, darkSuccess)
@@ -51,17 +51,17 @@ func New(isDark bool) Theme {
 			Text:          text,
 			TextMuted:     muted,
 			TextSubtle:    subtle,
+			Brand:         brand,
 			Accent:        accent,
-			AccentAlt:     accentAlt,
-			GradientStart: accent,
-			GradientEnd:   accentAlt,
+			GradientStart: brand,
+			GradientEnd:   accent,
 			Success:       success,
 			Warning:       warningText,
 			Error:         errorText,
 		},
 		Gradients: GradientStyles{
-			Brand: Gradient{Start: accent, End: accentAlt},
-			Motif: Gradient{Start: accentAlt, End: accent},
+			Brand: Gradient{Start: brand, End: accent},
+			Motif: Gradient{Start: accent, End: brand},
 		},
 	})
 }
@@ -77,7 +77,7 @@ func applyStyles(t Theme) Theme {
 			Background(bg).
 			Padding(1, 0, 0, 0),
 		HeaderBrand: lipgloss.NewStyle().
-			Foreground(t.Palette.Accent).
+			Foreground(t.Palette.Brand).
 			Background(bg).
 			Bold(true),
 		HeaderLead: lipgloss.NewStyle().
@@ -98,10 +98,10 @@ func applyStyles(t Theme) Theme {
 			Foreground(t.Palette.TextMuted).
 			Padding(1, 0, 1, 0),
 		FooterLead: lipgloss.NewStyle().
-			Foreground(t.Palette.TextMuted).
+			Foreground(t.Palette.TextSubtle).
 			Background(bg),
 		FooterRule: lipgloss.NewStyle().
-			Foreground(t.Palette.TextSubtle).
+			Foreground(t.Palette.Border).
 			Background(bg),
 	}
 
@@ -119,7 +119,7 @@ func applyStyles(t Theme) Theme {
 			Background(t.Palette.Surface).
 			Padding(1, 2),
 		Title: lipgloss.NewStyle().
-			Foreground(t.Palette.Accent).
+			Foreground(t.Palette.Brand).
 			Background(t.Palette.Surface).
 			Bold(true),
 		ErrorTitle: lipgloss.NewStyle().
@@ -133,7 +133,7 @@ func applyStyles(t Theme) Theme {
 
 	t.Text = TextStyles{
 		Section: lipgloss.NewStyle().
-			Foreground(t.Palette.Accent).
+			Foreground(t.Palette.Brand).
 			Background(bg).
 			Bold(true),
 		Body: lipgloss.NewStyle().
@@ -169,11 +169,11 @@ func applyStyles(t Theme) Theme {
 		ActiveContainer: lipgloss.NewStyle().
 			Background(bg).
 			BorderStyle(lipgloss.Border{Left: "┃"}).
-			BorderForeground(t.Palette.AccentAlt).
+			BorderForeground(t.Palette.Brand).
 			BorderBackground(bg).
 			PaddingLeft(1),
 		Cursor: lipgloss.NewStyle().
-			Foreground(t.Palette.Accent).
+			Foreground(t.Palette.Brand).
 			Background(bg).
 			Bold(true),
 		CursorInactive: lipgloss.NewStyle().
@@ -183,14 +183,14 @@ func applyStyles(t Theme) Theme {
 			Foreground(t.Palette.Text).
 			Background(bg),
 		ItemActive: lipgloss.NewStyle().
-			Foreground(t.Palette.Accent).
+			Foreground(t.Palette.Brand).
 			Background(bg).
 			Bold(true),
 		Subtitle: lipgloss.NewStyle().
 			Foreground(t.Palette.TextMuted).
 			Background(bg),
 		SubtitleActive: lipgloss.NewStyle().
-			Foreground(t.Palette.AccentAlt).
+			Foreground(t.Palette.Accent).
 			Background(bg),
 		Empty: lipgloss.NewStyle().
 			Foreground(t.Palette.TextMuted).
@@ -207,7 +207,7 @@ func applyStyles(t Theme) Theme {
 		ActiveContainer: lipgloss.NewStyle().
 			Background(bg).
 			BorderStyle(lipgloss.Border{Left: "┃"}).
-			BorderForeground(t.Palette.AccentAlt).
+			BorderForeground(t.Palette.Brand).
 			BorderBackground(bg).
 			PaddingLeft(1),
 		Label: lipgloss.NewStyle().
@@ -221,7 +221,7 @@ func applyStyles(t Theme) Theme {
 			Foreground(t.Palette.TextMuted).
 			Background(bg),
 		Active: lipgloss.NewStyle().
-			Foreground(t.Palette.AccentAlt).
+			Foreground(t.Palette.Brand).
 			Background(bg).
 			Bold(true),
 		Inactive: lipgloss.NewStyle().
@@ -231,7 +231,7 @@ func applyStyles(t Theme) Theme {
 
 	t.Progress = ProgressStyles{
 		Fill: lipgloss.NewStyle().
-			Foreground(t.Palette.AccentAlt).
+			Foreground(t.Palette.Accent).
 			Background(bg).
 			Bold(true),
 		Empty: lipgloss.NewStyle().

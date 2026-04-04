@@ -6,12 +6,16 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/usetero/cli/internal/interfaces/tui/ui/cursor"
-	"github.com/usetero/cli/internal/interfaces/tui/ui/present"
+)
+
+const (
+	bodyPadX = 2
+	bodyPadY = 1
 )
 
 func (m *Model) View() tea.View {
 	contentWidth := m.innerWidth()
-	header := m.theme.Shell.HeaderBar.Width(contentWidth).Render(normalizeLine(m.children.statusbar.View().Content))
+	header := m.theme.Shell.HeaderBar.Width(contentWidth).Render(normalizeLine(m.surface.shell.statusbar.View().Content))
 	body := m.renderBody(contentWidth)
 	footer := m.renderFooter(contentWidth)
 
@@ -25,14 +29,14 @@ func (m *Model) View() tea.View {
 	view := tea.NewView(content)
 	clean, cur := cursor.Extract(view.Content)
 	if cur != nil {
-		cur.Color = m.theme.Palette.AccentAlt
+		cur.Color = m.theme.Palette.Brand
 	}
 	view.Content = clean
 	view.Cursor = cur
 	view.AltScreen = true
-	view.WindowTitle = windowTitle
+	view.WindowTitle = m.windowTitle()
 	view.MouseMode = tea.MouseModeNone
-	if m.body.Busy() != nil {
+	if m.surface.body.Busy() != nil {
 		view.ProgressBar = tea.NewProgressBar(tea.ProgressBarIndeterminate, 0)
 	}
 	view.BackgroundColor = m.theme.Background
@@ -50,24 +54,56 @@ func (m *Model) renderBody(width int) string {
 		innerHeight = 1
 	}
 
-	bodyContent := lipgloss.NewStyle().
-		Width(innerWidth).
-		Height(innerHeight).
+	contentViewport := lipgloss.NewStyle().
+		Width(m.bodyContentWidth(width)).
 		AlignHorizontal(lipgloss.Left).
-		AlignVertical(lipgloss.Bottom).
-		Render(normalizeBody(m.body.View().Content))
+		Render(normalizeBody(m.surface.body.View().Content))
 
-	bodyBlock := m.theme.Shell.Body.Width(width).Height(height).Render(bodyContent)
+	contentContainer := lipgloss.NewStyle().
+		Width(innerWidth).
+		Padding(bodyPadY, bodyPadX).
+		Render(contentViewport)
+
+	bodyStack := lipgloss.JoinVertical(
+		lipgloss.Left,
+		normalizeLine(m.surface.shell.divider.View().Content),
+		contentContainer,
+	)
+
+	bodyBlock := m.theme.Shell.Body.Width(width).Height(height).Render(
+		bottomAnchor(bodyStack, innerWidth, innerHeight),
+	)
+
 	return lipgloss.NewStyle().Width(width).Height(height).Render(bodyBlock)
 }
 
 func (m *Model) renderFooter(width int) string {
-	rule := present.Rule(m.theme, width, "◇ Tero")
-	parts := []string{rule, "", normalizeBody(m.children.commandbar.View().Content)}
-	if help := normalizeBody(m.children.helpbar.View().Content); strings.TrimSpace(help) != "" {
+	parts := []string{normalizeBody(m.surface.shell.commandbar.View().Content)}
+	if help := normalizeBody(m.surface.shell.helpbar.View().Content); strings.TrimSpace(help) != "" {
 		parts = append(parts, "", help)
 	}
 	return lipgloss.NewStyle().
 		Width(width).
 		Render(lipgloss.JoinVertical(lipgloss.Left, parts...))
+}
+
+func bottomAnchor(content string, width, height int) string {
+	lines := strings.Split(strings.TrimRight(content, "\n"), "\n")
+	if height > 0 && len(lines) > height {
+		lines = lines[len(lines)-height:]
+	}
+	content = lipgloss.JoinVertical(lipgloss.Left, lines...)
+
+	if height > 0 {
+		return lipgloss.NewStyle().
+			Width(width).
+			Height(height).
+			AlignHorizontal(lipgloss.Left).
+			AlignVertical(lipgloss.Bottom).
+			Render(content)
+	}
+
+	return lipgloss.NewStyle().
+		Width(width).
+		Render(content)
 }

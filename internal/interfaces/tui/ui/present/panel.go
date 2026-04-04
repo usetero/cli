@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	panelPadLeft  = 2
-	panelPadRight = 2
+	panelPadLeft  = 1
+	panelPadRight = 1
 	panelPadY     = 1
 )
 
@@ -23,7 +23,9 @@ func PanelInnerWidth(width int) int {
 	return innerWidth
 }
 
-// Panel renders a full-width surfaced box with fixed internal padding.
+// Panel renders a surfaced block at the provided outer width.
+// It owns only the block's internal padding. Callers remain responsible for any
+// outer borders, gutters, or layout margins around the block.
 func Panel(appTheme theme.Theme, width int, content string) string {
 	content = restoreBackground(strings.TrimRight(content, "\n"), appTheme)
 

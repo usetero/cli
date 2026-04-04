@@ -81,6 +81,8 @@ func mapIdentityError(err error) error {
 		return identity.ErrExpiredDeviceCode
 	case errors.Is(err, ErrAccessDenied):
 		return identity.ErrAccessDenied
+	case errors.Is(err, ErrInvalidGrant):
+		return identity.ErrSessionExpired
 	default:
 		return err
 	}

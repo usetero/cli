@@ -11,17 +11,31 @@ import (
 	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
 )
 
-const visibleLines = 3
+const (
+	singleLineHeight = 1
+	multilineHeight  = 3
+)
 
-var (
-	sendBinding = key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "send"),
-	)
-	newlineBinding = key.NewBinding(
-		key.WithKeys("ctrl+j"),
-		key.WithHelp("ctrl+j", "newline"),
-	)
+type inputMode uint8
+
+const (
+	modeSingleLine inputMode = iota
+	modeMultiline
+)
+
+var sendBinding = key.NewBinding(
+	key.WithKeys("enter"),
+	key.WithHelp("enter", "send"),
+)
+
+var newlineBinding = key.NewBinding(
+	key.WithKeys("ctrl+j"),
+	key.WithHelp("ctrl+j", "newline"),
+)
+
+var closeBinding = key.NewBinding(
+	key.WithKeys("esc"),
+	key.WithHelp("esc", "close"),
 )
 
 // Model owns the command bar textarea state.
@@ -30,6 +44,8 @@ type Model struct {
 	textarea    textarea.Model
 	width       int
 	placeholder string
+	secret      bool
+	mode        inputMode
 }
 
 var _ core.Model = (*Model)(nil)
@@ -38,7 +54,7 @@ var _ core.Model = (*Model)(nil)
 func New(appTheme theme.Theme) *Model {
 	ta := textarea.New()
 	ta.ShowLineNumbers = false
-	ta.SetHeight(visibleLines)
+	ta.SetHeight(singleLineHeight)
 	ta.CharLimit = -1
 	ta.SetVirtualCursor(false)
 	ta.Focus()
@@ -62,7 +78,7 @@ func New(appTheme theme.Theme) *Model {
 			Prompt:      appTheme.Input.Inactive,
 		},
 		Cursor: textarea.CursorStyle{
-			Color: appTheme.Palette.AccentAlt,
+			Color: appTheme.Palette.Brand,
 			Shape: tea.CursorBar,
 			Blink: true,
 		},
@@ -84,9 +100,6 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
-		case key.Matches(keyMsg, newlineBinding):
-			m.textarea.InsertRune('\n')
-			return m, nil
 		case key.Matches(keyMsg, sendBinding):
 			text := strings.TrimSpace(m.textarea.Value())
 			if text == "" {
@@ -94,12 +107,33 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.textarea.Reset()
 			return m, func() tea.Msg { return SubmittedMsg{Text: text} }
+		case m.allowsNewline() && key.Matches(keyMsg, newlineBinding):
+			var cmd tea.Cmd
+			m.textarea, cmd = m.textarea.Update(msg)
+			m.normalizeValue()
+			return m, cmd
 		}
 	}
 
 	var cmd tea.Cmd
 	m.textarea, cmd = m.textarea.Update(msg)
+	m.normalizeValue()
 	return m, cmd
+}
+
+// ConsumesKey reports whether a key press belongs to the focused text input.
+func (m *Model) ConsumesKey(msg tea.KeyPressMsg) bool {
+	if m.allowsNewline() && key.Matches(msg, newlineBinding) {
+		return true
+	}
+	if msg.Mod != 0 {
+		return false
+	}
+	return true
+}
+
+func (m *Model) Empty() bool {
+	return strings.TrimSpace(m.textarea.Value()) == ""
 }
 
 // SetPlaceholder updates the visible placeholder copy.
@@ -114,4 +148,42 @@ func (m *Model) SetPlaceholder(placeholder string) {
 // ApplySpec updates the input state from an input spec.
 func (m *Model) ApplyInput(input core.Input) {
 	m.SetPlaceholder(input.Placeholder)
+	m.mode = modeForKind(input.Kind)
+	m.secret = input.Secret && m.mode == modeSingleLine
+	m.normalizeValue()
+}
+
+func (m *Model) normalizeValue() {
+	value := strings.ReplaceAll(m.textarea.Value(), "\r\n", "\n")
+	if !m.allowsNewline() {
+		if idx := strings.IndexByte(value, '\n'); idx >= 0 {
+			value = value[:idx]
+		}
+	}
+	if value != m.textarea.Value() {
+		m.textarea.SetValue(value)
+	}
+	m.textarea.SetHeight(m.visibleLines())
+}
+
+func modeForKind(kind core.InputKind) inputMode {
+	if kind == core.InputMultiline {
+		return modeMultiline
+	}
+	return modeSingleLine
+}
+
+func (m *Model) allowsNewline() bool {
+	return m.mode == modeMultiline
+}
+
+func (m *Model) visibleLines() int {
+	if m.mode == modeMultiline {
+		return multilineHeight
+	}
+	return singleLineHeight
+}
+
+func (m *Model) PreferredHeight(int) int {
+	return m.visibleLines()
 }

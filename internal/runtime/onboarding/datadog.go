@@ -59,7 +59,7 @@ func (w *Workflow) SubmitDatadogAPIKey(ctx context.Context, submission integrati
 	if !state.DatadogDraft.Site.Valid() {
 		return w.currentStateWithError(ctx, fmt.Errorf("datadog site must be selected first"))
 	}
-	valid, message, err := w.datadog.ValidateAPIKey(ctx, integrations.DatadogAPIKeyValidation{
+	valid, message, err := w.datadog(state.SelectedAccount.ID).ValidateAPIKey(ctx, integrations.DatadogAPIKeyValidation{
 		Site:   state.DatadogDraft.Site,
 		APIKey: validatedSubmission.APIKey,
 	})
@@ -99,12 +99,11 @@ func (w *Workflow) SubmitDatadogAppKey(ctx context.Context, submission integrati
 		return w.currentStateWithError(ctx, fmt.Errorf("datadog api key must be validated first"))
 	}
 
-	_, err = w.datadog.Create(ctx, integrations.DatadogAccountCreate{
-		AccountID: state.SelectedAccount.ID,
-		Name:      validatedSubmission.Name,
-		Site:      state.DatadogDraft.Site,
-		APIKey:    state.DatadogDraft.apiKey,
-		AppKey:    validatedSubmission.AppKey,
+	_, err = w.datadog(state.SelectedAccount.ID).Create(ctx, integrations.DatadogAccountCreate{
+		Name:   validatedSubmission.Name,
+		Site:   state.DatadogDraft.Site,
+		APIKey: state.DatadogDraft.apiKey,
+		AppKey: validatedSubmission.AppKey,
 	})
 	if err != nil {
 		return w.currentStateWithError(ctx, err)

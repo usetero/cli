@@ -8,24 +8,28 @@ Start here, then pick your path:
 
 | Doc | What You'll Learn |
 |-----|-------------------|
-| [architecture/system-overview.md](docs/architecture/system-overview.md) | Big picture boundary, ownership, and runtime lifecycle. |
-| [architecture/data-flow.md](docs/architecture/data-flow.md) | How data flows between GraphQL, SQLite, PowerSync, and uploader. |
+| [docs/README.md](docs/README.md) | Manual entrypoint and reading order. |
+| [docs/foundations/01-what-this-repo-is.md](docs/foundations/01-what-this-repo-is.md) | Big picture boundary and what this repository owns. |
+| [docs/foundations/03-codebase-map.md](docs/foundations/03-codebase-map.md) | How the repository is organized. |
+| [docs/foundations/04-data-flow.md](docs/foundations/04-data-flow.md) | How data flows between control plane, SQLite, PowerSync, and the UI. |
 
-Then pick your interface:
+Then read the relevant pattern docs for the change you are making:
 
 | Doc | When to Read |
 |-----|--------------|
-| [interfaces/tui.md](docs/interfaces/tui.md) | Working on the terminal UI runtime and Bubble Tea boundaries. |
-| [interfaces/mcp.md](docs/interfaces/mcp.md) | MCP adapter constraints. (Planned surface.) |
-| [interfaces/cli.md](docs/interfaces/cli.md) | Adding CLI commands and keeping handlers thin. |
+| [docs/patterns/architecture/tui.md](docs/patterns/architecture/tui.md) | Working on Bubble Tea models, message flow, layout, and screen composition. |
+| [docs/patterns/architecture/read-models.md](docs/patterns/architecture/read-models.md) | Adding presentation-oriented local reads. |
+| [docs/patterns/architecture/services.md](docs/patterns/architecture/services.md) | Working on service boundaries and choosing between local and remote implementations. |
+| [docs/patterns/engineering/logging.md](docs/patterns/engineering/logging.md) | Adding or tightening logs around lifecycle, runtime, or UI behavior. |
+| [docs/patterns/engineering/testing.md](docs/patterns/engineering/testing.md) | Deciding what layer should prove a behavior. |
 
 Supporting docs:
 
 | Doc | When to Read |
 |-----|--------------|
-| [operations/testing.md](docs/operations/testing.md) | Writing behavior-first tests and using test workflows. |
-| [operations/logging.md](docs/operations/logging.md) | Writing logs that are useful in production diagnosis. |
-| [operations/debugging.md](docs/operations/debugging.md) | Running debug workflows safely (`dev` by default). |
+| [docs/foundations/05-hard-rules.md](docs/foundations/05-hard-rules.md) | Repo-wide architectural guardrails. |
+| [docs/meta/documentation.md](docs/meta/documentation.md) | Writing and maintaining docs in this repo. |
+| [docs/meta/agent-docs.md](docs/meta/agent-docs.md) | What should live in `AGENTS.md` versus the manual. |
 
 ## Agent Rules
 
@@ -53,16 +57,12 @@ Supporting docs:
 ## Code Location
 
 ```
-cmd/                 Wiring. Creates implementations, injects dependencies.
-internal/app/        TUI. Bubble Tea models, pages, onboarding, chat.
-internal/cmd/        CLI commands. Direct API calls.
-internal/boundary/chat/ Chat client. Streaming, accumulation.
-internal/core/chat/  Pure chat lifecycle/session policy.
-internal/boundary/graphql/        GraphQL client. Control plane CRUD.
-internal/sqlite/     Local database.
-internal/powersync/  Sync engine.
-internal/domain/     Shared types.
-internal/auth/       Authentication.
+cmd/                    Composition. Binaries and high-level executable tests.
+internal/interfaces/    User-facing surfaces: CLI, TUI, MCP.
+internal/runtime/       Long-running coordination and deterministic progression.
+internal/readmodels/    Presentation-oriented local reads.
+internal/domains/       Business-shaped types and services.
+internal/infrastructure/ Concrete adapters: GraphQL, SQLite, PowerSync, auth, logging.
 ```
 
 ## Commands

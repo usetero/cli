@@ -1,30 +1,26 @@
-# Agent Docs Standards
+# Agent Docs Standard
 
-`AGENTS.md` is not a human architecture guide. It is an operational constraint
-file for coding agents.
+`AGENTS.md` files are operational constraint files for contributors and coding
+agents. They are not substitutes for the manual in `docs/`.
 
-Use it to prevent mistakes, not to explain the whole system.
+Use `AGENTS.md` to prevent predictable mistakes inside a local part of the tree.
+Use the manual to explain the system and the recurring doctrine behind it.
 
-## What goes where
+## What Belongs In `AGENTS.md`
 
-Put correctness-critical directives and workflow constraints in `AGENTS.md`.
-Put conceptual architecture and behavioral explanation in `docs/`.
+Put correctness-critical local instructions there, especially when violating the
+instruction would produce common or expensive mistakes.
 
-If a fact is only in `docs/` but an agent needs it to avoid wrong code, that
-fact belongs in `AGENTS.md` too.
+Examples:
 
-This division keeps `AGENTS.md` short and enforceable while allowing the main
-docs tree to carry deeper explanation for humans.
+- layer boundaries that are easy to violate locally,
+- workflow constraints for a sensitive directory,
+- rules about tests, code generation, or file ownership,
+- small local conventions that protect maintainability.
 
-## Writing bar for agent instructions
+## What Does Not Belong There
 
-A strong instruction is:
+Do not turn `AGENTS.md` into a second architecture manual.
 
-1. precise enough to execute,
-2. scoped to the directory/runtime it governs,
-3. short enough to stay high-signal,
-4. directly tied to known failure modes.
-
-Avoid broad prose, repeated guidance, and information that is obvious from
-local code symbols alone.
-Favor concrete directives tied to actual failure modes seen in this repo.
+If a concept needs explanation, motivation, and broad mental context, it
+belongs in `docs/` and should be referenced from `AGENTS.md` when necessary.

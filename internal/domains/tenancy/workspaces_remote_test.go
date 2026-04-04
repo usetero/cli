@@ -11,17 +11,12 @@ import (
 )
 
 func TestRemoteWorkspaceService_MappingAndValidation(t *testing.T) {
-	svc := NewRemoteWorkspaceService(&apitest.Client{})
-	if _, err := svc.ListByAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
-		t.Fatalf("expected account id validation error, got %v", err)
-	}
+	svc := NewRemoteWorkspaceService(&apitest.Client{}, "acc_1")
 
-	var calledAccountID controlplane.AccountID
 	var calledDeleteID controlplane.WorkspaceID
 	now := time.Now().UTC()
 	mock := &apitest.Client{
-		ListWorkspacesFn: func(_ context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error) {
-			calledAccountID = accountID
+		ListWorkspacesFn: func(_ context.Context) ([]controlplane.Workspace, error) {
 			return []controlplane.Workspace{{ID: "ws_1", Name: "Default", CreatedAt: now}}, nil
 		},
 		DeleteWorkspaceFn: func(_ context.Context, workspaceID controlplane.WorkspaceID) error {
@@ -29,19 +24,16 @@ func TestRemoteWorkspaceService_MappingAndValidation(t *testing.T) {
 			return nil
 		},
 	}
-	svc = NewRemoteWorkspaceService(mock)
-	rows, err := svc.ListByAccount(context.Background(), "acc_1")
+	svc = NewRemoteWorkspaceService(mock, "acc_1")
+	rows, err := svc.List(context.Background())
 	if err != nil {
 		t.Fatalf("list workspaces: %v", err)
-	}
-	if calledAccountID != controlplane.AccountID("acc_1") {
-		t.Fatalf("list called with account=%q", calledAccountID)
 	}
 	if len(rows) != 1 || rows[0].ID != "ws_1" || rows[0].AccountID != "acc_1" {
 		t.Fatalf("unexpected workspace mapping: %+v", rows)
 	}
 
-	if _, err := svc.Create(context.Background(), WorkspaceCreate{AccountID: "acc_1", Name: "Default"}); err == nil || !strings.Contains(err.Error(), "not implemented") {
+	if _, err := svc.Create(context.Background(), WorkspaceCreate{Name: "Default"}); err == nil || !strings.Contains(err.Error(), "not implemented") {
 		t.Fatalf("expected not implemented create error, got %v", err)
 	}
 	if err := svc.Delete(context.Background(), "ws_1"); err != nil {

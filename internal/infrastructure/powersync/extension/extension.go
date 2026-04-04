@@ -14,9 +14,6 @@ import (
 //go:embed extensions/*.dylib extensions/*.so
 var embeddedExtensions embed.FS
 
-//go:embed schema.json
-var schemaJSON string
-
 // Register configures SQLite to load the PowerSync extension on new connections.
 func Register() error {
 	extPath, err := Path()
@@ -29,7 +26,7 @@ func Register() error {
 
 // SchemaJSON returns the embedded PowerSync schema.
 func SchemaJSON() string {
-	return schemaJSON
+	return sqlite.PowerSyncSchemaJSON()
 }
 
 // ApplySchema applies the PowerSync schema to the database.

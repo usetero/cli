@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/usetero/cli/internal/domains/tenancy"
 	controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
 )
 
 type remoteDatadogClient interface {
-	GetAccountDatadogAccount(ctx context.Context, accountID controlplane.AccountID) (*controlplane.DatadogAccount, error)
+	GetDatadogAccount(ctx context.Context) (*controlplane.DatadogAccount, error)
 	ValidateDatadogAPIKey(ctx context.Context, apiKey string, site controlplane.DatadogSite) (bool, string, error)
 	CreateDatadogAccountWithCredentials(ctx context.Context, input controlplane.CreateDatadogAccountInput) (controlplane.DatadogAccount, error)
 	GetDatadogAccountStatus(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
@@ -27,12 +26,8 @@ func NewRemoteDatadogService(client remoteDatadogClient) *RemoteDatadogService {
 	return &RemoteDatadogService{client: client}
 }
 
-func (s *RemoteDatadogService) GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*DatadogAccount, error) {
-	if accountID == "" {
-		return nil, fmt.Errorf("account id is required")
-	}
-
-	account, err := s.client.GetAccountDatadogAccount(ctx, toControlPlaneAccountID(accountID))
+func (s *RemoteDatadogService) Get(ctx context.Context) (*DatadogAccount, error) {
+	account, err := s.client.GetDatadogAccount(ctx)
 	if err != nil {
 		return nil, err
 	}

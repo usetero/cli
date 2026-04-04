@@ -132,6 +132,38 @@ func TestNewStopsSyncerWhenUploaderConstructionFails(t *testing.T) {
 	}
 }
 
+func TestNewInitializesSyncerBeforeOpeningDatabase(t *testing.T) {
+	t.Parallel()
+
+	var order []string
+
+	_, err := newTestable(context.Background(), testScope(), testableDeps{
+		pathForScope: func(scope Scope) (sqlite.DatabasePath, error) {
+			return sqlite.DatabasePath(filepath.Join(t.TempDir(), "tero.sqlite")), nil
+		},
+		newSyncer: func() (testableSyncer, error) {
+			order = append(order, "syncer")
+			return syncertest.NewMock(), nil
+		},
+		openDB: func(ctx context.Context, path sqlite.DatabasePath) (*sqlite.DB, error) {
+			order = append(order, "db")
+			return sqlite.Open(ctx, path.String())
+		},
+		newUploader: func(db *sqlite.DB, notifier interface {
+			NotifyUploadCompleted(ctx context.Context) error
+		}) (testableUploader, error) {
+			return uploadertest.NewMock(), nil
+		},
+	}, logging.RootScope(logging.NewWithWriter(nil, logging.LevelInfo)))
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+
+	if len(order) < 2 || order[0] != "syncer" || order[1] != "db" {
+		t.Fatalf("expected syncer to initialize before db open, got %v", order)
+	}
+}
+
 func TestCloseStopsRuntimeAndUpdatesStatus(t *testing.T) {
 	t.Parallel()
 

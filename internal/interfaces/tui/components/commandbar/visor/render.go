@@ -8,7 +8,7 @@ import (
 )
 
 const collapsedLines = 3
-const visorPadX = 2
+const visorPadX = 1
 
 // SetSize satisfies the shared TUI model contract.
 func (m *Model) SetSize(width, _ int) {
@@ -20,22 +20,38 @@ func (m *Model) SetSize(width, _ int) {
 
 // View renders the visor output surface.
 func (m *Model) View() tea.View {
-	if strings.TrimSpace(m.text) == "" {
+	title := strings.TrimSpace(m.title)
+	detail := strings.TrimSpace(m.detail)
+	if title == "" && detail == "" {
 		return tea.NewView("")
 	}
 
-	content := strings.TrimSpace(m.text)
-	if !m.expanded {
-		lines := strings.Split(content, "\n")
-		if len(lines) > collapsedLines {
-			content = strings.Join(lines[:collapsedLines], "\n") + "\n" + m.theme.Text.Subtle.Render("...")
-		}
-	}
+	titleBlock := lipgloss.NewStyle().
+		Foreground(m.theme.Palette.Text).
+		Background(m.theme.Background).
+		Bold(true).
+		Render(title)
 
-	block := lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.theme.Text.Body.Render(content),
-	)
+	block := titleBlock
+	if detail != "" {
+		renderedDetail := strings.TrimSpace(detail)
+		if !m.expanded {
+			lines := strings.Split(renderedDetail, "\n")
+			if len(lines) > collapsedLines-2 {
+				limit := collapsedLines - 2
+				if limit < 1 {
+					limit = 1
+				}
+				renderedDetail = strings.Join(lines[:limit], "\n") + "\n" + m.theme.Text.Subtle.Render("...")
+			}
+		}
+		block = lipgloss.JoinVertical(
+			lipgloss.Left,
+			titleBlock,
+			"",
+			m.theme.Text.Body.Render(renderedDetail),
+		)
+	}
 
 	innerWidth := m.width - visorPadX*2
 	if innerWidth < 1 {

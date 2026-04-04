@@ -7,4 +7,3 @@ internal/domains/tenancy/adapters_remote.go
 internal/domains/tenancy/contracts.go
 internal/domains/tenancy/organizations_remote.go
 internal/domains/tenancy/workspaces_remote.go
-internal/infrastructure/powersync/extension/generate/main.go

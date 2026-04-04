@@ -42,7 +42,7 @@ func TestPanelKeepsBackgroundAcrossHeadingRow(t *testing.T) {
 func TestPanelKeepsBackgroundAcrossShortActionRow(t *testing.T) {
 	appTheme := theme.New(false).OnSurface()
 	bg := backgroundSeq(appTheme)
-	content := appTheme.Text.Body.Render("Press enter to get started.")
+	content := appTheme.Text.Body.Render("[enter] Get started")
 
 	out := Panel(appTheme, 100, content)
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
@@ -51,11 +51,11 @@ func TestPanelKeepsBackgroundAcrossShortActionRow(t *testing.T) {
 	}
 
 	actionRow := lines[1]
-	if !strings.Contains(actionRow, "Press enter to get started.") {
+	if !strings.Contains(actionRow, "Get started") {
 		t.Fatalf("expected action row, got %q", actionRow)
 	}
 
-	textEnd := strings.Index(actionRow, "started.") + len("started.")
+	textEnd := strings.Index(actionRow, "started") + len("started")
 	if textEnd <= 0 || textEnd >= len(actionRow) {
 		t.Fatalf("could not locate action end in %q", actionRow)
 	}

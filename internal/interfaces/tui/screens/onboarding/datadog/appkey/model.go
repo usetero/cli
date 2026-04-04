@@ -30,6 +30,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if openDocsBinding.Enabled() && keyMatchesOpenDocs(typed) {
 			return m, m.openBrowser()
 		}
+		if openPermissionsDocsBinding.Enabled() && keyMatchesOpenPermissionsDocs(typed) {
+			return m, m.openPermissionsDocs()
+		}
 		return m, nil
 	default:
 		return m, nil
@@ -43,16 +46,18 @@ func (m *Model) SetSize(width, height int) {}
 func (m *Model) Input() *core.Input {
 	return &core.Input{
 		Kind:        core.InputText,
-		Label:       "Paste a Datadog app key from a service account.",
-		Placeholder: "Paste app key",
+		Title:       "Enter your Datadog application key.",
+		Detail:      "This is different from your API key.\nTero needs both keys to access the Datadog API.\nRecommended: create a service account with the Standard role.",
+		Placeholder: "Paste application key",
+		Secret:      true,
 	}
 }
 
 func (m *Model) ShortHelp() []key.Binding {
 	if !m.site.Valid() {
-		return nil
+		return []key.Binding{openPermissionsDocsBinding}
 	}
-	return []key.Binding{openDocsBinding}
+	return []key.Binding{openDocsBinding, openPermissionsDocsBinding}
 }
 
 func (m *Model) SetSite(site integrations.DatadogSite) {

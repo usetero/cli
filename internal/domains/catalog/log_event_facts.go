@@ -6,7 +6,6 @@ type LogEventFacts struct {
 	IdentityProfile            *IdentityProfile
 	AttributionProfile         *AttributionProfile
 	StructureProfile           *StructureProfile
-	EventContextProfile        *EventContextProfile
 	EventRoleProfile           *EventRoleProfile
 	EmissionTemplateProfile    *EmissionTemplateProfile
 	OperatorProminenceProfile  *OperatorProminenceProfile
@@ -109,32 +108,6 @@ type StructureProfile struct {
 	Gaps []StructureProfileGaps `json:"gaps"`
 }
 
-type EventContextProfileContextLevel string
-
-const (
-	EventContextProfileContextLevelTrace       EventContextProfileContextLevel = "trace"
-	EventContextProfileContextLevelRequest     EventContextProfileContextLevel = "request"
-	EventContextProfileContextLevelJob         EventContextProfileContextLevel = "job"
-	EventContextProfileContextLevelTransaction EventContextProfileContextLevel = "transaction"
-	EventContextProfileContextLevelCorrelation EventContextProfileContextLevel = "correlation"
-	EventContextProfileContextLevelThread      EventContextProfileContextLevel = "thread"
-	EventContextProfileContextLevelProcess     EventContextProfileContextLevel = "process"
-	EventContextProfileContextLevelContainer   EventContextProfileContextLevel = "container"
-	EventContextProfileContextLevelHost        EventContextProfileContextLevel = "host"
-)
-
-// EventContextProfile Stores the sampled event examples and nearby local evidence captured at fingerprint time for one event.
-type EventContextProfile struct {
-	// Sample event records captured for this event family.
-	Examples []JSONObject `json:"examples"`
-	// Nearby context logs captured around the representative fingerprinting target.
-	ContextLogs []JSONObject `json:"context_logs,omitempty"`
-	// The normalized selection level used to choose the context logs.
-	ContextLevel *EventContextProfileContextLevel `json:"context_level,omitempty"`
-	// The exact raw field path that matched when choosing the context logs.
-	ContextField *string `json:"context_field,omitempty"`
-}
-
 type EventRoleProfileRole string
 
 const (
@@ -150,9 +123,9 @@ type EventRoleProfile struct {
 	Role EventRoleProfileRole `json:"role"`
 }
 
-// EmissionTemplateProfile Captures the stable emitted template the event follows so downstream systems can reason at the instrumentation-fix boundary rather than only at the semantic event boundary.
+// EmissionTemplateProfile Captures the stable emitted wording this event follows as an instrumentation artifact.
 type EmissionTemplateProfile struct {
-	// A stable emitted template string with descriptive placeholders for variable parts.
+	// The stable emitted wording for this event, with descriptive placeholders for clearly variable slots.
 	Template string `json:"template"`
 }
 
@@ -178,14 +151,6 @@ const (
 	ObservabilityValueProfileInstanceValueHigh ObservabilityValueProfileInstanceValue = "high"
 )
 
-type ObservabilityValueProfileInContextValue string
-
-const (
-	ObservabilityValueProfileInContextValueNone ObservabilityValueProfileInContextValue = "none"
-	ObservabilityValueProfileInContextValueLow  ObservabilityValueProfileInContextValue = "low"
-	ObservabilityValueProfileInContextValueHigh ObservabilityValueProfileInContextValue = "high"
-)
-
 type ObservabilityValueProfileCollectionGain string
 
 const (
@@ -194,12 +159,10 @@ const (
 	ObservabilityValueProfileCollectionGainHigh ObservabilityValueProfileCollectionGain = "high"
 )
 
-// ObservabilityValueProfile Captures how much one representative event matters, how much distinct value the target log still adds in local context, and how much extra value the larger collection adds beyond one representative copy.
+// ObservabilityValueProfile Captures how much one representative event matters on its own and how much extra value the larger collection adds beyond one representative copy.
 type ObservabilityValueProfile struct {
 	// How helpful one representative event instance is on its own.
 	InstanceValue ObservabilityValueProfileInstanceValue `json:"instance_value"`
-	// How much distinct value the target log still adds after reading the local context logs around it.
-	InContextValue *ObservabilityValueProfileInContextValue `json:"in_context_value,omitempty"`
 	// How much additional observability value the larger collection adds beyond one representative instance.
 	CollectionGain ObservabilityValueProfileCollectionGain `json:"collection_gain"`
 }
@@ -263,11 +226,11 @@ const (
 	ContextCompletenessProfileWorkUnitContextNotApplicable ContextCompletenessProfileWorkUnitContext = "not_applicable"
 )
 
-// ContextCompletenessProfile Captures whether the event carries the correlation identifiers it should have and which concrete required paths are missing.
+// ContextCompletenessProfile Captures whether the event carries the trace and work-unit identifiers that should exist on this event, and names any concrete required paths that are missing.
 type ContextCompletenessProfile struct {
-	// Whether distributed trace identifiers are present and complete for this event.
+	// Whether the event carries the distributed trace identifiers it should have.
 	TraceContext ContextCompletenessProfileTraceContext `json:"trace_context"`
-	// Whether request, job, workflow, or similar work-unit identifiers are present and complete.
+	// Whether the event carries the concrete request, job, workflow, batch, message, or similar execution identifier it should have.
 	WorkUnitContext ContextCompletenessProfileWorkUnitContext `json:"work_unit_context"`
 	// Concrete correlation paths that should exist on this event but are missing.
 	MissingRequiredPaths []FieldPath `json:"missing_required_paths"`

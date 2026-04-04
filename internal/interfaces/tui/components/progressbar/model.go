@@ -16,7 +16,7 @@ type Model struct {
 // New constructs a progress bar.
 func New(appTheme theme.Theme, width int) *Model {
 	bar := progress.New(
-		progress.WithColors(appTheme.Palette.AccentAlt, appTheme.Palette.Accent),
+		progress.WithColors(appTheme.Palette.Accent, appTheme.Palette.Brand),
 		progress.WithFillCharacters('█', '░'),
 		progress.WithWidth(max(width, 1)),
 	)

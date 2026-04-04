@@ -4,30 +4,25 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
-	"github.com/usetero/cli/internal/interfaces/tui/components/progressbar"
 	"github.com/usetero/cli/internal/interfaces/tui/core"
-	"github.com/usetero/cli/internal/interfaces/tui/ui/present"
 	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
 	accountruntime "github.com/usetero/cli/internal/runtime/account"
 )
 
 // Model renders the final cold-start sync wait step.
 type Model struct {
-	theme    theme.Theme
-	progress *progressbar.Model
-	status   accountruntime.Status
-	width    int
+	theme  theme.Theme
+	status accountruntime.Status
 }
 
 var _ core.Model = (*Model)(nil)
-var _ core.InputProvider = (*Model)(nil)
+var _ core.BusyProvider = (*Model)(nil)
+var _ core.ErrorProvider = (*Model)(nil)
 
 func New(appTheme theme.Theme) *Model {
 	return &Model{
-		theme:    appTheme,
-		progress: progressbar.New(appTheme, 32),
+		theme: appTheme,
 	}
 }
 
@@ -35,35 +30,38 @@ func (m *Model) Init() tea.Cmd { return nil }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) { return m, nil }
 
-func (m *Model) View() tea.View {
-	parts := []string{
-		m.theme.Text.Section.Render("Preparing your workspace"),
-		"",
-		m.theme.Text.Body.Render(m.statusLine()),
-	}
+func (m *Model) View() tea.View { return tea.NewView("") }
 
-	if pct, ok := m.percent(); ok {
-		parts = append(parts, "", m.progress.ViewAs(pct))
-	}
-	if detail := m.detailLine(); detail != "" {
-		parts = append(parts, "", m.theme.Text.Subtle.Render(detail))
-	}
+func (m *Model) SetSize(_, _ int) {}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, parts...)
-	return tea.NewView(present.Panel(m.theme.OnSurface(), m.width, content))
+func (m *Model) Busy() *core.Busy {
+	if _, ok := m.status.Sync.(*pssyncer.Error); ok {
+		return nil
+	}
+	busy := &core.Busy{
+		Label:  "Preparing your workspace",
+		Detail: "We're preparing your local workspace. This only blocks the first time for an account.",
+		Status: m.statusLine(),
+	}
+	if progress := m.progress(); progress != nil {
+		busy.Progress = progress
+	}
+	return busy
 }
 
-func (m *Model) SetSize(width, _ int) {
-	if width < 1 {
-		width = 1
-	}
-	m.width = width
-	m.progress.SetWidth(min(48, present.PanelInnerWidth(width)))
-}
-
-func (m *Model) Input() *core.Input {
-	return &core.Input{
-		Label: "We're preparing your local workspace. This only blocks the first time for an account.",
+func (m *Model) Error() *core.Error {
+	switch typed := m.status.Sync.(type) {
+	case *pssyncer.Error:
+		message := "Failed to prepare your workspace."
+		if typed.Err == nil {
+			return &core.Error{Message: message}
+		}
+		return &core.Error{
+			Message: message,
+			Detail:  typed.Err.Error(),
+		}
+	default:
+		return nil
 	}
 }
 
@@ -106,4 +104,17 @@ func (m *Model) percent() (float64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func (m *Model) progress() *core.Progress {
+	switch typed := m.status.Sync.(type) {
+	case *pssyncer.Syncing:
+		if typed.Progress != nil && typed.Progress.Total > 0 {
+			return &core.Progress{
+				Current: typed.Progress.Downloaded,
+				Total:   typed.Progress.Total,
+			}
+		}
+	}
+	return nil
 }

@@ -19,3 +19,7 @@ type AccountSelectedMsg struct {
 type AccountRuntimeUpdatedMsg struct {
 	Status accountruntime.Status
 }
+
+// OnboardingCompletedMsg notifies the app body router that bootstrap completed
+// and the main product surface should become active.
+type OnboardingCompletedMsg struct{}

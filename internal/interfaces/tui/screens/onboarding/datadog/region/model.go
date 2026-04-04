@@ -40,7 +40,7 @@ func (m *Model) SetSize(width, height int) {}
 func (m *Model) Input() *core.Input {
 	return &core.Input{
 		Kind:    core.InputSelect,
-		Label:   "Choose your Datadog region.",
+		Title:   "Choose your Datadog region.",
 		Options: append([]core.Option(nil), m.options...),
 	}
 }

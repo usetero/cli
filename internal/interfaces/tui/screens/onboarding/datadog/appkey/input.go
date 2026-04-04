@@ -6,10 +6,19 @@ import (
 )
 
 var openDocsBinding = key.NewBinding(
-	key.WithKeys("o"),
-	key.WithHelp("o", "open docs"),
+	key.WithKeys("ctrl+o"),
+	key.WithHelp("ctrl+o", "open Datadog"),
+)
+
+var openPermissionsDocsBinding = key.NewBinding(
+	key.WithKeys("ctrl+d"),
+	key.WithHelp("ctrl+d", "permissions docs"),
 )
 
 func keyMatchesOpenDocs(msg tea.KeyPressMsg) bool {
 	return key.Matches(msg, openDocsBinding)
+}
+
+func keyMatchesOpenPermissionsDocs(msg tea.KeyPressMsg) bool {
+	return key.Matches(msg, openPermissionsDocsBinding)
 }

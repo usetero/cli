@@ -370,25 +370,6 @@
           },
           {
             "values": [
-              "redundant"
-            ],
-            "type_name": "Redundant",
-            "kind": "object",
-            "fields": [
-              {
-                "name": "event_name",
-                "kind": "string",
-                "summary": "Log event name identified as redundant."
-              },
-              {
-                "name": "context_level",
-                "kind": "string",
-                "summary": "Context level where the redundant information already exists."
-              }
-            ]
-          },
-          {
-            "values": [
               "routine_system_chatter"
             ],
             "type_name": "RoutineSystemChatter",
@@ -668,24 +649,6 @@
           {
             "additionalProperties": false,
             "properties": {
-              "context_level": {
-                "description": "Context level where the redundant information already exists.",
-                "type": "string"
-              },
-              "event_name": {
-                "description": "Log event name identified as redundant.",
-                "type": "string"
-              }
-            },
-            "required": [
-              "context_level",
-              "event_name"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
-            "properties": {
               "collection_gain": {
                 "description": "Collection-level gain judgment associated with the event.",
                 "type": "string"
@@ -845,11 +808,6 @@
         "$.outcome                      string     - Durable outcome associated with the reactive flood behavior.",
         "$.peer_label                   string     - Named peer label involved in the reactive interaction when one is known.",
         "",
-        "Variant: redundant",
-        "Fields:",
-        "$.event_name                   string     - Log event name identified as redundant.",
-        "$.context_level                string     - Context level where the redundant information already exists.",
-        "",
         "Variant: routine_system_chatter",
         "Fields:",
         "$.event_name                   string     - Log event name identified as routine system chatter.",
@@ -903,43 +861,44 @@
             ],
             "type_name": "IdentityProfile",
             "summary": "Captures the intrinsic event identity: what happened, what durable thing it is about, the durable outcome if one exists, and the stable operation when that matters.",
-            "mental_model": "Name the durable event identity, not the literal phrasing in one sample. Every populated field should be a short lowercase snake_case label that stays stable across repeated occurrences of the same event family. Identity is about the event itself, not peers, severity, problem conclusions, IDs, status codes, or other per-instance detail.",
+            "mental_model": "Name the durable event identity, not the literal wording of one sample. Identity is the event's own stable semantic spine: what happened, what it was about, whether it carries a durable result, and what stable operation family it belongs to when that helps group neighboring events. It is about the event itself, not peers, severity, transport noise, or per-instance detail.",
             "kind": "object",
             "fields": [
               {
                 "name": "action",
                 "kind": "string",
                 "summary": "The coarse stable thing that happened.",
-                "mental_model": "Keep `action` coarse, reusable, and focused on the stable happening.",
-                "tweaks": [
-                  "Keep `action` on the coarse reusable event family, not a field-by-field restatement of `subject_class`, `subject`, or `operation`.",
-                  "Request-shaped lifecycle events stay at `request`, while structured event families such as `seller-listing.update` keep the family action and let `operation` carry the more specific sub-operation.",
-                  "Middleware events on a request path still usually keep `action=request` when the durable event family is the request handling step rather than a standalone middleware lifecycle.",
-                  "Use a short compound only when a bare verb would collapse distinct event families, such as `timing_recorded` or a local-object lifecycle like `connection_opened`.",
-                  "Do not prefix `action` with the subject or event family when the coarse family is already clear; prefer `update` over `seller_listing_update` and `reload` over `configuration_reload`."
+                "mental_model": "Keep `action` coarse, reusable, and focused on the stable happening rather than the full event phrase.",
+                "refinements": [
+                  "Request-shaped events usually keep `action=request`, while structured lifecycle families keep the family action such as `create`, `update`, or `activate`.",
+                  "Do not let `action` collapse into the result. A rejected request still usually has `action=request` while `outcome` carries `rejected`.",
+                  "When the event is a request-path middleware step rather than a standalone middleware lifecycle, keep `action=request`.",
+                  "Do not promote transient lifecycle state into `action`. A pending activation still has `action=activate`.",
+                  "Use a short compound only when a bare verb would lose the real family, such as a local-object lifecycle like `connection_opened`."
                 ]
               },
               {
                 "name": "subject_class",
                 "kind": "string",
                 "summary": "The coarse stable class the subject belongs to.",
-                "mental_model": "Keep `subject_class` broader than `subject` and use a small durable class label such as `resource`, `configuration`, or `middleware`.",
-                "tweaks": [
-                  "Keep `subject_class` coarse. Domain entities and request targets usually stay under `resource`, while local object families such as `connection` stay explicit when that is the real class.",
-                  "If a durable request target is directly observable, `subject_class` should be `resource` rather than `dependency` or `service`.",
-                  "Do not turn request-target identity into `dependency` or `service` just because the event also names a peer or external system. Peer semantics belong in attribution, while request identity stays on the durable target resource family."
+                "mental_model": "Keep `subject_class` broader than `subject` and use a small durable class label such as `resource`, `middleware`, or `connection`.",
+                "refinements": [
+                  "Keep `subject_class` coarse. Request targets and domain entities usually stay under `resource`.",
+                  "Do not turn the event's own subject into `dependency` or `service` just because a peer is also named. Peer semantics belong in attribution.",
+                  "When the event is explicitly about a local actor such as middleware or a connection object, use that local actor's coarse class instead of collapsing back to the surrounding request or peer.",
+                  "When the body and fields explicitly name a middleware step as the thing that acted, keep `subject_class=middleware` even if the event also names the underlying request target."
                 ]
               },
               {
                 "name": "subject",
                 "kind": "string",
                 "summary": "What specific durable thing the event is fundamentally about.",
-                "mental_model": "Use the event's own durable semantic object, not the peer it is interacting with. Prefer a short durable noun or noun phrase over a full observed phrase, local nickname, or peer label.",
-                "tweaks": [
-                  "Keep `subject` on the event's own durable object, not the peer, dependency, or a restatement of `subject_class`.",
-                  "Preserve namespaces when needed, singularize only true instance targets, and keep collection families plural when the event is about the collection rather than one instance.",
-                  "When a stable route or path names a compound collection family such as `event_licenses`, preserve the full compound family instead of collapsing to the terminal noun.",
-                  "A stable component or plain local object name may be the subject when the event is genuinely about that component or object, such as `auth` or `connection`."
+                "mental_model": "Use the event's own durable semantic object, not the peer it is interacting with. Prefer a short durable noun or noun phrase over a full observed phrase or local nickname.",
+                "refinements": [
+                  "Keep `subject` on the event's own semantic object, not the peer, dependency, or a restatement of `subject_class`.",
+                  "Preserve durable compound families such as `event_licenses` instead of collapsing to the terminal noun alone.",
+                  "Singularize only true instance targets. Keep collection families plural when the event is about the collection rather than one instance.",
+                  "A stable local component or object name may be the subject when the event is genuinely about that local actor, such as `auth` or `connection`."
                 ]
               },
               {
@@ -947,26 +906,22 @@
                 "kind": "string",
                 "summary": "The durable outcome, when one exists.",
                 "mental_model": "Use `outcome` only when the event carries a durable result worth encoding in identity. Leave it empty when the event does not naturally carry a stable result.",
-                "tweaks": [
-                  "Use a short stable result family such as `success`, `failure`, `missing`, `timeout`, `conflict`, `throttled`, or `rejected`, and normalize not-found results to `missing`.",
-                  "Leave `outcome` empty when the record only describes in-progress state or when the lifecycle is already carried by `action` and no separate durable terminal result is present."
+                "refinements": [
+                  "Use a short stable result family such as `success`, `failure`, `missing`, `timeout`, `conflict`, `throttled`, or `rejected`.",
+                  "Leave `outcome` empty for in-progress or non-terminal lifecycle state when there is no separate durable result yet."
                 ]
               },
               {
                 "name": "operation",
                 "kind": "string",
                 "summary": "The stable named operation, when one exists.",
-                "mental_model": "Use `operation` when a stable named operation materially helps distinguish neighboring identities. Prefer a durable verb_subject family recovered from routes, targets, commands, scopes, or structured operation names over generic transport phrasing.",
-                "tweaks": [
-                  "Use `operation` only when it adds a durable reusable family beyond the coarse `action`, and prefer a verb_subject form recovered from stable targets, scopes, or structured operation names.",
-                  "When the record exposes a bare sub-operation such as `CREATE` or `ACTIVATE` plus a stable subject or scope, expand it to a verb_subject family such as `create_seller_listing` or `reload_pricing_rules`.",
-                  "When a structured configuration or report event already exposes both the action and the durable scope, keep the verb_subject operation family such as `reload_pricing_rules` instead of leaving `operation` empty.",
-                  "When sibling outcomes or lifecycle variants share the same reusable verb_subject family, preserve that family in `operation`, such as `update_seller_listing`.",
-                  "For generic request lifecycle bodies such as `request started`, `request received`, or similar in-progress transport markers, leave `operation` empty unless the lifecycle-specific family itself is the durable identity.",
-                  "Do not emit generic lifecycle labels such as `request_started`, `request_received`, or `request_completed` as `operation` for ordinary request-path events.",
-                  "For middleware events on a request path, prefer the stable request operation family such as `post_checkout` over lifecycle paraphrases like `checkout_request` or `request_completed` when the method and durable target are directly visible.",
-                  "Do not infer completion-style request operations such as `post_orders` from method and route alone when the body is only a generic in-progress lifecycle marker.",
-                  "Do not restate `subject_class`, reuse completion-style request operations for generic lifecycle bodies, or append transient lifecycle-state suffixes such as `_pending` when they do not create a different durable operation family."
+                "mental_model": "Use `operation` when a stable named operation materially helps group neighboring identities. Prefer a durable verb_subject family recovered from routes, targets, scopes, or structured operation names over generic transport phrasing.",
+                "refinements": [
+                  "Use `operation` only when it adds a durable reusable family beyond the coarse `action`, usually in verb_subject form.",
+                  "When sibling outcomes or lifecycle variants share the same reusable family, preserve that family in `operation`, such as `update_seller_listing` or `confirm_payment_intent`.",
+                  "When a timeout, rejection, or failure record still exposes a stable request target or structured operation family, keep that reusable `operation` instead of dropping it just because the result is non-success.",
+                  "When an HTTP method and durable target are directly visible, keep the verb_subject request family such as `post_checkout` or `get_event_licenses` instead of collapsing to the bare target noun alone.",
+                  "Leave `operation` empty for generic transport lifecycle lines unless a real durable operation family is directly exposed."
                 ]
               }
             ]
@@ -978,28 +933,23 @@
             ],
             "type_name": "AttributionProfile",
             "summary": "Captures the separate materially involved peer boundary around the event when one is clearly exposed.",
-            "mental_model": "Ask whether this event materially crosses a boundary to or from another clearly identifiable peer. If yes, capture that peer in a stable operational way. If not, leave attribution empty. Attribution is for the involved peer boundary, not for the event's subject, local implementation detail, or generic runtime surface.",
+            "mental_model": "Ask whether this event clearly crosses a meaningful boundary to, from, or within another separately identifiable system. If yes, capture that peer in a coarse stable way. If not, leave attribution empty. Attribution is for real peer boundaries, not local implementation detail, transport noise, or the event's own subject.",
             "kind": "object",
             "fields": [
               {
                 "name": "peer_label",
                 "kind": "string",
                 "summary": "The most specific stable peer identity materially involved, if one is clear.",
-                "mental_model": "Use one durable lowercase snake_case system-family label for the separately involved peer. Prefer the peer the boundary is actually crossing to or from over incidental names that merely appear in the record.",
-                "tweaks": [
+                "mental_model": "Use one durable lowercase snake_case system-family label for the separately involved peer. Prefer the system the boundary is actually crossing to or from over incidental names that merely appear in the record.",
+                "refinements": [
                   "Leave `peer_label` empty when the peer boundary is unclear.",
-                  "Do not use placeholder labels such as `internal_system`, `downstream_service`, `peer_label`, or `unknown_peer`.",
-                  "Do not infer `peer_label` from logger names, class names, package names, controller names, binary names, config keys, or local component labels unless the event clearly exposes a separate system boundary.",
-                  "Setup, bootstrap, health, configuration, and runtime logs about the current service usually keep `peer_label` empty unless they directly name a separate involved system.",
-                  "When the record names the current provider or service only as the reporter of its own alert, status, or monitoring record, keep `peer_label` empty.",
-                  "Provider-native alert or monitor records that only point to the provider's own docs, alert URLs, service labels, or monitoring endpoints keep `peer_label` empty.",
-                  "When a provider-native alert record also exposes an explicit outbound delivery target or request destination to another system, attribute that destination peer instead of the reporting provider.",
-                  "When a first-party cluster-local or same-estate service URL appears only as local implementation detail inside an error or exception, keep `peer_label` empty.",
-                  "Exception text naming `*.svc.cluster.local`, internal Kubernetes DNS names, or same-estate first-party service hosts is implementation detail unless the event also directly exposes a distinct named first-party system boundary beyond the exception text itself.",
-                  "When a record names both the reporting provider and the actual request target or delivery destination, prefer the target or destination peer if that is the boundary the event is really crossing.",
-                  "An explicit outbound request target such as `http.url`, `request_url`, or a delivery destination outranks a generic provider `service` field when the event is about forwarding or posting to that target.",
-                  "When an outbound request target host clearly names another system family, normalize `peer_label` to that destination family, such as `datadog` from `http-intake.logs.datadoghq.com`.",
-                  "When a versioned client or provider label clearly names a separate third-party system, normalize it to the stable family such as `mailchimp` from `Mailchimp/7.4` or `stripe` from `Stripe/2026-03`."
+                  "Do not infer `peer_label` from logger names, class names, package names, controller names, binary names, config keys, or local component labels unless the record clearly exposes a separate system boundary.",
+                  "Startup, bootstrap, runtime, configuration, route, helper, and other self-local detail usually keep attribution empty.",
+                  "A named thing is not automatically a peer. Same-estate implementation detail, cluster-local hosts, and local exception text usually stay empty unless the event clearly exposes a real separate system boundary.",
+                  "A first-party or cluster-local hostname that appears only inside exception text or failure detail is implementation detail by default, not a peer boundary.",
+                  "When the record names both the reporting provider and the actual destination or request target, prefer the destination or target if that is the boundary the event is really crossing.",
+                  "When structured payload or source fields clearly name another system as the originating platform, it is acceptable to attribute that source even if the body is generic or wrapper-like.",
+                  "Normalize versioned or host-specific labels to the stable peer family, such as `stripe` or `datadog`."
                 ],
                 "optional": true
               },
@@ -1008,16 +958,11 @@
                 "kind": "enum",
                 "summary": "The coarse operational role of the materially involved peer.",
                 "mental_model": "Choose the broad operational role of the identified peer without repeating its exact identity. Keep the role coarse and stable.",
-                "tweaks": [
+                "refinements": [
                   "Leave `peer_role` empty when the peer itself is unclear.",
-                  "Do not invent finer labels like `saas_marketing_platform`, `cache_cluster`, or `search_crawler` here.",
                   "Preserve `bot` and `probe` when the traffic is clearly automated instead of collapsing them to `service`.",
-                  "When `peer_role` is `bot` or `probe`, `peer_kind` is usually `unknown` unless the record clearly exposes a more specific operational kind.",
-                  "Use `service` for another application or platform acting as the business-facing system on the other side of the event boundary, especially for upstream domain events or integration-originated business records.",
-                  "When structured event fields show another platform as the source, initiator, or originating system for a business entity or domain event, prefer `service` over `dependency`.",
-                  "Generic upstream webhooks, provider callbacks, and partner-platform delivery attempts are usually `dependency` unless the event is clearly about another application or platform as the business-facing source system.",
-                  "A generic delivery attempt from a partner platform with no richer business-event source semantics stays `dependency` even if the partner name is known.",
-                  "Use `dependency` for supporting infrastructure, provider APIs, queues, databases, caches, storage systems, and other external systems the current service depends on operationally."
+                  "Use `service` for another application or platform acting as the business-facing system on the other side of the event boundary, especially for upstream source systems and first-party peer services.",
+                  "Use `dependency` for supporting infrastructure and provider systems the current service depends on operationally, such as databases, caches, queues, storage, or external APIs."
                 ],
                 "enum_values": [
                   {
@@ -1052,13 +997,11 @@
                 "kind": "enum",
                 "summary": "The operational kind of the materially involved peer.",
                 "mental_model": "Choose the one dominant operational kind that best describes what sort of system the peer is so similar peers can be grouped together.",
-                "tweaks": [
+                "refinements": [
                   "When the peer is clear but no specific kind is exposed, use `unknown` instead of leaving `peer_kind` empty.",
-                  "Do not emit tags, lists, or prose here.",
                   "Use `internal_api` only for another first-party system boundary that really should be attributed. Do not use it for same-estate implementation detail that should leave attribution empty.",
-                  "Use `external_api` for clearly separate external partner platforms, SaaS systems, and third-party service endpoints when no more specific kind such as payment_service or email_service fits better.",
-                  "A destination host or outbound request URL pointing at another external service is usually `external_api` unless a more specific kind is obvious.",
-                  "Use `payment_service` for clearly named payment processors such as Stripe instead of falling back to `external_api`."
+                  "Use `external_api` for clearly separate external partner platforms and third-party service endpoints when no more specific kind fits better.",
+                  "Prefer a more specific kind such as `payment_service` over `external_api` when it is obvious."
                 ],
                 "enum_values": [
                   {
@@ -1105,14 +1048,12 @@
                 "kind": "enum",
                 "summary": "The coarse side of the materially involved peer boundary.",
                 "mental_model": "Only capture direction when the event clearly shows whether the identified peer is upstream, downstream, or another internal system boundary relative to the current service.",
-                "tweaks": [
+                "refinements": [
                   "`boundary_side` requires `peer_label`. Leave both fields empty when the peer is unclear.",
                   "`internal` is only for another named first-party system boundary, not a local module, feature, registry, binary, or runtime surface.",
-                  "Do not emit `boundary_side` for self-local setup, runtime, configuration, or implementation detail. Those cases usually mean the attribution fact stays empty.",
-                  "Do not emit `boundary_side` when the only named system is the current provider reporting its own alert or monitoring record.",
-                  "When an explicit outbound request target or delivery destination is present, use that target to decide `boundary_side` instead of a generic provider reporter field.",
-                  "A provider-native alert that posts or delivers to another external target is usually `downstream` relative to the current provider.",
-                  "Keep `boundary_side` coarse. Do not invent finer labels like `client`, `server`, `database`, or `queue` here."
+                  "Self-local setup, runtime, configuration, and implementation detail usually mean attribution stays empty rather than assigning a boundary side.",
+                  "When an explicit outbound destination or request target is present, use that target to decide `boundary_side` instead of a generic reporting provider field.",
+                  "Keep `boundary_side` coarse."
                 ],
                 "enum_values": [
                   {
@@ -1195,7 +1136,7 @@
                 "kind": "enum_list",
                 "summary": "Meaningful structural gaps observed during structure analysis.",
                 "mental_model": "Use `gaps` only for meaningful structural gaps exposed by structure analysis.",
-                "tweaks": [
+                "refinements": [
                   "Do not use `gaps` for generic uncertainty or weak structure; keep it for concrete missing stream partitioning or execution grouping."
                 ],
                 "enum_values": [
@@ -1217,127 +1158,27 @@
           },
           {
             "values": [
-              "structural",
-              "event_context_profile"
-            ],
-            "type_name": "EventContextProfile",
-            "summary": "Stores the sampled event examples and nearby local evidence captured at fingerprint time for one event.",
-            "mental_model": "This fact stores captured fingerprint-time evidence, not a semantic judgment about context quality or value. Keep the sampled examples and nearby context exactly as stored.",
-            "kind": "object",
-            "fields": [
-              {
-                "name": "examples",
-                "kind": "object_list",
-                "summary": "Sample event records captured for this event family.",
-                "mental_model": "Store the sampled representative records exactly as captured."
-              },
-              {
-                "name": "context_logs",
-                "kind": "object_list",
-                "summary": "Nearby context logs captured around the representative fingerprinting target.",
-                "mental_model": "Store the captured nearby context logs exactly as selected during fingerprinting.",
-                "optional": true
-              },
-              {
-                "name": "context_level",
-                "kind": "enum",
-                "summary": "The normalized selection level used to choose the context logs.",
-                "mental_model": "Record the selection level that produced the captured context logs.",
-                "tweaks": [
-                  "If `context_logs` are present, `context_level` should be present too."
-                ],
-                "enum_values": [
-                  {
-                    "value": "trace",
-                    "summary": "trace"
-                  },
-                  {
-                    "value": "request",
-                    "summary": "request"
-                  },
-                  {
-                    "value": "job",
-                    "summary": "job"
-                  },
-                  {
-                    "value": "transaction",
-                    "summary": "transaction"
-                  },
-                  {
-                    "value": "correlation",
-                    "summary": "correlation"
-                  },
-                  {
-                    "value": "thread",
-                    "summary": "thread"
-                  },
-                  {
-                    "value": "process",
-                    "summary": "process"
-                  },
-                  {
-                    "value": "container",
-                    "summary": "container"
-                  },
-                  {
-                    "value": "host",
-                    "summary": "host"
-                  }
-                ],
-                "optional": true
-              },
-              {
-                "name": "context_field",
-                "kind": "string",
-                "summary": "The exact raw field path that matched when choosing the context logs.",
-                "mental_model": "Record the exact raw field path that matched during context selection.",
-                "tweaks": [
-                  "If `context_logs` are present, `context_field` should be present too."
-                ],
-                "optional": true
-              }
-            ]
-          },
-          {
-            "values": [
               "artifact",
               "event_role_profile"
             ],
             "type_name": "EventRoleProfile",
             "summary": "Classifies the event's coarse observability artifact role as signal, marker, debug artifact, or garbled output.",
-            "mental_model": "Classify the event by the coarse role the record itself plays as an observability artifact once it is readable. This fact is about artifact role, not operator value, severity, or level correctness.",
+            "mental_model": "Classify the artifact by the role the record itself plays once it is readable. Ask: is this mainly communicating a substantive event, mainly leaving a breadcrumb or checkpoint, mainly dumping a rich debug payload inline, or effectively unreadable?",
             "kind": "object",
             "fields": [
               {
                 "name": "role",
                 "kind": "enum",
                 "summary": "The event's coarse observability role.",
-                "mental_model": "Choose whether the event is really communicating a substantive event or outcome, a breadcrumb or checkpoint, a debug-useful payload artifact emitted inline, or unusable garbage. Judge the whole readable artifact, not just the first thin body line or transport wrapper.",
-                "tweaks": [
-                  "A generic body such as `received message` can still be `signal` when the structured payload clearly carries a real business event together with a concrete outcome, resulting subject state, alert, or other meaningful change detail.",
-                  "A transport wrapper around a structured business event is still `signal` when the payload clearly names the business event together with concrete outcome, resulting subject state, or other change detail that matters on its own.",
-                  "A resulting business-object state in the payload, such as an updated listing status, counts as concrete change detail even when the wrapper body itself only says `received message`.",
-                  "When a wrapper carries both operation status and a resulting subject state that communicates a changed business property or lifecycle status, treat the whole record as `signal`, not merely receipt handling.",
-                  "Identifiers, source metadata, or a thin subject snapshot without a changed business property or resulting lifecycle state do not by themselves upgrade a receipt wrapper into `signal`.",
-                  "Do not let a generic emitted wrapper template force `marker` when the whole record still communicates a substantive event or outcome.",
-                  "A wrapper that exposes only business event identity plus generic operation metadata such as `UPDATE` and `SUCCEEDED`, but no concrete changed-subject detail or durable outcome beyond receipt handling, still stays `marker`.",
-                  "A receipt-style consumer line is `marker` when it only reports that work arrived and still does not communicate a concrete outcome, state change, or meaningful business detail beyond message arrival.",
-                  "Readable local helper progress is usually `marker`.",
-                  "Internal count, checkpoint, and batch-progress lines stay `marker` when they mostly describe local debugging or execution progress rather than a durable system operation, state change, or outcome.",
-                  "Routine system maintenance, compaction, cleanup, rebalancing, election, snapshotting, and other readable lifecycle work is still `signal` when the line clearly states what the system is doing, even if the log is repetitive or low value.",
-                  "Do not downgrade a readable maintenance or lifecycle operation to `marker` just because it is noisy, frequent, or operationally unimportant.",
-                  "Startup residue such as effective-config dumps, binary-path lines, environment summaries, or local runtime setup echoes is usually `marker` even when the body is readable and specific.",
-                  "A line that mainly reports local process setup, config materialization, or helper wiring is usually `marker`, not `signal`.",
-                  "Use `debug_artifact` for inline debug payloads such as full requests, full responses, object dumps, state snapshots, query dumps, or similarly bulky debugging material that is useful as an artifact but not as a normal log line.",
-                  "A request or response dump stays `debug_artifact` even when the payload is readable and could help debugging; the point is that it behaves like an inline artifact, not a normal signal or checkpoint log.",
-                  "If the record mainly exists to dump rich payload detail for later inspection, prefer `debug_artifact` over `marker`.",
-                  "A compact breadcrumb such as `got here before calling stripe` is still `marker`, not `debug_artifact`.",
-                  "Do not use `debug_artifact` for direct failure, outcome, or state-change logs just because they include some useful structured fields.",
-                  "A progress or count line does not become `signal` just because it includes resource identifiers, counts, or other structured context.",
-                  "Judge the target event itself. Nearby real signal in the stream does not upgrade a local checkpoint or breadcrumb into `signal`.",
-                  "A direct failure, warning, outcome, or state-change line whose body itself communicates the event clearly is still `signal` even when it is concise.",
-                  "Readable but low-value output is still not `garbled` and may still be `marker` or `debug_artifact` instead.",
-                  "A weak but readable lifecycle or outcome line can still be `signal`."
+                "mental_model": "Judge the whole readable artifact, not just the first thin line or transport wrapper. Prefer the coarsest honest role: substantive event or outcome, breadcrumb/checkpoint, inline debug payload, or unreadable output.",
+                "refinements": [
+                  "Use `signal` when the record itself clearly communicates a substantive event, outcome, alert, state change, or readable system operation.",
+                  "Readable maintenance or lifecycle work can still be `signal` even when it is repetitive or low value. Noise level does not by itself make something a `marker`.",
+                  "Use `marker` for breadcrumbs, checkpoints, progress lines, generic receipts, setup residue, and other readable control-flow or local-progress artifacts that mainly prove work reached a point.",
+                  "A generic wrapper or receipt stays `marker` unless the whole record clearly communicates a substantive outcome or changed subject state of its own.",
+                  "Use `debug_artifact` for inline requests, responses, dumps, snapshots, query bodies, or similarly rich payload artifacts that behave like debugging material rather than normal event lines.",
+                  "A short breadcrumb is still `marker`, not `debug_artifact`, even if it is debug-oriented.",
+                  "Use `garbled` only for malformed or effectively unintelligible output, not merely weak or low-value readable logs."
                 ],
                 "enum_values": [
                   {
@@ -1366,42 +1207,26 @@
               "emission_template_profile"
             ],
             "type_name": "EmissionTemplateProfile",
-            "summary": "Captures the stable emitted template the event follows so downstream systems can reason at the instrumentation-fix boundary rather than only at the semantic event boundary.",
-            "mental_model": "Infer one stable `template` string for the emitted artifact. Keep fixed wording intact and replace clearly variable parts with descriptive placeholders in braces. The template should answer: if two events came from the same likely instrumentation spot, what stable emitted wording would they share?",
+            "summary": "Captures the stable emitted wording this event follows as an instrumentation artifact.",
+            "mental_model": "Infer one human-readable emitted template for the event. Preserve stable literal wording. Replace clearly variable slots with descriptive placeholders in braces when repeated records from the same likely emission site would share the same wording except for those slots.",
             "kind": "object",
             "fields": [
               {
                 "name": "template",
                 "kind": "string",
-                "summary": "A stable emitted template string with descriptive placeholders for variable parts.",
-                "mental_model": "Always return one emitted template string. Start from the emitted body itself when body text exists. If the body is empty or effectively absent, derive a short stable emitted wording from the event's own stable alert, checkpoint, or outcome fields instead of leaving the template blank. Preserve stable emitted wording and replace variable parts with descriptive snake_case placeholders in braces such as `{middleware_name}` or `{duration_ms}` when that helps collapse sibling events from one likely emission site. When variation lives in a modifier phrase, replace the modifier and keep the stable head noun it describes.",
-                "tweaks": [
-                  "Keep `template` as a human-legible emitted string, not a snake_case family label.",
-                  "Prefer one template per likely instrumentation fix boundary.",
-                  "Always return `template`; when no clear variable slots exist, keep the stable emitted wording verbatim.",
-                  "If the target record has no usable body text, still emit a short stable template built from the record's own stable fields rather than omitting `template`.",
-                  "For body-less alert or checkpoint records, it is acceptable to synthesize a concise emitted wording from stable fields like alert code, level, or operation name when that is the clearest available emission template evidence.",
-                  "Anchor the template to the target event's emitted wording first; do not broaden it just because unrelated context logs look similar.",
-                  "Replace clearly variable slots with descriptive snake_case placeholders in braces.",
-                  "When a variable phrase modifies a stable noun, keep the stable noun literal and replace only the varying modifier.",
-                  "Do not use dots, hyphens, or other punctuation inside placeholder names. Convert dotted field names like `http.route` to `{http_route}`.",
-                  "Name placeholders for the emitted slot, not just the supporting field key. When the body says `in \u003cn\u003e ms`, prefer `{duration_ms}` over `{http_duration_ms}` even if the supporting field is `http.duration_ms`.",
-                  "Only introduce a placeholder when the slot is clearly variable from the emitted artifact, visible supporting fields, or variation across the target event's own examples.",
-                  "When a body token is mirrored by a stable supporting field such as `middleware.name` or `loop.stage`, it is reasonable to generalize that token into a placeholder even if the target event examples only show one concrete value.",
-                  "When body wording includes a concrete route or path that is also present in stable supporting fields such as `http.route`, prefer `{http_route}` over keeping the literal route even when the sampled event examples only show one route.",
-                  "When a checkpoint body includes a stage token supported by a field like `loop.stage`, prefer a shared placeholder such as `{loop_stage}` over repeating literal stage names.",
-                  "For worker checkpoint bodies matching `inventory reconciliation stage \u003cname\u003e iteration \u003cn\u003e for job inventory_reconciliation`, always emit `inventory reconciliation stage {loop_stage} iteration {loop_iteration} for job inventory_reconciliation.` when `loop.stage` and `loop.iteration` are present.",
-                  "Middleware or framework logs that differ only by middleware name should usually collapse to one shared emitted template.",
-                  "When a route-like slot is clearly variable, prefer `{http_route}`.",
-                  "Cleanup-loop delete logs that differ only by file path, storage class, or nearby noun choice should usually collapse when they still look like the same emitted delete site.",
-                  "When cleanup delete variants differ by deleted file kind, prefer `{file_kind}`.",
-                  "A cleanup summary such as `cleanup iteration completed` should stay separate from cleanup delete logs because it reflects a different emitted checkpoint.",
-                  "Do not let nested business payload type override a generic consumer receipt wrapper; keep the emitted wrapper template when the artifact itself is still generic.",
-                  "A receipt wrapper like `received address-updated message` should keep the literal message name when the target event's own examples do not show multiple message types.",
-                  "Do not replace a literal receipt noun with `{message_type}` unless the target event's own examples show that slot varying.",
-                  "If wrapper wording itself stays stable across the observed examples, keep that wording literal instead of inventing a placeholder for it.",
-                  "Do not generalize a stable domain noun into a placeholder unless variation is visible in the target event's own examples or clearly supported by target fields.",
-                  "When no broader sibling family is visible, keep the target's own stable emitted wording rather than inventing a broader abstraction."
+                "summary": "The stable emitted wording for this event, with descriptive placeholders for clearly variable slots.",
+                "mental_model": "Start from the event's own emitted wording. Keep literal wording when no broader abstraction is justified. Generalize only the parts that are clearly variable from the event's own examples or stable supporting fields. The result should stay close to the emitted artifact, not the event's business meaning.",
+                "refinements": [
+                  "Keep `template` as a human-legible emitted string, not a snake_case label.",
+                  "Prefer one template per likely emission site or instrumentation fix boundary.",
+                  "Always return one template string. When no clear variable slot exists, keep the stable emitted wording verbatim.",
+                  "Replace clearly variable slots with descriptive snake_case placeholders in braces such as `{middleware_name}`, `{http_route}`, `{loop_stage}`, `{loop_iteration}`, or `{file_kind}`.",
+                  "A stable supporting field may justify a placeholder even when the sampled body only shows one concrete value, if that field clearly names the emitted slot.",
+                  "When a variable phrase modifies a stable noun or head wording, keep the stable wording literal and replace only the varying slot.",
+                  "Name placeholders for the emitted slot rather than the raw field key. Use clean placeholder names without dots or hyphens.",
+                  "Collapse sibling variants when they still look like the same emitted site with different slot values, but keep distinct checkpoints or summaries separate.",
+                  "Generic wrapper or receipt events should keep the wrapper wording. Do not replace a generic emitted wrapper with the nested business payload meaning.",
+                  "Do not invent a broader abstraction or placeholder when variation is not visible in the event's own examples and is not clearly supported by stable event-local fields."
                 ]
               }
             ]
@@ -1413,27 +1238,22 @@
             ],
             "type_name": "OperatorProminenceProfile",
             "summary": "Captures how prominently the event deserves to appear in a normal operator workflow.",
-            "mental_model": "Judge only how prominently a routine operator would want this event in ordinary logs. This is not about severity, collection economics, routing, or whether engineers find the payload useful during deep debugging. Use `high` for important operator-facing signal about health, failures, coordination, meaningful state changes, or major lifecycle changes. Use `low` for situationally useful proof-of-life, maintenance summaries, and routine lifecycle context that can help operators but does not deserve constant prominence. Use `none` for implementation-step chatter, housekeeping substeps, and other internal detail that does not belong prominently in normal operator workflows.",
+            "mental_model": "Judge only how prominently a routine operator would want this event in normal logs. This is not about deep-debug usefulness, routing, or retention. Use `high` for failures, alerts, degraded health, coordination changes, and other state or lifecycle signals operators actually want front-and-center. Use `low` for the smaller set of proof-of-life, maintenance summaries, and routine lifecycle context that still deserves to stay visible. Use `none` for wrappers, breadcrumbs, setup residue, housekeeping substeps, and other detail that should realistically fade out of the normal operator workflow.",
             "kind": "object",
             "fields": [
               {
                 "name": "operator_prominence",
                 "kind": "enum",
                 "summary": "How prominently this event deserves to appear in normal operator workflows.",
-                "mental_model": "Ask whether a routine operator would want this event prominently visible in ordinary logs. `high` means the event is important operator-facing signal about health, state, coordination, failure, or a meaningful lifecycle change. `low` means the event can still help as proof-of-life, maintenance summary, or routine lifecycle context, but it does not deserve constant prominence. `none` means the event is implementation-step detail or housekeeping chatter that should not be prominent in normal operator workflows.",
-                "tweaks": [
-                  "Use `high` for important operator-facing failures, coordination changes, leader or role changes, degraded health, meaningful lifecycle transitions, or other signals a routine operator would intentionally want visible.",
-                  "A startup, readiness, failover, leader-election, or comparable lifecycle transition that changes the system's operating posture can still be `high` even when it is expected.",
-                  "Controller or coordination logs announcing leader election, role transition, or similar cluster-state changes should usually stay `high` because operators reasonably care about those state changes.",
-                  "Normal proof-of-life and maintenance summaries can stay `low` when they help confirm expected system activity but do not deserve the same prominence as failures or major state changes.",
-                  "A cleanup, compaction, snapshot, checkpoint, or comparable maintenance summary can stay `low` when it describes the broader maintenance cycle rather than one tiny internal step.",
-                  "A broad log-cleaning or compaction-cycle summary that confirms maintenance work happened can stay `low`; it is more prominent than one file-delete step, but still less prominent than failures or meaningful state changes.",
-                  "A line announcing that a subsystem is starting or running a broader cleanup or compaction cycle can still be `low` when it names the unit being maintained and describes the overall cycle rather than one internal substep.",
-                  "Use `none` for implementation-step narration, internal housekeeping substeps, and low-level file or index deletion chatter that mainly exposes how the subsystem performs maintenance.",
-                  "Do not automatically upgrade a line to `high` just because it is emitted by infrastructure software; judge whether it carries operator-facing signal, not whether the software is important.",
-                  "Do not automatically drop a line to `none` just because it is internal; a coordination change, major lifecycle transition, or meaningful health signal can still be `high`.",
-                  "If the line mostly proves that routine maintenance happened, but only at a broad summary level, it usually belongs at `low` rather than `none`.",
-                  "If the line mainly narrates one internal housekeeping step inside a larger maintenance process, it usually belongs at `none` rather than `low`."
+                "mental_model": "Ask whether a routine operator would want this event to stay visibly present in ordinary logs. `high` means the event is important operator-facing signal about health, failure, coordination, alerts, or meaningful state change. `low` means the event is still useful routine context, such as a broad maintenance or proof-of-life summary, but does not deserve constant prominence. `none` means the event should drop out of the normal operator surface.",
+                "refinements": [
+                  "Use `high` for failures, alerts, degraded conditions, coordination changes, leader or role changes, and meaningful lifecycle or state transitions that operators intentionally want visible.",
+                  "A startup, readiness, failover, leader-election, or comparable lifecycle transition can still be `high` when it changes the system's operating posture, even if it is expected.",
+                  "Use `low` for broad proof-of-life and maintenance summaries that help confirm expected activity without deserving the same prominence as failures or major state changes.",
+                  "A cleanup, compaction, checkpoint, or similar maintenance-cycle summary can stay `low` when it describes the broader operation rather than one tiny internal step.",
+                  "Use `none` for wrappers, setup residue, breadcrumbs, and housekeeping substeps that mainly expose how the subsystem works rather than what an operator needs to watch.",
+                  "A low-level file-delete or comparable maintenance substep should usually stay `none`, even when the broader cleanup-cycle summary belongs at `low`.",
+                  "Do not raise or lower prominence just because the line is internal, structured, or emitted by infrastructure software; judge whether a routine operator actually wants it visible."
                 ],
                 "enum_values": [
                   {
@@ -1458,33 +1278,21 @@
               "observability_value_profile"
             ],
             "type_name": "ObservabilityValueProfile",
-            "summary": "Captures how much one representative event matters, how much distinct value the target log still adds in local context, and how much extra value the larger collection adds beyond one representative copy.",
-            "mental_model": "Judge three separate lenses and keep them separate. Treat `instance_value` as the intrinsic one-copy value of the event. `in_context_value` asks whether this target log still adds distinct operator value once nearby logs for the same work are already visible. `collection_gain` asks whether the stream itself matters beyond one copy. Start conservative at `low`. Use `high` only when the value is obvious and operator-facing. Use `none` only for logs that would not be missed at all. Searchability, structure, or correlation alone do not make a log valuable when it still fails to tell a useful system story.",
+            "summary": "Captures how much one representative event matters on its own and how much extra value the larger collection adds beyond one representative copy.",
+            "mental_model": "Judge two separate questions and keep them separate. `instance_value` asks whether one representative copy is worth opening on purpose in a high-quality log surface. `collection_gain` asks whether the repeated stream materially matters after one representative copy is already understood. Bias toward sharper, quieter logs, not permissive retention. Use `high` only for events or streams people would clearly want to inspect or keep visible. Use `low` only for real secondary context that still improves the log surface. Use `none` for wrappers, breadcrumbs, residue, and chatter that would not be missed. Structure, searchability, correlation, or nearby hidden payload meaning do not rescue a weak log by themselves.",
             "kind": "object",
             "fields": [
               {
                 "name": "instance_value",
                 "kind": "enum",
                 "summary": "How helpful one representative event instance is on its own.",
-                "mental_model": "Ask whether an operator opening one representative copy of this log on purpose would find it clearly worth inspecting on its own. This is the intrinsic value of one copy, not whether nearby logs or repeated copies help later. Use `none` only when one copy adds essentially no operator-facing clue at all. If the record is the canonical observable envelope of a meaningful business event, it should not fall to `none` even when the wrapper is weak.",
-                "tweaks": [
-                  "Use `high` for concrete failures, durable business events, meaningful state changes, alerts, or operator-facing outcomes that are worth opening even if the outer body looks generic.",
-                  "Do not automatically upgrade a generic wrapper around a structured business event or durable state change just because the payload is rich or well-formed.",
-                  "A consumer or queue intake wrapper such as `received message` usually stays `low` or `none` when the target log mainly confirms receipt and the real operator story is still hidden inside nested payload detail.",
-                  "When an intake wrapper still exposes a recognizable business event family plus a concrete operation or status inside the nested payload, that is usually enough for `low`, but still not enough for `high` unless the target itself states the durable outcome or failure clearly.",
-                  "If a generic wrapper acts as the canonical observable envelope for a meaningful business event and exposes concrete operation status, change detail, or before or after state inside the payload, do not drop `instance_value` to `none`; that should usually stay `low` even if the wrapper remains weak.",
-                  "If one copy tells an operator what business event family this is and what operation status it carried, that is a weak but real clue and should be `low`, not `none`.",
-                  "Reserve `none` for artifacts that add essentially no operator-facing clue at all. A canonical business-event envelope with recognizable event type plus concrete operation status is not `none`, even when it is still only weakly useful.",
-                  "Only treat a wrapper as `high` when the target itself clearly communicates a durable outcome, failure, or state change that an operator would intentionally open on its own.",
-                  "When the payload exposes a recognizable event envelope such as an event `type` plus operation/status or before/after state under nested fields, that can support `high`, but only if the target reads like a substantive event record rather than intake chatter.",
-                  "A generic completion marker such as `ok`, `done`, `success`, or similar thin success wording should usually stay `low` when it carries only continuity fields like request IDs, generic status, or bookkeeping metadata and does not expose a richer business event, failure, or state transition.",
-                  "Keep proof-of-life, routine execution, request-start, progress, bookkeeping, and sampled telemetry at `low` unless one copy clearly tells an operator-facing story by itself.",
-                  "A single sampled measurement, gauge point, or periodic reading is usually `low` even when the measured system is important; the series often carries the real value.",
-                  "A startup residue or config dump such as `Setting up api documentation` or `Effective config: binaryPath: ...` is usually `low` at best for one copy and should not be upgraded just because it looks specific.",
-                  "Do not upgrade weak logs just because they are structured, searchable, or unique-looking.",
-                  "A breadcrumb that only proves control flow reached a point, such as `got here before calling stripe`, and carries only raw IDs or correlation handles but no concrete action result, state change, or failure, should usually be `none`.",
-                  "A request-scoped dependency checkpoint can still stay `none` for one-copy value even when it names the downstream target, if it only proves the request reached that step and carries no concrete action result, state change, or failure.",
-                  "Reserve `none` for leftovers that would not be missed at all, not for every weak but readable log."
+                "mental_model": "Ask whether someone opening one representative copy on purpose would be glad this log exists. Judge the event itself, not hidden meaning elsewhere in the payload or workflow. Use `high` when one copy already tells a meaningful failure, alert, state change, or durable outcome story. Use `low` when one copy is still useful secondary context such as a maintenance summary, continuity signal, or sampled measurement. Use `none` when one copy mainly adds wrapper noise, breadcrumbs, setup residue, or other detail that does not materially improve understanding on its own.",
+                "refinements": [
+                  "Use `high` for concrete failures, direct alerts, meaningful state changes, and other events whose body already communicates a substantive operator story worth opening.",
+                  "Use `low` for real but secondary context such as maintenance summaries, access-log copies, proof-of-life, routine continuity, or one sampled measurement.",
+                  "Use `none` for breadcrumbs, startup residue, config dumps, generic intake wrappers, and other lines that mostly prove control flow, setup, or receipt without adding a substantive event story.",
+                  "Do not rescue a wrapper, breadcrumb, or residue log just because it is structured, searchable, unique-looking, or sits next to meaningful nested payload detail.",
+                  "If the interesting meaning still lives somewhere underneath the wrapper rather than in the log itself, `instance_value` should usually stay `none`."
                 ],
                 "enum_values": [
                   {
@@ -1502,64 +1310,17 @@
                 ]
               },
               {
-                "name": "in_context_value",
-                "kind": "enum",
-                "summary": "How much distinct value the target log still adds after reading the local context logs around it.",
-                "mental_model": "Judge the value of the target log after trustworthy local context is visible. Ask whether an operator would still want this target log once nearby logs for the same work are already on the screen. This is about whether the target is subsumed, not about whether the surrounding context is useful on its own. For request-start, progress, and bookkeeping targets, default to `none` when a nearby richer failure or completion log already carries the route, target, error, downstream boundary, or outcome of the same work. Keep `low` when the target still preserves a real boundary, setup, scope, or downstream hint that the richer log drops.",
-                "tweaks": [
-                  "Judge from the perspective of the target log, not from the perspective of the surrounding context by itself.",
-                  "A nearby log only subsumes the target when it preserves the operator-relevant substance of the same work unit, not merely because it is nearby or mentions the same execution.",
-                  "If a nearby richer failure, completion, or outcome log already carries the route, target, error, outcome, or other operator-relevant substance of the same work, a weaker request-start, progress, or bookkeeping target should usually be `none`.",
-                  "A generic request-start line for the same work should usually drop to `none` when a nearby failure or completion log already preserves the route or target plus the concrete error or outcome.",
-                  "Do not keep a weak target at `low` just because it confirms that the execution started or existed when a richer nearby log already tells the story better.",
-                  "A generic nearby terminal line such as `request finished` or `done` does not fully subsume a more concrete target log when it drops route, target, mode, error, setup, or other operator-relevant detail.",
-                  "A generic terminal line that preserves only the same work unit and generic done/finished framing should not drive a request-start target to `none` by itself.",
-                  "A request-start line that still preserves route or target detail should stay at `low` when the only nearby terminal line is generic completion wording such as `request finished` plus a generic status like `done`.",
-                  "A weak dependency breadcrumb can stay `low` in context when it is the only line showing that the work reached a specific downstream boundary or external-call step that nearby completion logs do not preserve.",
-                  "If the target is the only evidence that the request or job reached a named downstream dependency, provider, stage boundary, or handoff point, keep `in_context_value` at `low` rather than `none` unless a nearby richer log already preserves that same boundary.",
-                  "A request-scoped dependency checkpoint may therefore be `none` for `instance_value` but still `low` for `in_context_value` when the nearby richer log drops the downstream step entirely.",
-                  "A weak checkpoint can stay `low` in context when it preserves a unique downstream target, stage, or setup hint that nearby outcome logs do not repeat, even if it remains poor on its own.",
-                  "If the target log carries unique setup, scope, target, mode, or input detail that nearby logs do not repeat, keep it at `low` rather than `none`.",
-                  "Concrete setup detail such as import mode, target dataset, source bucket, scope, or comparable request-shaping input is enough to keep a request-start target at `low` when nearby outcome logs do not repeat that setup.",
-                  "Routine request metadata such as request_id, route, method, or generic start/finish framing does not count as unique preserved detail when a nearby richer log already carries the outcome and same work unit.",
-                  "A startup or config residue line usually drops to `none` in context when nearby logs already show the meaningful startup problem, failure, or operating state and the residue line adds only setup chatter.",
-                  "A rich failure, outcome, or business-event log should usually stay `high` when nearby logs only confirm, precede, or partially restate the same path but do not replace the target as the clearest operator-facing record.",
-                  "Do not use collection-wide repetition to justify `in_context_value`; that belongs in `collection_gain`."
-                ],
-                "enum_values": [
-                  {
-                    "value": "none",
-                    "summary": "The target log adds no meaningful value once local context is visible."
-                  },
-                  {
-                    "value": "low",
-                    "summary": "The target log adds limited value once local context is visible."
-                  },
-                  {
-                    "value": "high",
-                    "summary": "The target log still clearly matters once local context is visible."
-                  }
-                ],
-                "optional": true
-              },
-              {
                 "name": "collection_gain",
                 "kind": "enum",
                 "summary": "How much additional observability value the larger collection adds beyond one representative instance.",
-                "mental_model": "Ask whether the larger collection itself clearly matters after an operator has already seen one representative copy. This is the value of the stream as a stream, not the value of the first copy. Use `none` only when repetition adds essentially nothing. A repeated business-event envelope can still have `low` collection gain even when each copy is weak.",
-                "tweaks": [
-                  "Use `high` only when the aggregate pattern itself is clearly important and materially matters more than any single representative copy.",
-                  "Access and proxy traffic, queue depth, burn rate, replication lag, and similarly aggregate operational patterns are the archetypal `high` cases.",
-                  "Keep repeated business events, repeated failures, repeated request completions, and similar confirmation streams at `low` when one representative copy already carries most of the story.",
-                  "A repeated intake-wrapper stream that only weakly previews business event progression should usually stay at `low`; repetition can show cadence or churn, but it still does not create strong aggregate value by itself.",
-                  "If a stream is the canonical envelope for repeated business-event updates, do not drop `collection_gain` to `none`; that should usually stay `low` even when the wrapper remains weak and the aggregate pattern is not strong enough for `high`.",
-                  "If repetition still helps an operator see the cadence or churn of a meaningful business-event family, keep `collection_gain` at `low` rather than `none`.",
-                  "Repeated request-start, progress, and bookkeeping streams should usually stay at `low` when they mainly confirm continuity or repeated execution rather than exposing an aggregate operational pattern that materially matters on its own.",
-                  "Do not raise `collection_gain` for a repeated dependency checkpoint stream that still only says the request reached a downstream step; if each copy remains deadweight on its own, the repeated stream should usually stay `none` too.",
-                  "Repeated startup residue and config dump lines such as `Setting up api documentation` or `Effective config: binaryPath: ...` should usually stay at `none`; repetition does not create stream value by itself.",
-                  "Routine worker ticks, no-change polls, read-only crawler streams, describe/list/status-check streams, and similar continuity traffic should usually stay at `low`.",
-                  "Repeating a deadweight breadcrumb that only carries IDs or correlation handles, such as `got here before calling stripe`, does not create collection value by itself; that stream should usually stay `none`.",
-                  "Do not raise `collection_gain` just because the collection is large, structured, or has some variation."
+                "mental_model": "Ask whether the stream itself matters after one representative copy is already understood. This is the value of the repeated pattern, not the value of the first log. Use `high` only when the aggregate pattern is operationally important in its own right, such as traffic shape, throughput, queue depth, burn rate, or similar operational series. Use `low` when repetition still adds real but limited continuity or cadence context. Use `none` when repetition mainly preserves deadweight.",
+                "refinements": [
+                  "Use `high` only when the aggregate pattern matters more than one copy, such as traffic shape, throughput, queue depth, burn rate, or similar operational series.",
+                  "A traffic or access-log stream can be `high` even when one representative copy is only `low`, because the stream itself is the useful signal.",
+                  "Use `low` for repeated real signals whose cadence still helps a bit, but where one representative copy already carries most of the story.",
+                  "Repeated failures, alerts, request completions, and routine maintenance summaries usually stay `low`, not `high`.",
+                  "Keep `none` for repeated wrappers, breadcrumbs, startup residue, config dumps, and other streams whose repetition mainly preserves noise.",
+                  "Do not raise `collection_gain` just because the stream is large, structured, varied, or hints that something meaningful exists somewhere underneath."
                 ],
                 "enum_values": [
                   {
@@ -1585,22 +1346,20 @@
             ],
             "type_name": "LevelExpectationProfile",
             "summary": "Captures the normalized severity level the event deserves.",
-            "mental_model": "Record the severity level the event deserves, not the level currently emitted in the samples. Judge only the event's severity. Do not use cost, prominence, internalness, or weak usefulness as a proxy for level. `debug` is implementation-facing inspection of how the system is deciding or stepping through work. `info` is normal operator-facing work that happened or completed, including routine maintenance and narrow housekeeping completions. `warn` is degraded, unexpected, retrying, or risky behavior where the system is still operating. `error` is failed intended work or a hard broken condition. Use the lowest honest level.",
+            "mental_model": "Record the level this event deserves, not the level currently emitted in the samples. Judge the underlying work, not the log's value, prominence, or internalness. Use `debug` for implementation-facing inspection of how the system is deciding or stepping through work. Use `info` for normal work, lifecycle, coordination, or maintenance that happened or completed. Use `warn` for degraded, retrying, fallback, or otherwise abnormal conditions where the system is still operating and the intended work has not clearly failed outright. Use `error` when the intended work was rejected, denied, aborted, or failed. Use the lowest honest level.",
             "kind": "object",
             "fields": [
               {
                 "name": "expected_level",
                 "kind": "enum",
                 "summary": "The severity level this event should use.",
-                "mental_model": "Classify the level by the severity of the underlying event, not by the emitted envelope. Ask in order: is this mainly planning, evaluation, step-by-step trace, or code-path inspection; if so use `debug`. If not, does it state that normal work happened or completed; if so default to `info`, even when the work unit is small, internal, low-prominence, or not very valuable. If not, is it abnormal, degraded, retrying, or risky while the system still operates; if so use `warn`. If the intended work did not complete or the event is a concrete broken condition, use `error`. Use the lowest honest level.",
-                "tweaks": [
-                  "Do not choose `debug` merely because a log is internal, narrow, low prominence, low value, or full of concrete paths, partitions, offsets, or artifact names.",
-                  "If the line states that one normal unit of work happened or completed, default to `info` unless it is mainly inspecting how the system is deciding or stepping through that work.",
-                  "Routine housekeeping, cleanup, maintenance, and other completed subsystem work can stay `info` even when the work unit is small.",
-                  "Use `debug` only for planning, evaluation, code-path inspection, developer checkpoints, or step-by-step execution trace.",
-                  "Routine coordination chatter such as rebalance preparation can stay `info` when it reports the normal system response rather than degraded coordination or stuck recovery.",
-                  "Use `warn` for abnormal or degraded but still operating conditions, including explicit warning semantics, retrying, reconnecting, fallback, or elevated risk without failed intended work.",
-                  "Use `error` when the intended work did not complete, including rejected, denied, or aborted authentication or authorization failures."
+                "mental_model": "Classify the level by what happened in the underlying work, not by the emitted envelope. If the line mainly exposes planning, evaluation, checkpoints, or step-by-step execution trace, use `debug`. Otherwise, if it says that normal work happened or completed, use `info`. Otherwise, if it describes degraded or risky operation while the system still serves, retries, falls back, or continues, use `warn`. If the intended work was rejected or did not complete, use `error`. Use the lowest honest level.",
+                "refinements": [
+                  "Do not choose `debug` merely because the log is internal, narrow, low-value, or low-prominence; `debug` is for inspection of how the system is deciding or stepping through work.",
+                  "Normal business results, lifecycle changes, coordination steps, and completed maintenance can stay `info` even when the work unit is small, unusual, or internal.",
+                  "Use `warn` for degraded but still operating conditions, including retries, fallbacks, reconnecting, elevated risk, or explicit warning-style alerts where the system has not clearly failed the intended work.",
+                  "Use `error` when the intended work was rejected, denied, aborted, timed out, or otherwise did not complete.",
+                  "Do not raise or lower the level based on observability value, operator prominence, or whether the emitted severity already looks plausible."
                 ],
                 "enum_values": [
                   {
@@ -1630,19 +1389,18 @@
             ],
             "type_name": "PayloadHygieneProfile",
             "summary": "Captures where event-local payload weight lives across the body and event attributes, plus the exact costly paths.",
-            "mental_model": "Judge event-local payload surfaces only. Assess body weight and event-attribute weight separately, and keep this fact descriptive: record where the cost or clutter lives, not why it exists. Shared resource and scope attributes are out of scope.",
+            "mental_model": "Judge only the event-local payload surface. Assess body weight and event-attribute weight separately, and record where the cost lives rather than why it exists. Shared resource and scope metadata are out of scope. Use `lean` for normal log-shaped payloads. Use `moderate` for messy or bulky payloads that still plausibly belong in logs. Use `heavy` when the payload has crossed the line where logs are the wrong transport and this should really move through an artifact or object-storage style path instead.",
             "kind": "object",
             "fields": [
               {
                 "name": "body_weight",
                 "kind": "enum",
                 "summary": "The weight carried by the log body itself.",
-                "mental_model": "Judge only the cost and clutter carried by the body itself.",
-                "tweaks": [
-                  "A single long URL, one verbose error sentence, or one repeated request target can justify `moderate` body weight without automatically making the whole body `heavy`.",
-                  "A compact access-log line with only a short route, method, status, and similar boilerplate should usually stay `lean` even if it is still useful or operator-readable.",
-                  "A long multi-line inline dump or repeated report content in the body should usually be `heavy` even when each individual line is simple.",
-                  "Reserve `heavy` for genuinely bulky body payloads such as large serialized objects, long query dumps, stack traces, or similarly oversized body text."
+                "mental_model": "Judge only the cost and clutter carried by the body itself. `lean` is a normal compact log body. `moderate` is verbose enough to justify cleanup pressure but still log-shaped. `heavy` means the body itself has become the wrong transport for logs.",
+                "refinements": [
+                  "A compact access-log or similarly short body should usually stay `lean`.",
+                  "A verbose validation summary, one long exception sentence, or similar bulky-but-still-readable body can be `moderate` without being `heavy`.",
+                  "Use `heavy` for inline dumps, long serialized objects, stack traces, query dumps, or similarly oversized body text that no longer belongs comfortably in logs."
                 ],
                 "enum_values": [
                   {
@@ -1663,13 +1421,12 @@
                 "name": "attribute_weight",
                 "kind": "enum",
                 "summary": "The weight carried by event attributes.",
-                "mental_model": "Judge only the cost and clutter carried by event attributes.",
-                "tweaks": [
-                  "A small set of short metadata fields such as app names, levels, timestamps, span IDs, or commit SHAs does not make event attributes moderate or heavy by itself.",
-                  "One bulky attribute path can justify `moderate` without making the full event-attribute surface `heavy`.",
-                  "Use `heavy` for event attributes when multiple large paths or a truly oversized attribute payload make the attribute surface materially costlier than normal as a whole.",
-                  "A repeated structured person or mailing-address payload spread across many leaf fields should usually be `heavy` when it materially enlarges the attribute surface as a whole, even if each individual leaf is short.",
-                  "If the event carries parallel copies of the same rich payload, such as localized and normalized variants of the same address/profile object, judge the combined attribute surface rather than discounting the repetition because each copy is individually tidy."
+                "mental_model": "Judge only the cost and clutter carried by event attributes. `lean` is a normal compact attribute set. `moderate` is cluttered or bulky but still plausibly log-shaped. `heavy` means the attribute surface has crossed the line where logs are the wrong transport, whether that comes from dump-shaped payloads or from repeated rich structured objects that materially enlarge the event.",
+                "refinements": [
+                  "A small set of short metadata fields does not make event attributes `moderate` or `heavy` by itself.",
+                  "One bulky attribute path, such as a long exception string, can justify `moderate` without making the full attribute surface `heavy`.",
+                  "Use `heavy` when the attribute surface carries large dumps, multiple bulky paths, or repeated rich structured objects that have clearly crossed the line where logs are the wrong transport.",
+                  "If the event carries repeated rich payloads across sibling objects, judge the combined surface; duplicated structured address or profile payloads can be `heavy` even when each leaf is individually short."
                 ],
                 "enum_values": [
                   {
@@ -1690,15 +1447,13 @@
                 "name": "expensive_paths",
                 "kind": "field_path_list",
                 "summary": "Concrete paths that materially increase cost or clutter.",
-                "mental_model": "Point at the exact concrete paths that materially drive cost or clutter within this event shape. When the costly surface is spread across multiple concrete sibling leaves in the event-path inventory, list those exact leaves rather than a parent object or a representative subset. For repeated structured address or profile payloads, include the full observed costly leaf set instead of trimming seemingly smaller leaves out of the repeated shape.",
-                "tweaks": [
-                  "Prefer the smallest concrete costly paths instead of broad container paths when the smaller paths are available.",
-                  "Point at the exact costly surface, such as `[body]` or `[attributes, exception]`.",
-                  "When a nested object is the real costly surface, prefer that exact existing object path over invented child leaves.",
-                  "If the valid event field paths already expose concrete costly child leaves, use those leaves and do not emit only their parent object path.",
-                  "When many sibling leaves under the same object are all materially costly, include each exact costly leaf path present in the event-family inventory instead of sampling only a few representative children.",
-                  "When a rich address or profile payload repeats across sibling objects, preserve the full repeated costly leaf set present in the inventory instead of dropping shorter fields like `country` just because they are individually compact.",
-                  "Do not infer optional sibling fields under a bulky object. If `address1`, `city`, and `postalCode` exist but `address2` does not, `address2` must not appear in `expensive_paths`.",
+                "mental_model": "Point at the exact concrete paths that materially drive cost or clutter within this event shape. Use the smallest real costly paths exposed by the event-path inventory. If one field is the costly surface, point at that field. If the cost is spread across many concrete sibling leaves, list those leaves rather than a broad parent or a representative subset.",
+                "refinements": [
+                  "Prefer the smallest concrete costly paths instead of broad container paths when those smaller paths exist in the event-path inventory.",
+                  "Use `[body]` when the body itself is the costly surface, and use exact attribute paths such as `[attributes, exception]` when one field carries the cost.",
+                  "When many sibling leaves are all materially costly, include each exact observed costly leaf instead of sampling only a few examples.",
+                  "When a repeated rich address or profile payload spreads cost across many leaves, preserve the full repeated costly leaf set present in the inventory.",
+                  "Do not invent absent siblings. If `address2` is not present, `address2` must not appear in `expensive_paths`.",
                   "When multiple costly paths are returned, list body paths before attribute paths."
                 ],
                 "optional": true
@@ -1711,28 +1466,23 @@
               "context_completeness_profile"
             ],
             "type_name": "ContextCompletenessProfile",
-            "summary": "Captures whether the event carries the correlation identifiers it should have and which concrete required paths are missing.",
-            "mental_model": "Judge actionable correlation completeness: whether this event family carries the trace and work-unit identifiers it should have to be investigated or grouped correctly. Use the target plus representative event examples to decide which identifiers belong on this family. This is about identifier completeness, not nearby context evidence. Judge trace context and work-unit context separately, and always return the exact concrete target paths that are missing.",
+            "summary": "Captures whether the event carries the trace and work-unit identifiers that should exist on this event, and names any concrete required paths that are missing.",
+            "mental_model": "Judge correlation completeness, not descriptive richness. Ask whether an operator could connect this event to the distributed trace and to the concrete request, job, workflow, batch, message, or similar unit of work it belongs to. Judge trace context and work-unit context separately. Use the target plus representative family examples to decide which identifiers genuinely belong on this event shape. `complete` means the expected identifiers are present. `partial` means the event has some of that context, or the exact missing path is knowable from family evidence. `missing` means the context should exist but no required identifier is present and no exact missing path is knowable with confidence. `not_applicable` means that context genuinely does not belong on this event shape at all. Always return only exact missing target paths.",
             "kind": "object",
             "fields": [
               {
                 "name": "trace_context",
                 "kind": "enum",
-                "summary": "Whether distributed trace identifiers are present and complete for this event.",
-                "mental_model": "Judge only real distributed trace identifiers such as `trace_id` and `span_id`.",
-                "tweaks": [
-                  "Body wording, severity, request shape, correlation labels, event IDs, and producer IDs do not satisfy trace context on their own.",
-                  "Producer-specific trace-like fields such as `tracingId`, `correlation_id`, or similar application labels do not count as real distributed trace context unless they are the actual standard trace identifier paths for this event.",
-                  "Use `not_applicable` only when distributed trace context genuinely does not belong on this event shape, not when instrumentation simply failed to include it.",
-                  "Provider-native cloud control-plane audit records such as CloudTrail-style `AwsApiCall` events are archetypal `not_applicable` cases for trace context when they only carry provider request identifiers and no real distributed trace fields.",
-                  "A background job or batch-work record with concrete work-unit identity such as `job_id`, but no request shape and no real trace fields in the family evidence, should usually be `not_applicable` rather than `missing`.",
-                  "A request-shaped application log with request correlation but no real trace identifiers should be `missing` or `partial`, not `not_applicable`.",
-                  "Application events, consumer logs, workflow steps, and integration-processing records that carry event metadata or work-unit identifiers should usually expect trace context; if real trace identifiers are absent, use `missing` or `partial`, not `not_applicable`.",
-                  "Background work and external control-plane records can be `not_applicable` for trace context while still having complete work-unit context.",
-                  "Use `partial` when some real trace context is present, or when representative examples make the concrete missing trace path knowable for this target even though the target omitted it.",
-                  "Use `missing` when trace context should exist but is absent and the sampled evidence does not make a concrete missing target trace path knowable with confidence.",
-                  "When representative event examples show that a trace identifier belongs on this event family but the target omits it, keep the family-level judgment and name the missing target path.",
-                  "If `trace_context` is `partial` because the target omitted a concrete required identifier, `missing_required_paths` must include that exact path and must not be empty."
+                "summary": "Whether the event carries the distributed trace identifiers it should have.",
+                "mental_model": "Judge only real distributed trace correlation, not generic request wording or local correlation handles.",
+                "refinements": [
+                  "Count only real distributed trace identifiers such as `trace_id` and `span_id`; body text, request shape, event IDs, correlation labels, and producer-specific handles do not satisfy trace context.",
+                  "Use `not_applicable` only when distributed trace context genuinely does not belong on this event shape, such as provider-native audit records or standalone background-job records that carry their own work-unit identity but no request or trace shape.",
+                  "If the event is application, consumer, workflow, or integration processing inside your system, absent trace identifiers are usually `missing` or `partial`, not `not_applicable`.",
+                  "A request-scoped helper or middleware log inside application processing is still usually `missing` or `partial`, not `not_applicable`, even when it is narrow and internal.",
+                  "Use `partial` when some real trace identifier is present, or when family evidence makes one exact missing trace path knowable for this target.",
+                  "Use `missing` when trace context should exist but no required trace identifier is present and the exact missing path is not knowable with confidence from the target plus family evidence.",
+                  "When family evidence shows that a concrete trace path belongs on this event and the target omits it, include that exact path in `missing_required_paths`."
                 ],
                 "enum_values": [
                   {
@@ -1756,15 +1506,17 @@
               {
                 "name": "work_unit_context",
                 "kind": "enum",
-                "summary": "Whether request, job, workflow, or similar work-unit identifiers are present and complete.",
-                "mental_model": "Judge whether the event carries the real request, job, workflow, batch, task, or similar execution identifiers it should have.",
-                "tweaks": [
-                  "Route, method, status, or generic body wording do not count as work-unit context by themselves.",
-                  "Asynchronous and background events can have complete work-unit context even when trace context is missing or not applicable.",
-                  "Use `not_applicable` only when work-unit context genuinely does not belong on this event shape, not when instrumentation simply failed to include it.",
-                  "Request-shaped logs with only route and method but no request_id or equivalent identifier should be `missing` or `partial`, not `complete`.",
-                  "When representative event examples show that a work-unit identifier such as `request_id`, `job_id`, or `workflow_id` belongs on this event family but the target omits it, use `partial` and list that exact missing target path.",
-                  "If `work_unit_context` is `partial` because the target omitted a concrete required identifier, `missing_required_paths` must include that exact path and must not be empty."
+                "summary": "Whether the event carries the concrete request, job, workflow, batch, message, or similar execution identifier it should have.",
+                "mental_model": "Judge whether the event names the actual unit of work this log belongs to.",
+                "refinements": [
+                  "Count only the concrete unit-of-work identifier. Route, method, status, body wording, and generic request language do not satisfy work-unit context by themselves.",
+                  "A present execution identifier such as `request_id`, `http.request_id`, `requestID`, `job_id`, `workflow_id`, `batch_id`, `task_id`, or `message.delivery_id` is usually enough for `complete` unless family evidence shows another identifier also belongs on this event shape.",
+                  "A request-scoped helper or middleware line with a concrete request identifier still belongs to that request and is usually `complete`, not `not_applicable`, for work-unit context.",
+                  "Background jobs, async workers, and provider-native audit records can be `complete` for work-unit context even when trace context is `missing` or `not_applicable`.",
+                  "Use `partial` when some work-unit identifier is present, or when family evidence makes one exact missing work-unit path knowable for this target.",
+                  "Use `missing` when work-unit context should exist but no required work-unit identifier is present and the exact missing path is not knowable with confidence from the target plus family evidence.",
+                  "Use `not_applicable` only when this event genuinely does not belong to a concrete request, job, workflow, batch, message, or similar unit of work at all.",
+                  "When family evidence shows that a concrete work-unit path belongs on this event and the target omits it, include that exact path in `missing_required_paths`."
                 ],
                 "enum_values": [
                   {
@@ -1789,13 +1541,12 @@
                 "name": "missing_required_paths",
                 "kind": "field_path_list",
                 "summary": "Concrete correlation paths that should exist on this event but are missing.",
-                "mental_model": "Emit only exact missing field paths.",
-                "tweaks": [
-                  "Do not emit broad conceptual notes such as `trace context missing`.",
-                  "When either completeness field is `partial` because the target omitted concrete identifiers, `missing_required_paths` must list those exact target paths.",
-                  "Do not leave `missing_required_paths` empty in a target-specific `partial` case with known missing identifiers.",
-                  "When multiple paths are missing, list real trace identifier paths before work-unit identifier paths.",
-                  "Within the same category, keep paths ordered from the smallest direct missing path to the more nested one."
+                "mental_model": "Emit only exact missing target paths when the required identifier path is concretely knowable.",
+                "refinements": [
+                  "Emit only exact missing field paths, never conceptual notes such as `trace context missing`.",
+                  "List a path only when that exact path is absent on the target and family evidence makes it genuinely required for this event shape.",
+                  "When either completeness field is `partial` because a concrete required identifier is knowably missing, `missing_required_paths` must include that exact path.",
+                  "If the exact required path is not knowable, leave `missing_required_paths` empty even when a completeness field is `missing`."
                 ]
               }
             ]
@@ -1807,7 +1558,7 @@
             ],
             "type_name": "SensitiveDataProfile",
             "summary": "Lists the exact event paths that actually expose secrets, payment data, PII, or PHI in sampled evidence.",
-            "mental_model": "Record only real observed exposure in the sampled event. Use exact event paths, return all four lists every time, and stay literal: if the sample does not actually expose usable sensitive content, do not count it. This fact is about what the event reveals, not what the field name suggests.",
+            "mental_model": "Record only real observed exposure in the sampled event. Use exact event paths. Stay literal: if the sample does not actually expose usable sensitive content, do not count it. This fact is about what the event reveals, not what a field name merely suggests.",
             "kind": "object",
             "fields": [
               {
@@ -1815,12 +1566,9 @@
                 "kind": "field_path_list",
                 "summary": "Exact paths that expose secrets or credentials.",
                 "mental_model": "Use `secret_paths` only for real credentials, tokens, keys, or authentication material that the sample actually exposes in usable form.",
-                "tweaks": [
-                  "Use `[body]` when the body itself contains the exposed secret value.",
-                  "Do not dismiss a secret just because it appears inline in prose. If the body literally includes the token or key value, it is still an exposure.",
-                  "Inline bearer tokens, JWTs, API keys, session tokens, and similar credential literals in body text still count as `secret_paths = [[\"body\"]]` even when there is no structured secret field.",
-                  "When body text includes a concrete bearer token value after words like `bearer token`, `authorization`, or `Authorization`, treat that as exposed authentication material at `[body]`.",
-                  "Masked, redacted, truncated, or placeholder secret-looking values do not count as exposure, even when the field name is `api_key`, `token`, `secret`, or similar."
+                "refinements": [
+                  "Inline credential material in body text still counts as exposure at `[\"body\"]` when the body literally includes the usable secret value.",
+                  "Masked, redacted, truncated, or placeholder secret-looking values do not count, even when the field name suggests a secret."
                 ]
               },
               {
@@ -1828,24 +1576,21 @@
                 "kind": "field_path_list",
                 "summary": "Exact paths that expose payment data.",
                 "mental_model": "Use `payment_paths` only for real payment instrument or payment-processing data that the sample actually exposes in usable form.",
-                "tweaks": [
-                  "Masked, redacted, truncated, or placeholder payment values do not count as exposure, even when the field name is `card_number`, `cvv`, `pan`, or similar."
+                "refinements": [
+                  "Masked, redacted, truncated, or placeholder payment-looking values do not count, even when the field name suggests payment data."
                 ]
               },
               {
                 "name": "pii_paths",
                 "kind": "field_path_list",
                 "summary": "Exact paths that expose actionable personally identifying data.",
-                "mental_model": "Use `pii_paths` for real actionable identifying content such as names, email addresses, phone numbers, mailing addresses, or government identifiers. For structured address or profile payloads, list the exact identifying leaves the event actually exposes rather than a trimmed representative subset.",
-                "tweaks": [
-                  "Nested real identifying content still counts. If a nested payload exposes an actual email or name, include that exact nested path.",
+                "mental_model": "Use `pii_paths` for real actionable identifying content such as names, email addresses, phone numbers, mailing addresses, or government identifiers. For structured payloads, list the exact identifying leaves the event actually exposes.",
+                "refinements": [
+                  "Nested identifying content still counts. If a nested payload exposes a real email, name, or address leaf, include that exact nested path.",
                   "If both current and previous state expose real identifying content, include both exact path sets.",
-                  "List only exact present leaves. Do not infer common sibling fields inside an address or profile object when they are absent on the target record.",
-                  "If an address object exposes `address1`, `city`, `region`, and `postalCode` but not `address2`, include only the present address paths.",
-                  "When a structured mailing address is exposed, keep the full exact identifying address leaf set that is actually present, including fields like `country` when they appear in the payload.",
-                  "Do not treat opaque internal IDs, device identifiers, advertising identifiers, campaign parameters, or search terms as PII unless the sampled value itself directly exposes real identifying content.",
-                  "Do not treat usernames, handles, screen names, or login aliases as `pii_paths` unless the sampled value itself directly reveals real identifying content such as an email address, phone number, or full real name.",
-                  "Do not treat client IPs, source IPs, forwarding headers, user agents, ports, or similar operational network identifiers as `pii_paths` in this fact."
+                  "List only exact present leaves. Do not infer absent siblings inside an address or profile object.",
+                  "When a structured mailing address is exposed, include the full exact identifying address leaf set that is actually present, including fields such as `country` when they appear in the payload.",
+                  "Do not treat opaque internal IDs, device identifiers, campaign parameters, search terms, usernames, handles, IPs, user agents, or similar operational identifiers as PII unless the sampled value itself directly reveals real identifying content."
                 ]
               },
               {
@@ -1853,8 +1598,8 @@
                 "kind": "field_path_list",
                 "summary": "Exact paths that expose protected health information.",
                 "mental_model": "Use `phi_paths` for exposed patient, diagnosis, treatment, or other health information that the sample actually reveals.",
-                "tweaks": [
-                  "Directly identifying patient records such as medical record numbers may legitimately appear in both `pii_paths` and `phi_paths`."
+                "refinements": [
+                  "The same exact path may legitimately appear in both `pii_paths` and `phi_paths` when it directly exposes both identity and health information, such as a medical record number."
                 ]
               }
             ]
@@ -2027,68 +1772,6 @@
           },
           {
             "additionalProperties": false,
-            "description": "Stores the sampled event examples and nearby local evidence captured at fingerprint time for one event.",
-            "properties": {
-              "context_field": {
-                "description": "The exact raw field path that matched when choosing the context logs.",
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "context_level": {
-                "description": "The normalized selection level used to choose the context logs.",
-                "enum": [
-                  "trace",
-                  "request",
-                  "job",
-                  "transaction",
-                  "correlation",
-                  "thread",
-                  "process",
-                  "container",
-                  "host",
-                  null
-                ],
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "context_logs": {
-                "description": "Nearby context logs captured around the representative fingerprinting target.",
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {},
-                  "required": [],
-                  "type": "object"
-                },
-                "type": [
-                  "array",
-                  "null"
-                ]
-              },
-              "examples": {
-                "description": "Sample event records captured for this event family.",
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {},
-                  "required": [],
-                  "type": "object"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "context_field",
-              "context_level",
-              "context_logs",
-              "examples"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
             "description": "Classifies the event's coarse observability artifact role as signal, marker, debug artifact, or garbled output.",
             "properties": {
               "role": {
@@ -2109,10 +1792,10 @@
           },
           {
             "additionalProperties": false,
-            "description": "Captures the stable emitted template the event follows so downstream systems can reason at the instrumentation-fix boundary rather than only at the semantic event boundary.",
+            "description": "Captures the stable emitted wording this event follows as an instrumentation artifact.",
             "properties": {
               "template": {
-                "description": "A stable emitted template string with descriptive placeholders for variable parts.",
+                "description": "The stable emitted wording for this event, with descriptive placeholders for clearly variable slots.",
                 "type": "string"
               }
             },
@@ -2142,7 +1825,7 @@
           },
           {
             "additionalProperties": false,
-            "description": "Captures how much one representative event matters, how much distinct value the target log still adds in local context, and how much extra value the larger collection adds beyond one representative copy.",
+            "description": "Captures how much one representative event matters on its own and how much extra value the larger collection adds beyond one representative copy.",
             "properties": {
               "collection_gain": {
                 "description": "How much additional observability value the larger collection adds beyond one representative instance.",
@@ -2152,19 +1835,6 @@
                   "high"
                 ],
                 "type": "string"
-              },
-              "in_context_value": {
-                "description": "How much distinct value the target log still adds after reading the local context logs around it.",
-                "enum": [
-                  "none",
-                  "low",
-                  "high",
-                  null
-                ],
-                "type": [
-                  "string",
-                  "null"
-                ]
               },
               "instance_value": {
                 "description": "How helpful one representative event instance is on its own.",
@@ -2178,7 +1848,6 @@
             },
             "required": [
               "collection_gain",
-              "in_context_value",
               "instance_value"
             ],
             "type": "object"
@@ -2249,7 +1918,7 @@
           },
           {
             "additionalProperties": false,
-            "description": "Captures whether the event carries the correlation identifiers it should have and which concrete required paths are missing.",
+            "description": "Captures whether the event carries the trace and work-unit identifiers that should exist on this event, and names any concrete required paths that are missing.",
             "properties": {
               "missing_required_paths": {
                 "description": "Concrete correlation paths that should exist on this event but are missing.",
@@ -2263,7 +1932,7 @@
                 "type": "array"
               },
               "trace_context": {
-                "description": "Whether distributed trace identifiers are present and complete for this event.",
+                "description": "Whether the event carries the distributed trace identifiers it should have.",
                 "enum": [
                   "complete",
                   "partial",
@@ -2273,7 +1942,7 @@
                 "type": "string"
               },
               "work_unit_context": {
-                "description": "Whether request, job, workflow, or similar work-unit identifiers are present and complete.",
+                "description": "Whether the event carries the concrete request, job, workflow, batch, message, or similar execution identifier it should have.",
                 "enum": [
                   "complete",
                   "partial",
@@ -2379,23 +2048,15 @@
         "$.execution_correlation_keys[] string[]   - The canonical execution or work-unit correlation keys observed in structure analysis.",
         "$.gaps[]                       string[]   - Meaningful structural gaps observed during structure analysis. Values: empty_capture=No usable records were available for structure analysis.; missing_stream_partitions=Expected stream partitioning was not visible.; missing_execution_grouping=Expected execution grouping was not visible..",
         "",
-        "Variant: structural + event_context_profile",
-        "Stores the sampled event examples and nearby local evidence captured at fingerprint time for one event.",
-        "Fields:",
-        "$.examples[]                   object[]   - Sample event records captured for this event family.",
-        "$.context_logs[]               object[]   - Nearby context logs captured around the representative fingerprinting target.",
-        "$.context_level                string     - The normalized selection level used to choose the context logs. Values: trace=trace; request=request; job=job; transaction=transaction; correlation=correlation; thread=thread; process=process; container=container; host=host.",
-        "$.context_field                string     - The exact raw field path that matched when choosing the context logs.",
-        "",
         "Variant: artifact + event_role_profile",
         "Classifies the event's coarse observability artifact role as signal, marker, debug artifact, or garbled output.",
         "Fields:",
         "$.role                         string     - The event's coarse observability role. Values: signal=A readable event, state change, alert, or outcome artifact.; marker=A breadcrumb, checkpoint, or lightweight progress artifact.; debug_artifact=A debug-useful payload artifact such as a request, response, dump, or snapshot emitted inline into logs.; garbled=A malformed or unintelligible artifact..",
         "",
         "Variant: artifact + emission_template_profile",
-        "Captures the stable emitted template the event follows so downstream systems can reason at the instrumentation-fix boundary rather than only at the semantic event boundary.",
+        "Captures the stable emitted wording this event follows as an instrumentation artifact.",
         "Fields:",
-        "$.template                     string     - A stable emitted template string with descriptive placeholders for variable parts.",
+        "$.template                     string     - The stable emitted wording for this event, with descriptive placeholders for clearly variable slots.",
         "",
         "Variant: quality + operator_prominence_profile",
         "Captures how prominently the event deserves to appear in a normal operator workflow.",
@@ -2403,10 +2064,9 @@
         "$.operator_prominence          string     - How prominently this event deserves to appear in normal operator workflows. Values: none=Implementation-step detail or housekeeping chatter that does not deserve routine operator prominence.; low=Situationally useful proof-of-life, maintenance summary, or routine lifecycle context.; high=Important operator-facing signal about health, failures, coordination, state, or meaningful lifecycle changes..",
         "",
         "Variant: quality + observability_value_profile",
-        "Captures how much one representative event matters, how much distinct value the target log still adds in local context, and how much extra value the larger collection adds beyond one representative copy.",
+        "Captures how much one representative event matters on its own and how much extra value the larger collection adds beyond one representative copy.",
         "Fields:",
         "$.instance_value               string     - How helpful one representative event instance is on its own. Values: none=One representative instance adds essentially no meaningful observability clue.; low=One representative instance adds a weak but real observability clue.; high=One representative instance is directly valuable on its own..",
-        "$.in_context_value             string     - How much distinct value the target log still adds after reading the local context logs around it. Values: none=The target log adds no meaningful value once local context is visible.; low=The target log adds limited value once local context is visible.; high=The target log still clearly matters once local context is visible..",
         "$.collection_gain              string     - How much additional observability value the larger collection adds beyond one representative instance. Values: none=The larger collection adds essentially no extra value beyond one representative instance.; low=The larger collection adds limited but real extra value beyond one representative instance.; high=The larger collection adds materially important value beyond one representative instance..",
         "",
         "Variant: quality + level_expectation_profile",
@@ -2422,10 +2082,10 @@
         "$.expensive_paths[]            string[][] - Concrete paths that materially increase cost or clutter.",
         "",
         "Variant: quality + context_completeness_profile",
-        "Captures whether the event carries the correlation identifiers it should have and which concrete required paths are missing.",
+        "Captures whether the event carries the trace and work-unit identifiers that should exist on this event, and names any concrete required paths that are missing.",
         "Fields:",
-        "$.trace_context                string     - Whether distributed trace identifiers are present and complete for this event. Values: complete=Trace context is complete.; partial=Trace context is partially present.; missing=Trace context is missing.; not_applicable=Trace context does not belong on this event shape..",
-        "$.work_unit_context            string     - Whether request, job, workflow, or similar work-unit identifiers are present and complete. Values: complete=Work-unit context is complete.; partial=Work-unit context is partially present.; missing=Work-unit context is missing.; not_applicable=Work-unit context does not belong on this event shape..",
+        "$.trace_context                string     - Whether the event carries the distributed trace identifiers it should have. Values: complete=Trace context is complete.; partial=Trace context is partially present.; missing=Trace context is missing.; not_applicable=Trace context does not belong on this event shape..",
+        "$.work_unit_context            string     - Whether the event carries the concrete request, job, workflow, batch, message, or similar execution identifier it should have. Values: complete=Work-unit context is complete.; partial=Work-unit context is partially present.; missing=Work-unit context is missing.; not_applicable=Work-unit context does not belong on this event shape..",
         "$.missing_required_paths[]     string[][] - Concrete correlation paths that should exist on this event but are missing.",
         "",
         "Variant: compliance + sensitive_data_profile",
@@ -3333,7 +2993,7 @@
                 "kind": "string",
                 "summary": "A concise grounded summary of how actionable findings against this service are likely to be.",
                 "mental_model": "Describe the practical actionability of findings against this service in one grounded sentence.",
-                "tweaks": [
+                "refinements": [
                   "Ground the summary in the chosen ownership and change levers instead of generic remediation prose.",
                   "When the service is mainly operated or configured rather than owned in code, say that plainly using words like `operate`, `configuration`, `platform`, `deployment`, `collector`, or `tuning` when they fit the selected levers.",
                   "For operated open-source components such as brokers, databases, or collectors, prefer operational language about running or tuning the platform over wording that sounds like direct application-code ownership."
@@ -3372,7 +3032,7 @@
                 "kind": "enum",
                 "summary": "How much direct control the team likely has over behavior changes.",
                 "mental_model": "Choose the team's realistic level of control over changing the service's behavior.",
-                "tweaks": [
+                "refinements": [
                   "Use `configured_only` when the realistic levers are collector, service, or deployment configuration, even if the team also operates the running process.",
                   "Collector-style infrastructure that is primarily shaped through pipeline or collector config should usually be `configured_only`, not `operated_only`.",
                   "Reserve `operated_only` for services the team mainly runs and tunes operationally, such as brokers, databases, or other platforms where the main levers are operating the system rather than editing its config surface."
@@ -3441,7 +3101,7 @@
                 "kind": "enum",
                 "summary": "The overall payload weight of the shared service-level metadata.",
                 "mental_model": "Judge the overall payload weight of shared metadata carried across this service's logs.",
-                "tweaks": [
+                "refinements": [
                   "Use `heavy` when repeated shared metadata clearly dominates the logs, not just when it is merely noticeable.",
                   "Repeated bulky Kubernetes label or annotation objects across the service's logs usually mean `shared_payload_weight = heavy`, especially when they appear together.",
                   "When repeated scope metadata adds to already bulky shared resource metadata, treat the combined shared surface as `heavy` rather than downgrading it to `moderate`."
@@ -3466,7 +3126,7 @@
                 "kind": "enum",
                 "summary": "How much non-essential shared enrichment surrounds the service's logs.",
                 "mental_model": "Judge how much non-essential shared platform, vendor, collector, or deployment metadata surrounds the service's logs.",
-                "tweaks": [
+                "refinements": [
                   "Use `high` when repeated shared platform or vendor metadata is clearly dominating the surrounding logs rather than acting as minor context.",
                   "Bulky repeated Kubernetes labels, annotations, and repeated scope metadata together are a `high` shared-enrichment-noise pattern, not merely `medium`."
                 ],
@@ -3494,7 +3154,7 @@
                 "kind": "field_path_list",
                 "summary": "Concrete shared paths that materially increase cost or clutter across this service's logs.",
                 "mental_model": "Use concrete shared paths under `resource_attributes` or `scope_attributes` that materially increase cost or clutter.",
-                "tweaks": [
+                "refinements": [
                   "When one nested shared object is the real clutter source, prefer the smallest concrete object path that captures that group.",
                   "When repeated instrumentation scope metadata materially contributes to shared clutter, include the concrete scope path such as `scope_attributes.otel.scope.name` in `expensive_shared_paths` instead of listing only resource metadata.",
                   "When bulky Kubernetes label or annotation objects repeat across the service's logs, include those exact shared object paths rather than flattening to individual leaves.",

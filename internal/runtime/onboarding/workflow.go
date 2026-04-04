@@ -18,8 +18,8 @@ type Workflow struct {
 	preferences preferences.PreferenceService
 	orgs        tenancy.OrganizationService
 	accounts    func(organizationID tenancy.OrganizationID) tenancy.AccountService
-	workspaces  tenancy.WorkspaceService
-	datadog     integrations.DatadogService
+	workspaces  func(accountID tenancy.AccountID) tenancy.WorkspaceService
+	datadog     func(accountID tenancy.AccountID) integrations.DatadogService
 	readiness   readinessReader
 
 	mu    sync.Mutex
@@ -31,8 +31,8 @@ func NewWorkflow(
 	preferences preferences.PreferenceService,
 	orgs tenancy.OrganizationService,
 	accounts func(organizationID tenancy.OrganizationID) tenancy.AccountService,
-	workspaces tenancy.WorkspaceService,
-	datadog integrations.DatadogService,
+	workspaces func(accountID tenancy.AccountID) tenancy.WorkspaceService,
+	datadog func(accountID tenancy.AccountID) integrations.DatadogService,
 	readiness readinessReader,
 ) *Workflow {
 	if preferences == nil {
@@ -106,7 +106,7 @@ func (w *Workflow) projectState(ctx context.Context, pref preferences.Snapshot) 
 		return state, nil
 	}
 
-	workspaces, err := w.workspaces.ListByAccount(ctx, state.SelectedAccount.ID)
+	workspaces, err := w.workspaces(state.SelectedAccount.ID).List(ctx)
 	if err != nil {
 		return state, err
 	}
@@ -117,13 +117,14 @@ func (w *Workflow) projectState(ctx context.Context, pref preferences.Snapshot) 
 		return state, nil
 	}
 
-	ddAccount, err := w.datadog.GetByAccount(ctx, state.SelectedAccount.ID)
+	ddSvc := w.datadog(state.SelectedAccount.ID)
+	ddAccount, err := ddSvc.Get(ctx)
 	if err != nil {
 		return state, err
 	}
 	state.DatadogAccount = ddAccount
 	if ddAccount != nil {
-		status, err := w.datadog.Status(ctx, ddAccount.ID)
+		status, err := ddSvc.Status(ctx, ddAccount.ID)
 		if err != nil {
 			return state, err
 		}

@@ -6,38 +6,34 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/usetero/cli/internal/domains/tenancy"
 	controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
 	"github.com/usetero/cli/internal/infrastructure/controlplane/api/apitest"
 )
 
 func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
 	svc := NewRemoteDatadogService(&apitest.Client{})
-	if _, err := svc.GetByAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
-		t.Fatalf("expected account id validation error, got %v", err)
-	}
 	if _, _, err := svc.ValidateAPIKey(context.Background(), DatadogAPIKeyValidation{APIKey: DatadogAPIKey("key")}); err == nil || !strings.Contains(err.Error(), "datadog site is required") {
 		t.Fatalf("expected site validation error, got %v", err)
 	}
 	if _, _, err := svc.ValidateAPIKey(context.Background(), DatadogAPIKeyValidation{Site: DatadogSiteUS1}); err == nil || !strings.Contains(err.Error(), "api key is required") {
 		t.Fatalf("expected api key validation error, got %v", err)
 	}
-	if _, err := svc.Create(context.Background(), DatadogAccountCreate{}); err == nil || !strings.Contains(err.Error(), "account id is required") {
-		t.Fatalf("expected account id validation error, got %v", err)
+	if _, err := svc.Create(context.Background(), DatadogAccountCreate{}); err == nil || !strings.Contains(err.Error(), "datadog account name is required") {
+		t.Fatalf("expected name validation error, got %v", err)
 	}
 	if _, err := svc.Status(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "datadog account id is required") {
 		t.Fatalf("expected datadog account id validation error, got %v", err)
 	}
 
 	mock := &apitest.Client{
-		GetAccountDatadogAccountFn: func(context.Context, controlplane.AccountID) (*controlplane.DatadogAccount, error) {
+		GetDatadogAccountFn: func(context.Context) (*controlplane.DatadogAccount, error) {
 			return &controlplane.DatadogAccount{ID: "dd_1", Name: "Main", Site: controlplane.DatadogSiteUS1}, nil
 		},
 		ValidateDatadogAPIKeyFn: func(context.Context, string, controlplane.DatadogSite) (bool, string, error) {
 			return true, "", nil
 		},
 		CreateDatadogAccountWithCredentialsFn: func(_ context.Context, input controlplane.CreateDatadogAccountInput) (controlplane.DatadogAccount, error) {
-			if input.AccountID != "acc_1" || input.Name != "Main" || input.APIKey != "api" || input.AppKey != "app" {
+			if input.Name != "Main" || input.APIKey != "api" || input.AppKey != "app" {
 				return controlplane.DatadogAccount{}, errors.New("unexpected create input")
 			}
 			return controlplane.DatadogAccount{ID: "dd_new", Name: input.Name, Site: input.Site}, nil
@@ -57,9 +53,9 @@ func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
 	}
 
 	svc = NewRemoteDatadogService(mock)
-	account, err := svc.GetByAccount(context.Background(), tenancy.AccountID("acc_1"))
+	account, err := svc.Get(context.Background())
 	if err != nil {
-		t.Fatalf("get by account: %v", err)
+		t.Fatalf("get datadog account: %v", err)
 	}
 	if account == nil || account.ID != "dd_1" || account.Site != DatadogSiteUS1 {
 		t.Fatalf("unexpected account mapping: %+v", account)
@@ -71,11 +67,10 @@ func TestRemoteDatadogService_MappingAndValidation(t *testing.T) {
 	}
 
 	createdID, err := svc.Create(context.Background(), DatadogAccountCreate{
-		AccountID: "acc_1",
-		Name:      DatadogAccountName("Main"),
-		Site:      DatadogSiteUS1,
-		APIKey:    DatadogAPIKey("api"),
-		AppKey:    DatadogAppKey("app"),
+		Name:   DatadogAccountName("Main"),
+		Site:   DatadogSiteUS1,
+		APIKey: DatadogAPIKey("api"),
+		AppKey: DatadogAppKey("app"),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)

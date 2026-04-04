@@ -1,97 +1,49 @@
-# Documentation
+# The Tero CLI Manual
 
-This directory is a working map for engineers changing the CLI. It is organized
-by the question you are trying to answer, not by package names.
+This folder explains how to work in the CLI repository.
 
-If you are new to the repository, start here and then follow one of the reading
-paths below.
+The code is still the source of truth for exact behavior. The job of this manual
+is different. It should help someone understand the shape of the repository, the
+main architectural boundaries, and the handful of patterns that matter enough to
+be documented.
 
-## What This Repo Is
+This repository is still in active development. New screens and services are
+still being built. That makes it more important to document the stable mental
+models instead of trying to catalog every current surface in detail.
 
-The CLI is a presentation runtime for the Tero control plane. It renders the
-interactive TUI (`internal/interfaces/tui`), exposes direct command surfaces
-(`internal/interfaces/cli`), and keeps terminal interactions responsive
-through runtime and local projection layers backed by PowerSync.
+## How To Read This
 
-Business truth still lives in the control plane. The CLI should present and
-orchestrate that truth, not redefine it.
+If you are new to the repository, read the foundations in order:
 
-## How This Docs Tree Is Organized
+1. `foundations/01-what-this-repo-is.md`
+2. `foundations/02-system-of-understanding.md`
+3. `foundations/03-codebase-map.md`
+4. `foundations/04-data-flow.md`
+5. `foundations/05-hard-rules.md`
 
-- `architecture/`: system shape, boundaries, and non-negotiable flow rules.
-- `domains/`: ownership and invariants for concrete product flows (for example onboarding).
-- `interfaces/`: contracts by user surface (`tui`, `cli`, `mcp`).
-- `operations/`: practical debugging, logging, observability, and testing workflows.
-- `reference/`: stable conventions referenced from multiple docs.
-- `specs/`: focused audits and temporary design/test artifacts.
-- `meta/`: standards for writing/maintaining documentation in this repo.
+That sequence is meant to get you oriented quickly. It starts with what this
+repository is responsible for, then explains the product model behind it, then
+shows how that model appears in the code.
 
-## Read By Intent
+If you already understand the system and need implementation guidance, go to the
+pattern docs.
 
-### I need the big picture before I touch code
+## How The Docs Are Organized
 
-- [architecture/README.md](architecture/README.md)
-- [architecture/system-overview.md](architecture/system-overview.md)
-- [architecture/data-flow.md](architecture/data-flow.md)
-- [architecture/runtime-architecture.md](architecture/runtime-architecture.md)
-- [architecture/ui-runtime.md](architecture/ui-runtime.md)
-- [architecture/ui-messages.md](architecture/ui-messages.md)
-- [architecture/ui-layout.md](architecture/ui-layout.md)
-- [architecture/theme-and-chrome.md](architecture/theme-and-chrome.md)
+- `foundations/` is the top-to-bottom introduction to the repository.
+- `patterns/` captures recurring implementation rules that keep the codebase
+  manageable.
+- `meta/` defines how docs and `AGENTS.md` files should be maintained.
 
-### I am changing onboarding/bootstrap behavior
+## What Belongs Here
 
-- [domains/onboarding-bootstrap.md](domains/onboarding-bootstrap.md)
-- [interfaces/tui.md](interfaces/tui.md)
-- [operations/testing.md](operations/testing.md)
-- [operations/debugging.md](operations/debugging.md)
+This manual should explain:
 
-### I am changing chat behavior or lifecycle semantics
+- what the CLI owns and what it does not own,
+- where truth lives,
+- why local runtime and local data exist,
+- how the major packages relate to one another,
+- which patterns are important enough to defend explicitly.
 
-- [domains/chat.md](domains/chat.md)
-- [interfaces/tui.md](interfaces/tui.md)
-- [operations/testing.md](operations/testing.md)
-- [specs/chat-test-audit.md](specs/chat-test-audit.md)
-
-### I am changing status bar tabs or drawer behavior
-
-- [domains/statusbar.md](domains/statusbar.md)
-- [interfaces/tui.md](interfaces/tui.md)
-- [operations/testing.md](operations/testing.md)
-- [operations/debugging.md](operations/debugging.md)
-
-### I am adding or modifying a CLI command
-
-- [interfaces/cli.md](interfaces/cli.md)
-- [architecture/system-overview.md](architecture/system-overview.md)
-- [operations/testing.md](operations/testing.md)
-
-### I am debugging runtime issues
-
-- [operations/debugging.md](operations/debugging.md)
-- [operations/observability.md](operations/observability.md)
-- [operations/logging.md](operations/logging.md)
-- [reference/toasts.md](reference/toasts.md)
-
-## Code Entry Points (Quick Map)
-
-Use these paths when docs and code should be read together:
-
-- `cmd/tero/main.go`: executable entrypoint.
-- `internal/interfaces/cli/execute.go`: config resolution and surface selection.
-- `internal/interfaces/tui/app.go`: TUI composition and startup.
-- `internal/interfaces/tui/root/`: root Bubble Tea shell.
-- `internal/interfaces/tui/screens/onboarding/`: onboarding flow orchestration and steps.
-- `internal/runtime/onboarding/`: deterministic onboarding projection and progression.
-- `internal/runtime/session/`: account-scoped long-running runtime.
-- `internal/infrastructure/controlplane/api/`: control-plane GraphQL client.
-- `internal/infrastructure/powersync/`: sync lifecycle and projection pipeline.
-- `internal/domains/`: typed business operations and contracts.
-
-## Documentation Quality Bar
-
-A doc in this repo is good if it helps an engineer build the right mental model,
-predict non-happy-path behavior, understand what must not be broken, and find
-the right code entrypoints quickly.
-
-If a page is only a checklist of files/commands, it is incomplete.
+It should not try to mirror the whole tree or become a second source of truth
+for implementation details.

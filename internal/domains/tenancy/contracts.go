@@ -8,7 +8,7 @@ var (
 	_ WorkspaceService    = (*RemoteWorkspaceService)(nil)
 	_ OrganizationService = (*RemoteOrganizationService)(nil)
 
-	_ remoteAccountClient      = (*controlplane.Client)(nil)
-	_ remoteWorkspaceClient    = (*controlplane.Client)(nil)
-	_ remoteOrganizationClient = (*controlplane.Client)(nil)
+	_ remoteAccountClient      = (*controlplane.BootstrapClient)(nil)
+	_ remoteWorkspaceClient    = (*controlplane.AccountClient)(nil)
+	_ remoteOrganizationClient = (*controlplane.BootstrapClient)(nil)
 )

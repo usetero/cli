@@ -6,9 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/usetero/cli/internal/infrastructure/powersync/extension"
-	"github.com/usetero/cli/internal/infrastructure/sqlite"
 )
 
 func main() {
@@ -21,41 +18,29 @@ func main() {
 func run() error {
 	ctx := context.Background()
 
-	if err := extension.Register(); err != nil {
-		return fmt.Errorf("register powersync extension: %w", err)
-	}
-
-	tmpDir, err := os.MkdirTemp("", "tero-generate-*")
-	if err != nil {
-		return fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	dbPath := filepath.Join(tmpDir, "generate.db")
-	db, err := sqlite.OpenBare(ctx, dbPath)
-	if err != nil {
-		return fmt.Errorf("open database: %w", err)
-	}
-	defer db.Close()
-
-	if err := extension.ApplySchema(ctx, db); err != nil {
-		return fmt.Errorf("apply embedded powersync schema: %w", err)
-	}
-
 	repoRoot, err := findRepoRoot()
 	if err != nil {
 		return err
 	}
+	controlPlaneRoot, err := findControlPlaneRoot(repoRoot)
+	if err != nil {
+		return err
+	}
 
-	authoredSchemaPath := filepath.Join(filepath.Dir(repoRoot), "control-plane", "internal", "infra", "powersync", "schema.sql")
+	authoredSchemaPath := filepath.Join(controlPlaneRoot, "internal", "infra", "powersync", "schema.sql")
 	schemaSQL, err := os.ReadFile(authoredSchemaPath)
 	if err != nil {
 		return fmt.Errorf("read control-plane powersync schema %s: %w", authoredSchemaPath, err)
 	}
-	authoredJSONBSchemaPath := filepath.Join(filepath.Dir(repoRoot), "control-plane", "internal", "infra", "powersync", "jsonb_schema.json")
+	authoredJSONBSchemaPath := filepath.Join(controlPlaneRoot, "internal", "infra", "powersync", "jsonb_schema.json")
 	jsonbSchema, err := os.ReadFile(authoredJSONBSchemaPath)
 	if err != nil {
 		return fmt.Errorf("read control-plane powersync jsonb schema %s: %w", authoredJSONBSchemaPath, err)
+	}
+	authoredPowerSyncSchemaPath := filepath.Join(controlPlaneRoot, "internal", "infra", "powersync", "powersync_schema.json")
+	powerSyncSchema, err := os.ReadFile(authoredPowerSyncSchemaPath)
+	if err != nil {
+		return fmt.Errorf("read control-plane powersync schema artifact %s: %w", authoredPowerSyncSchemaPath, err)
 	}
 
 	outputDir := filepath.Join(repoRoot, "internal", "infrastructure", "sqlite")
@@ -66,6 +51,10 @@ func run() error {
 	jsonbSchemaPath := filepath.Join(outputDir, "jsonb_schema.json")
 	if err := os.WriteFile(jsonbSchemaPath, jsonbSchema, 0o644); err != nil {
 		return fmt.Errorf("write jsonb_schema.json: %w", err)
+	}
+	powerSyncSchemaPath := filepath.Join(outputDir, "powersync_schema.json")
+	if err := os.WriteFile(powerSyncSchemaPath, powerSyncSchema, 0o644); err != nil {
+		return fmt.Errorf("write powersync_schema.json: %w", err)
 	}
 
 	if err := generateJSONBTypes(repoRoot, jsonbSchema); err != nil {
@@ -78,6 +67,7 @@ func run() error {
 
 	fmt.Printf("Wrote %s\n", schemaPath)
 	fmt.Printf("Wrote %s\n", jsonbSchemaPath)
+	fmt.Printf("Wrote %s\n", powerSyncSchemaPath)
 	return nil
 }
 
@@ -105,4 +95,17 @@ func findRepoRoot() (string, error) {
 		}
 		dir = parent
 	}
+}
+
+func findControlPlaneRoot(repoRoot string) (string, error) {
+	if override := os.Getenv("TERO_CONTROL_PLANE_ROOT"); override != "" {
+		return override, nil
+	}
+
+	controlPlaneRoot := filepath.Join(filepath.Dir(repoRoot), "control-plane")
+	if _, err := os.Stat(filepath.Join(controlPlaneRoot, "go.mod")); err == nil {
+		return controlPlaneRoot, nil
+	}
+
+	return "", fmt.Errorf("could not find control-plane repo; set TERO_CONTROL_PLANE_ROOT")
 }

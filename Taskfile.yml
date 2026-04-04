@@ -58,9 +58,8 @@ tasks:
         '
 
   generate:schema:
-    desc: Generate PowerSync schema.json and copy the authored SQLite schema/jsonb schema/sqlc
+    desc: Copy canonical control-plane schema artifacts into sqlite and regenerate local bindings
     cmds:
-      - ./scripts/with-env.sh go generate ./internal/infrastructure/powersync/extension
       - ./scripts/with-env.sh go generate ./internal/infrastructure/sqlite
       - cp internal/infrastructure/sqlite/schema.sql internal/domains/chat/tools/query_schema.sql
 

@@ -14,9 +14,9 @@ type Client struct {
 	ListAccountsFn                        func(ctx context.Context, organizationID controlplane.OrganizationID) ([]controlplane.Account, error)
 	CreateAccountFn                       func(ctx context.Context, organizationID controlplane.OrganizationID, name string) (controlplane.Account, error)
 	DeleteAccountFn                       func(ctx context.Context, accountID controlplane.AccountID) error
-	ListWorkspacesFn                      func(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error)
+	ListWorkspacesFn                      func(ctx context.Context) ([]controlplane.Workspace, error)
 	DeleteWorkspaceFn                     func(ctx context.Context, workspaceID controlplane.WorkspaceID) error
-	GetAccountDatadogAccountFn            func(ctx context.Context, accountID controlplane.AccountID) (*controlplane.DatadogAccount, error)
+	GetDatadogAccountFn                   func(ctx context.Context) (*controlplane.DatadogAccount, error)
 	ValidateDatadogAPIKeyFn               func(ctx context.Context, apiKey string, site controlplane.DatadogSite) (bool, string, error)
 	CreateDatadogAccountWithCredentialsFn func(ctx context.Context, input controlplane.CreateDatadogAccountInput) (controlplane.DatadogAccount, error)
 	GetDatadogAccountStatusFn             func(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
@@ -29,9 +29,9 @@ var _ interface {
 	ListAccounts(ctx context.Context, organizationID controlplane.OrganizationID) ([]controlplane.Account, error)
 	CreateAccount(ctx context.Context, organizationID controlplane.OrganizationID, name string) (controlplane.Account, error)
 	DeleteAccount(ctx context.Context, accountID controlplane.AccountID) error
-	ListWorkspaces(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error)
+	ListWorkspaces(ctx context.Context) ([]controlplane.Workspace, error)
 	DeleteWorkspace(ctx context.Context, workspaceID controlplane.WorkspaceID) error
-	GetAccountDatadogAccount(ctx context.Context, accountID controlplane.AccountID) (*controlplane.DatadogAccount, error)
+	GetDatadogAccount(ctx context.Context) (*controlplane.DatadogAccount, error)
 	ValidateDatadogAPIKey(ctx context.Context, apiKey string, site controlplane.DatadogSite) (bool, string, error)
 	CreateDatadogAccountWithCredentials(ctx context.Context, input controlplane.CreateDatadogAccountInput) (controlplane.DatadogAccount, error)
 	GetDatadogAccountStatus(ctx context.Context, datadogAccountID controlplane.DatadogAccountID) (*controlplane.DatadogAccountStatus, error)
@@ -83,11 +83,11 @@ func (c *Client) DeleteAccount(ctx context.Context, accountID controlplane.Accou
 	return c.DeleteAccountFn(ctx, accountID)
 }
 
-func (c *Client) ListWorkspaces(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error) {
+func (c *Client) ListWorkspaces(ctx context.Context) ([]controlplane.Workspace, error) {
 	if c.ListWorkspacesFn == nil {
 		return nil, nil
 	}
-	return c.ListWorkspacesFn(ctx, accountID)
+	return c.ListWorkspacesFn(ctx)
 }
 
 func (c *Client) DeleteWorkspace(ctx context.Context, workspaceID controlplane.WorkspaceID) error {
@@ -97,11 +97,11 @@ func (c *Client) DeleteWorkspace(ctx context.Context, workspaceID controlplane.W
 	return c.DeleteWorkspaceFn(ctx, workspaceID)
 }
 
-func (c *Client) GetAccountDatadogAccount(ctx context.Context, accountID controlplane.AccountID) (*controlplane.DatadogAccount, error) {
-	if c.GetAccountDatadogAccountFn == nil {
+func (c *Client) GetDatadogAccount(ctx context.Context) (*controlplane.DatadogAccount, error) {
+	if c.GetDatadogAccountFn == nil {
 		return nil, nil
 	}
-	return c.GetAccountDatadogAccountFn(ctx, accountID)
+	return c.GetDatadogAccountFn(ctx)
 }
 
 func (c *Client) ValidateDatadogAPIKey(ctx context.Context, apiKey string, site controlplane.DatadogSite) (bool, string, error) {

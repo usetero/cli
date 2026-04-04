@@ -79,6 +79,33 @@ func TestGetAccessToken_RefreshesExpired(t *testing.T) {
 	}
 }
 
+func TestGetAccessToken_SessionExpiredClearsTokensAndReturnsNotAuthenticated(t *testing.T) {
+	t.Parallel()
+
+	store := &identitytest.TokenStore{
+		AccessTokenValue:  identity.AccessToken(makeJWT(time.Now().Add(-1 * time.Minute))),
+		RefreshTokenValue: identity.RefreshToken("refresh_1"),
+	}
+
+	s := identity.NewService(identitytest.Provider{
+		StartDeviceAuthFn: func(context.Context) (identity.DeviceFlow, error) { return identity.DeviceFlow{}, nil },
+		PollAuthenticationFn: func(context.Context, string) (identity.Tokens, identity.User, error) {
+			return identity.Tokens{}, identity.User{}, nil
+		},
+		RefreshFn: func(context.Context, identity.RefreshToken, identity.ProviderOrgID) (identity.Tokens, error) {
+			return identity.Tokens{}, identity.ErrSessionExpired
+		},
+	}, store, identity.NopLogger{})
+
+	_, err := s.GetAccessToken(context.Background())
+	if !errors.Is(err, identity.ErrNotAuthenticated) {
+		t.Fatalf("expected ErrNotAuthenticated, got %v", err)
+	}
+	if store.AccessTokenValue != "" || store.RefreshTokenValue != "" {
+		t.Fatalf("expected tokens to be cleared, got access=%q refresh=%q", store.AccessTokenValue, store.RefreshTokenValue)
+	}
+}
+
 func TestRefreshForOrganization(t *testing.T) {
 	t.Parallel()
 

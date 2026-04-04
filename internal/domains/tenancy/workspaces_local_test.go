@@ -16,10 +16,10 @@ func openTenancyTestDB(t *testing.T) *sqlite.DB {
 
 func TestLocalWorkspaceService_CRUD(t *testing.T) {
 	db := openTenancyTestDB(t)
-	workspaceSvc := NewLocalWorkspaceService(db.Raw())
 	accountID := AccountID("acc_1")
+	workspaceSvc := NewLocalWorkspaceService(db.Raw(), accountID)
 
-	workspaceID, err := workspaceSvc.Create(context.Background(), WorkspaceCreate{AccountID: accountID, Name: "Default"})
+	workspaceID, err := workspaceSvc.Create(context.Background(), WorkspaceCreate{Name: "Default"})
 	if err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestLocalWorkspaceService_CRUD(t *testing.T) {
 		t.Fatalf("expected non-empty workspace id")
 	}
 
-	workspaces, err := workspaceSvc.ListByAccount(context.Background(), accountID)
+	workspaces, err := workspaceSvc.List(context.Background())
 	if err != nil {
 		t.Fatalf("list workspaces: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestLocalWorkspaceService_CRUD(t *testing.T) {
 	if err := workspaceSvc.Delete(context.Background(), workspaceID); err != nil {
 		t.Fatalf("delete workspace: %v", err)
 	}
-	workspaces, err = workspaceSvc.ListByAccount(context.Background(), accountID)
+	workspaces, err = workspaceSvc.List(context.Background())
 	if err != nil {
 		t.Fatalf("list after delete: %v", err)
 	}
@@ -52,16 +52,10 @@ func TestLocalWorkspaceService_CRUD(t *testing.T) {
 
 func TestLocalWorkspaceService_ValidationAndUninitialized(t *testing.T) {
 	db := openTenancyTestDB(t)
-	svc := NewLocalWorkspaceService(db.Raw())
+	svc := NewLocalWorkspaceService(db.Raw(), "acc_1")
 
-	if _, err := svc.Create(context.Background(), WorkspaceCreate{Name: "Default"}); err == nil || !strings.Contains(err.Error(), "account id is required") {
-		t.Fatalf("expected account id validation error, got %v", err)
-	}
-	if _, err := svc.Create(context.Background(), WorkspaceCreate{AccountID: "acc_1"}); err == nil || !strings.Contains(err.Error(), "workspace name is required") {
+	if _, err := svc.Create(context.Background(), WorkspaceCreate{}); err == nil || !strings.Contains(err.Error(), "workspace name is required") {
 		t.Fatalf("expected workspace name validation error, got %v", err)
-	}
-	if _, err := svc.ListByAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
-		t.Fatalf("expected account id validation on list, got %v", err)
 	}
 	if err := svc.Delete(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
 		t.Fatalf("expected workspace id validation error, got %v", err)

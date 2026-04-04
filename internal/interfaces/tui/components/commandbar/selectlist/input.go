@@ -1,8 +1,12 @@
 package selectlist
 
-import "charm.land/bubbles/v2/key"
+import (
+	"charm.land/bubbles/v2/key"
+	baselist "github.com/usetero/cli/internal/interfaces/tui/components/selectlist"
+)
 
-// ShortHelp satisfies the shared TUI model contract.
+func SelectBinding() key.Binding { return baselist.SelectBinding() }
+
 func (m *Model) ShortHelp() []key.Binding {
-	return []key.Binding{upBinding, downBinding, selectBinding}
+	return m.list.ShortHelp()
 }

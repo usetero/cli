@@ -21,10 +21,8 @@ func newOnboardingWorkflow(exec *runner, identityService *identity.Service) (*ru
 	}
 
 	prefs := domainprefs.NewService(store)
-	client := controlplane.NewClient(exec.cfg.API.Origin, identityService)
+	client := controlplane.NewBootstrapClient(exec.cfg.API.Origin, identityService)
 	orgs := tenancy.NewRemoteOrganizationService(client)
-	workspaces := tenancy.NewRemoteWorkspaceService(client)
-	datadog := integrations.NewRemoteDatadogService(client)
 
 	return runtimeonboarding.NewWorkflow(
 		prefs,
@@ -32,8 +30,20 @@ func newOnboardingWorkflow(exec *runner, identityService *identity.Service) (*ru
 		func(organizationID tenancy.OrganizationID) tenancy.AccountService {
 			return tenancy.NewRemoteAccountService(client, organizationID)
 		},
-		workspaces,
-		datadog,
+		func(accountID tenancy.AccountID) tenancy.WorkspaceService {
+			accountClient, err := client.ForAccount(controlplane.AccountID(accountID))
+			if err != nil {
+				panic(err)
+			}
+			return tenancy.NewRemoteWorkspaceService(accountClient, accountID)
+		},
+		func(accountID tenancy.AccountID) integrations.DatadogService {
+			accountClient, err := client.ForAccount(controlplane.AccountID(accountID))
+			if err != nil {
+				panic(err)
+			}
+			return integrations.NewRemoteDatadogService(accountClient)
+		},
 		nil,
 	), nil
 }

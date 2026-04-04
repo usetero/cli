@@ -9,19 +9,23 @@ import (
 
 type remoteWorkspaceClient interface {
 	DeleteWorkspace(ctx context.Context, workspaceID controlplane.WorkspaceID) error
-	ListWorkspaces(ctx context.Context, accountID controlplane.AccountID) ([]controlplane.Workspace, error)
+	ListWorkspaces(ctx context.Context) ([]controlplane.Workspace, error)
 }
 
 // RemoteWorkspaceService uses control-plane API for workspace operations.
 type RemoteWorkspaceService struct {
-	client remoteWorkspaceClient
+	client    remoteWorkspaceClient
+	accountID AccountID
 }
 
-func NewRemoteWorkspaceService(client remoteWorkspaceClient) *RemoteWorkspaceService {
+func NewRemoteWorkspaceService(client remoteWorkspaceClient, accountID AccountID) *RemoteWorkspaceService {
 	if client == nil {
 		panic("tenancy remote workspace service requires client")
 	}
-	return &RemoteWorkspaceService{client: client}
+	if accountID == "" {
+		panic("tenancy remote workspace service requires account id")
+	}
+	return &RemoteWorkspaceService{client: client, accountID: accountID}
 }
 
 func (s *RemoteWorkspaceService) Create(_ context.Context, _ WorkspaceCreate) (WorkspaceID, error) {
@@ -35,19 +39,15 @@ func (s *RemoteWorkspaceService) Delete(ctx context.Context, id WorkspaceID) err
 	return s.client.DeleteWorkspace(ctx, toControlPlaneWorkspaceID(id))
 }
 
-func (s *RemoteWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {
-	if accountID == "" {
-		return nil, fmt.Errorf("account id is required")
-	}
-
-	rows, err := s.client.ListWorkspaces(ctx, toControlPlaneAccountID(accountID))
+func (s *RemoteWorkspaceService) List(ctx context.Context) ([]Workspace, error) {
+	rows, err := s.client.ListWorkspaces(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]Workspace, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, fromControlPlaneWorkspace(row, accountID))
+		out = append(out, fromControlPlaneWorkspace(row, s.accountID))
 	}
 	return out, nil
 }

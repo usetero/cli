@@ -58,12 +58,12 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch typed := msg.(type) {
 	case tea.KeyPressMsg:
-		if m.phase == phaseIdle && key.Matches(typed, startBinding) {
+		if m.phase == phaseIdle && typed.Code == tea.KeyEnter {
 			m.phase = phaseStarting
 			m.err = nil
 			return m, m.startDeviceFlow()
 		}
-		if m.phase == phaseFailed && key.Matches(typed, retryBinding) {
+		if m.phase == phaseFailed && typed.Code == tea.KeyEnter {
 			if m.browserURL() == "" {
 				m.phase = phaseStarting
 				m.err = nil

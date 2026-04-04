@@ -13,8 +13,17 @@ func (m *Model) ShortHelp() []key.Binding {
 }
 
 func (m *Model) Input() *core.Input {
+	if m.loadErr != nil {
+		return &core.Input{
+			Kind:   core.InputConfirm,
+			Action: "Retry",
+		}
+	}
 	if m.loading || m.busy != nil {
-		return &core.Input{Label: "Loading onboarding..."}
+		return nil
+	}
+	if m.Router.Busy() != nil || m.Router.Error() != nil {
+		return nil
 	}
 	if input := m.Router.Input(); input != nil {
 		return input

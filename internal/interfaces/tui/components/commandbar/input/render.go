@@ -10,6 +10,8 @@ import (
 	"github.com/usetero/cli/internal/interfaces/tui/ui/present"
 )
 
+const inputPadX = 1
+
 // SetSize satisfies the shared TUI model contract.
 func (m *Model) SetSize(width, _ int) {
 	if width < 0 {
@@ -32,7 +34,14 @@ func (m *Model) View() tea.View {
 			Background(m.theme.Background).
 			Render(m.placeholder)
 	} else {
-		content = m.textarea.View()
+		if m.secret {
+			content = lipgloss.NewStyle().
+				Foreground(m.theme.Palette.Text).
+				Background(m.theme.Background).
+				Render(strings.Repeat("•", len([]rune(m.textarea.Value()))))
+		} else {
+			content = m.textarea.View()
+		}
 
 		r, g, b, _ := m.theme.Background.RGBA()
 		bgSeq := fmt.Sprintf("\033[48;2;%d;%d;%dm", r>>8, g>>8, b>>8)
@@ -44,10 +53,18 @@ func (m *Model) View() tea.View {
 	}
 
 	lines := strings.Split(content, "\n")
+	visibleLines := m.visibleLines()
 	for len(lines) < visibleLines {
-		lines = append(lines, "")
+		lines = append(lines, " ")
 	}
 	content = strings.Join(lines[:visibleLines], "\n")
 
-	return tea.NewView(present.Panel(m.theme, m.width, content))
+	return tea.NewView(
+		lipgloss.NewStyle().
+			Width(present.PanelInnerWidth(m.width)).
+			Padding(0, inputPadX).
+			Background(m.theme.Background).
+			Foreground(m.theme.Palette.Text).
+			Render(content),
+	)
 }

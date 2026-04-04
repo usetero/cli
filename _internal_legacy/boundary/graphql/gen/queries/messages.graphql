@@ -1,9 +1,0 @@
-mutation CreateMessage($input: CreateMessageInput!) {
-    createMessage(input: $input) {
-        id
-        role
-        model
-        stopReason
-        createdAt
-    }
-}

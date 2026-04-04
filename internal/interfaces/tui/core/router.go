@@ -49,6 +49,30 @@ func (r *Router) View() tea.View {
 	return r.active.View()
 }
 
+// Page returns the active child's page metadata.
+func (r *Router) Page() Page {
+	if r.active == nil {
+		return Page{}
+	}
+	provider, ok := r.active.(PageProvider)
+	if !ok {
+		return Page{}
+	}
+	return provider.Page()
+}
+
+// Commands returns the active child's available shell commands.
+func (r *Router) Commands() []Command {
+	if r.active == nil {
+		return nil
+	}
+	provider, ok := r.active.(CommandProvider)
+	if !ok {
+		return nil
+	}
+	return provider.Commands()
+}
+
 // SetSize forwards layout to the active child only.
 func (r *Router) SetSize(width, height int) {
 	if r.active == nil {
@@ -91,4 +115,28 @@ func (r *Router) Busy() *Busy {
 		return nil
 	}
 	return provider.Busy()
+}
+
+// Error returns the active child's error state.
+func (r *Router) Error() *Error {
+	if r.active == nil {
+		return nil
+	}
+	provider, ok := r.active.(ErrorProvider)
+	if !ok {
+		return nil
+	}
+	return provider.Error()
+}
+
+// Notice returns the active child's inline notice state.
+func (r *Router) Notice() *Notice {
+	if r.active == nil {
+		return nil
+	}
+	provider, ok := r.active.(NoticeProvider)
+	if !ok {
+		return nil
+	}
+	return provider.Notice()
 }

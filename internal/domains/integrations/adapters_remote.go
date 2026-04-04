@@ -1,13 +1,6 @@
 package integrations
 
-import (
-	"github.com/usetero/cli/internal/domains/tenancy"
-	controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
-)
-
-func toControlPlaneAccountID(id tenancy.AccountID) controlplane.AccountID {
-	return controlplane.AccountID(id)
-}
+import controlplane "github.com/usetero/cli/internal/infrastructure/controlplane/api"
 
 func toControlPlaneDatadogAccountID(id DatadogAccountID) controlplane.DatadogAccountID {
 	return controlplane.DatadogAccountID(id)
@@ -19,11 +12,10 @@ func toControlPlaneDatadogSite(site DatadogSite) controlplane.DatadogSite {
 
 func toControlPlaneCreateDatadogAccountInput(input DatadogAccountCreate) controlplane.CreateDatadogAccountInput {
 	return controlplane.CreateDatadogAccountInput{
-		AccountID: toControlPlaneAccountID(input.AccountID),
-		Name:      input.Name.String(),
-		Site:      toControlPlaneDatadogSite(input.Site),
-		APIKey:    input.APIKey.String(),
-		AppKey:    input.AppKey.String(),
+		Name:   input.Name.String(),
+		Site:   toControlPlaneDatadogSite(input.Site),
+		APIKey: input.APIKey.String(),
+		AppKey: input.AppKey.String(),
 	}
 }
 

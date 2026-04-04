@@ -228,11 +228,6 @@ CREATE TABLE findings (
     -- $.outcome                      string     - Durable outcome associated with the reactive flood behavior.
     -- $.peer_label                   string     - Named peer label involved in the reactive interaction when one is known.
     -- 
-    -- Variant: redundant
-    -- Fields:
-    -- $.event_name                   string     - Log event name identified as redundant.
-    -- $.context_level                string     - Context level where the redundant information already exists.
-    -- 
     -- Variant: routine_system_chatter
     -- Fields:
     -- $.event_name                   string     - Log event name identified as routine system chatter.
@@ -306,23 +301,15 @@ CREATE TABLE log_event_facts (
     -- $.execution_correlation_keys[] string[]   - The canonical execution or work-unit correlation keys observed in structure analysis.
     -- $.gaps[]                       string[]   - Meaningful structural gaps observed during structure analysis. Values: empty_capture=No usable records were available for structure analysis.; missing_stream_partitions=Expected stream partitioning was not visible.; missing_execution_grouping=Expected execution grouping was not visible..
     -- 
-    -- Variant: structural + event_context_profile
-    -- Stores the sampled event examples and nearby local evidence captured at fingerprint time for one event.
-    -- Fields:
-    -- $.examples[]                   object[]   - Sample event records captured for this event family.
-    -- $.context_logs[]               object[]   - Nearby context logs captured around the representative fingerprinting target.
-    -- $.context_level                string     - The normalized selection level used to choose the context logs. Values: trace=trace; request=request; job=job; transaction=transaction; correlation=correlation; thread=thread; process=process; container=container; host=host.
-    -- $.context_field                string     - The exact raw field path that matched when choosing the context logs.
-    -- 
     -- Variant: artifact + event_role_profile
     -- Classifies the event's coarse observability artifact role as signal, marker, debug artifact, or garbled output.
     -- Fields:
     -- $.role                         string     - The event's coarse observability role. Values: signal=A readable event, state change, alert, or outcome artifact.; marker=A breadcrumb, checkpoint, or lightweight progress artifact.; debug_artifact=A debug-useful payload artifact such as a request, response, dump, or snapshot emitted inline into logs.; garbled=A malformed or unintelligible artifact..
     -- 
     -- Variant: artifact + emission_template_profile
-    -- Captures the stable emitted template the event follows so downstream systems can reason at the instrumentation-fix boundary rather than only at the semantic event boundary.
+    -- Captures the stable emitted wording this event follows as an instrumentation artifact.
     -- Fields:
-    -- $.template                     string     - A stable emitted template string with descriptive placeholders for variable parts.
+    -- $.template                     string     - The stable emitted wording for this event, with descriptive placeholders for clearly variable slots.
     -- 
     -- Variant: quality + operator_prominence_profile
     -- Captures how prominently the event deserves to appear in a normal operator workflow.
@@ -330,10 +317,9 @@ CREATE TABLE log_event_facts (
     -- $.operator_prominence          string     - How prominently this event deserves to appear in normal operator workflows. Values: none=Implementation-step detail or housekeeping chatter that does not deserve routine operator prominence.; low=Situationally useful proof-of-life, maintenance summary, or routine lifecycle context.; high=Important operator-facing signal about health, failures, coordination, state, or meaningful lifecycle changes..
     -- 
     -- Variant: quality + observability_value_profile
-    -- Captures how much one representative event matters, how much distinct value the target log still adds in local context, and how much extra value the larger collection adds beyond one representative copy.
+    -- Captures how much one representative event matters on its own and how much extra value the larger collection adds beyond one representative copy.
     -- Fields:
     -- $.instance_value               string     - How helpful one representative event instance is on its own. Values: none=One representative instance adds essentially no meaningful observability clue.; low=One representative instance adds a weak but real observability clue.; high=One representative instance is directly valuable on its own..
-    -- $.in_context_value             string     - How much distinct value the target log still adds after reading the local context logs around it. Values: none=The target log adds no meaningful value once local context is visible.; low=The target log adds limited value once local context is visible.; high=The target log still clearly matters once local context is visible..
     -- $.collection_gain              string     - How much additional observability value the larger collection adds beyond one representative instance. Values: none=The larger collection adds essentially no extra value beyond one representative instance.; low=The larger collection adds limited but real extra value beyond one representative instance.; high=The larger collection adds materially important value beyond one representative instance..
     -- 
     -- Variant: quality + level_expectation_profile
@@ -349,10 +335,10 @@ CREATE TABLE log_event_facts (
     -- $.expensive_paths[]            string[][] - Concrete paths that materially increase cost or clutter.
     -- 
     -- Variant: quality + context_completeness_profile
-    -- Captures whether the event carries the correlation identifiers it should have and which concrete required paths are missing.
+    -- Captures whether the event carries the trace and work-unit identifiers that should exist on this event, and names any concrete required paths that are missing.
     -- Fields:
-    -- $.trace_context                string     - Whether distributed trace identifiers are present and complete for this event. Values: complete=Trace context is complete.; partial=Trace context is partially present.; missing=Trace context is missing.; not_applicable=Trace context does not belong on this event shape..
-    -- $.work_unit_context            string     - Whether request, job, workflow, or similar work-unit identifiers are present and complete. Values: complete=Work-unit context is complete.; partial=Work-unit context is partially present.; missing=Work-unit context is missing.; not_applicable=Work-unit context does not belong on this event shape..
+    -- $.trace_context                string     - Whether the event carries the distributed trace identifiers it should have. Values: complete=Trace context is complete.; partial=Trace context is partially present.; missing=Trace context is missing.; not_applicable=Trace context does not belong on this event shape..
+    -- $.work_unit_context            string     - Whether the event carries the concrete request, job, workflow, batch, message, or similar execution identifier it should have. Values: complete=Work-unit context is complete.; partial=Work-unit context is partially present.; missing=Work-unit context is missing.; not_applicable=Work-unit context does not belong on this event shape..
     -- $.missing_required_paths[]     string[][] - Concrete correlation paths that should exist on this event but are missing.
     -- 
     -- Variant: compliance + sensitive_data_profile

@@ -10,6 +10,7 @@ var (
 	ErrSlowDown             = errors.New("slow down")
 	ErrExpiredToken         = errors.New("expired token")
 	ErrAccessDenied         = errors.New("access denied")
+	ErrInvalidGrant         = errors.New("invalid grant")
 )
 
 // APIError describes a non-success non-OAuth response from WorkOS.
@@ -45,6 +46,8 @@ func (e *OAuthError) Unwrap() error {
 		return ErrExpiredToken
 	case "access_denied":
 		return ErrAccessDenied
+	case "invalid_grant":
+		return ErrInvalidGrant
 	default:
 		return nil
 	}

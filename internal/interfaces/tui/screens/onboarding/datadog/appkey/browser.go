@@ -8,6 +8,8 @@ import (
 
 var openBrowser = browser.Open
 
+const teroDatadogPermissionsDocsURL = "https://docs.usetero.com/integrations/datadog#permissions"
+
 type browserOpenedMsg struct {
 	Err error
 }
@@ -19,5 +21,11 @@ func (m *Model) openBrowser() tea.Cmd {
 	url := integrations.DatadogAppKeyURL(m.site)
 	return func() tea.Msg {
 		return browserOpenedMsg{Err: openBrowser(url)}
+	}
+}
+
+func (m *Model) openPermissionsDocs() tea.Cmd {
+	return func() tea.Msg {
+		return browserOpenedMsg{Err: openBrowser(teroDatadogPermissionsDocsURL)}
 	}
 }

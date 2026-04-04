@@ -72,8 +72,8 @@ func RequireLocalRun(t testing.TB, homeDir string) LocalRun {
 	}
 }
 
-func (r LocalRun) APIClient() *controlplane.Client {
-	return controlplane.NewClient(r.apiOrigin, staticTokenProvider(r.accessToken))
+func (r LocalRun) APIClient() *controlplane.BootstrapClient {
+	return controlplane.NewBootstrapClient(r.apiOrigin, staticTokenProvider(r.accessToken))
 }
 
 func (r LocalRun) FindOrganizationID(ctx context.Context, name string) (controlplane.OrganizationID, error) {

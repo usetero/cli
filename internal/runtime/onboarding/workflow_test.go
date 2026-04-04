@@ -1,4 +1,4 @@
-package onboarding
+package onboarding_test
 
 import (
 	"context"
@@ -6,135 +6,29 @@ import (
 	"testing"
 
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/integrations/integrationstest"
 	"github.com/usetero/cli/internal/domains/preferences"
-	"github.com/usetero/cli/internal/domains/preferences/preferencestest"
 	"github.com/usetero/cli/internal/domains/tenancy"
-	"github.com/usetero/cli/internal/domains/tenancy/tenancytest"
-	"github.com/usetero/cli/internal/infrastructure/powersync/syncertest"
+	runtimeonboarding "github.com/usetero/cli/internal/runtime/onboarding"
+	"github.com/usetero/cli/internal/runtime/onboardingtest"
 )
-
-func newTestWorkflow(
-	t *testing.T,
-	pref preferences.Snapshot,
-	orgs []tenancy.Organization,
-	accounts map[tenancy.OrganizationID][]tenancy.Account,
-	workspaces map[tenancy.AccountID][]tenancy.Workspace,
-	datadogByAccount map[tenancy.AccountID]*integrations.DatadogAccount,
-	datadogStatus map[integrations.DatadogAccountID]*integrations.DatadogStatus,
-	ready bool,
-) (*Workflow, *preferencestest.MockService, *integrationstest.MockDatadogService, *int) {
-	t.Helper()
-
-	snapshot := pref
-	setScopeCalls := 0
-	prefs := &preferencestest.MockService{
-		SnapshotFn: func(context.Context) (preferences.Snapshot, error) { return snapshot, nil },
-		SetRoleFn: func(_ context.Context, selection preferences.RoleSelection) error {
-			snapshot.Role = selection.Role
-			return nil
-		},
-		SetOrganizationFn: func(_ context.Context, selection preferences.OrganizationSelection) error {
-			snapshot.Organization = selection.OrganizationID
-			snapshot.Account = ""
-			snapshot.Workspace = ""
-			return nil
-		},
-		SetAccountFn: func(_ context.Context, selection preferences.AccountSelection) error {
-			snapshot.Account = selection.AccountID
-			snapshot.Workspace = ""
-			return nil
-		},
-		SetWorkspaceFn: func(_ context.Context, selection preferences.WorkspaceSelection) error {
-			snapshot.Workspace = selection.WorkspaceID
-			return nil
-		},
-		SetScopeFn: func(_ context.Context, selection preferences.ScopeSelection) error {
-			setScopeCalls++
-			snapshot.Organization = selection.OrganizationID
-			snapshot.Account = selection.AccountID
-			snapshot.Workspace = selection.WorkspaceID
-			return nil
-		},
-	}
-
-	datadog := &integrationstest.MockDatadogService{
-		GetByAccountFn: func(_ context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error) {
-			return datadogByAccount[accountID], nil
-		},
-		ValidateAPIKeyFn: func(context.Context, integrations.DatadogAPIKeyValidation) (bool, string, error) {
-			return true, "", nil
-		},
-		CreateFn: func(_ context.Context, input integrations.DatadogAccountCreate) (integrations.DatadogAccountID, error) {
-			id := integrations.DatadogAccountID("dd_1")
-			datadogByAccount[input.AccountID] = &integrations.DatadogAccount{
-				ID:   id,
-				Name: input.Name.String(),
-				Site: input.Site,
-			}
-			if datadogStatus[id] == nil {
-				datadogStatus[id] = &integrations.DatadogStatus{ReadyForUse: false}
-			}
-			return id, nil
-		},
-		StatusFn: func(_ context.Context, accountID integrations.DatadogAccountID) (*integrations.DatadogStatus, error) {
-			return datadogStatus[accountID], nil
-		},
-	}
-
-	workflow := NewWorkflow(
-		prefs,
-		&tenancytest.MockOrganizationService{
-			ListFn: func(context.Context) ([]tenancy.Organization, error) { return orgs, nil },
-			CreateFn: func(context.Context, tenancy.OrganizationCreate) (tenancy.OrganizationBootstrap, error) {
-				return tenancy.OrganizationBootstrap{
-					Organization: tenancy.Organization{ID: "org_1", Name: "Org 1"},
-					Account:      tenancy.Account{ID: "acct_1", Name: "Account 1"},
-					Workspace:    tenancy.Workspace{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
-				}, nil
-			},
-		},
-		func(orgID tenancy.OrganizationID) tenancy.AccountService {
-			return &tenancytest.MockAccountService{
-				ListFn: func(context.Context) ([]tenancy.Account, error) { return accounts[orgID], nil },
-				CreateFn: func(context.Context, tenancy.AccountCreate) (tenancy.AccountID, error) {
-					return "acct_new", nil
-				},
-			}
-		},
-		&tenancytest.MockWorkspaceService{
-			ListByAccountFn: func(_ context.Context, accountID tenancy.AccountID) ([]tenancy.Workspace, error) {
-				return workspaces[accountID], nil
-			},
-		},
-		datadog,
-		syncertest.MockReadinessService{
-			ReadyFn: func(context.Context) (bool, error) { return ready, nil },
-		},
-	)
-
-	return workflow, prefs, datadog, &setScopeCalls
-}
 
 func TestWorkflow_CreateOrganizationAppliesBootstrapScope(t *testing.T) {
 	t.Parallel()
 
-	workflow, _, _, setScopeCalls := newTestWorkflow(
-		t,
-		preferences.Snapshot{},
-		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
-		map[tenancy.OrganizationID][]tenancy.Account{
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot:      preferences.Snapshot{},
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
 		},
-		map[tenancy.AccountID][]tenancy.Workspace{
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
 			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
 		},
-		map[tenancy.AccountID]*integrations.DatadogAccount{},
-		map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
-		false,
-	)
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{},
+		DatadogStatus:    map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+	})
 
-	state, err := workflow.CreateOrganization(context.Background(), tenancy.OrganizationCreate{Name: "Org 1"})
+	state, err := h.Workflow.CreateOrganization(context.Background(), tenancy.OrganizationCreate{Name: "Org 1"})
 	if err != nil {
 		t.Fatalf("CreateOrganization() error = %v", err)
 	}
@@ -147,66 +41,165 @@ func TestWorkflow_CreateOrganizationAppliesBootstrapScope(t *testing.T) {
 	if state.SelectedWorkspace == nil || state.SelectedWorkspace.ID != "ws_1" {
 		t.Fatalf("expected selected workspace ws_1, got %+v", state.SelectedWorkspace)
 	}
-	if state.NextStep != StepDatadogRegion {
+	if state.NextStep != runtimeonboarding.StepDatadogRegion {
 		t.Fatalf("expected StepDatadogRegion, got %q", state.NextStep)
 	}
-	if *setScopeCalls != 1 {
-		t.Fatalf("expected one SetScope call, got %d", *setScopeCalls)
+	if h.PreferenceStore.SaveCalls != 1 {
+		t.Fatalf("expected one preference save, got %d", h.PreferenceStore.SaveCalls)
+	}
+	if h.PreferenceStore.Snapshot.Organization != "org_1" || h.PreferenceStore.Snapshot.Account != "acct_1" || h.PreferenceStore.Snapshot.Workspace != "ws_1" {
+		t.Fatalf("expected bootstrap scope to be stored, got %+v", h.PreferenceStore.Snapshot)
 	}
 }
 
 func TestWorkflow_IgnoresStaleOrganizationPreference(t *testing.T) {
 	t.Parallel()
 
-	workflow, _, _, _ := newTestWorkflow(
-		t,
-		preferences.Snapshot{Organization: "org_stale"},
-		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}, {ID: "org_2", Name: "Org 2"}},
-		nil,
-		nil,
-		map[tenancy.AccountID]*integrations.DatadogAccount{},
-		map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
-		false,
-	)
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot:         preferences.Snapshot{Organization: "org_stale"},
+		Organizations:    []tenancy.Organization{{ID: "org_1", Name: "Org 1"}, {ID: "org_2", Name: "Org 2"}},
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{},
+		DatadogStatus:    map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+	})
 
-	state, err := workflow.State(context.Background())
+	state, err := h.Workflow.State(context.Background())
 	if err != nil {
 		t.Fatalf("State() error = %v", err)
 	}
 	if state.SelectedOrganization != nil {
 		t.Fatalf("expected stale organization preference to be ignored, got %+v", state.SelectedOrganization)
 	}
-	if state.NextStep != StepOrganizationSelect {
+	if state.NextStep != runtimeonboarding.StepOrganizationSelect {
 		t.Fatalf("expected StepOrganizationSelect, got %q", state.NextStep)
+	}
+}
+
+func TestWorkflow_IgnoresStaleAccountPreference(t *testing.T) {
+	t.Parallel()
+
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
+			Organization: "org_1",
+			Account:      "acct_stale",
+		},
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
+			"org_1": {
+				{ID: "acct_1", Name: "Account 1"},
+				{ID: "acct_2", Name: "Account 2"},
+			},
+		},
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{},
+		DatadogStatus:    map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+	})
+
+	state, err := h.Workflow.State(context.Background())
+	if err != nil {
+		t.Fatalf("State() error = %v", err)
+	}
+	if state.SelectedAccount != nil {
+		t.Fatalf("expected stale account preference to be ignored, got %+v", state.SelectedAccount)
+	}
+	if state.NextStep != runtimeonboarding.StepAccountSelect {
+		t.Fatalf("expected StepAccountSelect, got %q", state.NextStep)
+	}
+}
+
+func TestWorkflow_IgnoresStaleWorkspacePreference(t *testing.T) {
+	t.Parallel()
+
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
+			Organization: "org_1",
+			Account:      "acct_1",
+			Workspace:    "ws_stale",
+		},
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
+			"org_1": {{ID: "acct_1", Name: "Account 1"}},
+		},
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
+			"acct_1": {
+				{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
+				{ID: "ws_2", AccountID: "acct_1", Name: "Workspace 2"},
+			},
+		},
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{},
+		DatadogStatus:    map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+	})
+
+	state, err := h.Workflow.State(context.Background())
+	if err != nil {
+		t.Fatalf("State() error = %v", err)
+	}
+	if state.SelectedWorkspace != nil {
+		t.Fatalf("expected stale workspace preference to be ignored, got %+v", state.SelectedWorkspace)
+	}
+	if state.NextStep != runtimeonboarding.StepWorkspaceSelect {
+		t.Fatalf("expected StepWorkspaceSelect, got %q", state.NextStep)
+	}
+}
+
+func TestWorkflow_ExistingDatadogAccountSkipsSetup(t *testing.T) {
+	t.Parallel()
+
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
+			Organization: "org_1",
+			Account:      "acct_1",
+			Workspace:    "ws_1",
+		},
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
+			"org_1": {{ID: "acct_1", Name: "Account 1"}},
+		},
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
+			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
+		},
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{
+			"acct_1": {ID: "dd_1", Name: "Datadog", Site: integrations.DatadogSiteUS5},
+		},
+		DatadogStatus: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
+			"dd_1": {ReadyForUse: false},
+		},
+	})
+
+	state, err := h.Workflow.State(context.Background())
+	if err != nil {
+		t.Fatalf("State() error = %v", err)
+	}
+	if state.DatadogAccount == nil || state.DatadogAccount.ID != "dd_1" {
+		t.Fatalf("expected existing datadog account, got %+v", state.DatadogAccount)
+	}
+	if state.NextStep != runtimeonboarding.StepDatadogDiscovery {
+		t.Fatalf("expected StepDatadogDiscovery, got %q", state.NextStep)
 	}
 }
 
 func TestWorkflow_InvalidDatadogKeyReturnsErrorAndPreservesState(t *testing.T) {
 	t.Parallel()
 
-	workflow, _, datadog, _ := newTestWorkflow(
-		t,
-		preferences.Snapshot{
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
 		},
-		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
-		map[tenancy.OrganizationID][]tenancy.Account{
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
 		},
-		map[tenancy.AccountID][]tenancy.Workspace{
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
 			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
 		},
-		map[tenancy.AccountID]*integrations.DatadogAccount{},
-		map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
-		false,
-	)
-	datadog.ValidateAPIKeyFn = func(context.Context, integrations.DatadogAPIKeyValidation) (bool, string, error) {
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{},
+		DatadogStatus:    map[integrations.DatadogAccountID]*integrations.DatadogStatus{},
+	})
+	h.Datadog.ValidateAPIKeyFn = func(context.Context, integrations.DatadogAPIKeyValidation) (bool, string, error) {
 		return false, "datadog rejected key", nil
 	}
 
-	state, err := workflow.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1)
+	state, err := h.Workflow.SetDatadogSite(context.Background(), integrations.DatadogSiteUS1)
 	if err != nil {
 		t.Fatalf("SetDatadogSite() error = %v", err)
 	}
@@ -214,7 +207,7 @@ func TestWorkflow_InvalidDatadogKeyReturnsErrorAndPreservesState(t *testing.T) {
 		t.Fatal("expected datadog site to be recorded")
 	}
 
-	state, err = workflow.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{
+	state, err = h.Workflow.SubmitDatadogAPIKey(context.Background(), integrations.DatadogAPIKeySubmission{
 		APIKey: integrations.DatadogAPIKey("bad"),
 	})
 	if err == nil || !strings.Contains(err.Error(), "datadog rejected key") {
@@ -226,7 +219,7 @@ func TestWorkflow_InvalidDatadogKeyReturnsErrorAndPreservesState(t *testing.T) {
 	if state.DatadogDraft.HasAPIKey {
 		t.Fatal("did not expect API key to be marked valid")
 	}
-	if state.NextStep != StepDatadogAPIKey {
+	if state.NextStep != runtimeonboarding.StepDatadogAPIKey {
 		t.Fatalf("expected StepDatadogAPIKey, got %q", state.NextStep)
 	}
 }
@@ -234,65 +227,62 @@ func TestWorkflow_InvalidDatadogKeyReturnsErrorAndPreservesState(t *testing.T) {
 func TestWorkflow_PowerSyncReadinessGatesDone(t *testing.T) {
 	t.Parallel()
 
-	workflow, _, _, _ := newTestWorkflow(
-		t,
-		preferences.Snapshot{
+	h := onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
 		},
-		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
-		map[tenancy.OrganizationID][]tenancy.Account{
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
 		},
-		map[tenancy.AccountID][]tenancy.Workspace{
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
 			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
 		},
-		map[tenancy.AccountID]*integrations.DatadogAccount{
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{
 			"acct_1": {ID: "dd_1", Name: "Datadog", Site: integrations.DatadogSiteUS1},
 		},
-		map[integrations.DatadogAccountID]*integrations.DatadogStatus{
+		DatadogStatus: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
 			"dd_1": {ReadyForUse: true},
 		},
-		false,
-	)
+	})
 
-	state, err := workflow.State(context.Background())
+	state, err := h.Workflow.State(context.Background())
 	if err != nil {
 		t.Fatalf("State() error = %v", err)
 	}
-	if state.NextStep != StepPowerSyncReady {
+	if state.NextStep != runtimeonboarding.StepPowerSyncReady {
 		t.Fatalf("expected StepPowerSyncReady, got %q", state.NextStep)
 	}
 
-	workflow, _, _, _ = newTestWorkflow(
-		t,
-		preferences.Snapshot{
+	h = onboardingtest.NewHarness(t, onboardingtest.Config{
+		Snapshot: preferences.Snapshot{
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
 		},
-		[]tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
-		map[tenancy.OrganizationID][]tenancy.Account{
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
 		},
-		map[tenancy.AccountID][]tenancy.Workspace{
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
 			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
 		},
-		map[tenancy.AccountID]*integrations.DatadogAccount{
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{
 			"acct_1": {ID: "dd_1", Name: "Datadog", Site: integrations.DatadogSiteUS1},
 		},
-		map[integrations.DatadogAccountID]*integrations.DatadogStatus{
+		DatadogStatus: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
 			"dd_1": {ReadyForUse: true},
 		},
-		true,
-	)
+		Ready: true,
+	})
 
-	state, err = workflow.State(context.Background())
+	state, err = h.Workflow.State(context.Background())
 	if err != nil {
 		t.Fatalf("State() error = %v", err)
 	}
-	if state.NextStep != StepDone {
+	if state.NextStep != runtimeonboarding.StepDone {
 		t.Fatalf("expected StepDone, got %q", state.NextStep)
 	}
 }

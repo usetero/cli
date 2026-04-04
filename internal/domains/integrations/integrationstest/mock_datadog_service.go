@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/tenancy"
 )
 
 // MockDatadogService is a functional mock for integrations.DatadogService.
 type MockDatadogService struct {
-	GetByAccountFn   func(ctx context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error)
+	GetFn            func(ctx context.Context) (*integrations.DatadogAccount, error)
 	ValidateAPIKeyFn func(ctx context.Context, validation integrations.DatadogAPIKeyValidation) (bool, string, error)
 	CreateFn         func(ctx context.Context, create integrations.DatadogAccountCreate) (integrations.DatadogAccountID, error)
 	StatusFn         func(ctx context.Context, datadogAccountID integrations.DatadogAccountID) (*integrations.DatadogStatus, error)
@@ -21,11 +20,11 @@ func NewMockDatadogService() *MockDatadogService {
 	return &MockDatadogService{}
 }
 
-func (m *MockDatadogService) GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error) {
-	if m.GetByAccountFn == nil {
+func (m *MockDatadogService) Get(ctx context.Context) (*integrations.DatadogAccount, error) {
+	if m.GetFn == nil {
 		return nil, nil
 	}
-	return m.GetByAccountFn(ctx, accountID)
+	return m.GetFn(ctx)
 }
 
 func (m *MockDatadogService) ValidateAPIKey(ctx context.Context, validation integrations.DatadogAPIKeyValidation) (bool, string, error) {

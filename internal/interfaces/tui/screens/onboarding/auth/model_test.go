@@ -93,7 +93,7 @@ func TestAuthViewShowsFailureState(t *testing.T) {
 	_, _ = model.Update(deviceFlowFailedMsg{Err: context.DeadlineExceeded})
 
 	input := model.Input()
-	if input == nil || !strings.Contains(input.Action, "try again") {
+	if input == nil || !strings.Contains(strings.ToLower(input.Action), "try again") {
 		t.Fatalf("expected retry action, got %#v", input)
 	}
 }
@@ -126,16 +126,16 @@ func TestAuthIdleStartsWithActionInput(t *testing.T) {
 	model := New(logging.Scope{}, service, theme.New(false))
 
 	input := model.Input()
-	if input == nil || input.Kind != core.InputAction {
+	if input == nil || input.Kind != core.InputConfirm {
 		t.Fatalf("expected idle action input, got %#v", input)
 	}
-	if !strings.Contains(input.Action, "get started") {
+	if !strings.Contains(strings.ToLower(input.Action), "get started") {
 		t.Fatalf("expected start action, got %#v", input)
 	}
 
 	bindings := model.ShortHelp()
-	if len(bindings) != 1 || bindings[0].Help().Desc != "start" {
-		t.Fatalf("expected start binding, got %+v", bindings)
+	if len(bindings) != 0 {
+		t.Fatalf("expected no page-owned start binding, got %+v", bindings)
 	}
 }
 

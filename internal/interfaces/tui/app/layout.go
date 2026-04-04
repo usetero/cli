@@ -25,13 +25,21 @@ func (m *Model) applyLayout() {
 	}
 
 	contentWidth := m.innerWidth()
-	m.children.statusbar.SetSize(contentWidth, 1)
+	m.surface.shell.statusbar.SetSize(contentWidth, 1)
+	m.surface.shell.divider.SetSize(contentWidth, 1)
+	title := windowTitle
+	if page := m.surface.body.Page(); page.Title != "" {
+		title = m.surface.shell.commandbar.FooterTitle(page.Title)
+	}
+	m.surface.shell.divider.SetState(title, m.surface.body.Busy() != nil, m.surface.shell.commandbar.IsPaletteOpen(), m.titleSpinnerStep)
 
 	helpHeight := m.helpbarHeight(contentWidth)
 	commandHeight := m.commandbarHeight(contentWidth, helpHeight)
-	m.children.commandbar.SetSize(contentWidth, commandHeight)
-	m.children.helpbar.SetSize(contentWidth, helpHeight)
-	m.body.SetSize(contentWidth, m.bodyHeight(commandHeight, helpHeight))
+	m.surface.shell.commandbar.SetSize(contentWidth, commandHeight)
+	m.surface.shell.helpbar.SetSize(contentWidth, helpHeight)
+	bodyHeight := m.bodyHeight(commandHeight, helpHeight)
+	m.surface.shell.divider.SetSize(contentWidth, 1)
+	m.surface.body.SetSize(m.bodyContentWidth(contentWidth), m.bodyContentViewportHeight(bodyHeight))
 }
 
 func (m *Model) innerWidth() int {
@@ -52,7 +60,7 @@ func (m *Model) innerHeight() int {
 
 func (m *Model) headerHeight(width int) int {
 	height := lipgloss.Height(
-		m.theme.Shell.HeaderBar.Width(width).Render(normalizeLine(m.children.statusbar.View().Content)),
+		m.theme.Shell.HeaderBar.Width(width).Render(normalizeLine(m.surface.shell.statusbar.View().Content)),
 	)
 	if height < 1 {
 		return 1
@@ -61,8 +69,8 @@ func (m *Model) headerHeight(width int) int {
 }
 
 func (m *Model) helpbarHeight(width int) int {
-	m.children.helpbar.SetSize(width, 0)
-	height := lipgloss.Height(strings.TrimRight(m.children.helpbar.View().Content, "\n"))
+	m.surface.shell.helpbar.SetSize(width, 0)
+	height := lipgloss.Height(strings.TrimRight(m.surface.shell.helpbar.View().Content, "\n"))
 	if height < 0 {
 		return 0
 	}
@@ -70,7 +78,7 @@ func (m *Model) helpbarHeight(width int) int {
 }
 
 func (m *Model) commandbarHeight(width, helpHeight int) int {
-	provider, ok := any(m.children.commandbar).(core.HeightProvider)
+	provider, ok := any(m.surface.shell.commandbar).(core.HeightProvider)
 	if !ok {
 		return 1
 	}
@@ -104,7 +112,39 @@ func (m *Model) bodyHeight(commandHeight, helpHeight int) int {
 }
 
 func (m *Model) footerChromeHeight(helpHeight int) int {
-	return 2
+	return 0
+}
+
+func (m *Model) bodyContentWidth(width int) int {
+	width = width - m.theme.Shell.Body.GetHorizontalFrameSize() - bodyPadX*2
+	if width < 1 {
+		return 1
+	}
+	return width
+}
+
+func (m *Model) bodyContentHeight(height int) int {
+	height = height - m.theme.Shell.Body.GetVerticalFrameSize() - bodyPadY*2
+	if height < 1 {
+		return 1
+	}
+	return height
+}
+
+func (m *Model) bodyContentViewportHeight(height int) int {
+	height = m.bodyContentHeight(height) - m.bodyDividerHeight() - m.bodyDividerGapHeight()
+	if height < 1 {
+		return 1
+	}
+	return height
+}
+
+func (m *Model) bodyDividerHeight() int {
+	return 1
+}
+
+func (m *Model) bodyDividerGapHeight() int {
+	return 1
 }
 
 func normalizeLine(value string) string {

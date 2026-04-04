@@ -50,6 +50,13 @@ func TestModelStatusAndProgress(t *testing.T) {
 		if !ok || pct != 25 {
 			t.Fatalf("percent() = (%v, %t), want (25, true)", pct, ok)
 		}
+		busy := m.Busy()
+		if busy == nil || busy.Progress == nil {
+			t.Fatalf("expected busy progress, got %#v", busy)
+		}
+		if busy.Progress.Current != 25 || busy.Progress.Total != 100 {
+			t.Fatalf("unexpected busy progress: %#v", busy.Progress)
+		}
 	})
 
 	t.Run("ready and error states are projected", func(t *testing.T) {
@@ -64,6 +71,12 @@ func TestModelStatusAndProgress(t *testing.T) {
 		m.SetStatus(accountruntime.Status{Sync: &pssyncer.Error{Err: errors.New("boom")}})
 		if got := m.statusLine(); got != "Sync failed: boom" {
 			t.Fatalf("error statusLine() = %q", got)
+		}
+		if busy := m.Busy(); busy != nil {
+			t.Fatalf("expected no busy state for error, got %#v", busy)
+		}
+		if err := m.Error(); err == nil || err.Message != "Failed to prepare your workspace." || err.Detail != "boom" {
+			t.Fatalf("unexpected error state: %#v", err)
 		}
 	})
 }

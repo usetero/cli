@@ -12,14 +12,18 @@ import (
 
 // LocalWorkspaceService uses SQLite/sqlc for workspace CRUD.
 type LocalWorkspaceService struct {
-	q *workspacesdb.Queries
+	q         *workspacesdb.Queries
+	accountID AccountID
 }
 
-func NewLocalWorkspaceService(db *sql.DB) *LocalWorkspaceService {
+func NewLocalWorkspaceService(db *sql.DB, accountID AccountID) *LocalWorkspaceService {
 	if db == nil {
 		panic("tenancy local workspace service requires db")
 	}
-	return &LocalWorkspaceService{q: workspacesdb.New(db)}
+	if accountID == "" {
+		panic("tenancy local workspace service requires account id")
+	}
+	return &LocalWorkspaceService{q: workspacesdb.New(db), accountID: accountID}
 }
 
 func (s *LocalWorkspaceService) Create(ctx context.Context, create WorkspaceCreate) (WorkspaceID, error) {
@@ -31,7 +35,7 @@ func (s *LocalWorkspaceService) Create(ctx context.Context, create WorkspaceCrea
 	id := WorkspaceID(uuid.NewString())
 	err = s.q.Create(ctx, workspacesdb.CreateParams{
 		ID:        ptrString(toWorkspacesDBWorkspaceID(id)),
-		AccountID: ptrString(toWorkspacesDBAccountID(validated.AccountID)),
+		AccountID: ptrString(toWorkspacesDBAccountID(s.accountID)),
 		Name:      ptrString(validated.Name),
 		CreatedAt: ptrString(time.Now().UTC().Format(time.RFC3339)),
 	})
@@ -48,11 +52,8 @@ func (s *LocalWorkspaceService) Delete(ctx context.Context, id WorkspaceID) erro
 	return s.q.Delete(ctx, ptrString(toWorkspacesDBWorkspaceID(id)))
 }
 
-func (s *LocalWorkspaceService) ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error) {
-	if accountID == "" {
-		return nil, fmt.Errorf("account id is required")
-	}
-	rows, err := s.q.ListByAccount(ctx, ptrString(toWorkspacesDBAccountID(accountID)))
+func (s *LocalWorkspaceService) List(ctx context.Context) ([]Workspace, error) {
+	rows, err := s.q.ListByAccount(ctx, ptrString(toWorkspacesDBAccountID(s.accountID)))
 	if err != nil {
 		return nil, err
 	}

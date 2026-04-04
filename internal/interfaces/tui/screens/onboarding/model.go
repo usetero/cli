@@ -2,6 +2,7 @@ package onboarding
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -54,15 +55,20 @@ type Model struct {
 	psReady     *powersyncready.Model
 	loading     bool
 	busy        *core.Busy
+	loadErr     error
+	notice      *core.Notice
 	state       runtimeonboarding.State
 	account     accountruntime.Status
 	placeholder *core.Input
 }
 
 var _ core.Model = (*Model)(nil)
+var _ core.PageProvider = (*Model)(nil)
 var _ core.BusyProvider = (*Model)(nil)
 var _ core.InputProvider = (*Model)(nil)
 var _ core.HelpProvider = (*Model)(nil)
+var _ core.ErrorProvider = (*Model)(nil)
+var _ core.NoticeProvider = (*Model)(nil)
 
 func New(scope logging.Scope, identityService *identity.Service, workflow *runtimeonboarding.Workflow, appTheme theme.Theme) *Model {
 	if workflow == nil {
@@ -112,15 +118,47 @@ func (m *Model) Init() tea.Cmd {
 	return m.Router.Init()
 }
 
+func (m *Model) Page() core.Page {
+	return core.Page{Title: "Onboarding"}
+}
+
+func (m *Model) Commands() []core.Command { return nil }
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch typed := msg.(type) {
 	case stateLoadedMsg:
+		wasInlineAction := m.isInlineActionFailure()
 		m.loading = false
 		m.busy = nil
 		if typed.Err != nil {
+			if errors.Is(typed.Err, identity.ErrNotAuthenticated) {
+				m.loadErr = nil
+				m.notice = &core.Notice{
+					Level:   core.NoticeError,
+					Message: "Your session ended. Sign in again.",
+				}
+				m.showAuth()
+				return m, nil
+			}
+			if wasInlineAction {
+				m.loadErr = nil
+				m.notice = &core.Notice{
+					Level:   core.NoticeError,
+					Message: typed.Err.Error(),
+				}
+				if typed.State.NextStep != "" {
+					return m, m.applyState(typed.State)
+				}
+				return m, nil
+			}
+			m.loadErr = typed.Err
+			m.notice = nil
+			m.clear()
 			m.scope.Error("load onboarding state", "error", typed.Err)
 			return m, nil
 		}
+		m.loadErr = nil
+		m.notice = nil
 		return m, m.applyState(typed.State)
 	case refreshRequestedMsg:
 		if !m.shouldRefresh() {
@@ -135,35 +173,50 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case organizationselect.SelectedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Selecting Organization"}
 		return m, m.selectOrganization(typed.OrganizationID)
 	case create.CreatedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Creating Organization"}
 		return m, m.createOrganization(typed.Name)
 	case accountselect.SelectedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Selecting Account"}
 		return m, m.selectAccount(typed.AccountID)
 	case accountcreate.CreatedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Creating Account"}
 		return m, m.createAccount(typed.Name)
 	case workspaceselect.SelectedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Selecting Workspace"}
 		return m, m.selectWorkspace(typed.WorkspaceID)
 	case datadogregion.SelectedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Saving Datadog Region"}
 		return m, m.setDatadogSite(typed.Site)
 	case datadogapikey.SubmittedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Validating Datadog API Key"}
 		return m, m.submitDatadogAPIKey(typed.APIKey)
 	case datadogappkey.SubmittedMsg:
+		m.notice = nil
 		m.busy = &core.Busy{Label: "Saving Datadog App Key"}
 		return m, m.submitDatadogAppKey(typed.AppKey)
 	}
 
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && m.loadErr != nil && keyMsg.Code == tea.KeyEnter {
+		m.loadErr = nil
+		m.loading = true
+		return m, m.loadState()
+	}
+
 	switch m.Active() {
 	case m.auth:
+		wasAuthenticated := m.auth.Authenticated()
 		cmd := m.Router.Update(msg)
-		if m.auth.Authenticated() && !m.loading {
+		if !wasAuthenticated && m.auth.Authenticated() && !m.loading {
 			m.loading = true
 			return m, tea.Batch(cmd, m.loadState())
 		}
@@ -172,6 +225,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.Router.Update(msg)
 	default:
 		return m, nil
+	}
+}
+
+func (m *Model) isInlineActionFailure() bool {
+	if m.busy == nil {
+		return false
+	}
+	switch m.Active() {
+	case m.orgSelect, m.orgCreate, m.acctSelect, m.acctCreate, m.wsSelect, m.ddRegion, m.ddAPIKey, m.ddAppKey:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -244,6 +309,7 @@ func (m *Model) routeState(state runtimeonboarding.State) tea.Cmd {
 			m.showPowerSyncReady()
 		} else {
 			m.clear()
+			cmds = append(cmds, func() tea.Msg { return events.OnboardingCompletedMsg{} })
 		}
 	default:
 		m.clear()

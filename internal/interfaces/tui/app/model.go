@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/infrastructure/logging"
 	accountmodel "github.com/usetero/cli/internal/interfaces/tui/app/account"
+	chromedivider "github.com/usetero/cli/internal/interfaces/tui/components/chrome/divider"
 	"github.com/usetero/cli/internal/interfaces/tui/components/commandbar"
 	"github.com/usetero/cli/internal/interfaces/tui/components/helpbar"
 	"github.com/usetero/cli/internal/interfaces/tui/components/statusbar"
@@ -23,13 +24,14 @@ const windowTitle = "Tero"
 
 // Model renders the TUI shell.
 type Model struct {
-	scope    logging.Scope
-	theme    theme.Theme
-	width    int
-	height   int
-	account  *accountmodel.Model
-	body     core.Screen
-	children children
+	scope            logging.Scope
+	theme            theme.Theme
+	width            int
+	height           int
+	account          *accountmodel.Model
+	surface          surface
+	titleSpinnerTick bool
+	titleSpinnerStep int
 }
 
 func New(scope logging.Scope, runtimeFactory accountmodel.RuntimeFactory, body core.Screen, env string, appTheme theme.Theme) *Model {
@@ -40,25 +42,29 @@ func New(scope logging.Scope, runtimeFactory accountmodel.RuntimeFactory, body c
 		panic("app body model is required")
 	}
 
-	status := statusbar.New(env, appTheme)
-	command := commandbar.New(appTheme)
-	help := helpbar.New(appTheme)
 	m := &Model{
-		scope:    scope,
-		theme:    appTheme,
-		account:  accountmodel.New(scope, runtimeFactory),
-		body:     body,
-		children: newChildren(status, command, help),
+		scope:   scope,
+		theme:   appTheme,
+		account: accountmodel.New(scope, runtimeFactory),
+		surface: newSurface(
+			body,
+			statusbar.New(env, appTheme),
+			chromedivider.New(appTheme),
+			commandbar.New(appTheme),
+			helpbar.New(appTheme),
+		),
 	}
-	m.children.refreshFooter(m.body)
 	m.applyLayout()
 	return m
 }
 
 func (m *Model) Init() tea.Cmd {
 	m.scope.Info("tui initialized")
-	m.children.refreshFooter(m.body)
-	return tea.Batch(m.children.Init(), m.body.Init())
+	cmds := []tea.Cmd{m.surface.Init()}
+	if cmd := m.startWindowTitleSpinner(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -68,19 +74,74 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(size.Width, size.Height)
 	}
 
+	switch typed := msg.(type) {
+	case core.CommandSelectedMsg:
+		switch typed.ID {
+		case core.CommandQuit:
+			m.scope.Info("quit requested", "mode", "command")
+			_ = m.account.Close(ctx)
+			return m, tea.Quit
+		case core.CommandOpenSpikes:
+			m.surface.shell.commandbar.SetLocalNotice(&core.Notice{
+				Level:   core.NoticeInfo,
+				Message: "Spikes view is not wired yet.",
+			})
+			m.applyLayout()
+			return m, nil
+		case core.CommandOpenWaste:
+			m.surface.shell.commandbar.SetLocalNotice(&core.Notice{
+				Level:   core.NoticeInfo,
+				Message: "Waste view is not wired yet.",
+			})
+			m.applyLayout()
+			return m, nil
+		case core.CommandOpenServices:
+			m.surface.shell.commandbar.SetLocalNotice(&core.Notice{
+				Level:   core.NoticeInfo,
+				Message: "Services view is not wired yet.",
+			})
+			m.applyLayout()
+			return m, nil
+		}
+	}
+
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && key.Matches(keyMsg, quitBinding) {
 		m.scope.Info("quit requested", "mode", "immediate")
 		_ = m.account.Close(ctx)
 		return m, tea.Quit
 	}
 
-	_, accountCmd := m.account.Update(msg)
-	nextBody, bodyCmd := m.body.Update(msg)
-	if typed, ok := nextBody.(core.Screen); ok && typed != nil {
-		m.body = typed
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+		if shellCmd, consumed := m.surface.HandleKey(keyMsg); consumed {
+			m.applyLayout()
+
+			var titleCmd tea.Cmd
+			if m.surface.body.Busy() != nil {
+				titleCmd = m.startWindowTitleSpinner()
+			} else {
+				m.stopWindowTitleSpinner()
+			}
+
+			return m, tea.Batch(shellCmd, titleCmd)
+		}
 	}
-	shellCmd := m.children.Update(msg)
-	m.children.refreshFooter(m.body)
+
+	if cmd := m.updateWindowTitleSpinner(msg); cmd != nil || m.surface.body.Busy() == nil {
+		if _, ok := msg.(windowTitleTickMsg); ok {
+			return m, cmd
+		}
+	}
+
+	_, accountCmd := m.account.Update(msg)
+	surfaceCmd := m.surface.Update(msg)
 	m.applyLayout()
-	return m, tea.Batch(accountCmd, bodyCmd, shellCmd)
+
+	var titleCmd tea.Cmd
+	if m.surface.body.Busy() != nil {
+		titleCmd = m.startWindowTitleSpinner()
+	} else {
+		m.stopWindowTitleSpinner()
+	}
+
+	return m, tea.Batch(accountCmd, surfaceCmd, titleCmd)
 }

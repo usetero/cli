@@ -70,3 +70,19 @@ func TestProviderErrorMapping(t *testing.T) {
 		t.Fatalf("expected authorization pending mapping, got %v", err)
 	}
 }
+
+func TestProviderRefreshInvalidGrantMapsToSessionExpired(t *testing.T) {
+	provider := infraworkos.NewProvider(&workostest.Client{
+		RefreshTokenFn: func(context.Context, string, string) (infraworkos.RefreshResult, error) {
+			return infraworkos.RefreshResult{}, &infraworkos.OAuthError{
+				Code:        "invalid_grant",
+				Description: "Session has already ended.",
+			}
+		},
+	})
+
+	_, err := provider.Refresh(context.Background(), "r1", "")
+	if !errors.Is(err, identity.ErrSessionExpired) {
+		t.Fatalf("expected session expired mapping, got %v", err)
+	}
+}

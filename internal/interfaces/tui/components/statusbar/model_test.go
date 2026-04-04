@@ -76,6 +76,15 @@ func TestModel_RendersOrganizationName(t *testing.T) {
 	if !strings.Contains(view, "Acme Corp") {
 		t.Fatalf("expected organization in status bar, got %q", view)
 	}
+	if !strings.Contains(view, "184 services, 91k facts, 12 policies") {
+		t.Fatalf("expected estate scaffold in status bar, got %q", view)
+	}
+	if !strings.Contains(view, "● 2 spikes") {
+		t.Fatalf("expected spikes scaffold in status bar, got %q", view)
+	}
+	if !strings.Contains(view, "● 18% waste") {
+		t.Fatalf("expected waste scaffold in status bar, got %q", view)
+	}
 }
 
 func TestModel_TruncatesOrganizationToFitWidth(t *testing.T) {
@@ -84,26 +93,10 @@ func TestModel_TruncatesOrganizationToFitWidth(t *testing.T) {
 	model.SetSize(12, 1)
 	view := ansi.Strip(model.View().Content)
 
-	if !strings.Contains(view, "TERO") || !strings.Contains(view, "╱╱") {
-		t.Fatalf("expected lead-in and brand to remain visible, got %q", view)
+	if !strings.Contains(view, "● TERO") {
+		t.Fatalf("expected sync dot and brand to remain visible, got %q", view)
 	}
 	if strings.Contains(view, "Acme Corp") {
 		t.Fatalf("expected truncated organization in narrow mode, got %q", view)
-	}
-}
-
-func TestModel_UsesWarningDotAfterAccountSelectionBeforeRuntimeStarts(t *testing.T) {
-	model := New("dev", theme.New(false))
-	model.Update(events.OrganizationSelectedMsg{Organization: tenancy.Organization{ID: "org_1", Name: "Acme Corp"}})
-	model.Update(events.AccountSelectedMsg{
-		Scope: accountruntime.Scope{
-			Organization: tenancy.Organization{ID: "org_1", Name: "Acme Corp"},
-			Account:      tenancy.Account{ID: "acc_1", Name: "Main"},
-		},
-	})
-
-	view := model.View().Content
-	if !strings.Contains(view, "Acme Corp") {
-		t.Fatalf("expected organization in status bar, got %q", ansi.Strip(view))
 	}
 }

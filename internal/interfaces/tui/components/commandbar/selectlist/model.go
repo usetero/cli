@@ -1,85 +1,68 @@
 package selectlist
 
 import (
-	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	baselist "github.com/usetero/cli/internal/interfaces/tui/components/selectlist"
 	"github.com/usetero/cli/internal/interfaces/tui/core"
 	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
 )
 
-var (
-	upBinding = key.NewBinding(
-		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "move"),
-	)
-	downBinding = key.NewBinding(
-		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "move"),
-	)
-	selectBinding = key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "select"),
-	)
-)
+type optionItem struct {
+	option core.Option
+}
 
-// Model owns local command-option selection state.
+func (i optionItem) FilterValue() string { return i.option.Label + " " + i.option.Subtitle }
+func (i optionItem) Title() string       { return i.option.Label }
+func (i optionItem) Subtitle() string    { return i.option.Subtitle }
+
 type Model struct {
-	theme   theme.Theme
-	width   int
-	options []core.Option
-	index   int
+	list *baselist.Model
 }
 
 var _ core.Model = (*Model)(nil)
 
-// New constructs a select-list model.
 func New(appTheme theme.Theme) *Model {
-	return &Model{theme: appTheme}
+	return &Model{list: baselist.New(appTheme, false, "")}
 }
 
-// Init satisfies tea.Model.
-func (m *Model) Init() tea.Cmd { return nil }
+func (m *Model) Init() tea.Cmd { return m.list.Init() }
 
-// Update handles local list navigation and selection.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyPressMsg)
-	if !ok {
-		return m, nil
+	next, cmd := m.list.Update(msg)
+	if typed, ok := msg.(baselist.SelectedMsg); ok {
+		selected, ok := typed.Item.(optionItem)
+		if !ok {
+			return m, cmd
+		}
+		return m, func() tea.Msg { return SelectedMsg{Option: selected.option} }
 	}
-
-	switch {
-	case key.Matches(keyMsg, upBinding):
-		if m.index > 0 {
-			m.index--
-		}
-	case key.Matches(keyMsg, downBinding):
-		if m.index < len(m.options)-1 {
-			m.index++
-		}
-	case key.Matches(keyMsg, selectBinding):
-		if len(m.options) == 0 {
-			return m, nil
-		}
-		option := m.options[m.index]
-		return m, func() tea.Msg { return SelectedMsg{Option: option} }
+	if updated, ok := next.(*baselist.Model); ok {
+		m.list = updated
 	}
-
-	return m, nil
+	return m, cmd
 }
 
-// SetOptions updates the current option list.
+func (m *Model) ConsumesKey(msg tea.KeyPressMsg) bool {
+	return m.list.ConsumesKey(msg)
+}
+
 func (m *Model) SetOptions(options []core.Option) {
-	m.options = append([]core.Option(nil), options...)
-	if len(m.options) == 0 {
-		m.index = 0
-		return
+	items := make([]list.Item, 0, len(options))
+	for _, option := range options {
+		items = append(items, optionItem{option: option})
 	}
-	if m.index >= len(m.options) {
-		m.index = len(m.options) - 1
-	}
+	m.list.SetItems(items)
 }
 
-// ApplySpec updates the current option list from a select-list spec.
 func (m *Model) ApplyInput(input core.Input) {
 	m.SetOptions(input.Options)
+}
+
+func (m *Model) PreferredHeight(width int) int {
+	provider, ok := any(m.list).(core.HeightProvider)
+	if !ok {
+		return 1
+	}
+	return provider.PreferredHeight(width)
 }

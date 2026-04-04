@@ -56,7 +56,7 @@ func TestClientListOrganizations_SendsAuthAndMapsResponse(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, tokenProviderFunc(func(context.Context) (string, error) {
+	client := NewBootstrapClient(ts.URL, tokenProviderFunc(func(context.Context) (string, error) {
 		return "tok_1", nil
 	}))
 
@@ -75,7 +75,31 @@ func TestClientListOrganizations_SendsAuthAndMapsResponse(t *testing.T) {
 	}
 }
 
-func TestClientValidateDatadogAPIKey_DefaultErrorMessage(t *testing.T) {
+func TestClientListOrganizations_DoesNotScopeToAccount(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("X-Account-ID"); got != "" {
+			t.Fatalf("expected no account scope header, got %q", got)
+		}
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"organizations": {
+					"edges": [],
+					"totalCount": 0
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	client := NewBootstrapClient(ts.URL, nil)
+	if _, err := client.ListOrganizations(context.Background()); err != nil {
+		t.Fatalf("list organizations: %v", err)
+	}
+}
+
+func TestAccountClientValidateDatadogAPIKey_DefaultErrorMessage(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +121,11 @@ func TestClientValidateDatadogAPIKey_DefaultErrorMessage(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
+	bootstrap := NewBootstrapClient(ts.URL, nil)
+	client, err := bootstrap.ForAccount("acc_1")
+	if err != nil {
+		t.Fatalf("bind account client: %v", err)
+	}
 	ok, message, err := client.ValidateDatadogAPIKey(context.Background(), "api_key", DatadogSiteUS1)
 	if err != nil {
 		t.Fatalf("validate datadog api key: %v", err)
@@ -110,7 +138,7 @@ func TestClientValidateDatadogAPIKey_DefaultErrorMessage(t *testing.T) {
 	}
 }
 
-func TestClientGetAccountDatadogAccount_ReturnsNilWhenAbsent(t *testing.T) {
+func TestAccountClientGetDatadogAccount_ReturnsNilWhenAbsent(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -138,31 +166,86 @@ func TestClientGetAccountDatadogAccount_ReturnsNilWhenAbsent(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
-	account, err := client.GetAccountDatadogAccount(context.Background(), AccountID("acc_1"))
+	bootstrap := NewBootstrapClient(ts.URL, nil)
+	client, err := bootstrap.ForAccount("acc_1")
 	if err != nil {
-		t.Fatalf("get account datadog account: %v", err)
+		t.Fatalf("bind account client: %v", err)
+	}
+	account, err := client.GetDatadogAccount(context.Background())
+	if err != nil {
+		t.Fatalf("get datadog account: %v", err)
 	}
 	if account != nil {
 		t.Fatalf("expected nil datadog account when absent, got %+v", account)
 	}
 }
 
-func TestClientCreateDatadogAccountWithCredentials_Validation(t *testing.T) {
+func TestAccountClientGetDatadogAccount_ScopesRequestToAccount(t *testing.T) {
 	t.Parallel()
 
-	client := NewClient("http://example.com", nil)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/graphql" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("X-Account-ID"); got != "acc_1" {
+			t.Fatalf("expected account scope header acc_1, got %q", got)
+		}
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"accounts": {
+					"edges": [
+						{
+							"node": {
+								"id": "acc_1",
+								"datadogAccount": {
+									"id": "dd_1",
+									"name": "Datadog Demo",
+									"site": "US5"
+								}
+							}
+						}
+					]
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	bootstrap := NewBootstrapClient(ts.URL, nil)
+	client, err := bootstrap.ForAccount("acc_1")
+	if err != nil {
+		t.Fatalf("bind account client: %v", err)
+	}
+	account, err := client.GetDatadogAccount(context.Background())
+	if err != nil {
+		t.Fatalf("get datadog account: %v", err)
+	}
+	if account == nil {
+		t.Fatal("expected datadog account")
+	}
+	if account.ID != "dd_1" || account.Name != "Datadog Demo" || account.Site != DatadogSiteUS5 {
+		t.Fatalf("unexpected datadog account: %+v", account)
+	}
+}
+
+func TestAccountClientCreateDatadogAccountWithCredentials_Validation(t *testing.T) {
+	t.Parallel()
+
+	bootstrap := NewBootstrapClient("http://example.com", nil)
+	client, err := bootstrap.ForAccount("acc_1")
+	if err != nil {
+		t.Fatalf("bind account client: %v", err)
+	}
 
 	tests := []struct {
 		name  string
 		input CreateDatadogAccountInput
 		match string
 	}{
-		{name: "missing account id", input: CreateDatadogAccountInput{Name: "Main", Site: DatadogSiteUS1, APIKey: "a", AppKey: "b"}, match: "account id is required"},
-		{name: "missing name", input: CreateDatadogAccountInput{AccountID: "acc_1", Site: DatadogSiteUS1, APIKey: "a", AppKey: "b"}, match: "name is required"},
-		{name: "missing site", input: CreateDatadogAccountInput{AccountID: "acc_1", Name: "Main", APIKey: "a", AppKey: "b"}, match: "datadog site is required"},
-		{name: "missing api key", input: CreateDatadogAccountInput{AccountID: "acc_1", Name: "Main", Site: DatadogSiteUS1, AppKey: "b"}, match: "api key is required"},
-		{name: "missing app key", input: CreateDatadogAccountInput{AccountID: "acc_1", Name: "Main", Site: DatadogSiteUS1, APIKey: "a"}, match: "app key is required"},
+		{name: "missing name", input: CreateDatadogAccountInput{Site: DatadogSiteUS1, APIKey: "a", AppKey: "b"}, match: "name is required"},
+		{name: "missing site", input: CreateDatadogAccountInput{Name: "Main", APIKey: "a", AppKey: "b"}, match: "datadog site is required"},
+		{name: "missing api key", input: CreateDatadogAccountInput{Name: "Main", Site: DatadogSiteUS1, AppKey: "b"}, match: "api key is required"},
+		{name: "missing app key", input: CreateDatadogAccountInput{Name: "Main", Site: DatadogSiteUS1, APIKey: "a"}, match: "app key is required"},
 	}
 
 	for _, tt := range tests {
@@ -179,7 +262,7 @@ func TestClientListAccounts_PropagatesTokenProviderErrors(t *testing.T) {
 	t.Parallel()
 
 	wantErr := errors.New("token unavailable")
-	client := NewClient("http://example.com", tokenProviderFunc(func(context.Context) (string, error) {
+	client := NewBootstrapClient("http://example.com", tokenProviderFunc(func(context.Context) (string, error) {
 		return "", wantErr
 	}))
 	_, err := client.ListAccounts(context.Background(), OrganizationID("org_1"))
@@ -218,7 +301,7 @@ func TestAuthTransport_SetsAuthorizationHeader(t *testing.T) {
 	}
 }
 
-func TestClientListWorkspaces_SetsAccountHeader(t *testing.T) {
+func TestAccountClientListWorkspaces_SetsAccountHeader(t *testing.T) {
 	t.Parallel()
 
 	var gotAccount string
@@ -235,8 +318,12 @@ func TestClientListWorkspaces_SetsAccountHeader(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
-	if _, err := client.ListWorkspaces(context.Background(), AccountID("acc_1")); err != nil {
+	bootstrap := NewBootstrapClient(ts.URL, nil)
+	client, err := bootstrap.ForAccount("acc_1")
+	if err != nil {
+		t.Fatalf("bind account client: %v", err)
+	}
+	if _, err := client.ListWorkspaces(context.Background()); err != nil {
 		t.Fatalf("list workspaces: %v", err)
 	}
 	if gotAccount != "acc_1" {
@@ -254,6 +341,9 @@ func TestClientListAccounts_MapsCreatedAt(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/graphql" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("X-Account-ID"); got != "" {
+			t.Fatalf("expected no account scope header, got %q", got)
 		}
 		var payload map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&payload)
@@ -276,7 +366,7 @@ func TestClientListAccounts_MapsCreatedAt(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
+	client := NewBootstrapClient(ts.URL, nil)
 	accounts, err := client.ListAccounts(context.Background(), OrganizationID("org_1"))
 	if err != nil {
 		t.Fatalf("list accounts: %v", err)
@@ -308,13 +398,13 @@ func TestClientDeleteOrganization_SendsConfirmedMutation(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
+	client := NewBootstrapClient(ts.URL, nil)
 	if err := client.DeleteOrganization(context.Background(), "org_1"); err != nil {
 		t.Fatalf("delete organization: %v", err)
 	}
 }
 
-func TestClientDeleteAccountAndWorkspace_ValidationAndMutation(t *testing.T) {
+func TestBootstrapClientDeleteAccountAndAccountClientDeleteWorkspace_ValidationAndMutation(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -331,23 +421,27 @@ func TestClientDeleteAccountAndWorkspace_ValidationAndMutation(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := NewClient(ts.URL, nil)
+	bootstrap := NewBootstrapClient(ts.URL, nil)
+	accountClient, err := bootstrap.ForAccount("acc_1")
+	if err != nil {
+		t.Fatalf("bind account client: %v", err)
+	}
 
-	if err := client.DeleteAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
+	if err := bootstrap.DeleteAccount(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "account id is required") {
 		t.Fatalf("expected account id validation error, got %v", err)
 	}
-	if err := client.DeleteWorkspace(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
+	if err := accountClient.DeleteWorkspace(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "workspace id is required") {
 		t.Fatalf("expected workspace id validation error, got %v", err)
 	}
-	if err := client.DeleteAccount(context.Background(), "acc_1"); err != nil {
+	if err := bootstrap.DeleteAccount(context.Background(), "acc_1"); err != nil {
 		t.Fatalf("delete account: %v", err)
 	}
-	if err := client.DeleteWorkspace(context.Background(), "ws_1"); err != nil {
+	if err := accountClient.DeleteWorkspace(context.Background(), "ws_1"); err != nil {
 		t.Fatalf("delete workspace: %v", err)
 	}
 }
 
-func TestNewClient_PanicsWhenOriginIncludesPath(t *testing.T) {
+func TestNewBootstrapClient_PanicsWhenOriginIncludesPath(t *testing.T) {
 	t.Parallel()
 
 	defer func() {
@@ -360,5 +454,5 @@ func TestNewClient_PanicsWhenOriginIncludesPath(t *testing.T) {
 		}
 	}()
 
-	_ = NewClient("https://api.usetero.dev/graphql", nil)
+	_ = NewBootstrapClient("https://api.usetero.dev/graphql", nil)
 }

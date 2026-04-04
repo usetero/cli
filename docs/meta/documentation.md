@@ -1,41 +1,29 @@
-# Documentation Standards
+# Documentation Standard
 
-These docs should feel like a strong engineer helping another engineer build the
-right model of the system. The goal is not documentation volume; the goal is
-faster correct decisions.
+These docs should help an engineer build the right mental model of the system
+and then make correct changes quickly.
 
-If a reader finishes a page and still cannot predict how the system behaves
-under failure or edge conditions, the page is not complete yet.
+Good documentation in this repository should:
 
-## What a good doc should do
+1. explain why a part of the system exists,
+2. clarify what owns what,
+3. encode the stable rules that prevent drift,
+4. point a reader toward the right code when needed.
 
-A useful page in this repository should help a reader:
+## Writing Guidance
 
-1. understand why this part of the system exists,
-2. predict non-happy-path behavior,
-3. identify what must not be broken,
-4. find the right code entry points quickly.
+Prefer durable explanations over inventories of current implementation detail.
 
-If a page only lists files or commands with no model behind it, it is not done.
+Start with context, then explain shape and ownership, then anchor to a few key
+code paths where helpful. Avoid writing pages that only list files, commands, or
+headings with no model behind them.
 
-## Writing guidance
-
-Start with context and intent, then explain runtime behavior, then anchor to
-invariants and code paths. Use lists where they improve clarity, but avoid
-defaulting to checklist style for conceptual docs.
-
-Prefer prose for “read-to-understand” documents (architecture, domain).
-Use compact lists for operational checklists and reference contracts.
-
-## Maintenance guidance
+## Maintenance Guidance
 
 Treat docs as part of the implementation contract:
 
-1. update docs in the same change as behavior/workflow changes,
-2. remove stale content aggressively,
-3. keep one canonical page per concept and link to it instead of duplicating.
-
-Coherence matters more than preserving old wording. Rewrite sections fully when
-the model changes.
-Incremental patching is fine for small corrections, but architectural shifts
-usually deserve a deliberate rewrite so the mental model stays coherent.
+1. update docs when the underlying model changes,
+2. remove stale material aggressively,
+3. keep one canonical page per concept,
+4. rewrite cleanly when the mental model changes instead of patching around
+   drift.

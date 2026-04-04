@@ -45,15 +45,6 @@ func DecodeLogEventFacts(rows []LogEventFactsRow) (LogEventFacts, error) {
 				return LogEventFacts{}, fmt.Errorf("decode StructureProfile: %w", err)
 			}
 			out.StructureProfile = &decoded
-		case "structural:event_context_profile":
-			if out.EventContextProfile != nil {
-				continue
-			}
-			var decoded EventContextProfile
-			if err := json.Unmarshal([]byte(row.Value), &decoded); err != nil {
-				return LogEventFacts{}, fmt.Errorf("decode EventContextProfile: %w", err)
-			}
-			out.EventContextProfile = &decoded
 		case "artifact:event_role_profile":
 			if out.EventRoleProfile != nil {
 				continue

@@ -1,25 +1,23 @@
 package onboarding
 
 import (
-	"context"
+	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/domains/identity"
 	"github.com/usetero/cli/internal/domains/identity/identitytest"
 	"github.com/usetero/cli/internal/domains/integrations"
-	"github.com/usetero/cli/internal/domains/integrations/integrationstest"
 	"github.com/usetero/cli/internal/domains/preferences"
-	"github.com/usetero/cli/internal/domains/preferences/preferencestest"
 	"github.com/usetero/cli/internal/domains/tenancy"
-	"github.com/usetero/cli/internal/domains/tenancy/tenancytest"
 	"github.com/usetero/cli/internal/infrastructure/logging"
-	"github.com/usetero/cli/internal/infrastructure/powersync/syncertest"
 	"github.com/usetero/cli/internal/interfaces/tui/core"
 	"github.com/usetero/cli/internal/interfaces/tui/events"
 	"github.com/usetero/cli/internal/interfaces/tui/ui/theme"
 	accountruntime "github.com/usetero/cli/internal/runtime/account"
+	pssyncer "github.com/usetero/cli/internal/infrastructure/powersync/syncer"
 	runtimeonboarding "github.com/usetero/cli/internal/runtime/onboarding"
+	"github.com/usetero/cli/internal/runtime/onboardingtest"
 )
 
 func TestModelInit_UnauthenticatedShowsAuthStep(t *testing.T) {
@@ -34,7 +32,7 @@ func TestModelInit_UnauthenticatedShowsAuthStep(t *testing.T) {
 	if m.Active() != m.auth {
 		t.Fatalf("expected auth step to be active")
 	}
-	if input := m.Input(); input == nil || input.Kind != core.InputAction {
+	if input := m.Input(); input == nil || input.Kind != core.InputConfirm {
 		t.Fatalf("expected auth action input, got %#v", input)
 	}
 }
@@ -43,7 +41,7 @@ func TestModelInit_AuthenticatedLoadsInitialWorkflowState(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t, workflowConfig{
-		pref: preferences.Snapshot{},
+		Snapshot: preferences.Snapshot{},
 	}, true)
 
 	cmd := m.Init()
@@ -165,25 +163,25 @@ func TestModelRefreshRequested_ReprojectsDiscoveryState(t *testing.T) {
 	t.Parallel()
 
 	cfg := workflowConfig{
-		pref: preferences.Snapshot{
+		Snapshot: preferences.Snapshot{
 			Organization: "org_1",
 			Account:      "acct_1",
 			Workspace:    "ws_1",
 		},
-		orgs: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
-		accounts: map[tenancy.OrganizationID][]tenancy.Account{
+		Organizations: []tenancy.Organization{{ID: "org_1", Name: "Org 1"}},
+		Accounts: map[tenancy.OrganizationID][]tenancy.Account{
 			"org_1": {{ID: "acct_1", Name: "Account 1"}},
 		},
-		workspaces: map[tenancy.AccountID][]tenancy.Workspace{
+		Workspaces: map[tenancy.AccountID][]tenancy.Workspace{
 			"acct_1": {{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"}},
 		},
-		datadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{
+		DatadogByAccount: map[tenancy.AccountID]*integrations.DatadogAccount{
 			"acct_1": {ID: "dd_1", Name: "Datadog", Site: integrations.DatadogSiteUS1},
 		},
-		datadogStatus: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
+		DatadogStatus: map[integrations.DatadogAccountID]*integrations.DatadogStatus{
 			"dd_1": {ReadyForUse: false},
 		},
-		ready: true,
+		Ready: true,
 	}
 
 	m := newTestModel(t, cfg, true)
@@ -192,14 +190,14 @@ func TestModelRefreshRequested_ReprojectsDiscoveryState(t *testing.T) {
 		SelectedOrganization: &tenancy.Organization{ID: "org_1", Name: "Org 1"},
 		SelectedAccount:      &tenancy.Account{ID: "acct_1", Name: "Account 1"},
 		SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
-		DatadogAccount:       cfg.datadogByAccount["acct_1"],
-		DatadogStatus:        cfg.datadogStatus["dd_1"],
+		DatadogAccount:       cfg.DatadogByAccount["acct_1"],
+		DatadogStatus:        cfg.DatadogStatus["dd_1"],
 		PowerSyncReady:       true,
 		NextStep:             runtimeonboarding.StepDatadogDiscovery,
 	}
 	m.showDatadogDiscovery()
 
-	cfg.datadogStatus["dd_1"].ReadyForUse = true
+	cfg.DatadogStatus["dd_1"].ReadyForUse = true
 
 	_, cmd := m.Update(refreshRequestedMsg{})
 	if cmd == nil {
@@ -256,6 +254,42 @@ func TestModelAccountRuntimeStatus_ControlsFinalPowerSyncGate(t *testing.T) {
 	}
 }
 
+func TestModelAccountRuntimeStatus_ExposesPowerSyncFailureAsShellError(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t, workflowConfig{}, true)
+	m.state = runtimeonboarding.State{
+		SelectedOrganization: &tenancy.Organization{ID: "org_1", Name: "Org 1"},
+		SelectedAccount:      &tenancy.Account{ID: "acct_1", Name: "Account 1"},
+		SelectedWorkspace:    &tenancy.Workspace{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
+		DatadogAccount:       &integrations.DatadogAccount{ID: "dd_1", Name: "Datadog", Site: integrations.DatadogSiteUS1},
+		DatadogStatus:        &integrations.DatadogStatus{ReadyForUse: true},
+		PowerSyncReady:       true,
+		NextStep:             runtimeonboarding.StepDone,
+	}
+
+	_, _ = m.Update(events.AccountRuntimeUpdatedMsg{
+		Status: accountruntime.Status{
+			Scope: accountruntime.Scope{
+				Organization: tenancy.Organization{ID: "org_1", Name: "Org 1"},
+				Account:      tenancy.Account{ID: "acct_1", Name: "Account 1"},
+				Workspace:    tenancy.Workspace{ID: "ws_1", AccountID: "acct_1", Name: "Workspace 1"},
+			},
+			Sync: &pssyncer.Error{Err: errors.New("boom")},
+		},
+	})
+
+	if m.Active() != m.psReady {
+		t.Fatalf("expected powersync step to remain active on failure")
+	}
+	if busy := m.Busy(); busy != nil {
+		t.Fatalf("expected no shell busy state on failure, got %#v", busy)
+	}
+	if err := m.Error(); err == nil || err.Message != "Failed to prepare your workspace." || err.Detail != "boom" {
+		t.Fatalf("unexpected shell error state: %#v", err)
+	}
+}
+
 func TestModelProviders_ReflectLoadingAndBusyState(t *testing.T) {
 	t.Parallel()
 
@@ -265,8 +299,8 @@ func TestModelProviders_ReflectLoadingAndBusyState(t *testing.T) {
 	if busy := m.Busy(); busy == nil || busy.Label != "Loading Onboarding State" {
 		t.Fatalf("expected loading busy state, got %#v", busy)
 	}
-	if input := m.Input(); input == nil || input.Label != "Loading onboarding..." {
-		t.Fatalf("expected loading input placeholder, got %#v", input)
+	if input := m.Input(); input != nil {
+		t.Fatalf("expected no input while loading, got %#v", input)
 	}
 	if help := m.ShortHelp(); help != nil {
 		t.Fatalf("expected no help while loading, got %+v", help)
@@ -278,86 +312,42 @@ func TestModelProviders_ReflectLoadingAndBusyState(t *testing.T) {
 	if busy := m.Busy(); busy == nil || busy.Label != "Selecting Account" {
 		t.Fatalf("expected explicit busy state, got %#v", busy)
 	}
-	if input := m.Input(); input == nil || input.Label != "Loading onboarding..." {
-		t.Fatalf("expected busy override input, got %#v", input)
+	if input := m.Input(); input != nil {
+		t.Fatalf("expected no input while busy, got %#v", input)
 	}
 	if help := m.ShortHelp(); help != nil {
 		t.Fatalf("expected no help while busy, got %+v", help)
 	}
 }
 
-type workflowConfig struct {
-	pref             preferences.Snapshot
-	orgs             []tenancy.Organization
-	accounts         map[tenancy.OrganizationID][]tenancy.Account
-	workspaces       map[tenancy.AccountID][]tenancy.Workspace
-	datadogByAccount map[tenancy.AccountID]*integrations.DatadogAccount
-	datadogStatus    map[integrations.DatadogAccountID]*integrations.DatadogStatus
-	ready            bool
+func TestModelStateLoaded_NotAuthenticatedRoutesBackToAuth(t *testing.T) {
+	t.Parallel()
+
+	m := newTestModel(t, workflowConfig{}, true)
+	m.showOrganizationCreate()
+
+	_, cmd := m.Update(stateLoadedMsg{Err: identity.ErrNotAuthenticated})
+	if cmd != nil {
+		t.Fatalf("expected no follow-up command when routing back to auth")
+	}
+	if m.Active() != m.auth {
+		t.Fatalf("expected auth step to become active")
+	}
+	if m.loadErr != nil {
+		t.Fatalf("expected load error to be cleared, got %v", m.loadErr)
+	}
+	if m.notice == nil || m.notice.Message == "" {
+		t.Fatalf("expected a session-ended notice")
+	}
 }
+
+type workflowConfig = onboardingtest.Config
 
 func newTestModel(t *testing.T, cfg workflowConfig, authenticated bool) *Model {
 	t.Helper()
 
-	if cfg.accounts == nil {
-		cfg.accounts = map[tenancy.OrganizationID][]tenancy.Account{}
-	}
-	if cfg.workspaces == nil {
-		cfg.workspaces = map[tenancy.AccountID][]tenancy.Workspace{}
-	}
-	if cfg.datadogByAccount == nil {
-		cfg.datadogByAccount = map[tenancy.AccountID]*integrations.DatadogAccount{}
-	}
-	if cfg.datadogStatus == nil {
-		cfg.datadogStatus = map[integrations.DatadogAccountID]*integrations.DatadogStatus{}
-	}
-
-	prefs := &preferencestest.MockService{
-		SnapshotFn:        func(context.Context) (preferences.Snapshot, error) { return cfg.pref, nil },
-		SetRoleFn:         func(context.Context, preferences.RoleSelection) error { return nil },
-		SetOrganizationFn: func(context.Context, preferences.OrganizationSelection) error { return nil },
-		SetAccountFn:      func(context.Context, preferences.AccountSelection) error { return nil },
-		SetWorkspaceFn:    func(context.Context, preferences.WorkspaceSelection) error { return nil },
-		SetScopeFn:        func(context.Context, preferences.ScopeSelection) error { return nil },
-	}
-
-	datadog := &integrationstest.MockDatadogService{
-		GetByAccountFn: func(_ context.Context, accountID tenancy.AccountID) (*integrations.DatadogAccount, error) {
-			return cfg.datadogByAccount[accountID], nil
-		},
-		ValidateAPIKeyFn: func(context.Context, integrations.DatadogAPIKeyValidation) (bool, string, error) {
-			return true, "", nil
-		},
-		CreateFn: func(context.Context, integrations.DatadogAccountCreate) (integrations.DatadogAccountID, error) {
-			return "dd_1", nil
-		},
-		StatusFn: func(_ context.Context, accountID integrations.DatadogAccountID) (*integrations.DatadogStatus, error) {
-			return cfg.datadogStatus[accountID], nil
-		},
-	}
-
-	workflow := runtimeonboarding.NewWorkflow(
-		prefs,
-		&tenancytest.MockOrganizationService{
-			ListFn: func(context.Context) ([]tenancy.Organization, error) { return cfg.orgs, nil },
-		},
-		func(orgID tenancy.OrganizationID) tenancy.AccountService {
-			return &tenancytest.MockAccountService{
-				ListFn: func(context.Context) ([]tenancy.Account, error) { return cfg.accounts[orgID], nil },
-			}
-		},
-		&tenancytest.MockWorkspaceService{
-			ListByAccountFn: func(_ context.Context, accountID tenancy.AccountID) ([]tenancy.Workspace, error) {
-				return cfg.workspaces[accountID], nil
-			},
-		},
-		datadog,
-		syncertest.MockReadinessService{
-			ReadyFn: func(context.Context) (bool, error) { return cfg.ready, nil },
-		},
-	)
-
-	return New(logging.Scope{}, newIdentityService(authenticated), workflow, theme.New(false))
+	h := onboardingtest.NewHarness(t, onboardingtest.Config(cfg))
+	return New(logging.Scope{}, newIdentityService(authenticated), h.Workflow, theme.New(false))
 }
 
 func newIdentityService(authenticated bool) *identity.Service {

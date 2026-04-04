@@ -19,8 +19,7 @@ type Workspace struct {
 
 // WorkspaceCreate is the workspace creation mutation input.
 type WorkspaceCreate struct {
-	AccountID AccountID `label:"account id" validate:"required"`
-	Name      string    `label:"workspace name" validate:"required,notblank,max=100"`
+	Name string `label:"workspace name" validate:"required,notblank,max=100"`
 }
 
 // Validate normalizes and validates workspace create input.
@@ -36,5 +35,5 @@ func (c WorkspaceCreate) Validate() (WorkspaceCreate, error) {
 type WorkspaceService interface {
 	Create(ctx context.Context, create WorkspaceCreate) (WorkspaceID, error)
 	Delete(ctx context.Context, id WorkspaceID) error
-	ListByAccount(ctx context.Context, accountID AccountID) ([]Workspace, error)
+	List(ctx context.Context) ([]Workspace, error)
 }

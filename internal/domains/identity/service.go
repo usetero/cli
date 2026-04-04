@@ -116,6 +116,13 @@ func (s *Service) GetAccessToken(ctx context.Context) (string, error) {
 
 	tokens, err := s.provider.Refresh(ctx, refreshToken, "")
 	if err != nil {
+		if errors.Is(err, ErrSessionExpired) {
+			s.log.Info("refresh rejected; clearing local tokens")
+			if clearErr := s.store.ClearTokens(); clearErr != nil {
+				return "", clearErr
+			}
+			return "", ErrNotAuthenticated
+		}
 		return "", err
 	}
 	if err := s.saveTokens(tokens); err != nil {

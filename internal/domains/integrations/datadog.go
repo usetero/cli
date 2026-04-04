@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/usetero/cli/internal/domains/tenancy"
 	"github.com/usetero/cli/internal/domains/validation"
 )
 
@@ -129,20 +128,14 @@ func (v DatadogAPIKeyValidation) Validate() (DatadogAPIKeyValidation, error) {
 
 // DatadogAccountCreate is the Datadog account creation mutation input.
 type DatadogAccountCreate struct {
-	AccountID tenancy.AccountID
-	Name      DatadogAccountName
-	Site      DatadogSite
-	APIKey    DatadogAPIKey
-	AppKey    DatadogAppKey
+	Name   DatadogAccountName
+	Site   DatadogSite
+	APIKey DatadogAPIKey
+	AppKey DatadogAppKey
 }
 
 // Validate normalizes and validates Datadog account create input.
 func (c DatadogAccountCreate) Validate() (DatadogAccountCreate, error) {
-	if err := validation.Struct(struct {
-		AccountID tenancy.AccountID `label:"account id" validate:"required"`
-	}{AccountID: c.AccountID}); err != nil {
-		return DatadogAccountCreate{}, err
-	}
 	parsedName, err := ParseDatadogAccountName(c.Name.String())
 	if err != nil {
 		return DatadogAccountCreate{}, err
@@ -168,7 +161,7 @@ func (c DatadogAccountCreate) Validate() (DatadogAccountCreate, error) {
 
 // DatadogService is the domain contract for Datadog onboarding operations.
 type DatadogService interface {
-	GetByAccount(ctx context.Context, accountID tenancy.AccountID) (*DatadogAccount, error)
+	Get(ctx context.Context) (*DatadogAccount, error)
 	ValidateAPIKey(ctx context.Context, validation DatadogAPIKeyValidation) (bool, string, error)
 	Create(ctx context.Context, create DatadogAccountCreate) (DatadogAccountID, error)
 	Status(ctx context.Context, datadogAccountID DatadogAccountID) (*DatadogStatus, error)

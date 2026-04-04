@@ -30,6 +30,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if openDocsBinding.Enabled() && keyMatchesOpenDocs(typed) {
 			return m, m.openBrowser()
 		}
+		if openTeroDocsBinding.Enabled() && keyMatchesOpenTeroDocs(typed) {
+			return m, m.openTeroDocs()
+		}
 		return m, nil
 	default:
 		return m, nil
@@ -43,16 +46,18 @@ func (m *Model) SetSize(width, height int) {}
 func (m *Model) Input() *core.Input {
 	return &core.Input{
 		Kind:        core.InputText,
-		Label:       "Paste a Datadog API key for the selected region.",
+		Title:       "Enter your Datadog API key.",
+		Detail:      "Tero needs both your API key and application key to access the Datadog API.",
 		Placeholder: "Paste API key",
+		Secret:      true,
 	}
 }
 
 func (m *Model) ShortHelp() []key.Binding {
 	if !m.site.Valid() {
-		return nil
+		return []key.Binding{openTeroDocsBinding}
 	}
-	return []key.Binding{openDocsBinding}
+	return []key.Binding{openDocsBinding, openTeroDocsBinding}
 }
 
 func (m *Model) SetSite(site integrations.DatadogSite) {

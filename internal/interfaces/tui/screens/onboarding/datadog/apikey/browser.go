@@ -8,6 +8,8 @@ import (
 
 var openBrowser = browser.Open
 
+const teroDatadogDocsURL = "https://docs.usetero.com/integrations/datadog"
+
 type browserOpenedMsg struct {
 	Err error
 }
@@ -19,5 +21,11 @@ func (m *Model) openBrowser() tea.Cmd {
 	url := integrations.DatadogAPIKeyURL(m.site)
 	return func() tea.Msg {
 		return browserOpenedMsg{Err: openBrowser(url)}
+	}
+}
+
+func (m *Model) openTeroDocs() tea.Cmd {
+	return func() tea.Msg {
+		return browserOpenedMsg{Err: openBrowser(teroDatadogDocsURL)}
 	}
 }
