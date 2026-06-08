@@ -77,6 +77,31 @@ success/failure. Option B is off the table.
 
 The rest of this plan assumes **Option A**.
 
+## Schema bump findings (2026-06-08, regenerated mirror)
+
+Regenerating `gen/schema.graphql` against the live control plane (it was ~2
+months stale) surfaced breaking changes — the current operations no longer
+validate:
+
+| Existing CLI op | Status in current control-plane schema |
+|---|---|
+| `createConversation` / `updateConversation` / `deleteConversation` | **removed** — chat is not a control-plane GraphQL concern |
+| `createMessage` | **removed** |
+| `approveLogEventPolicy` / `dismissLogEventPolicy` | **removed** → policy lifecycle moved to the Issue model (`ignoreIssue`, `createLogEventPolicy`) |
+| `updateService` | renamed → `setServiceEnabled` |
+| `workspaces` (query) | **removed** |
+
+Consequence: the **current uploader is already broken** against the live
+control plane (pushes `createConversation`/`createMessage` mutations that no
+longer exist). Rebuilding the data layer is not optional cleanup.
+
+**Chat is ephemeral (decided 2026-06-08).** Conversation/message history is no
+longer persisted across sessions — in-memory during a session is enough. So:
+delete all chat persistence (conversation/message GraphQL ops, uploader
+handlers, sqlite conversations/messages tables and query surfaces); chat state
+lives in-memory and streams via `internal/boundary/chat`. This removes the last
+thing that needed a persistent local store and locks **Option A**.
+
 ## Consumer inventory (18 non-test importers) → replacement
 
 | Area | Files | Uses PowerSync for | Replacement under Option A |
