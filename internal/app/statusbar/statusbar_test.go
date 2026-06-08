@@ -58,3 +58,48 @@ func TestFetchWorkspaceCountReturnsErrorWhenTableMissing(t *testing.T) {
 		t.Fatalf("expected error when workspaces table is missing")
 	}
 }
+
+func TestSyncStatusStaysWiredOutsideDrawerTabs(t *testing.T) {
+	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
+
+	// syncStatus renders the brand sync dot but is no longer a drawer tab, so
+	// the lifecycle must reach it independently of m.tabs. Clearing the tabs
+	// isolates that wiring: with the syncer present, Init must still start the
+	// sync poll loop.
+	m.tabs = nil
+	if m.Init() == nil {
+		t.Fatal("Init() must start syncStatus polling even with no drawer tabs")
+	}
+}
+
+func TestBuildTabsMirrorsProductSurfaces(t *testing.T) {
+	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
+
+	want := []struct {
+		group string
+		label string
+	}{
+		{group: "Control Plane", label: "Policies"},
+		{group: "Control Plane", label: "Issues"},
+		{group: "Control Plane", label: "Checks"},
+		{group: "Data Plane", label: "Services"},
+		{group: "Data Plane", label: "Log events"},
+		{group: "Data Plane", label: "Edge instances"},
+	}
+
+	if len(m.tabs) != len(want) {
+		t.Fatalf("tab count = %d, want %d", len(m.tabs), len(want))
+	}
+	for i, tab := range m.tabs {
+		if tab.Label() != want[i].label {
+			t.Fatalf("tab %d label = %q, want %q", i, tab.Label(), want[i].label)
+		}
+		grouped, ok := tab.(groupedDrawerTab)
+		if !ok {
+			t.Fatalf("tab %d does not expose a group", i)
+		}
+		if grouped.GroupLabel() != want[i].group {
+			t.Fatalf("tab %d group = %q, want %q", i, grouped.GroupLabel(), want[i].group)
+		}
+	}
+}

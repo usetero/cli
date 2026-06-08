@@ -4,11 +4,9 @@ package statusbar
 import (
 	"time"
 
-	"github.com/usetero/cli/internal/app/statusbar/compliance"
-	"github.com/usetero/cli/internal/app/statusbar/quality"
 	"github.com/usetero/cli/internal/app/statusbar/services"
+	"github.com/usetero/cli/internal/app/statusbar/surfaces"
 	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
-	"github.com/usetero/cli/internal/app/statusbar/waste"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
@@ -24,29 +22,32 @@ type workspaceCountLoadedMsg struct {
 
 // Tab indices for the drawer.
 const (
-	TabWaste      = 0
-	TabQuality    = 1
-	TabCompliance = 2
-	TabServices   = 3
-	TabSync       = 4
-	tabCount      = 5
+	TabPolicies      = 0
+	TabIssues        = 1
+	TabChecks        = 2
+	TabServices      = 3
+	TabLogEvents     = 4
+	TabEdgeInstances = 5
+	tabCount         = 6
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Waste", "Quality", "Compliance", "Services", "Sync"}
+var tabLabels = [tabCount]string{"Policies", "Issues", "Checks", "Services", "Log events", "Edge instances"}
 
 // Model renders the app status bar.
 type Model struct {
-	theme            styles.Theme
-	scope            log.Scope
-	env              string
-	tabs             []drawerTab
-	syncStatus       *syncstatus.Model
-	servicesStatus   *services.Model
-	wasteStatus      *waste.Model
-	qualityStatus    *quality.Model
-	complianceStatus *compliance.Model
-	width            int
+	theme           styles.Theme
+	scope           log.Scope
+	env             string
+	tabs            []drawerTab
+	syncStatus      *syncstatus.Model
+	policiesStatus  *surfaces.Model
+	issuesStatus    *surfaces.Model
+	checksStatus    *surfaces.Model
+	servicesStatus  *services.Model
+	logEventsStatus *surfaces.Model
+	edgeStatus      *surfaces.Model
+	width           int
 
 	// Account context
 	org            string
@@ -68,14 +69,16 @@ type Model struct {
 func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host string, env string) *Model {
 	scope = scope.Child("statusbar")
 	m := &Model{
-		theme:            theme,
-		scope:            scope,
-		env:              env,
-		syncStatus:       syncstatus.New(theme, scope, syncer, host),
-		servicesStatus:   services.New(theme, scope),
-		wasteStatus:      waste.New(theme, scope),
-		qualityStatus:    quality.New(theme, scope),
-		complianceStatus: compliance.New(theme, scope),
+		theme:           theme,
+		scope:           scope,
+		env:             env,
+		syncStatus:      syncstatus.New(theme, scope, syncer, host),
+		policiesStatus:  surfaces.NewPolicies(theme, scope),
+		issuesStatus:    surfaces.NewIssues(theme, scope),
+		checksStatus:    surfaces.NewChecks(theme, scope),
+		servicesStatus:  services.New(theme, scope),
+		logEventsStatus: surfaces.NewLogEvents(theme, scope),
+		edgeStatus:      surfaces.NewEdgeInstances(theme, scope),
 	}
 	m.tabs = m.buildTabs()
 	return m

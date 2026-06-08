@@ -12,8 +12,11 @@ confusing stale state.
 
 ## What the status bar owns
 
-The status bar owns presentation state and interaction for five tabs:
-waste, quality, compliance, services, and sync.
+The status bar owns presentation state and interaction for product-surface tabs
+that mirror the webapp navigation:
+
+- Control Plane: policies, issues, checks.
+- Data Plane: services, log events, edge instances.
 
 It does not own business truth. Facts still come from synced SQLite state and
 sync runtime signals.
@@ -32,9 +35,10 @@ Think of the status bar as a shell plus tab plugins.
   interaction.
 - Shared poll lifecycle (`tabpoll/`):
   typed `PollMsg` -> async fetch -> typed `DataMsg` cycle.
-- Shared policy-tab behavior (`policytab/`):
-  reusable base for waste/quality/compliance polling, change detection, and
-  list/detail cursor lifecycle.
+- Product surfaces (`surfaces/`):
+  non-interactive summary tabs (policies, issues, checks, log events, edge
+  instances) that poll a snapshot, gate on "has data", and render compact +
+  drawer views.
 - Shared list/detail mechanics (`listdetail/`):
   keyboard navigation and detail-view enter/exit semantics.
 
@@ -50,14 +54,15 @@ into tab packages.
    `internal/domain` ownership.
 4. Drawer interactions are tab-owned; the shell routes keys but does not
    micromanage tab internals.
-5. Shared polling/list-detail behavior belongs in `tabpoll`, `policytab`, and
-   `listdetail`, not duplicated per tab.
+5. Shared polling/list-detail behavior belongs in `tabpoll` and `listdetail`,
+   not duplicated per tab.
 
 ## Data and ownership boundaries
 
 Status bar tabs read from local runtime state:
 
-- policy/service counts from SQLite query surfaces,
+- policy, issue, check, service, and log-event counts from SQLite query
+  surfaces,
 - sync health from the syncer integration model.
 
 They should not call remote APIs directly from tab update/render paths.
@@ -65,20 +70,20 @@ Onboarding handles API-first bootstrap; status bar is runtime projection UI.
 
 ## Why the current split exists
 
-Waste, quality, and compliance look similar because they solve the same shape of
-problem: poll summary + categories, render compact signal, then offer a
-list/detail drawer for category inspection.
+Some product surfaces look similar because they solve the same shape of problem:
+poll summary state, render compact signals where useful, then offer a drawer
+summary for inspection.
 
-The shared `policytab.Base` exists to remove boilerplate that was previously
+The shared `surfaces.Model` exists to remove boilerplate that was previously
 easy to drift:
 
 - poll lifecycle bookkeeping,
 - "has data" gating,
-- cursor clamp and state-change checks,
-- standard list/detail navigation wiring.
+- snapshot change detection,
+- standard compact/drawer rendering.
 
-The remaining logic in each tab should be domain-specific rendering and query
-selection only.
+The remaining logic in each surface should be domain-specific query selection
+and snapshot shaping only (the per-surface `fetch...` functions).
 
 ## Naming contract
 
@@ -89,7 +94,7 @@ To keep tabs consistent, use these names:
 - rendering helpers: `render...` for tab-local view composition.
 
 When two tabs need the same lifecycle behavior, move it to `tabpoll`,
-`policytab`, or `viewkit` instead of introducing one-off names in each tab.
+`surfaces`, or `viewkit` instead of introducing one-off names in each tab.
 
 ## Practical change checklist
 

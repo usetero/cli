@@ -10,8 +10,12 @@ import (
 )
 
 // SetDB sets the database for status polling.
+//
+// syncStatus is fed alongside the drawer tabs even though it is no longer a
+// drawer tab itself: its compact sync dot lives in the brand segment and its
+// pending-upload count needs the runtime database.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	cmds := []tea.Cmd{m.fetchWorkspaceCount(db)}
+	cmds := []tea.Cmd{m.fetchWorkspaceCount(db), m.syncStatus.SetDB(db)}
 	for _, tab := range m.tabs {
 		cmds = append(cmds, tab.SetDB(db))
 	}
@@ -20,7 +24,7 @@ func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
 
 // Init initializes child models.
 func (m *Model) Init() tea.Cmd {
-	var cmds []tea.Cmd
+	cmds := []tea.Cmd{m.syncStatus.Init()}
 	for _, tab := range m.tabs {
 		cmds = append(cmds, tab.Init())
 	}
@@ -31,7 +35,7 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.ingestStatusMessages(msg)
 
-	var cmds []tea.Cmd
+	cmds := []tea.Cmd{m.syncStatus.Update(msg)}
 	for _, tab := range m.tabs {
 		cmds = append(cmds, tab.Update(msg))
 	}

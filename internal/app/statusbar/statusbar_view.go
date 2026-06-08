@@ -32,28 +32,21 @@ func (m *Model) View() string {
 	// 1. Brand + sync dot + org context (always shown)
 	segments = append(segments, m.renderBrand())
 
-	// 2. Services health (dot + service count + discovery)
+	// 2. Issues and services mirror the primary product surfaces without
+	// flooding the compact bar with every drawer tab.
+	issuesView := m.issuesStatus.CompactView()
+	if issuesView != "" {
+		segments = append(segments, issuesView)
+	}
+
 	servicesView := m.servicesStatus.CompactView()
 	if servicesView != "" {
 		segments = append(segments, servicesView)
 	}
 
-	// 3. Waste status (pending count, estimated/observed savings)
-	wasteView := m.wasteStatus.CompactView()
-	if wasteView != "" {
-		segments = append(segments, wasteView)
-	}
-
-	// 4. Quality status (field-level improvements)
-	qualityView := m.qualityStatus.CompactView()
-	if qualityView != "" {
-		segments = append(segments, qualityView)
-	}
-
-	// 5. Compliance status (leaking/at-risk counts across PII, Secrets, PHI, Payment Data)
-	complianceView := m.complianceStatus.CompactView()
-	if complianceView != "" {
-		segments = append(segments, complianceView)
+	logEventsView := m.logEventsStatus.CompactView()
+	if logEventsView != "" {
+		segments = append(segments, logEventsView)
 	}
 
 	// Build right-aligned segment first so we know how much space is left.
@@ -151,19 +144,34 @@ func (m *Model) renderTabBar(width int) string {
 	colors := m.theme
 	activeStyle := lipgloss.NewStyle().Foreground(colors.Accent).Background(colors.Bg).Bold(true)
 	inactiveStyle := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
+	groupStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg).Bold(true)
 	sepStyle := lipgloss.NewStyle().Foreground(colors.TextSubtle).Background(colors.Bg)
 
-	var tabs []string
+	var parts []string
+	lastGroup := ""
 	for i, tab := range m.tabs {
+		group := ""
+		if grouped, ok := tab.(groupedDrawerTab); ok {
+			group = grouped.GroupLabel()
+		}
+		if group != "" && group != lastGroup {
+			parts = append(parts, groupStyle.Render(strings.ToUpper(group)))
+			lastGroup = group
+		}
+
 		label := tab.Label()
 		if i == m.activeTab {
-			tabs = append(tabs, activeStyle.Render(label))
+			parts = append(parts, activeStyle.Render(label))
 		} else {
-			tabs = append(tabs, inactiveStyle.Render(label))
+			parts = append(parts, inactiveStyle.Render(label))
 		}
 	}
 
-	return strings.Join(tabs, sepStyle.Render("  "))
+	rendered := strings.Join(parts, sepStyle.Render("  "))
+	if width > 0 && lipgloss.Width(rendered) > width {
+		return lipgloss.NewStyle().MaxWidth(width).Render(rendered)
+	}
+	return rendered
 }
 
 // renderDrawerHint renders the "ctrl+d open/close" hint.
