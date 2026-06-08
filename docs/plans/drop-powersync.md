@@ -95,12 +95,54 @@ Consequence: the **current uploader is already broken** against the live
 control plane (pushes `createConversation`/`createMessage` mutations that no
 longer exist). Rebuilding the data layer is not optional cleanup.
 
+**Workspaces removed from the control plane (found 2026-06-08).** The
+`workspaces` query *and the `Workspace` type itself* are gone from the schema —
+the concept was removed, not renamed. The CLI threads workspace context through
+~39 non-test files: a whole onboarding workspace-selection step
+(`onboarding/workspaces/*`), onboarding gates/transitions, chat
+(`input_flow`, `model`), the status bar org/workspace display, and app wiring.
+Removing it is a user-facing flow change, not a mechanical edit — **needs a
+product decision on the post-workspace onboarding/UX** before code. Tracked
+separately from the core PowerSync removal.
+
 **Chat is ephemeral (decided 2026-06-08).** Conversation/message history is no
 longer persisted across sessions — in-memory during a session is enough. So:
 delete all chat persistence (conversation/message GraphQL ops, uploader
 handlers, sqlite conversations/messages tables and query surfaces); chat state
 lives in-memory and streams via `internal/boundary/chat`. This removes the last
 thing that needed a persistent local store and locks **Option A**.
+
+## Operation-file migration status (task #1, in progress)
+
+Reconciling `queries/*.graphql` against the refreshed schema (control plane up
+locally). Done so far:
+
+- `services.graphql`: `updateService(input:{enabled})` → `setServiceEnabled(id,
+  enabled)`. Operation names kept (`EnableService`/`DisableService`) so the
+  generated method signatures don't churn.
+- `accounts.graphql`: `CreateAccountInput` → `AccountCreateInput`.
+- `organizations.graphql`: `CreateOrganizationInput` → `OrganizationCreateInput`;
+  removed the now-gone `workspace { … }` from the bootstrap result.
+- `datadog_accounts.graphql`: `CreateDatadogAccountWithCredentialsInput` →
+  `DatadogAccountCreateInput`.
+- Deleted: `conversations.graphql`, `messages.graphql` (chat ephemeral),
+  `log_event_policies.graphql` (approve/dismiss → Issue model),
+  `workspaces.graphql` (workspaces removed).
+
+**Blocker — the read model is deeply restructured, not renamed.**
+`DatadogAccountStatus` went from ~33 flat metric fields to a nested model:
+`health: StatusHealth`, `readiness: StatusReadiness`,
+`coverage: DatadogAccountStatusCoverage`, `current: DatadogAccountCurrentStatus`,
+`preview/effective: StatusScenario`. So `GetDatadogAccountStatus` must be
+re-shaped to the nested model, and its ~8 consumers (onboarding datadog
+discovery, status-bar surfaces/services, chat update handlers, the sqlite status
+layer, domain types) re-mapped. This is tasks #2/#4 work fused into the regen —
+genqlient won't emit `generated.go` until every operation validates, so the
+client regen lands together with the read-model remap, not before it.
+
+Net: task #1 is not a mechanical regen; it is the front edge of the full
+read-model migration. Sequence the read-model remap (datadog status + the new
+issues/checks/edge queries) as the unit that unblocks the regen.
 
 ## Consumer inventory (18 non-test importers) → replacement
 

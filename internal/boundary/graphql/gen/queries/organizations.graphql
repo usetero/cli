@@ -12,7 +12,7 @@ query ListOrganizations {
     }
 }
 
-mutation CreateOrganizationAndBootstrap($input: CreateOrganizationInput!) {
+mutation CreateOrganizationAndBootstrap($input: OrganizationCreateInput!) {
     createOrganizationAndBootstrap(input: $input) {
         organization {
             id
@@ -21,10 +21,6 @@ mutation CreateOrganizationAndBootstrap($input: CreateOrganizationInput!) {
             workosOrganizationID
         }
         account {
-            id
-            name
-        }
-        workspace {
             id
             name
         }

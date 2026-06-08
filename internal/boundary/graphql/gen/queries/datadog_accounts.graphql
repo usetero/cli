@@ -14,7 +14,7 @@ query GetAccount($id: ID!) {
 }
 
 mutation CreateDatadogAccountWithCredentials(
-    $input: CreateDatadogAccountWithCredentialsInput!
+    $input: DatadogAccountCreateInput!
 ) {
     createDatadogAccount(input: $input) {
         id

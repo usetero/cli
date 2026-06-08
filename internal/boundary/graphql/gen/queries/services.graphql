@@ -57,7 +57,7 @@ query GetServiceByName($name: String!) {
 
 # Mutation to enable a service for analysis
 mutation EnableService($serviceId: ID!) {
-    updateService(id: $serviceId, input: { enabled: true }) {
+    setServiceEnabled(id: $serviceId, enabled: true) {
         id
         name
         enabled
@@ -66,7 +66,7 @@ mutation EnableService($serviceId: ID!) {
 
 # Mutation to disable a service
 mutation DisableService($serviceId: ID!) {
-    updateService(id: $serviceId, input: { enabled: false }) {
+    setServiceEnabled(id: $serviceId, enabled: false) {
         id
         name
         enabled

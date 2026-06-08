@@ -11,7 +11,7 @@ query ListAccounts($organizationID: ID!) {
     }
 }
 
-mutation CreateAccount($input: CreateAccountInput!) {
+mutation CreateAccount($input: AccountCreateInput!) {
     createAccount(input: $input) {
         id
         name
