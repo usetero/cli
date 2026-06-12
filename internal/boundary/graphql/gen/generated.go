@@ -1293,6 +1293,102 @@ func (v *ListEdgeInstancesResponse) GetEdgeInstances() ListEdgeInstancesEdgeInst
 	return v.EdgeInstances
 }
 
+// ListIssuesIssuesIssueConnection includes the requested fields of the GraphQL type IssueConnection.
+type ListIssuesIssuesIssueConnection struct {
+	TotalCount int                                             `json:"totalCount"`
+	Edges      []ListIssuesIssuesIssueConnectionEdgesIssueEdge `json:"edges"`
+}
+
+// GetTotalCount returns ListIssuesIssuesIssueConnection.TotalCount, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnection) GetTotalCount() int { return v.TotalCount }
+
+// GetEdges returns ListIssuesIssuesIssueConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnection) GetEdges() []ListIssuesIssuesIssueConnectionEdgesIssueEdge {
+	return v.Edges
+}
+
+// ListIssuesIssuesIssueConnectionEdgesIssueEdge includes the requested fields of the GraphQL type IssueEdge.
+type ListIssuesIssuesIssueConnectionEdgesIssueEdge struct {
+	Node ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue `json:"node"`
+}
+
+// GetNode returns ListIssuesIssuesIssueConnectionEdgesIssueEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdge) GetNode() ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue {
+	return v.Node
+}
+
+// ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue includes the requested fields of the GraphQL type Issue.
+type ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue struct {
+	// Unique identifier
+	Id string `json:"id"`
+	// Stable account-local issue identifier for product links and support workflows.
+	DisplayID string `json:"displayID"`
+	// Short user-facing title for this issue.
+	Title string `json:"title"`
+	// How much attention a kept finding deserves. Values: low = Legitimate finding,
+	// but low urgency or prominence.; medium = Legitimate finding with clear but not
+	// top-tier urgency.; high = Legitimate finding that deserves strong user attention.
+	Priority IssuePriority                                                                     `json:"priority"`
+	Service  *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService                    `json:"service"`
+	Cost     ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals `json:"cost"`
+}
+
+// GetId returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Id, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetId() string { return v.Id }
+
+// GetDisplayID returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.DisplayID, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetDisplayID() string {
+	return v.DisplayID
+}
+
+// GetTitle returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Title, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetTitle() string { return v.Title }
+
+// GetPriority returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Priority, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetPriority() IssuePriority {
+	return v.Priority
+}
+
+// GetService returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Service, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetService() *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService {
+	return v.Service
+}
+
+// GetCost returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Cost, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetCost() ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals {
+	return v.Cost
+}
+
+// ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals includes the requested fields of the GraphQL type StatusMeasurementTotals.
+type ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals struct {
+	TotalUsdPerHour *float64 `json:"totalUsdPerHour"`
+}
+
+// GetTotalUsdPerHour returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals.TotalUsdPerHour, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals) GetTotalUsdPerHour() *float64 {
+	return v.TotalUsdPerHour
+}
+
+// ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService includes the requested fields of the GraphQL type Service.
+type ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService struct {
+	// Service identifier in telemetry (e.g., 'checkout-service')
+	Name string `json:"name"`
+}
+
+// GetName returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService.Name, and is useful for accessing the field via an interface.
+func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService) GetName() string {
+	return v.Name
+}
+
+// ListIssuesResponse is returned by ListIssues on success.
+type ListIssuesResponse struct {
+	// Query Issues records in your account.
+	Issues ListIssuesIssuesIssueConnection `json:"issues"`
+}
+
+// GetIssues returns ListIssuesResponse.Issues, and is useful for accessing the field via an interface.
+func (v *ListIssuesResponse) GetIssues() ListIssuesIssuesIssueConnection { return v.Issues }
+
 // ListOrganizationsOrganizationsOrganizationConnection includes the requested fields of the GraphQL type OrganizationConnection.
 type ListOrganizationsOrganizationsOrganizationConnection struct {
 	Edges      []ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge `json:"edges"`
@@ -1818,6 +1914,14 @@ type __ListAccountsInput struct {
 
 // GetOrganizationID returns __ListAccountsInput.OrganizationID, and is useful for accessing the field via an interface.
 func (v *__ListAccountsInput) GetOrganizationID() string { return v.OrganizationID }
+
+// __ListIssuesInput is used internally by genqlient
+type __ListIssuesInput struct {
+	First int `json:"first"`
+}
+
+// GetFirst returns __ListIssuesInput.First, and is useful for accessing the field via an interface.
+func (v *__ListIssuesInput) GetFirst() int { return v.First }
 
 // __ListServiceLogEventsInput is used internally by genqlient
 type __ListServiceLogEventsInput struct {
@@ -2471,6 +2575,55 @@ func ListEdgeInstances(
 	}
 
 	data_ = &ListEdgeInstancesResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListIssues.
+const ListIssues_Operation = `
+query ListIssues ($first: Int!) {
+	issues(first: $first, where: {closedAtIsNil:true,ignoredAtIsNil:true}, orderBy: {field:PRIORITY,direction:DESC}) {
+		totalCount
+		edges {
+			node {
+				id
+				displayID
+				title
+				priority
+				service {
+					name
+				}
+				cost {
+					totalUsdPerHour
+				}
+			}
+		}
+	}
+}
+`
+
+// Individual active issues with detail, for the chat agent's read tool.
+func ListIssues(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	first int,
+) (data_ *ListIssuesResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListIssues",
+		Query:  ListIssues_Operation,
+		Variables: &__ListIssuesInput{
+			First: first,
+		},
+	}
+
+	data_ = &ListIssuesResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

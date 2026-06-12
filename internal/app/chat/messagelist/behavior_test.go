@@ -268,7 +268,7 @@ func TestBehavior_ToolResultsStayBoundToOriginalBlock(t *testing.T) {
 			},
 		},
 	)
-	registry := chattools.NewRegistry(nil, nil, map[string]chattools.ActionTool{
+	registry := chattools.NewRegistry(map[string]chattools.ActionTool{
 		"set_service_enabled": actionTool,
 	})
 

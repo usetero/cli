@@ -51,6 +51,7 @@ type Client interface {
 
 	// Product surface reads
 	GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryResponse, error)
+	ListIssues(ctx context.Context, first int) (*gen.ListIssuesResponse, error)
 	ListChecks(ctx context.Context) (*gen.ListChecksResponse, error)
 	ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesResponse, error)
 
@@ -281,6 +282,14 @@ func (c *client) GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryRespo
 		return nil, err
 	}
 	return gen.GetIssueSummary(ctx, gql)
+}
+
+func (c *client) ListIssues(ctx context.Context, first int) (*gen.ListIssuesResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListIssues(ctx, gql, first)
 }
 
 func (c *client) ListChecks(ctx context.Context) (*gen.ListChecksResponse, error) {

@@ -59,13 +59,17 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 		m.statusBar.SetDB(m.db),
 	)
 
-	// Create tool registry with executors. Service enable/disable is a
-	// synchronous control-plane mutation; policy approval moved to the issue
-	// model and is no longer a chat action.
+	// Create tool registry. All tools are GraphQL-backed: the read tools query
+	// the control-plane catalog and set_service_enabled is a synchronous
+	// mutation. Policy approval moved to the issue model and is no longer a
+	// chat action.
 	m.toolRegistry = chattools.NewRegistry(
-		chattools.NewQueryTool(m.db, m.scope),
-		chattools.NewShowTool(m.db),
 		map[string]chattools.ActionTool{
+			"list_services":       chattools.NewListServicesTool(m.services),
+			"list_issues":         chattools.NewListIssuesTool(m.services),
+			"list_checks":         chattools.NewListChecksTool(m.services),
+			"list_edge_instances": chattools.NewListEdgeInstancesTool(m.services),
+			"account_status":      chattools.NewAccountStatusTool(m.services),
 			"set_service_enabled": chattools.NewSetServiceEnabledAction(m.services.Services),
 		},
 	)

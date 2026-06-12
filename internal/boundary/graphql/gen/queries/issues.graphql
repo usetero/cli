@@ -17,3 +17,28 @@ query GetIssueSummary {
         }
     }
 }
+
+# Individual active issues with detail, for the chat agent's read tool.
+query ListIssues($first: Int!) {
+    issues(
+        first: $first
+        where: { closedAtIsNil: true, ignoredAtIsNil: true }
+        orderBy: { field: PRIORITY, direction: DESC }
+    ) {
+        totalCount
+        edges {
+            node {
+                id
+                displayID
+                title
+                priority
+                service {
+                    name
+                }
+                cost {
+                    totalUsdPerHour
+                }
+            }
+        }
+    }
+}

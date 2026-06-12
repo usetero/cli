@@ -8,9 +8,13 @@ import (
 	"github.com/usetero/cli/internal/log"
 )
 
+// maxIssues bounds the issue-list read for the chat agent.
+const maxIssues = 50
+
 // Issues provides access to the account's active issues.
 type Issues interface {
 	GetSummary(ctx context.Context) (domain.IssueSummary, error)
+	List(ctx context.Context) ([]domain.Issue, error)
 }
 
 // IssueService reads issue aggregates from the control plane.
@@ -57,4 +61,33 @@ func (s *IssueService) GetSummary(ctx context.Context) (domain.IssueSummary, err
 		log.Int("open", int(summary.Open)),
 		log.Int("high", int(summary.HighCount)))
 	return summary, nil
+}
+
+// List fetches the active issues with detail, highest priority first.
+func (s *IssueService) List(ctx context.Context) ([]domain.Issue, error) {
+	s.scope.Debug("fetching issues from API")
+	resp, err := s.client.ListIssues(ctx, maxIssues)
+	if err != nil {
+		s.scope.Error("failed to fetch issues", "error", err)
+		return nil, err
+	}
+
+	issues := make([]domain.Issue, 0, len(resp.Issues.Edges))
+	for _, edge := range resp.Issues.Edges {
+		node := edge.Node
+		issue := domain.Issue{
+			ID:          node.Id,
+			DisplayID:   node.DisplayID,
+			Title:       node.Title,
+			Priority:    domain.IssuePriority(node.Priority),
+			CostPerHour: node.Cost.TotalUsdPerHour,
+		}
+		if node.Service != nil {
+			issue.ServiceName = node.Service.Name
+		}
+		issues = append(issues, issue)
+	}
+
+	s.scope.Debug("fetched issues", log.Int("count", len(issues)))
+	return issues, nil
 }

@@ -11,6 +11,16 @@ const (
 
 func (p IssuePriority) String() string { return string(p) }
 
+// Issue is a single active issue with the detail the chat agent surfaces.
+type Issue struct {
+	ID          string
+	DisplayID   string
+	Title       string
+	Priority    IssuePriority
+	ServiceName string
+	CostPerHour *float64
+}
+
 // IssueSummary is the server-computed aggregate state for active issues
 // (issues whose closedAt and ignoredAt are both nil). The control plane
 // computes the count and per-priority breakdown; the CLI never aggregates

@@ -7,8 +7,6 @@ import (
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
-	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/query"
-	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/show"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
@@ -159,19 +157,11 @@ func (m *Model) newToolBlock(index int, toolUse *domain.ToolUse, width int) *too
 		return tools.New(m.blockTheme, index, m.turnID, toolUse.ID, width, child)
 	}
 
-	var child tools.Child
-	switch {
-	case m.toolRegistry.Query != nil && toolUse.Name == m.toolRegistry.Query.Name():
-		child = query.New(m.blockTheme, index, m.turnID, toolUse.ID, width, m.toolRegistry.Query, m.scope)
-	case m.toolRegistry.Show != nil && toolUse.Name == m.toolRegistry.Show.Name():
-		child = show.New(m.blockTheme, index, m.turnID, toolUse.ID, width, m.toolRegistry.Show, m.scope)
-	default:
-		entry, ok := m.toolRegistry.Lookup(toolUse.Name)
-		if !ok {
-			m.scope.Warn("unknown tool, using generic action", "name", toolUse.Name)
-			entry = chattools.UnknownTool(toolUse.Name)
-		}
-		child = action.New(index, m.turnID, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
+	entry, ok := m.toolRegistry.Lookup(toolUse.Name)
+	if !ok {
+		m.scope.Warn("unknown tool, using generic action", "name", toolUse.Name)
+		entry = chattools.UnknownTool(toolUse.Name)
 	}
+	child := action.New(index, m.turnID, toolUse.ID, width, entry.Config, entry.Exec, m.scope)
 	return tools.New(m.blockTheme, index, m.turnID, toolUse.ID, width, child)
 }

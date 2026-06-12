@@ -24,6 +24,7 @@ type MockClient struct {
 	EnableServiceFunc                       func(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
 	DisableServiceFunc                      func(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
 	GetIssueSummaryFunc                     func(ctx context.Context) (*gen.GetIssueSummaryResponse, error)
+	ListIssuesFunc                          func(ctx context.Context, first int) (*gen.ListIssuesResponse, error)
 	ListChecksFunc                          func(ctx context.Context) (*gen.ListChecksResponse, error)
 	ListEdgeInstancesFunc                   func(ctx context.Context) (*gen.ListEdgeInstancesResponse, error)
 	GetAccountStatusSummaryFunc             func(ctx context.Context) (*gen.GetAccountStatusSummaryResponse, error)
@@ -132,6 +133,13 @@ func (m *MockClient) DisableService(ctx context.Context, serviceID string) (*gen
 func (m *MockClient) GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryResponse, error) {
 	if m.GetIssueSummaryFunc != nil {
 		return m.GetIssueSummaryFunc(ctx)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) ListIssues(ctx context.Context, first int) (*gen.ListIssuesResponse, error) {
+	if m.ListIssuesFunc != nil {
+		return m.ListIssuesFunc(ctx, first)
 	}
 	return nil, nil
 }
