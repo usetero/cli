@@ -1,0 +1,19 @@
+# Active issues with server-computed priority breakdown. An issue is active
+# while both closedAt and ignoredAt are nil; the control plane computes the
+# summary count and priority facet buckets so the CLI never aggregates locally.
+query GetIssueSummary {
+    issues(where: { closedAtIsNil: true, ignoredAtIsNil: true }) {
+        totalCount
+        summary {
+            count
+        }
+        facets {
+            priorities {
+                buckets {
+                    value
+                    count
+                }
+            }
+        }
+    }
+}

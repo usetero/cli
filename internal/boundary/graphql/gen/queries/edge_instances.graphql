@@ -1,0 +1,16 @@
+# Edge instances registered for the active account. totalCount is the fleet
+# size; lastSyncAt lets the surface report recency without local aggregation.
+query ListEdgeInstances {
+    edgeInstances(orderBy: { field: LAST_SYNC_AT, direction: DESC }) {
+        totalCount
+        edges {
+            node {
+                id
+                instanceID
+                serviceName
+                serviceNamespace
+                lastSyncAt
+            }
+        }
+    }
+}

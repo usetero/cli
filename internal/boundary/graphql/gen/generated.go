@@ -303,6 +303,18 @@ func (v *EnableServiceSetServiceEnabledService) GetName() string { return v.Name
 // GetEnabled returns EnableServiceSetServiceEnabledService.Enabled, and is useful for accessing the field via an interface.
 func (v *EnableServiceSetServiceEnabledService) GetEnabled() bool { return v.Enabled }
 
+type FindingCheckDomain string
+
+const (
+	FindingCheckDomainCost       FindingCheckDomain = "cost"
+	FindingCheckDomainCompliance FindingCheckDomain = "compliance"
+)
+
+var AllFindingCheckDomain = []FindingCheckDomain{
+	FindingCheckDomainCost,
+	FindingCheckDomainCompliance,
+}
+
 // GetAccountAccountsAccountConnection includes the requested fields of the GraphQL type AccountConnection.
 type GetAccountAccountsAccountConnection struct {
 	Edges []GetAccountAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
@@ -503,6 +515,79 @@ type GetDatadogAccountStatusResponse struct {
 func (v *GetDatadogAccountStatusResponse) GetDatadogAccounts() GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection {
 	return v.DatadogAccounts
 }
+
+// GetIssueSummaryIssuesIssueConnection includes the requested fields of the GraphQL type IssueConnection.
+type GetIssueSummaryIssuesIssueConnection struct {
+	TotalCount int                                                     `json:"totalCount"`
+	Summary    GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary `json:"summary"`
+	Facets     GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets   `json:"facets"`
+}
+
+// GetTotalCount returns GetIssueSummaryIssuesIssueConnection.TotalCount, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnection) GetTotalCount() int { return v.TotalCount }
+
+// GetSummary returns GetIssueSummaryIssuesIssueConnection.Summary, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnection) GetSummary() GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary {
+	return v.Summary
+}
+
+// GetFacets returns GetIssueSummaryIssuesIssueConnection.Facets, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnection) GetFacets() GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets {
+	return v.Facets
+}
+
+// GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets includes the requested fields of the GraphQL type IssueFacets.
+type GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets struct {
+	Priorities GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet `json:"priorities"`
+}
+
+// GetPriorities returns GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets.Priorities, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnectionFacetsIssueFacets) GetPriorities() GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet {
+	return v.Priorities
+}
+
+// GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet includes the requested fields of the GraphQL type IssuePriorityFacet.
+type GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet struct {
+	Buckets []GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket `json:"buckets"`
+}
+
+// GetBuckets returns GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet.Buckets, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacet) GetBuckets() []GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket {
+	return v.Buckets
+}
+
+// GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket includes the requested fields of the GraphQL type IssuePriorityFacetBucket.
+type GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket struct {
+	Value IssuePriority `json:"value"`
+	Count int           `json:"count"`
+}
+
+// GetValue returns GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket.Value, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket) GetValue() IssuePriority {
+	return v.Value
+}
+
+// GetCount returns GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket.Count, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnectionFacetsIssueFacetsPrioritiesIssuePriorityFacetBucketsIssuePriorityFacetBucket) GetCount() int {
+	return v.Count
+}
+
+// GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary includes the requested fields of the GraphQL type IssueSummary.
+type GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary struct {
+	Count int `json:"count"`
+}
+
+// GetCount returns GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary.Count, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryIssuesIssueConnectionSummaryIssueSummary) GetCount() int { return v.Count }
+
+// GetIssueSummaryResponse is returned by GetIssueSummary on success.
+type GetIssueSummaryResponse struct {
+	// Query Issues records in your account.
+	Issues GetIssueSummaryIssuesIssueConnection `json:"issues"`
+}
+
+// GetIssues returns GetIssueSummaryResponse.Issues, and is useful for accessing the field via an interface.
+func (v *GetIssueSummaryResponse) GetIssues() GetIssueSummaryIssuesIssueConnection { return v.Issues }
 
 // GetServiceByNameResponse is returned by GetServiceByName on success.
 type GetServiceByNameResponse struct {
@@ -717,6 +802,20 @@ func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEvents
 	return v.CreatedAt
 }
 
+type IssuePriority string
+
+const (
+	IssuePriorityLow    IssuePriority = "low"
+	IssuePriorityMedium IssuePriority = "medium"
+	IssuePriorityHigh   IssuePriority = "high"
+)
+
+var AllIssuePriority = []IssuePriority{
+	IssuePriorityLow,
+	IssuePriorityMedium,
+	IssuePriorityHigh,
+}
+
 // ListAccountsAccountsAccountConnection includes the requested fields of the GraphQL type AccountConnection.
 type ListAccountsAccountsAccountConnection struct {
 	Edges      []ListAccountsAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
@@ -774,6 +873,237 @@ type ListAccountsResponse struct {
 
 // GetAccounts returns ListAccountsResponse.Accounts, and is useful for accessing the field via an interface.
 func (v *ListAccountsResponse) GetAccounts() ListAccountsAccountsAccountConnection { return v.Accounts }
+
+// ListChecksChecksCheckConnection includes the requested fields of the GraphQL type CheckConnection.
+type ListChecksChecksCheckConnection struct {
+	TotalCount int                                              `json:"totalCount"`
+	Edges      []ListChecksChecksCheckConnectionEdgesCheckEdge  `json:"edges"`
+	Facets     ListChecksChecksCheckConnectionFacetsCheckFacets `json:"facets"`
+}
+
+// GetTotalCount returns ListChecksChecksCheckConnection.TotalCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnection) GetTotalCount() int { return v.TotalCount }
+
+// GetEdges returns ListChecksChecksCheckConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnection) GetEdges() []ListChecksChecksCheckConnectionEdgesCheckEdge {
+	return v.Edges
+}
+
+// GetFacets returns ListChecksChecksCheckConnection.Facets, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnection) GetFacets() ListChecksChecksCheckConnectionFacetsCheckFacets {
+	return v.Facets
+}
+
+// ListChecksChecksCheckConnectionEdgesCheckEdge includes the requested fields of the GraphQL type CheckEdge.
+type ListChecksChecksCheckConnectionEdgesCheckEdge struct {
+	Node ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck `json:"node"`
+}
+
+// GetNode returns ListChecksChecksCheckConnectionEdgesCheckEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdge) GetNode() ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck {
+	return v.Node
+}
+
+// ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck includes the requested fields of the GraphQL type Check.
+// The GraphQL type's documentation follows.
+//
+// One code-defined standing product question and its account posture.
+type ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck struct {
+	Id      string                                                        `json:"id"`
+	Name    string                                                        `json:"name"`
+	Domain  FindingCheckDomain                                            `json:"domain"`
+	Posture ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture `json:"posture"`
+}
+
+// GetId returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck.Id, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck) GetId() string { return v.Id }
+
+// GetName returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck.Name, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck) GetName() string { return v.Name }
+
+// GetDomain returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck.Domain, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck) GetDomain() FindingCheckDomain {
+	return v.Domain
+}
+
+// GetPosture returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck.Posture, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheck) GetPosture() ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture {
+	return v.Posture
+}
+
+// ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture includes the requested fields of the GraphQL type CheckPosture.
+// The GraphQL type's documentation follows.
+//
+// Account-scoped posture for one check, computed from findings and issues.
+type ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture struct {
+	OpenFindingCount      int                                                                                         `json:"openFindingCount"`
+	PendingFindingCount   int                                                                                         `json:"pendingFindingCount"`
+	EscalatedFindingCount int                                                                                         `json:"escalatedFindingCount"`
+	ActiveIssueCount      int                                                                                         `json:"activeIssueCount"`
+	AffectedServiceCount  int                                                                                         `json:"affectedServiceCount"`
+	Current               ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals `json:"current"`
+}
+
+// GetOpenFindingCount returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.OpenFindingCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetOpenFindingCount() int {
+	return v.OpenFindingCount
+}
+
+// GetPendingFindingCount returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.PendingFindingCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetPendingFindingCount() int {
+	return v.PendingFindingCount
+}
+
+// GetEscalatedFindingCount returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.EscalatedFindingCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetEscalatedFindingCount() int {
+	return v.EscalatedFindingCount
+}
+
+// GetActiveIssueCount returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.ActiveIssueCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetActiveIssueCount() int {
+	return v.ActiveIssueCount
+}
+
+// GetAffectedServiceCount returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.AffectedServiceCount, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetAffectedServiceCount() int {
+	return v.AffectedServiceCount
+}
+
+// GetCurrent returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture.Current, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPosture) GetCurrent() ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals {
+	return v.Current
+}
+
+// ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals includes the requested fields of the GraphQL type StatusMeasurementTotals.
+type ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals struct {
+	TotalUsdPerHour *float64 `json:"totalUsdPerHour"`
+}
+
+// GetTotalUsdPerHour returns ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals.TotalUsdPerHour, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionEdgesCheckEdgeNodeCheckPostureCurrentStatusMeasurementTotals) GetTotalUsdPerHour() *float64 {
+	return v.TotalUsdPerHour
+}
+
+// ListChecksChecksCheckConnectionFacetsCheckFacets includes the requested fields of the GraphQL type CheckFacets.
+type ListChecksChecksCheckConnectionFacetsCheckFacets struct {
+	Domains ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet `json:"domains"`
+}
+
+// GetDomains returns ListChecksChecksCheckConnectionFacetsCheckFacets.Domains, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionFacetsCheckFacets) GetDomains() ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet {
+	return v.Domains
+}
+
+// ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet includes the requested fields of the GraphQL type CheckDomainFacet.
+type ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet struct {
+	Buckets []ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket `json:"buckets"`
+}
+
+// GetBuckets returns ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet.Buckets, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacet) GetBuckets() []ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket {
+	return v.Buckets
+}
+
+// ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket includes the requested fields of the GraphQL type CheckDomainFacetBucket.
+type ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket struct {
+	Value FindingCheckDomain `json:"value"`
+	Count int                `json:"count"`
+}
+
+// GetValue returns ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket.Value, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket) GetValue() FindingCheckDomain {
+	return v.Value
+}
+
+// GetCount returns ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket.Count, and is useful for accessing the field via an interface.
+func (v *ListChecksChecksCheckConnectionFacetsCheckFacetsDomainsCheckDomainFacetBucketsCheckDomainFacetBucket) GetCount() int {
+	return v.Count
+}
+
+// ListChecksResponse is returned by ListChecks on success.
+type ListChecksResponse struct {
+	// Code-defined product checks with account-scoped posture measurements.
+	Checks ListChecksChecksCheckConnection `json:"checks"`
+}
+
+// GetChecks returns ListChecksResponse.Checks, and is useful for accessing the field via an interface.
+func (v *ListChecksResponse) GetChecks() ListChecksChecksCheckConnection { return v.Checks }
+
+// ListEdgeInstancesEdgeInstancesEdgeInstanceConnection includes the requested fields of the GraphQL type EdgeInstanceConnection.
+type ListEdgeInstancesEdgeInstancesEdgeInstanceConnection struct {
+	TotalCount int                                                                         `json:"totalCount"`
+	Edges      []ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge `json:"edges"`
+}
+
+// GetTotalCount returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnection.TotalCount, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnection) GetTotalCount() int {
+	return v.TotalCount
+}
+
+// GetEdges returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnection) GetEdges() []ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge {
+	return v.Edges
+}
+
+// ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge includes the requested fields of the GraphQL type EdgeInstanceEdge.
+type ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge struct {
+	Node ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance `json:"node"`
+}
+
+// GetNode returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdge) GetNode() ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance {
+	return v.Node
+}
+
+// ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance includes the requested fields of the GraphQL type EdgeInstance.
+type ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance struct {
+	// Unique identifier of this edge instance
+	Id string `json:"id"`
+	// The service.instance.id resource attribute identifying this instance
+	InstanceID string `json:"instanceID"`
+	// The service.name resource attribute
+	ServiceName string `json:"serviceName"`
+	// The service.namespace resource attribute
+	ServiceNamespace *string `json:"serviceNamespace"`
+	// When this edge instance last synced
+	LastSyncAt time.Time `json:"lastSyncAt"`
+}
+
+// GetId returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance.Id, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance) GetId() string {
+	return v.Id
+}
+
+// GetInstanceID returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance.InstanceID, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance) GetInstanceID() string {
+	return v.InstanceID
+}
+
+// GetServiceName returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance.ServiceName, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance) GetServiceName() string {
+	return v.ServiceName
+}
+
+// GetServiceNamespace returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance.ServiceNamespace, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance) GetServiceNamespace() *string {
+	return v.ServiceNamespace
+}
+
+// GetLastSyncAt returns ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance.LastSyncAt, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesEdgeInstancesEdgeInstanceConnectionEdgesEdgeInstanceEdgeNodeEdgeInstance) GetLastSyncAt() time.Time {
+	return v.LastSyncAt
+}
+
+// ListEdgeInstancesResponse is returned by ListEdgeInstances on success.
+type ListEdgeInstancesResponse struct {
+	// Query EdgeInstances records in your account.
+	EdgeInstances ListEdgeInstancesEdgeInstancesEdgeInstanceConnection `json:"edgeInstances"`
+}
+
+// GetEdgeInstances returns ListEdgeInstancesResponse.EdgeInstances, and is useful for accessing the field via an interface.
+func (v *ListEdgeInstancesResponse) GetEdgeInstances() ListEdgeInstancesEdgeInstancesEdgeInstanceConnection {
+	return v.EdgeInstances
+}
 
 // ListOrganizationsOrganizationsOrganizationConnection includes the requested fields of the GraphQL type OrganizationConnection.
 type ListOrganizationsOrganizationsOrganizationConnection struct {
@@ -1356,6 +1686,50 @@ func GetDatadogAccountStatus(
 	return data_, err_
 }
 
+// The query executed by GetIssueSummary.
+const GetIssueSummary_Operation = `
+query GetIssueSummary {
+	issues(where: {closedAtIsNil:true,ignoredAtIsNil:true}) {
+		totalCount
+		summary {
+			count
+		}
+		facets {
+			priorities {
+				buckets {
+					value
+					count
+				}
+			}
+		}
+	}
+}
+`
+
+// Active issues with server-computed priority breakdown. An issue is active
+// while both closedAt and ignoredAt are nil; the control plane computes the
+// summary count and priority facet buckets so the CLI never aggregates locally.
+func GetIssueSummary(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *GetIssueSummaryResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "GetIssueSummary",
+		Query:  GetIssueSummary_Operation,
+	}
+
+	data_ = &GetIssueSummaryResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
 // The query executed by GetService.
 const GetService_Operation = `
 query GetService ($id: ID!) {
@@ -1485,6 +1859,105 @@ func ListAccounts(
 	}
 
 	data_ = &ListAccountsResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListChecks.
+const ListChecks_Operation = `
+query ListChecks {
+	checks {
+		totalCount
+		edges {
+			node {
+				id
+				name
+				domain
+				posture {
+					openFindingCount
+					pendingFindingCount
+					escalatedFindingCount
+					activeIssueCount
+					affectedServiceCount
+					current {
+						totalUsdPerHour
+					}
+				}
+			}
+		}
+		facets {
+			domains {
+				buckets {
+					value
+					count
+				}
+			}
+		}
+	}
+}
+`
+
+// Code-defined product checks with account-scoped posture. Posture counts and
+// cost totals are computed server-side from findings and issues; the domain
+// facet groups checks by lane (cost / compliance).
+func ListChecks(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *ListChecksResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListChecks",
+		Query:  ListChecks_Operation,
+	}
+
+	data_ = &ListChecksResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListEdgeInstances.
+const ListEdgeInstances_Operation = `
+query ListEdgeInstances {
+	edgeInstances(orderBy: {field:LAST_SYNC_AT,direction:DESC}) {
+		totalCount
+		edges {
+			node {
+				id
+				instanceID
+				serviceName
+				serviceNamespace
+				lastSyncAt
+			}
+		}
+	}
+}
+`
+
+// Edge instances registered for the active account. totalCount is the fleet
+// size; lastSyncAt lets the surface report recency without local aggregation.
+func ListEdgeInstances(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *ListEdgeInstancesResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListEdgeInstances",
+		Query:  ListEdgeInstances_Operation,
+	}
+
+	data_ = &ListEdgeInstancesResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

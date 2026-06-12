@@ -19,6 +19,9 @@ type ServiceSet struct {
 	DatadogAccounts DatadogAccounts
 	Services        Services
 	Policies        Policies
+	Issues          Issues
+	Checks          Checks
+	EdgeInstances   EdgeInstances
 }
 
 // NewServiceSet creates ServiceSet with an internally-managed client.
@@ -48,6 +51,9 @@ func newServiceSetWithScope(client Client, scope log.Scope) ServiceSet {
 		DatadogAccounts: NewDatadogAccountService(client, scope),
 		Services:        NewServiceService(client, scope),
 		Policies:        NewPolicyService(client, scope),
+		Issues:          NewIssueService(client, scope),
+		Checks:          NewCheckService(client, scope),
+		EdgeInstances:   NewEdgeInstanceService(client, scope),
 	}
 }
 

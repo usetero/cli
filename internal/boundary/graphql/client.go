@@ -48,6 +48,11 @@ type Client interface {
 	// Service operations
 	EnableService(ctx context.Context, serviceID string) (*gen.EnableServiceResponse, error)
 	DisableService(ctx context.Context, serviceID string) (*gen.DisableServiceResponse, error)
+
+	// Product surface reads
+	GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryResponse, error)
+	ListChecks(ctx context.Context) (*gen.ListChecksResponse, error)
+	ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesResponse, error)
 }
 
 // client is the concrete implementation of Client.
@@ -261,4 +266,30 @@ func (c *client) DisableService(ctx context.Context, serviceID string) (*gen.Dis
 		return nil, err
 	}
 	return gen.DisableService(ctx, gql, serviceID)
+}
+
+// Product surface reads
+
+func (c *client) GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetIssueSummary(ctx, gql)
+}
+
+func (c *client) ListChecks(ctx context.Context) (*gen.ListChecksResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListChecks(ctx, gql)
+}
+
+func (c *client) ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListEdgeInstances(ctx, gql)
 }

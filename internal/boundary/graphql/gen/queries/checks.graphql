@@ -1,0 +1,33 @@
+# Code-defined product checks with account-scoped posture. Posture counts and
+# cost totals are computed server-side from findings and issues; the domain
+# facet groups checks by lane (cost / compliance).
+query ListChecks {
+    checks {
+        totalCount
+        edges {
+            node {
+                id
+                name
+                domain
+                posture {
+                    openFindingCount
+                    pendingFindingCount
+                    escalatedFindingCount
+                    activeIssueCount
+                    affectedServiceCount
+                    current {
+                        totalUsdPerHour
+                    }
+                }
+            }
+        }
+        facets {
+            domains {
+                buckets {
+                    value
+                    count
+                }
+            }
+        }
+    }
+}
