@@ -25,7 +25,6 @@ const (
 	EventDatadogAPIKeyEntered  EventKind = "datadog_apikey_entered"
 	EventDatadogAccountCreated EventKind = "datadog_account_created"
 	EventDatadogDiscoveryDone  EventKind = "datadog_discovery_done"
-	EventWorkspaceSelected     EventKind = "workspace_selected"
 )
 
 // Event is the canonical transition input consumed by the bootstrap engine.
@@ -39,7 +38,6 @@ type Event struct {
 	Site             domain.DatadogSite
 	APIKey           string
 	DatadogAccountID domain.DatadogAccountID
-	Workspace        domain.Workspace
 }
 
 // TransitionKind is the deterministic output shape for ApplyEvent.
@@ -93,8 +91,8 @@ func ApplyEvent(state State, event Event) Transition {
 		nextState, next := ApplyRuntimeReady(state, event.Org, event.Account)
 		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
 	case EventDatadogReady:
-		nextState, next := ApplyDatadogReady(state)
-		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
+		// Datadog already configured: onboarding is complete (no workspace step).
+		return completeOrNoop(state)
 	case EventDatadogNeeded:
 		nextState, next := ApplyDatadogNeeded(state)
 		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
@@ -108,19 +106,20 @@ func ApplyEvent(state State, event Event) Transition {
 		nextState, next := ApplyDatadogAccountCreated(state, event.DatadogAccountID)
 		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
 	case EventDatadogDiscoveryDone:
-		nextState, next := ApplyDatadogDiscoveryComplete(state)
-		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
-	case EventWorkspaceSelected:
-		// Workspace selection is the final onboarding step. The control plane
-		// has no sync to wait for, so completing here drops the agent straight
-		// into chat.
-		nextState := ApplyWorkspaceSelected(state, event.Workspace)
-		completion, ok := CompleteOnboarding(nextState)
-		if !ok {
-			return Transition{Kind: TransitionNoop, State: nextState}
-		}
-		return Transition{Kind: TransitionComplete, State: nextState, Completion: completion}
+		// Datadog discovery finished: onboarding is complete. The account is the
+		// working context; there is no workspace step.
+		return completeOrNoop(state)
 	default:
 		return Transition{Kind: TransitionNoop, State: state}
 	}
+}
+
+// completeOrNoop completes onboarding when the required state is present,
+// otherwise no-ops.
+func completeOrNoop(state State) Transition {
+	completion, ok := CompleteOnboarding(state)
+	if !ok {
+		return Transition{Kind: TransitionNoop, State: state}
+	}
+	return Transition{Kind: TransitionComplete, State: state, Completion: completion}
 }

@@ -75,11 +75,10 @@ func New(
 func (m *Model) Init() tea.Cmd {
 	m.started = time.Now()
 	m.state = bootstrap.PreflightState{
-		Outcome:            bootstrap.PreflightOutcomeResolved,
-		Role:               m.userPref.GetRole(),
-		ActiveOrgID:        m.userPref.GetActiveOrgID(),
-		DefaultAccountID:   m.orgPref.GetDefaultAccountID(),
-		DefaultWorkspaceID: m.orgPref.GetDefaultWorkspaceID(),
+		Outcome:          bootstrap.PreflightOutcomeResolved,
+		Role:             m.userPref.GetRole(),
+		ActiveOrgID:      m.userPref.GetActiveOrgID(),
+		DefaultAccountID: m.orgPref.GetDefaultAccountID(),
 	}
 	m.stage = stageAuth
 	return tea.Batch(m.spinner.Tick, m.checkAuth())

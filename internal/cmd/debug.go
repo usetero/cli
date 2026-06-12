@@ -161,7 +161,6 @@ func newDebugPrefsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 				fmt.Println(s.Title.Render("Org Preferences"))
 				fmt.Println(s.Help.Render("Path: " + orgPrefsPath))
 				printPref("Account ID", orgPrefs.GetDefaultAccountID().String())
-				printPref("Workspace ID", orgPrefs.GetDefaultWorkspaceID().String())
 			}
 
 			return nil

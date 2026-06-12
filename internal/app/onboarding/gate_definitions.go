@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/app/onboarding/preflight"
 	"github.com/usetero/cli/internal/app/onboarding/role"
 	"github.com/usetero/cli/internal/app/onboarding/runtimeinit"
-	"github.com/usetero/cli/internal/app/onboarding/workspaces"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
 
@@ -52,8 +51,6 @@ func (m *Model) newStepForGate(gate Gate) (Step, error) {
 		return datadog.NewAppKey(m.ctx, m.theme, *m.state.Account, m.state.DDSite, m.state.DDAPIKey, m.services, m.scope), nil
 	case bootstrap.GateDatadogDiscovery:
 		return datadog.NewDiscovery(m.ctx, m.theme, m.state.DDAccount, m.services, m.scope), nil
-	case bootstrap.GateWorkspaceSelect:
-		return workspaces.NewSelect(m.ctx, m.theme, *m.state.Account, m.services, m.orgPrefs, m.scope), nil
 	default:
 		return nil, fmt.Errorf("unsupported gate %q", gate)
 	}
@@ -66,8 +63,6 @@ func (m *Model) validateGateState(gate Gate) error {
 		return fmt.Errorf("gate %q requires org", gate)
 	case req.NeedsAccount && m.state.Account == nil:
 		return fmt.Errorf("gate %q requires account", gate)
-	case req.NeedsWorkspace && m.state.Workspace == nil:
-		return fmt.Errorf("gate %q requires workspace", gate)
 	case req.NeedsDDSite && m.state.DDSite == "":
 		return fmt.Errorf("gate %q requires datadog site", gate)
 	case req.NeedsDDAPIKey && m.state.DDAPIKey == "":

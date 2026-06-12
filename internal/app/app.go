@@ -69,7 +69,6 @@ type Model struct {
 	toolRegistry  *chattools.Registry
 	user          *auth.User
 	account       domain.Account
-	workspace     domain.Workspace
 
 	// Components
 	statusBar  *statusbar.Model
@@ -193,7 +192,6 @@ func (m *Model) newChat() *chat.Model {
 	return chat.New(
 		m.user,
 		m.account,
-		m.workspace,
 		m.theme,
 		m.services,
 		m.runtimeDeps,

@@ -37,8 +37,7 @@ type Model struct {
 	width           int
 
 	// Account context
-	org       string
-	workspace string
+	org string
 
 	// Conversation
 	title string

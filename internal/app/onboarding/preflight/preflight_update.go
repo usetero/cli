@@ -67,7 +67,6 @@ func (m *Model) handleResult(msg preflightResolutionCompletedMsg) tea.Cmd {
 		"role", msg.state.Role,
 		"active_org_id", msg.state.ActiveOrgID,
 		"default_account_id", msg.state.DefaultAccountID,
-		"default_workspace_id", msg.state.DefaultWorkspaceID,
 		"outcome", msg.state.Outcome,
 		"org", msg.state.Org != nil,
 		"account", msg.state.Account != nil,

@@ -7,7 +7,6 @@ import graphql "github.com/usetero/cli/internal/boundary/graphql"
 func NewMockServiceSet(
 	organizations *MockOrganizations,
 	accounts *MockAccounts,
-	workspaces *MockWorkspaces,
 	datadogAccounts *MockDatadogAccounts,
 ) graphql.ServiceSet {
 	services := graphql.ServiceSet{}
@@ -17,9 +16,6 @@ func NewMockServiceSet(
 	}
 	if accounts != nil {
 		services.Accounts = accounts
-	}
-	if workspaces != nil {
-		services.Workspaces = workspaces
 	}
 	if datadogAccounts != nil {
 		services.DatadogAccounts = datadogAccounts

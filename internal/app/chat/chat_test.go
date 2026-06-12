@@ -32,7 +32,7 @@ func newTestChat(t *testing.T, client chat.Client) *Model {
 	services := graphql.NewServiceSetFromClient(apitest.NewMockClient(), scope)
 	runtimeDeps := usecase.NewRuntimeDeps(client)
 
-	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, services, runtimeDeps, nil, scope)
+	m := New(nil, domain.Account{ID: "acct-1"}, theme, services, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)
 	return m
 }

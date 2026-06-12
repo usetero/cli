@@ -33,7 +33,6 @@ func newEmptyStateChat(t *testing.T, summary domain.AccountSummary) *Model {
 	return New(
 		nil,
 		domain.Account{ID: "acct-1"},
-		domain.Workspace{ID: "ws-1"},
 		styles.NewTheme(true),
 		graphql.ServiceSet{Status: stubStatus{summary: summary}},
 		usecase.RuntimeDeps{EffectContext: context.Background()},

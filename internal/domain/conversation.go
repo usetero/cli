@@ -21,11 +21,10 @@ func (id ConversationID) String() string {
 
 // Conversation represents a chat conversation.
 type Conversation struct {
-	ID          ConversationID `json:"id"`
-	WorkspaceID WorkspaceID    `json:"workspace_id"`
-	Title       string         `json:"title"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	ID        ConversationID `json:"id"`
+	Title     string         `json:"title"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }
 
 // ContextSource indicates who added an entity to context.

@@ -19,7 +19,7 @@ func TestCheckHasDatadogEmitsReady(t *testing.T) {
 	mockDatadog.HasAccountFunc = func(context.Context, domain.AccountID) (bool, error) {
 		return true, nil
 	}
-	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
+	services := apitest.NewMockServiceSet(nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
 	cmd := m.Update(datadogCheckCompletedMsg{hasDatadog: true})
@@ -38,7 +38,7 @@ func TestCheckNoDatadogEmitsNeeded(t *testing.T) {
 	mockDatadog.HasAccountFunc = func(context.Context, domain.AccountID) (bool, error) {
 		return false, nil
 	}
-	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
+	services := apitest.NewMockServiceSet(nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
 	cmd := m.Update(datadogCheckCompletedMsg{hasDatadog: false})
@@ -57,7 +57,7 @@ func TestCheckErrorEnablesRetry(t *testing.T) {
 	mockDatadog.HasAccountFunc = func(context.Context, domain.AccountID) (bool, error) {
 		return false, errors.New("boom")
 	}
-	services := apitest.NewMockServiceSet(nil, nil, nil, mockDatadog)
+	services := apitest.NewMockServiceSet(nil, nil, mockDatadog)
 
 	m := NewCheck(context.Background(), styles.NewTheme(true), domain.Account{ID: "acc-1"}, services, logtest.NewScope(t))
 	if cmd := m.Update(datadogCheckCompletedMsg{err: errors.New("boom")}); cmd == nil {

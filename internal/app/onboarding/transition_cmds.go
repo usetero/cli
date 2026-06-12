@@ -23,23 +23,20 @@ func (m *Model) commandForTransition(event bootstrap.Event, transition bootstrap
 		m.scope.Info("onboarding complete",
 			slog.String("org_id", transition.Completion.Org.ID.String()),
 			slog.String("account_id", transition.Completion.Account.ID.String()),
-			slog.String("workspace_id", string(transition.Completion.Workspace.ID)),
 		)
 		return func() tea.Msg {
 			return bootstrap.OnboardingComplete{
-				User:      transition.Completion.User,
-				Org:       transition.Completion.Org,
-				Account:   transition.Completion.Account,
-				Workspace: transition.Completion.Workspace,
+				User:    transition.Completion.User,
+				Org:     transition.Completion.Org,
+				Account: transition.Completion.Account,
 			}
 		}
 	case bootstrap.TransitionNoop:
-		if event.Kind == bootstrap.EventWorkspaceSelected {
-			m.scope.Error("workspace selected without required onboarding state",
+		if event.Kind == bootstrap.EventDatadogDiscoveryDone {
+			m.scope.Error("datadog discovery completed without required onboarding state",
 				slog.Bool("has_user", m.state.User != nil),
 				slog.Bool("has_org", m.state.Org != nil),
 				slog.Bool("has_account", m.state.Account != nil),
-				slog.Bool("has_workspace", m.state.Workspace != nil),
 			)
 		}
 		return nil

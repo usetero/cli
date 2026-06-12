@@ -60,8 +60,8 @@ func (m *Model) switchOrganization() tea.Cmd {
 	return m.restartOnboarding()
 }
 
-// switchAccount clears account preference (cascades to workspace) and
-// re-enters onboarding. The saved org auto-selects, then prompts for account.
+// switchAccount clears the account preference and re-enters onboarding. The
+// saved org auto-selects, then prompts for account.
 func (m *Model) switchAccount() tea.Cmd {
 	m.scope.Info("switching account")
 	_ = m.orgPrefs.ClearDefaultAccountID()

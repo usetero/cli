@@ -38,11 +38,11 @@ func TestRewindGate(t *testing.T) {
 			want:   GateDatadogAPIKey,
 		},
 		{
-			name:   "workspace requirement rewinds to workspace when workspace missing",
-			target: GateWorkspaceSelect,
-			req:    GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsWorkspace: true},
+			name:   "datadog discovery rewinds to datadog check when dd account missing",
+			target: GateDatadogDiscovery,
+			req:    GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDAccount: true},
 			state:  State{Org: &domain.Organization{ID: "org-1"}, Account: &domain.Account{ID: "acc-1"}},
-			want:   GateWorkspaceSelect,
+			want:   GateDatadogCheck,
 		},
 	}
 

@@ -29,16 +29,3 @@ func NewAccount(opts ...func(*domain.Account)) domain.Account {
 	}
 	return acc
 }
-
-// NewWorkspace creates a test workspace with sensible defaults.
-// Use functional options to override specific fields.
-func NewWorkspace(opts ...func(*domain.Workspace)) domain.Workspace {
-	ws := domain.Workspace{
-		ID:   domain.NewWorkspaceID(),
-		Name: "Test Workspace",
-	}
-	for _, opt := range opts {
-		opt(&ws)
-	}
-	return ws
-}

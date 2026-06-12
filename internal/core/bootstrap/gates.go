@@ -17,7 +17,6 @@ const (
 	GateDatadogAPIKey    Gate = "datadog_api_key"
 	GateDatadogAppKey    Gate = "datadog_app_key"
 	GateDatadogDiscovery Gate = "datadog_discovery"
-	GateWorkspaceSelect  Gate = "workspace_select"
 )
 
 func (g Gate) String() string { return string(g) }

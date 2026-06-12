@@ -7,8 +7,7 @@ import (
 
 // Store keys for org preferences.
 const (
-	keyDefaultAccountID   = "default_account_id"
-	keyDefaultWorkspaceID = "default_workspace_id"
+	keyDefaultAccountID = "default_account_id"
 )
 
 // OrgPreferences provides access to org-scoped preferences.
@@ -16,10 +15,7 @@ const (
 type OrgPreferences interface {
 	GetDefaultAccountID() domain.AccountID
 	SetDefaultAccountID(accountID domain.AccountID) error
-	GetDefaultWorkspaceID() domain.WorkspaceID
-	SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error
 	ClearDefaultAccountID() error
-	ClearDefaultWorkspaceID() error
 	Clear() error
 }
 
@@ -48,24 +44,9 @@ func (s *OrgService) SetDefaultAccountID(accountID domain.AccountID) error {
 	return s.store.Save()
 }
 
-func (s *OrgService) GetDefaultWorkspaceID() domain.WorkspaceID {
-	return domain.WorkspaceID(s.store.Get(keyDefaultWorkspaceID))
-}
-
-func (s *OrgService) SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error {
-	s.store.Set(keyDefaultWorkspaceID, workspaceID.String())
-	return s.store.Save()
-}
-
-// ClearDefaultAccountID clears the default account and cascades to workspace.
+// ClearDefaultAccountID clears the default account.
 func (s *OrgService) ClearDefaultAccountID() error {
 	s.store.Set(keyDefaultAccountID, "")
-	s.store.Set(keyDefaultWorkspaceID, "")
-	return s.store.Save()
-}
-
-func (s *OrgService) ClearDefaultWorkspaceID() error {
-	s.store.Set(keyDefaultWorkspaceID, "")
 	return s.store.Save()
 }
 

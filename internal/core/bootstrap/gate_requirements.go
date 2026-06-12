@@ -5,7 +5,7 @@ func RequirementForGate(gate Gate) GateRequirement {
 	switch gate {
 	case GateAccountSelect, GateAccountCreate:
 		return GateRequirement{NeedsOrg: true}
-	case GateRuntimeInit, GateDatadogCheck, GateWorkspaceSelect:
+	case GateRuntimeInit, GateDatadogCheck:
 		return GateRequirement{NeedsOrg: true, NeedsAccount: true}
 	case GateDatadogAPIKey:
 		return GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true}

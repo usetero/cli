@@ -71,13 +71,10 @@ func (m *MockUserPreferences) Clear() error {
 
 // MockOrgPreferences implements preferences.OrgPreferences for testing.
 type MockOrgPreferences struct {
-	GetDefaultAccountIDFunc     func() domain.AccountID
-	SetDefaultAccountIDFunc     func(accountID domain.AccountID) error
-	GetDefaultWorkspaceIDFunc   func() domain.WorkspaceID
-	SetDefaultWorkspaceIDFunc   func(workspaceID domain.WorkspaceID) error
-	ClearDefaultAccountIDFunc   func() error
-	ClearDefaultWorkspaceIDFunc func() error
-	ClearFunc                   func() error
+	GetDefaultAccountIDFunc   func() domain.AccountID
+	SetDefaultAccountIDFunc   func(accountID domain.AccountID) error
+	ClearDefaultAccountIDFunc func() error
+	ClearFunc                 func() error
 }
 
 func NewMockOrgPreferences() *MockOrgPreferences {
@@ -98,30 +95,9 @@ func (m *MockOrgPreferences) SetDefaultAccountID(accountID domain.AccountID) err
 	return nil
 }
 
-func (m *MockOrgPreferences) GetDefaultWorkspaceID() domain.WorkspaceID {
-	if m.GetDefaultWorkspaceIDFunc != nil {
-		return m.GetDefaultWorkspaceIDFunc()
-	}
-	return ""
-}
-
-func (m *MockOrgPreferences) SetDefaultWorkspaceID(workspaceID domain.WorkspaceID) error {
-	if m.SetDefaultWorkspaceIDFunc != nil {
-		return m.SetDefaultWorkspaceIDFunc(workspaceID)
-	}
-	return nil
-}
-
 func (m *MockOrgPreferences) ClearDefaultAccountID() error {
 	if m.ClearDefaultAccountIDFunc != nil {
 		return m.ClearDefaultAccountIDFunc()
-	}
-	return nil
-}
-
-func (m *MockOrgPreferences) ClearDefaultWorkspaceID() error {
-	if m.ClearDefaultWorkspaceIDFunc != nil {
-		return m.ClearDefaultWorkspaceIDFunc()
 	}
 	return nil
 }

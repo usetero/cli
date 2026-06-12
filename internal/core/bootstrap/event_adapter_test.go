@@ -17,7 +17,7 @@ func TestEventFromMessage(t *testing.T) {
 		{name: "authenticated", msg: Authenticated{}, kind: EventAuthenticated},
 		{name: "org selected", msg: OrgSelected{}, kind: EventOrgSelected},
 		{name: "runtime ready", msg: RuntimeReady{}, kind: EventRuntimeReady},
-		{name: "workspace selected", msg: WorkspaceSelected{}, kind: EventWorkspaceSelected},
+		{name: "datadog discovery complete", msg: DatadogDiscoveryComplete{}, kind: EventDatadogDiscoveryDone},
 	}
 
 	for _, tt := range tests {

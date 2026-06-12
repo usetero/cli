@@ -31,7 +31,6 @@ func (m *Model) logPreflightResolved(preflight bootstrap.PreflightResolved) {
 		slog.String("role", preflight.State.Role),
 		slog.String("active_org_id", preflight.State.ActiveOrgID.String()),
 		slog.String("default_account_id", preflight.State.DefaultAccountID.String()),
-		slog.String("default_workspace_id", string(preflight.State.DefaultWorkspaceID)),
 		slog.Bool("org_resolved", preflight.State.Org != nil),
 		slog.Bool("account_resolved", preflight.State.Account != nil),
 		slog.String("error", preflight.State.Error))

@@ -38,8 +38,6 @@ func EventFromMessage(msg Message) (Event, bool) {
 		return Event{Kind: EventDatadogAccountCreated, DatadogAccountID: msg.DatadogAccountID}, true
 	case DatadogDiscoveryComplete:
 		return Event{Kind: EventDatadogDiscoveryDone}, true
-	case WorkspaceSelected:
-		return Event{Kind: EventWorkspaceSelected, Workspace: msg.Workspace}, true
 	default:
 		return Event{}, false
 	}

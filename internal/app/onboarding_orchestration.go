@@ -46,11 +46,9 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		m.state = stateChat
 		m.user = msg.User
 		m.account = msg.Account
-		m.workspace = msg.Workspace
 		m.scope.Info("onboarding complete",
 			"org", msg.Org.Name,
 			"account", msg.Account.Name,
-			"workspace", msg.Workspace.Name,
 		)
 
 		// Create chat model (sizing happens via updateLayout)

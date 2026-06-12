@@ -98,53 +98,36 @@ func TestHandleTransitionPreflightRouting(t *testing.T) {
 	}
 }
 
-func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		msg      any
-		wantGate Gate
-	}{
-		{name: "datadog ready goes to workspace select", msg: bootstrap.DatadogReady{}, wantGate: bootstrap.GateWorkspaceSelect},
-		{name: "datadog needed goes to region", msg: bootstrap.DatadogNeeded{}, wantGate: bootstrap.GateDatadogRegion},
-		{name: "discovery complete goes to workspace select", msg: bootstrap.DatadogDiscoveryComplete{}, wantGate: bootstrap.GateWorkspaceSelect},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			m := newTestModel(t)
-			m.state.Org = ptrOrg("org-1")
-			m.state.Account = ptrAccount("acc-1")
-			_ = m.handleTransition(tc.msg)
-			if m.gate != tc.wantGate {
-				t.Fatalf("gate = %s, want %s", m.gate, tc.wantGate)
-			}
-		})
-	}
-}
-
-func TestHandleTransitionWorkspaceSelectedCompletesOnboarding(t *testing.T) {
+func TestHandleTransitionDatadogNeededRoutesToRegion(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
-	m.state.User = ptrUser("user-1")
 	m.state.Org = ptrOrg("org-1")
 	m.state.Account = ptrAccount("acc-1")
-	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
+	_ = m.handleTransition(bootstrap.DatadogNeeded{})
+	if m.gate != bootstrap.GateDatadogRegion {
+		t.Fatalf("gate = %s, want %s", m.gate, bootstrap.GateDatadogRegion)
+	}
+}
 
-	// Workspace selection is the terminal step: it completes onboarding rather
-	// than advancing to a sync gate.
-	cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: workspace})
-	if cmd == nil {
-		t.Fatal("expected transition command")
-	}
-	if m.state.Workspace == nil || m.state.Workspace.ID != workspace.ID {
-		t.Fatalf("workspace state not set correctly: %+v", m.state.Workspace)
-	}
-	if _, ok := cmd().(bootstrap.OnboardingComplete); !ok {
-		t.Fatalf("expected OnboardingComplete command")
+func TestHandleTransitionDatadogCompletesOnboarding(t *testing.T) {
+	t.Parallel()
+
+	// Datadog ready and discovery-complete are both terminal: they complete
+	// onboarding rather than advancing to a workspace or sync gate.
+	for _, msg := range []any{bootstrap.DatadogReady{}, bootstrap.DatadogDiscoveryComplete{}} {
+		m := newTestModel(t)
+		m.state.User = ptrUser("user-1")
+		m.state.Org = ptrOrg("org-1")
+		m.state.Account = ptrAccount("acc-1")
+
+		cmd := m.handleTransition(msg)
+		if cmd == nil {
+			t.Fatalf("expected transition command for %T", msg)
+		}
+		if _, ok := cmd().(bootstrap.OnboardingComplete); !ok {
+			t.Fatalf("expected OnboardingComplete command for %T", msg)
+		}
 	}
 }
 
@@ -229,7 +212,7 @@ func TestHandleTransitionOrgSelectedClearsServiceAccountScope(t *testing.T) {
 	}
 }
 
-func TestHandleTransitionWorkspaceSelectedMissingStateNoops(t *testing.T) {
+func TestHandleTransitionDatadogCompleteMissingStateNoops(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
@@ -237,7 +220,7 @@ func TestHandleTransitionWorkspaceSelectedMissingStateNoops(t *testing.T) {
 	m.state.Org = ptrOrg("org-1")
 	// Missing account should not panic or emit a completion payload.
 
-	cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: domain.Workspace{ID: "ws-1"}})
+	cmd := m.handleTransition(bootstrap.DatadogDiscoveryComplete{})
 	if cmd != nil {
 		t.Fatal("expected nil command when completion state is incomplete")
 	}
@@ -270,10 +253,6 @@ func ptrOrg(id string) *domain.Organization {
 
 func ptrAccount(id string) *domain.Account {
 	return &domain.Account{ID: domain.AccountID(id), Name: id}
-}
-
-func ptrWorkspace(id string) *domain.Workspace {
-	return &domain.Workspace{ID: domain.WorkspaceID(id), Name: id}
 }
 
 func ptrUser(id string) *iauth.User {

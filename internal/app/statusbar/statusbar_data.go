@@ -43,8 +43,6 @@ func (m *Model) ingestStatusMessages(msg tea.Msg) {
 		m.org = msg.Org.Name
 	case bootstrap.OrgCreated:
 		m.org = msg.Org.Name
-	case bootstrap.WorkspaceSelected:
-		m.workspace = msg.Workspace.Name
 	}
 }
 

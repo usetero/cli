@@ -7,7 +7,6 @@ type GateRequirement struct {
 	NeedsDDSite    bool
 	NeedsDDAPIKey  bool
 	NeedsDDAccount bool
-	NeedsWorkspace bool
 }
 
 // RewindGate returns the earliest gate that satisfies the missing requirement.
@@ -27,9 +26,6 @@ func RewindGate(target Gate, req GateRequirement, state State) Gate {
 	}
 	if req.NeedsDDAccount && state.DDAccount == "" {
 		return GateDatadogCheck
-	}
-	if req.NeedsWorkspace && state.Workspace == nil {
-		return GateWorkspaceSelect
 	}
 	return target
 }

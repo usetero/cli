@@ -48,16 +48,6 @@ func TestApplyDatadogTransitions(t *testing.T) {
 	}
 }
 
-func TestApplyWorkspaceSelected(t *testing.T) {
-	t.Parallel()
-
-	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
-	state := ApplyWorkspaceSelected(State{}, workspace)
-	if state.Workspace == nil || state.Workspace.ID != workspace.ID {
-		t.Fatalf("workspace not applied: %#v", state.Workspace)
-	}
-}
-
 func TestApplyOrgSelectedClearsAccountScopedState(t *testing.T) {
 	t.Parallel()
 
@@ -65,7 +55,6 @@ func TestApplyOrgSelectedClearsAccountScopedState(t *testing.T) {
 	state, next := ApplyOrgSelected(State{
 		Org:       &domain.Organization{ID: "org-1"},
 		Account:   &domain.Account{ID: "acc-1"},
-		Workspace: &domain.Workspace{ID: "ws-1"},
 		DDSite:    "US1",
 		DDAPIKey:  "api-key",
 		DDAccount: "dd-1",
@@ -76,7 +65,7 @@ func TestApplyOrgSelectedClearsAccountScopedState(t *testing.T) {
 	if state.Org == nil || state.Org.ID != org.ID {
 		t.Fatalf("org not applied: %#v", state.Org)
 	}
-	if state.Account != nil || state.Workspace != nil || state.DDSite != "" || state.DDAPIKey != "" || state.DDAccount != "" {
+	if state.Account != nil || state.DDSite != "" || state.DDAPIKey != "" || state.DDAccount != "" {
 		t.Fatalf("account-scoped state not cleared: %#v", state)
 	}
 }
@@ -88,7 +77,6 @@ func TestApplyAccountSelectedClearsScopedStateBeforeSettingAccount(t *testing.T)
 	account := domain.Account{ID: "acc-2", Name: "Account 2"}
 	state, next := ApplyAccountSelected(State{
 		Account:   &domain.Account{ID: "acc-1"},
-		Workspace: &domain.Workspace{ID: "ws-1"},
 		DDSite:    "US1",
 		DDAPIKey:  "api-key",
 		DDAccount: "dd-1",
@@ -99,7 +87,7 @@ func TestApplyAccountSelectedClearsScopedStateBeforeSettingAccount(t *testing.T)
 	if state.Account == nil || state.Account.ID != account.ID {
 		t.Fatalf("account not applied: %#v", state.Account)
 	}
-	if state.Workspace != nil || state.DDSite != "" || state.DDAPIKey != "" || state.DDAccount != "" {
+	if state.DDSite != "" || state.DDAPIKey != "" || state.DDAccount != "" {
 		t.Fatalf("account-scoped state not reset: %#v", state)
 	}
 }

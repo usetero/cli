@@ -15,7 +15,6 @@ type ServiceSet struct {
 	scope           log.Scope
 	Organizations   Organizations
 	Accounts        Accounts
-	Workspaces      Workspaces
 	DatadogAccounts DatadogAccounts
 	Services        Services
 	Policies        Policies
@@ -48,7 +47,6 @@ func newServiceSetWithScope(client Client, scope log.Scope) ServiceSet {
 		scope:           scope,
 		Organizations:   NewOrganizationService(client, scope),
 		Accounts:        NewAccountService(client, scope),
-		Workspaces:      NewWorkspaceService(client, scope),
 		DatadogAccounts: NewDatadogAccountService(client, scope),
 		Services:        NewServiceService(client, scope),
 		Policies:        NewPolicyService(client, scope),

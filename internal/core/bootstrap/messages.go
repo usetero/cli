@@ -70,29 +70,22 @@ type DatadogAccountCreated struct {
 
 type DatadogDiscoveryComplete struct{}
 
-type WorkspaceSelected struct {
-	Workspace domain.Workspace
-}
-
 type OnboardingComplete struct {
-	User      *auth.User
-	Org       domain.Organization
-	Account   domain.Account
-	Workspace domain.Workspace
+	User    *auth.User
+	Org     domain.Organization
+	Account domain.Account
 }
 
 type PreflightState struct {
-	Outcome            PreflightOutcome
-	HasValidAuth       bool
-	Role               string
-	ActiveOrgID        domain.OrganizationID
-	DefaultAccountID   domain.AccountID
-	DefaultWorkspaceID domain.WorkspaceID
-	Org                *domain.Organization
-	Account            *domain.Account
-	Workspace          *domain.Workspace
-	HasDatadog         bool
-	Error              string
+	Outcome          PreflightOutcome
+	HasValidAuth     bool
+	Role             string
+	ActiveOrgID      domain.OrganizationID
+	DefaultAccountID domain.AccountID
+	Org              *domain.Organization
+	Account          *domain.Account
+	HasDatadog       bool
+	Error            string
 }
 
 type PreflightResolved struct {
@@ -115,5 +108,4 @@ func (DatadogAPIKeyEntered) bootstrapMessage()  {}
 func (DatadogAccountCreated) bootstrapMessage() {}
 func (DatadogDiscoveryComplete) bootstrapMessage() {
 }
-func (WorkspaceSelected) bootstrapMessage() {}
 func (PreflightResolved) bootstrapMessage() {}

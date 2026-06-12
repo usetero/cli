@@ -15,7 +15,6 @@ func TestNewStepForGateCoverage(t *testing.T) {
 	m.state.DDSite = "US1"
 	m.state.DDAPIKey = "api-key"
 	m.state.DDAccount = "dd-1"
-	m.state.Workspace = ptrWorkspace("ws-1")
 
 	expected := []Gate{
 		bootstrap.GatePreflight,
@@ -31,7 +30,6 @@ func TestNewStepForGateCoverage(t *testing.T) {
 		bootstrap.GateDatadogAPIKey,
 		bootstrap.GateDatadogAppKey,
 		bootstrap.GateDatadogDiscovery,
-		bootstrap.GateWorkspaceSelect,
 	}
 
 	for _, gate := range expected {

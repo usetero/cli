@@ -10,7 +10,6 @@ type State struct {
 	User      *auth.User
 	Org       *domain.Organization
 	Account   *domain.Account
-	Workspace *domain.Workspace
 	DDSite    domain.DatadogSite
 	DDAPIKey  string
 	DDAccount domain.DatadogAccountID
@@ -89,10 +88,6 @@ func ApplyRuntimeReady(state State, org domain.Organization, account domain.Acco
 	return state, GateDatadogCheck
 }
 
-func ApplyDatadogReady(state State) (State, Gate) {
-	return state, GateWorkspaceSelect
-}
-
 func ApplyDatadogNeeded(state State) (State, Gate) {
 	return state, GateDatadogRegion
 }
@@ -112,20 +107,8 @@ func ApplyDatadogAccountCreated(state State, datadogAccountID domain.DatadogAcco
 	return state, GateDatadogDiscovery
 }
 
-func ApplyDatadogDiscoveryComplete(state State) (State, Gate) {
-	return state, GateWorkspaceSelect
-}
-
-// ApplyWorkspaceSelected records the selected workspace. It is the terminal
-// onboarding step (there is no sync gate), so it returns only the next state.
-func ApplyWorkspaceSelected(state State, workspace domain.Workspace) State {
-	state.Workspace = &workspace
-	return state
-}
-
 func clearAccountScopedState(state State) State {
 	state.Account = nil
-	state.Workspace = nil
 	state.DDSite = ""
 	state.DDAPIKey = ""
 	state.DDAccount = ""
