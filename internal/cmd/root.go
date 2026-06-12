@@ -25,6 +25,13 @@ func NewRootCmd(scope log.Scope, version string) *cobra.Command {
 	rootCmd.AddCommand(NewResetCmd(scope, cliConfig))
 	rootCmd.AddCommand(NewInternalCmd(scope, cliConfig))
 
+	// Product surfaces — direct GraphQL reads for the current account.
+	rootCmd.AddCommand(NewStatusCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewIssuesCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewChecksCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewServicesCmd(scope, cliConfig))
+	rootCmd.AddCommand(NewEdgeCmd(scope, cliConfig))
+
 	return rootCmd
 }
 

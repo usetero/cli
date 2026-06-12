@@ -18,7 +18,7 @@ query GetIssueSummary {
     }
 }
 
-# Individual active issues with detail, for the chat agent's read tool.
+# Individual active issues with detail, for the issues command and read tool.
 query ListIssues($first: Int!) {
     issues(
         first: $first
@@ -34,9 +34,6 @@ query ListIssues($first: Int!) {
                 priority
                 service {
                     name
-                }
-                cost {
-                    totalUsdPerHour
                 }
             }
         }

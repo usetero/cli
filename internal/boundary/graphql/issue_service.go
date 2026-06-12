@@ -76,11 +76,10 @@ func (s *IssueService) List(ctx context.Context) ([]domain.Issue, error) {
 	for _, edge := range resp.Issues.Edges {
 		node := edge.Node
 		issue := domain.Issue{
-			ID:          node.Id,
-			DisplayID:   node.DisplayID,
-			Title:       node.Title,
-			Priority:    domain.IssuePriority(node.Priority),
-			CostPerHour: node.Cost.TotalUsdPerHour,
+			ID:        node.Id,
+			DisplayID: node.DisplayID,
+			Title:     node.Title,
+			Priority:  domain.IssuePriority(node.Priority),
 		}
 		if node.Service != nil {
 			issue.ServiceName = node.Service.Name

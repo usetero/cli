@@ -1328,9 +1328,8 @@ type ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue struct {
 	// How much attention a kept finding deserves. Values: low = Legitimate finding,
 	// but low urgency or prominence.; medium = Legitimate finding with clear but not
 	// top-tier urgency.; high = Legitimate finding that deserves strong user attention.
-	Priority IssuePriority                                                                     `json:"priority"`
-	Service  *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService                    `json:"service"`
-	Cost     ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals `json:"cost"`
+	Priority IssuePriority                                                  `json:"priority"`
+	Service  *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService `json:"service"`
 }
 
 // GetId returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Id, and is useful for accessing the field via an interface.
@@ -1352,21 +1351,6 @@ func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetPriority() I
 // GetService returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Service, and is useful for accessing the field via an interface.
 func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetService() *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService {
 	return v.Service
-}
-
-// GetCost returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue.Cost, and is useful for accessing the field via an interface.
-func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssue) GetCost() ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals {
-	return v.Cost
-}
-
-// ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals includes the requested fields of the GraphQL type StatusMeasurementTotals.
-type ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals struct {
-	TotalUsdPerHour *float64 `json:"totalUsdPerHour"`
-}
-
-// GetTotalUsdPerHour returns ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals.TotalUsdPerHour, and is useful for accessing the field via an interface.
-func (v *ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueCostStatusMeasurementTotals) GetTotalUsdPerHour() *float64 {
-	return v.TotalUsdPerHour
 }
 
 // ListIssuesIssuesIssueConnectionEdgesIssueEdgeNodeIssueService includes the requested fields of the GraphQL type Service.
@@ -2600,16 +2584,13 @@ query ListIssues ($first: Int!) {
 				service {
 					name
 				}
-				cost {
-					totalUsdPerHour
-				}
 			}
 		}
 	}
 }
 `
 
-// Individual active issues with detail, for the chat agent's read tool.
+// Individual active issues with detail, for the issues command and read tool.
 func ListIssues(
 	ctx_ context.Context,
 	client_ graphql.Client,
