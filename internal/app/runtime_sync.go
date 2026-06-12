@@ -52,8 +52,12 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 		return nil, err
 	}
 
-	// Start catalog status polling now that db is ready
-	catalogCmd := m.statusBar.SetDB(m.db)
+	// Start status polling: drawer tabs read from the account-scoped
+	// control-plane services; the sync indicator still reads the runtime db.
+	catalogCmd := tea.Batch(
+		m.statusBar.SetServices(m.services),
+		m.statusBar.SetDB(m.db),
+	)
 
 	// Create tool registry with executors
 	m.toolRegistry = chattools.NewRegistry(

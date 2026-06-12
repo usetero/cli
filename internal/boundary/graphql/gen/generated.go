@@ -387,6 +387,194 @@ type GetAccountResponse struct {
 // GetAccounts returns GetAccountResponse.Accounts, and is useful for accessing the field via an interface.
 func (v *GetAccountResponse) GetAccounts() GetAccountAccountsAccountConnection { return v.Accounts }
 
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection includes the requested fields of the GraphQL type DatadogAccountConnection.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection struct {
+	Edges []GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge `json:"edges"`
+}
+
+// GetEdges returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection.Edges, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection) GetEdges() []GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge {
+	return v.Edges
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge includes the requested fields of the GraphQL type DatadogAccountEdge.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge struct {
+	Node GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount `json:"node"`
+}
+
+// GetNode returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge.Node, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge) GetNode() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount {
+	return v.Node
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount includes the requested fields of the GraphQL type DatadogAccount.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount struct {
+	// Status of this Datadog account in the catalog pipeline.
+	// Derived from the status of all services discovered from this account.
+	// Returns null if the status view has no row yet.
+	Status *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus `json:"status"`
+}
+
+// GetStatus returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount.Status, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount) GetStatus() *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus {
+	return v.Status
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus includes the requested fields of the GraphQL type DatadogAccountStatus.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus struct {
+	Health    StatusHealth                                                                                                                                    `json:"health"`
+	Readiness GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness                          `json:"readiness"`
+	Coverage  GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage                           `json:"coverage"`
+	Current   GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus `json:"current"`
+}
+
+// GetHealth returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Health, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetHealth() StatusHealth {
+	return v.Health
+}
+
+// GetReadiness returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Readiness, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetReadiness() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness {
+	return v.Readiness
+}
+
+// GetCoverage returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Coverage, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetCoverage() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage {
+	return v.Coverage
+}
+
+// GetCurrent returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Current, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetCurrent() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus {
+	return v.Current
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage includes the requested fields of the GraphQL type DatadogAccountStatusCoverage.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage struct {
+	LogEventCount         int `json:"logEventCount"`
+	LogEventAnalyzedCount int `json:"logEventAnalyzedCount"`
+	LogServiceCount       int `json:"logServiceCount"`
+	LogActiveServices     int `json:"logActiveServices"`
+	DisabledServices      int `json:"disabledServices"`
+	InactiveServices      int `json:"inactiveServices"`
+	OkServices            int `json:"okServices"`
+}
+
+// GetLogEventCount returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogEventCount, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogEventCount() int {
+	return v.LogEventCount
+}
+
+// GetLogEventAnalyzedCount returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogEventAnalyzedCount, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogEventAnalyzedCount() int {
+	return v.LogEventAnalyzedCount
+}
+
+// GetLogServiceCount returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogServiceCount, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogServiceCount() int {
+	return v.LogServiceCount
+}
+
+// GetLogActiveServices returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogActiveServices, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogActiveServices() int {
+	return v.LogActiveServices
+}
+
+// GetDisabledServices returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.DisabledServices, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetDisabledServices() int {
+	return v.DisabledServices
+}
+
+// GetInactiveServices returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.InactiveServices, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetInactiveServices() int {
+	return v.InactiveServices
+}
+
+// GetOkServices returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.OkServices, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetOkServices() int {
+	return v.OkServices
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus includes the requested fields of the GraphQL type DatadogAccountCurrentStatus.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus struct {
+	Services GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals   `json:"services"`
+	Totals   GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals `json:"totals"`
+}
+
+// GetServices returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus.Services, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus) GetServices() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals {
+	return v.Services
+}
+
+// GetTotals returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus.Totals, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatus) GetTotals() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals {
+	return v.Totals
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals includes the requested fields of the GraphQL type StatusServiceTotals.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals struct {
+	EventsPerHour    *float64 `json:"eventsPerHour"`
+	VolumeUsdPerHour *float64 `json:"volumeUsdPerHour"`
+}
+
+// GetEventsPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals.EventsPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals) GetEventsPerHour() *float64 {
+	return v.EventsPerHour
+}
+
+// GetVolumeUsdPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals.VolumeUsdPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusServicesStatusServiceTotals) GetVolumeUsdPerHour() *float64 {
+	return v.VolumeUsdPerHour
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals includes the requested fields of the GraphQL type StatusMeasurementTotals.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals struct {
+	EventsPerHour    *float64 `json:"eventsPerHour"`
+	BytesPerHour     *float64 `json:"bytesPerHour"`
+	TotalUsdPerHour  *float64 `json:"totalUsdPerHour"`
+	VolumeUsdPerHour *float64 `json:"volumeUsdPerHour"`
+}
+
+// GetEventsPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals.EventsPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals) GetEventsPerHour() *float64 {
+	return v.EventsPerHour
+}
+
+// GetBytesPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals.BytesPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals) GetBytesPerHour() *float64 {
+	return v.BytesPerHour
+}
+
+// GetTotalUsdPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals.TotalUsdPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals) GetTotalUsdPerHour() *float64 {
+	return v.TotalUsdPerHour
+}
+
+// GetVolumeUsdPerHour returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals.VolumeUsdPerHour, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCurrentDatadogAccountCurrentStatusTotalsStatusMeasurementTotals) GetVolumeUsdPerHour() *float64 {
+	return v.VolumeUsdPerHour
+}
+
+// GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness includes the requested fields of the GraphQL type StatusReadiness.
+type GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness struct {
+	ReadyForUse bool `json:"readyForUse"`
+}
+
+// GetReadyForUse returns GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness.ReadyForUse, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness) GetReadyForUse() bool {
+	return v.ReadyForUse
+}
+
+// GetAccountStatusSummaryResponse is returned by GetAccountStatusSummary on success.
+type GetAccountStatusSummaryResponse struct {
+	// Query DatadogAccounts records in your account.
+	DatadogAccounts GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection `json:"datadogAccounts"`
+}
+
+// GetDatadogAccounts returns GetAccountStatusSummaryResponse.DatadogAccounts, and is useful for accessing the field via an interface.
+func (v *GetAccountStatusSummaryResponse) GetDatadogAccounts() GetAccountStatusSummaryDatadogAccountsDatadogAccountConnection {
+	return v.DatadogAccounts
+}
+
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection includes the requested fields of the GraphQL type DatadogAccountConnection.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection struct {
 	Edges []GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge `json:"edges"`
@@ -1174,6 +1362,246 @@ func (v *ListOrganizationsResponse) GetOrganizations() ListOrganizationsOrganiza
 	return v.Organizations
 }
 
+// ListServiceLogEventsLogEventsLogEventConnection includes the requested fields of the GraphQL type LogEventConnection.
+type ListServiceLogEventsLogEventsLogEventConnection struct {
+	Edges []ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge `json:"edges"`
+}
+
+// GetEdges returns ListServiceLogEventsLogEventsLogEventConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnection) GetEdges() []ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge {
+	return v.Edges
+}
+
+// ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge includes the requested fields of the GraphQL type LogEventEdge.
+type ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge struct {
+	Node ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent `json:"node"`
+}
+
+// GetNode returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdge) GetNode() ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent {
+	return v.Node
+}
+
+// ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent includes the requested fields of the GraphQL type LogEvent.
+type ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent struct {
+	// Snake_case identifier unique per service, e.g. nginx_access_log
+	Name string `json:"name"`
+	// Human-readable title for the log event, suitable for product surfaces.
+	DisplayName *string `json:"displayName"`
+	// Status of this log event.
+	// Shows where the log event is in the preparation pipeline.
+	// Returns null if the status view has no row yet.
+	Status *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus `json:"status"`
+}
+
+// GetName returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.Name, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetName() string {
+	return v.Name
+}
+
+// GetDisplayName returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.DisplayName, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetDisplayName() *string {
+	return v.DisplayName
+}
+
+// GetStatus returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.Status, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetStatus() *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus {
+	return v.Status
+}
+
+// ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus includes the requested fields of the GraphQL type LogEventStatus.
+type ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus struct {
+	Current ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals `json:"current"`
+}
+
+// GetCurrent returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus.Current, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatus) GetCurrent() ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals {
+	return v.Current
+}
+
+// ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals includes the requested fields of the GraphQL type StatusMeasurementTotals.
+type ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals struct {
+	EventsPerHour   *float64 `json:"eventsPerHour"`
+	BytesPerHour    *float64 `json:"bytesPerHour"`
+	TotalUsdPerHour *float64 `json:"totalUsdPerHour"`
+}
+
+// GetEventsPerHour returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals.EventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals) GetEventsPerHour() *float64 {
+	return v.EventsPerHour
+}
+
+// GetBytesPerHour returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals.BytesPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals) GetBytesPerHour() *float64 {
+	return v.BytesPerHour
+}
+
+// GetTotalUsdPerHour returns ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals.TotalUsdPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEventStatusCurrentStatusMeasurementTotals) GetTotalUsdPerHour() *float64 {
+	return v.TotalUsdPerHour
+}
+
+// ListServiceLogEventsResponse is returned by ListServiceLogEvents on success.
+type ListServiceLogEventsResponse struct {
+	// Query LogEvents records in your account.
+	LogEvents ListServiceLogEventsLogEventsLogEventConnection `json:"logEvents"`
+}
+
+// GetLogEvents returns ListServiceLogEventsResponse.LogEvents, and is useful for accessing the field via an interface.
+func (v *ListServiceLogEventsResponse) GetLogEvents() ListServiceLogEventsLogEventsLogEventConnection {
+	return v.LogEvents
+}
+
+// ListServiceStatusesResponse is returned by ListServiceStatuses on success.
+type ListServiceStatusesResponse struct {
+	// Query Services records in your account.
+	Services ListServiceStatusesServicesServiceConnection `json:"services"`
+}
+
+// GetServices returns ListServiceStatusesResponse.Services, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesResponse) GetServices() ListServiceStatusesServicesServiceConnection {
+	return v.Services
+}
+
+// ListServiceStatusesServicesServiceConnection includes the requested fields of the GraphQL type ServiceConnection.
+type ListServiceStatusesServicesServiceConnection struct {
+	Edges []ListServiceStatusesServicesServiceConnectionEdgesServiceEdge `json:"edges"`
+}
+
+// GetEdges returns ListServiceStatusesServicesServiceConnection.Edges, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnection) GetEdges() []ListServiceStatusesServicesServiceConnectionEdgesServiceEdge {
+	return v.Edges
+}
+
+// ListServiceStatusesServicesServiceConnectionEdgesServiceEdge includes the requested fields of the GraphQL type ServiceEdge.
+type ListServiceStatusesServicesServiceConnectionEdgesServiceEdge struct {
+	Node ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
+}
+
+// GetNode returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdge.Node, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdge) GetNode() ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService {
+	return v.Node
+}
+
+// ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService includes the requested fields of the GraphQL type Service.
+type ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService struct {
+	// Unique identifier of the service
+	Id string `json:"id"`
+	// Service identifier in telemetry (e.g., 'checkout-service')
+	Name string `json:"name"`
+	// Narrow status surface for the services list.
+	// Drops issue-projection rollups (preview / effective / savings) and
+	// per-service indexing cost from the full status to keep the list query cheap.
+	// Use status for the service detail page.
+	// Returns null if no baseline or volume data is available yet.
+	StatusSummary *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary `json:"statusSummary"`
+}
+
+// GetId returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService.Id, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService) GetId() string {
+	return v.Id
+}
+
+// GetName returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService.Name, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService) GetName() string {
+	return v.Name
+}
+
+// GetStatusSummary returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService.StatusSummary, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeService) GetStatusSummary() *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary {
+	return v.StatusSummary
+}
+
+// ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary includes the requested fields of the GraphQL type ServiceStatusSummary.
+type ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary struct {
+	Health                StatusHealth                                                                                `json:"health"`
+	LogEventCount         int                                                                                         `json:"logEventCount"`
+	LogEventAnalyzedCount int                                                                                         `json:"logEventAnalyzedCount"`
+	Current               ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent `json:"current"`
+}
+
+// GetHealth returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary.Health, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary) GetHealth() StatusHealth {
+	return v.Health
+}
+
+// GetLogEventCount returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary.LogEventCount, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary) GetLogEventCount() int {
+	return v.LogEventCount
+}
+
+// GetLogEventAnalyzedCount returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary.LogEventAnalyzedCount, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary) GetLogEventAnalyzedCount() int {
+	return v.LogEventAnalyzedCount
+}
+
+// GetCurrent returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary.Current, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummary) GetCurrent() ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent {
+	return v.Current
+}
+
+// ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent includes the requested fields of the GraphQL type ServiceStatusSummaryCurrent.
+type ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent struct {
+	EventsPerHour   *float64                                                                                                                `json:"eventsPerHour"`
+	BytesPerHour    *float64                                                                                                                `json:"bytesPerHour"`
+	TotalUsdPerHour *float64                                                                                                                `json:"totalUsdPerHour"`
+	Severity        ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals `json:"severity"`
+}
+
+// GetEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent.EventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent) GetEventsPerHour() *float64 {
+	return v.EventsPerHour
+}
+
+// GetBytesPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent.BytesPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent) GetBytesPerHour() *float64 {
+	return v.BytesPerHour
+}
+
+// GetTotalUsdPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent.TotalUsdPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent) GetTotalUsdPerHour() *float64 {
+	return v.TotalUsdPerHour
+}
+
+// GetSeverity returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent.Severity, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrent) GetSeverity() ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals {
+	return v.Severity
+}
+
+// ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals includes the requested fields of the GraphQL type StatusSeverityTotals.
+type ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals struct {
+	DebugEventsPerHour *float64 `json:"debugEventsPerHour"`
+	InfoEventsPerHour  *float64 `json:"infoEventsPerHour"`
+	WarnEventsPerHour  *float64 `json:"warnEventsPerHour"`
+	ErrorEventsPerHour *float64 `json:"errorEventsPerHour"`
+	OtherEventsPerHour *float64 `json:"otherEventsPerHour"`
+}
+
+// GetDebugEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals.DebugEventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals) GetDebugEventsPerHour() *float64 {
+	return v.DebugEventsPerHour
+}
+
+// GetInfoEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals.InfoEventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals) GetInfoEventsPerHour() *float64 {
+	return v.InfoEventsPerHour
+}
+
+// GetWarnEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals.WarnEventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals) GetWarnEventsPerHour() *float64 {
+	return v.WarnEventsPerHour
+}
+
+// GetErrorEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals.ErrorEventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals) GetErrorEventsPerHour() *float64 {
+	return v.ErrorEventsPerHour
+}
+
+// GetOtherEventsPerHour returns ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals.OtherEventsPerHour, and is useful for accessing the field via an interface.
+func (v *ListServiceStatusesServicesServiceConnectionEdgesServiceEdgeNodeServiceStatusSummaryCurrentSeverityStatusSeverityTotals) GetOtherEventsPerHour() *float64 {
+	return v.OtherEventsPerHour
+}
+
 // ListServicesResponse is returned by ListServices on success.
 type ListServicesResponse struct {
 	// Query Services records in your account.
@@ -1390,6 +1818,26 @@ type __ListAccountsInput struct {
 
 // GetOrganizationID returns __ListAccountsInput.OrganizationID, and is useful for accessing the field via an interface.
 func (v *__ListAccountsInput) GetOrganizationID() string { return v.OrganizationID }
+
+// __ListServiceLogEventsInput is used internally by genqlient
+type __ListServiceLogEventsInput struct {
+	ServiceID string `json:"serviceID"`
+	First     int    `json:"first"`
+}
+
+// GetServiceID returns __ListServiceLogEventsInput.ServiceID, and is useful for accessing the field via an interface.
+func (v *__ListServiceLogEventsInput) GetServiceID() string { return v.ServiceID }
+
+// GetFirst returns __ListServiceLogEventsInput.First, and is useful for accessing the field via an interface.
+func (v *__ListServiceLogEventsInput) GetFirst() int { return v.First }
+
+// __ListServiceStatusesInput is used internally by genqlient
+type __ListServiceStatusesInput struct {
+	First int `json:"first"`
+}
+
+// GetFirst returns __ListServiceStatusesInput.First, and is useful for accessing the field via an interface.
+func (v *__ListServiceStatusesInput) GetFirst() int { return v.First }
 
 // __ValidateDatadogApiKeyInput is used internally by genqlient
 type __ValidateDatadogApiKeyInput struct {
@@ -1622,6 +2070,71 @@ func GetAccount(
 	}
 
 	data_ = &GetAccountResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by GetAccountStatusSummary.
+const GetAccountStatusSummary_Operation = `
+query GetAccountStatusSummary {
+	datadogAccounts(first: 1) {
+		edges {
+			node {
+				status {
+					health
+					readiness {
+						readyForUse
+					}
+					coverage {
+						logEventCount
+						logEventAnalyzedCount
+						logServiceCount
+						logActiveServices
+						disabledServices
+						inactiveServices
+						okServices
+					}
+					current {
+						services {
+							eventsPerHour
+							volumeUsdPerHour
+						}
+						totals {
+							eventsPerHour
+							bytesPerHour
+							totalUsdPerHour
+							volumeUsdPerHour
+						}
+					}
+				}
+			}
+		}
+	}
+}
+`
+
+// Account-level status summary for the data-plane surfaces. The control plane
+// computes health, service counts, coverage, and throughput totals; the CLI
+// reads them as-is rather than aggregating service rows locally. The active
+// account is scoped via the request header, so the single datadog account for
+// the account is taken as the first edge.
+func GetAccountStatusSummary(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *GetAccountStatusSummaryResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "GetAccountStatusSummary",
+		Query:  GetAccountStatusSummary_Operation,
+	}
+
+	data_ = &GetAccountStatusSummaryResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(
@@ -1996,6 +2509,115 @@ func ListOrganizations(
 	}
 
 	data_ = &ListOrganizationsResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListServiceLogEvents.
+const ListServiceLogEvents_Operation = `
+query ListServiceLogEvents ($serviceID: ID!, $first: Int!) {
+	logEvents(first: $first, where: {serviceID:$serviceID}) {
+		edges {
+			node {
+				name
+				displayName
+				status {
+					current {
+						eventsPerHour
+						bytesPerHour
+						totalUsdPerHour
+					}
+				}
+			}
+		}
+	}
+}
+`
+
+// Log events for one service, with current throughput/cost, for the service
+// detail drill-down.
+func ListServiceLogEvents(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	serviceID string,
+	first int,
+) (data_ *ListServiceLogEventsResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListServiceLogEvents",
+		Query:  ListServiceLogEvents_Operation,
+		Variables: &__ListServiceLogEventsInput{
+			ServiceID: serviceID,
+			First:     first,
+		},
+	}
+
+	data_ = &ListServiceLogEventsResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by ListServiceStatuses.
+const ListServiceStatuses_Operation = `
+query ListServiceStatuses ($first: Int!) {
+	services(first: $first, where: {enabled:true}) {
+		edges {
+			node {
+				id
+				name
+				statusSummary {
+					health
+					logEventCount
+					logEventAnalyzedCount
+					current {
+						eventsPerHour
+						bytesPerHour
+						totalUsdPerHour
+						severity {
+							debugEventsPerHour
+							infoEventsPerHour
+							warnEventsPerHour
+							errorEventsPerHour
+							otherEventsPerHour
+						}
+					}
+				}
+			}
+		}
+	}
+}
+`
+
+// Enabled services with the narrow per-service status used by the services list.
+// statusSummary is the control plane's list-optimized projection (health, event
+// counts, current throughput and severity mix).
+func ListServiceStatuses(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	first int,
+) (data_ *ListServiceStatusesResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "ListServiceStatuses",
+		Query:  ListServiceStatuses_Operation,
+		Variables: &__ListServiceStatusesInput{
+			First: first,
+		},
+	}
+
+	data_ = &ListServiceStatusesResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

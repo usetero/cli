@@ -1,0 +1,91 @@
+# Account-level status summary for the data-plane surfaces. The control plane
+# computes health, service counts, coverage, and throughput totals; the CLI
+# reads them as-is rather than aggregating service rows locally. The active
+# account is scoped via the request header, so the single datadog account for
+# the account is taken as the first edge.
+query GetAccountStatusSummary {
+    datadogAccounts(first: 1) {
+        edges {
+            node {
+                status {
+                    health
+                    readiness {
+                        readyForUse
+                    }
+                    coverage {
+                        logEventCount
+                        logEventAnalyzedCount
+                        logServiceCount
+                        logActiveServices
+                        disabledServices
+                        inactiveServices
+                        okServices
+                    }
+                    current {
+                        services {
+                            eventsPerHour
+                            volumeUsdPerHour
+                        }
+                        totals {
+                            eventsPerHour
+                            bytesPerHour
+                            totalUsdPerHour
+                            volumeUsdPerHour
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Enabled services with the narrow per-service status used by the services list.
+# statusSummary is the control plane's list-optimized projection (health, event
+# counts, current throughput and severity mix).
+query ListServiceStatuses($first: Int!) {
+    services(first: $first, where: { enabled: true }) {
+        edges {
+            node {
+                id
+                name
+                statusSummary {
+                    health
+                    logEventCount
+                    logEventAnalyzedCount
+                    current {
+                        eventsPerHour
+                        bytesPerHour
+                        totalUsdPerHour
+                        severity {
+                            debugEventsPerHour
+                            infoEventsPerHour
+                            warnEventsPerHour
+                            errorEventsPerHour
+                            otherEventsPerHour
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Log events for one service, with current throughput/cost, for the service
+# detail drill-down.
+query ListServiceLogEvents($serviceID: ID!, $first: Int!) {
+    logEvents(first: $first, where: { serviceID: $serviceID }) {
+        edges {
+            node {
+                name
+                displayName
+                status {
+                    current {
+                        eventsPerHour
+                        bytesPerHour
+                        totalUsdPerHour
+                    }
+                }
+            }
+        }
+    }
+}

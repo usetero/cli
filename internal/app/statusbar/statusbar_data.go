@@ -5,21 +5,29 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/sqlite"
 )
 
-// SetDB sets the database for status polling.
+// SetServices points the drawer tabs at the account-scoped control-plane
+// services. Each tab polls its own GraphQL reads from here.
+func (m *Model) SetServices(services graphql.ServiceSet) tea.Cmd {
+	cmds := make([]tea.Cmd, 0, len(m.tabs))
+	for _, tab := range m.tabs {
+		cmds = append(cmds, tab.SetServices(services))
+	}
+	return tea.Batch(cmds...)
+}
+
+// SetDB feeds the sync indicator and workspace count, which still read the
+// local runtime database. The drawer tabs are fed via SetServices.
 //
 // syncStatus is fed alongside the drawer tabs even though it is no longer a
 // drawer tab itself: its compact sync dot lives in the brand segment and its
 // pending-upload count needs the runtime database.
 func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	cmds := []tea.Cmd{m.fetchWorkspaceCount(db), m.syncStatus.SetDB(db)}
-	for _, tab := range m.tabs {
-		cmds = append(cmds, tab.SetDB(db))
-	}
-	return tea.Batch(cmds...)
+	return tea.Batch(m.fetchWorkspaceCount(db), m.syncStatus.SetDB(db))
 }
 
 // Init initializes child models.

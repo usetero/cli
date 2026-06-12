@@ -11,10 +11,10 @@ import (
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/app/chattools"
 	"github.com/usetero/cli/internal/auth"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -70,7 +70,7 @@ type Model struct {
 	policySummary *domain.AccountSummary
 
 	// Dependencies
-	db           sqlite.DB
+	services     graphql.ServiceSet
 	runtimeDeps  usecase.RuntimeDeps
 	toolRegistry *tools.Registry
 }
@@ -90,7 +90,7 @@ func New(
 	account domain.Account,
 	workspace domain.Workspace,
 	theme styles.Theme,
-	db sqlite.DB,
+	services graphql.ServiceSet,
 	runtimeDeps usecase.RuntimeDeps,
 	toolRegistry *tools.Registry,
 	scope log.Scope,
@@ -105,7 +105,7 @@ func New(
 		account:      account,
 		workspace:    workspace,
 		theme:        theme,
-		db:           db,
+		services:     services,
 		runtimeDeps:  runtimeDeps,
 		toolRegistry: toolRegistry,
 	}

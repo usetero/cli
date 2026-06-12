@@ -40,6 +40,8 @@ func serviceColor(theme styles.Theme, h domain.ServiceHealth) color.Color {
 	switch h {
 	case domain.ServiceHealthOK:
 		return theme.Success
+	case domain.ServiceHealthError:
+		return theme.Error
 	case domain.ServiceHealthDisabled, domain.ServiceHealthInactive:
 		return theme.TextMuted
 	default:

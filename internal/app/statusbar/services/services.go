@@ -15,10 +15,10 @@ import (
 	"github.com/usetero/cli/internal/app/statusbar/listdetail"
 	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
 	"github.com/usetero/cli/internal/app/statusbar/viewkit"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/status"
 	"github.com/usetero/cli/internal/tea/components/table"
@@ -26,8 +26,7 @@ import (
 
 const (
 	pollInterval = 2 * time.Second
-	maxServices  = 50
-	dbTimeout    = 2 * time.Second
+	fetchTimeout = 2 * time.Second
 	pollSource   = "services"
 
 	// levelDisplayThreshold is the minimum fraction of total volume a
@@ -51,7 +50,9 @@ type serviceDetailLoadedMsg struct {
 type Model struct {
 	theme styles.Theme
 	scope log.Scope
-	db    sqlite.DB
+
+	api   graphql.ServiceSet
+	ready bool
 
 	summary   domain.AccountSummary
 	services  []domain.ServiceStatus
@@ -72,15 +73,16 @@ func New(theme styles.Theme, scope log.Scope) *Model {
 	}
 }
 
-// SetDB sets the database and starts polling.
-func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	m.db = db
+// SetServices points the tab at the account-scoped services and starts polling.
+func (m *Model) SetServices(services graphql.ServiceSet) tea.Cmd {
+	m.api = services
+	m.ready = true
 	return m.poll()
 }
 
-// Init starts polling.
+// Init starts polling once the services are available.
 func (m *Model) Init() tea.Cmd {
-	if m.db == nil {
+	if !m.ready {
 		return nil
 	}
 	return m.poll()
@@ -95,7 +97,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if cmd, handled := tabpoll.UpdatePollCycle(
 		msg,
 		pollSource,
-		m.db != nil,
+		m.ready,
 		&m.fetching,
 		m.fetchData(),
 		m.poll(),
@@ -123,31 +125,31 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 // fetchData returns a Cmd that queries service data off the event loop.
 func (m *Model) fetchData() tea.Cmd {
-	db := m.db
+	services := m.api
 	scope := m.scope
-	return tabpoll.Fetch(dbTimeout, func(ctx context.Context) (fetchedData, error) {
-		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+	return tabpoll.Fetch(fetchTimeout, func(ctx context.Context) (fetchedData, error) {
+		summary, err := services.Status.GetAccountSummary(ctx)
 		if err != nil {
 			scope.Error("get summary", "err", err)
 			return fetchedData{}, err
 		}
 
-		services, err := db.ServiceStatuses().ListEnabledServiceStatuses(ctx, maxServices)
+		statuses, err := services.Status.ListServiceStatuses(ctx)
 		if err != nil {
 			scope.Error("list service statuses", "err", err)
-			services = nil
+			statuses = nil
 		}
 
-		return fetchedData{summary: summary, services: services}, nil
+		return fetchedData{summary: summary, services: statuses}, nil
 	})
 }
 
 // fetchDetail returns a Cmd that queries log event detail off the event loop.
 func (m *Model) fetchDetail(svc domain.ServiceStatus) tea.Cmd {
-	db := m.db
+	services := m.api
 	scope := m.scope
-	return tabpoll.FetchDetail(dbTimeout, func(ctx context.Context) ([]domain.LogEventStatus, error) {
-		logEvents, err := db.LogEventStatuses().ListByService(ctx, svc.Name, 25)
+	return tabpoll.FetchDetail(fetchTimeout, func(ctx context.Context) ([]domain.LogEventStatus, error) {
+		logEvents, err := services.Status.ListServiceLogEvents(ctx, svc.ID)
 		if err != nil {
 			scope.Error("list log event statuses", "service", svc.Name, "err", err)
 			return nil, err
@@ -240,7 +242,7 @@ func (m *Model) ExpandedView(width, height int) string {
 	if !m.hasData {
 		return viewkit.RenderServicesEmptyState(
 			m.theme,
-			m.db != nil,
+			m.ready,
 			m.summary,
 			"Ask Tero to explore your services and pick which ones to enable.",
 		)

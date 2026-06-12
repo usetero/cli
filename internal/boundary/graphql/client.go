@@ -53,6 +53,11 @@ type Client interface {
 	GetIssueSummary(ctx context.Context) (*gen.GetIssueSummaryResponse, error)
 	ListChecks(ctx context.Context) (*gen.ListChecksResponse, error)
 	ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesResponse, error)
+
+	// Data-plane status reads
+	GetAccountStatusSummary(ctx context.Context) (*gen.GetAccountStatusSummaryResponse, error)
+	ListServiceStatuses(ctx context.Context, first int) (*gen.ListServiceStatusesResponse, error)
+	ListServiceLogEvents(ctx context.Context, serviceID string, first int) (*gen.ListServiceLogEventsResponse, error)
 }
 
 // client is the concrete implementation of Client.
@@ -292,4 +297,30 @@ func (c *client) ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesR
 		return nil, err
 	}
 	return gen.ListEdgeInstances(ctx, gql)
+}
+
+// Data-plane status reads
+
+func (c *client) GetAccountStatusSummary(ctx context.Context) (*gen.GetAccountStatusSummaryResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetAccountStatusSummary(ctx, gql)
+}
+
+func (c *client) ListServiceStatuses(ctx context.Context, first int) (*gen.ListServiceStatusesResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListServiceStatuses(ctx, gql, first)
+}
+
+func (c *client) ListServiceLogEvents(ctx context.Context, serviceID string, first int) (*gen.ListServiceLogEventsResponse, error) {
+	gql, err := c.gql(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListServiceLogEvents(ctx, gql, serviceID, first)
 }

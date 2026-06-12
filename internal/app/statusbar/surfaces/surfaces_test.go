@@ -43,22 +43,37 @@ func TestCompactViewHidesEmptyAndZeroPrimary(t *testing.T) {
 	}
 }
 
-func TestPendingCategorySignalBranches(t *testing.T) {
-	cost := 4.0
-
-	highPriority := []domain.PolicyCategoryStatus{{PolicyPendingHighCount: 2, EstimatedCostPerHour: &cost}}
-	if got := pendingCategorySignal(highPriority); !strings.Contains(got, "high-priority") {
-		t.Fatalf("expected high-priority signal to win, got %q", got)
+func TestCheckDomainSummaryAggregatesByDomain(t *testing.T) {
+	catalog := domain.CheckCatalog{
+		Checks: []domain.Check{
+			{Domain: domain.CheckDomainCost, OpenFindingCount: 3, ActiveIssueCount: 1},
+			{Domain: domain.CheckDomainCost, OpenFindingCount: 2, ActiveIssueCount: 0},
+			{Domain: domain.CheckDomainCompliance, OpenFindingCount: 9, ActiveIssueCount: 4},
+		},
+		ByDomain: map[domain.CheckDomain]int64{
+			domain.CheckDomainCost:       2,
+			domain.CheckDomainCompliance: 1,
+		},
 	}
 
-	costOnly := []domain.PolicyCategoryStatus{{EstimatedCostPerHour: &cost}}
-	if got := pendingCategorySignal(costOnly); strings.Contains(got, "high-priority") || got == "" {
-		t.Fatalf("expected a cost signal with no high-priority work, got %q", got)
+	got := checkDomainSummary(catalog, domain.CheckDomainCost)
+	if !strings.Contains(got, "2 checks") || !strings.Contains(got, "5 findings") || !strings.Contains(got, "1 issues") {
+		t.Fatalf("cost summary = %q, want 2 checks / 5 findings / 1 issues", got)
 	}
+}
 
-	idle := []domain.PolicyCategoryStatus{{}}
-	if got := pendingCategorySignal(idle); got != "no high-priority policies" {
-		t.Fatalf("expected idle signal, got %q", got)
+func TestConnectedToneBranches(t *testing.T) {
+	if got := connectedTone(0, 0); got != "" {
+		t.Fatalf("expected no tone with zero fleet, got %q", got)
+	}
+	if got := connectedTone(0, 3); got != "danger" {
+		t.Fatalf("expected danger when none connected, got %q", got)
+	}
+	if got := connectedTone(1, 3); got != "warning" {
+		t.Fatalf("expected warning when partially connected, got %q", got)
+	}
+	if got := connectedTone(3, 3); got != "success" {
+		t.Fatalf("expected success when all connected, got %q", got)
 	}
 }
 

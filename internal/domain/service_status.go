@@ -6,6 +6,7 @@ type ServiceHealth string
 const (
 	ServiceHealthDisabled ServiceHealth = "DISABLED"
 	ServiceHealthInactive ServiceHealth = "INACTIVE"
+	ServiceHealthError    ServiceHealth = "ERROR"
 	ServiceHealthOK       ServiceHealth = "OK"
 )
 
@@ -14,6 +15,7 @@ func (s ServiceHealth) String() string { return string(s) }
 // ServiceStatus mirrors service_statuses_cache. All columns included;
 // callers pick what they need.
 type ServiceStatus struct {
+	ID     string
 	Name   string
 	Health ServiceHealth
 

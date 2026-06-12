@@ -22,17 +22,16 @@ type workspaceCountLoadedMsg struct {
 
 // Tab indices for the drawer.
 const (
-	TabPolicies      = 0
-	TabIssues        = 1
-	TabChecks        = 2
-	TabServices      = 3
-	TabLogEvents     = 4
-	TabEdgeInstances = 5
-	tabCount         = 6
+	TabIssues        = 0
+	TabChecks        = 1
+	TabServices      = 2
+	TabLogEvents     = 3
+	TabEdgeInstances = 4
+	tabCount         = 5
 )
 
 // Tab labels.
-var tabLabels = [tabCount]string{"Policies", "Issues", "Checks", "Services", "Log events", "Edge instances"}
+var tabLabels = [tabCount]string{"Issues", "Checks", "Services", "Log events", "Edge instances"}
 
 // Model renders the app status bar.
 type Model struct {
@@ -41,7 +40,6 @@ type Model struct {
 	env             string
 	tabs            []drawerTab
 	syncStatus      *syncstatus.Model
-	policiesStatus  *surfaces.Model
 	issuesStatus    *surfaces.Model
 	checksStatus    *surfaces.Model
 	servicesStatus  *services.Model
@@ -73,7 +71,6 @@ func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host stri
 		scope:           scope,
 		env:             env,
 		syncStatus:      syncstatus.New(theme, scope, syncer, host),
-		policiesStatus:  surfaces.NewPolicies(theme, scope),
 		issuesStatus:    surfaces.NewIssues(theme, scope),
 		checksStatus:    surfaces.NewChecks(theme, scope),
 		servicesStatus:  services.New(theme, scope),

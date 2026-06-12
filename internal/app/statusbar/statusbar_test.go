@@ -79,7 +79,6 @@ func TestBuildTabsMirrorsProductSurfaces(t *testing.T) {
 		group string
 		label string
 	}{
-		{group: "Control Plane", label: "Policies"},
 		{group: "Control Plane", label: "Issues"},
 		{group: "Control Plane", label: "Checks"},
 		{group: "Data Plane", label: "Services"},

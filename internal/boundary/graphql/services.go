@@ -22,6 +22,7 @@ type ServiceSet struct {
 	Issues          Issues
 	Checks          Checks
 	EdgeInstances   EdgeInstances
+	Status          Status
 }
 
 // NewServiceSet creates ServiceSet with an internally-managed client.
@@ -54,6 +55,7 @@ func newServiceSetWithScope(client Client, scope log.Scope) ServiceSet {
 		Issues:          NewIssueService(client, scope),
 		Checks:          NewCheckService(client, scope),
 		EdgeInstances:   NewEdgeInstanceService(client, scope),
+		Status:          NewStatusService(client, scope),
 	}
 }
 

@@ -210,7 +210,7 @@ func (m *Model) newChat() *chat.Model {
 		m.account,
 		m.workspace,
 		m.theme,
-		m.db,
+		m.services,
 		m.runtimeDeps,
 		m.toolRegistry,
 		m.scope,

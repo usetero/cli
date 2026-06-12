@@ -11,20 +11,24 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/usetero/cli/internal/app/statusbar/tabpoll"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/format"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/components/table"
 )
 
 const (
 	pollInterval = 2 * time.Second
-	dbTimeout    = 2 * time.Second
+	fetchTimeout = 2 * time.Second
+
+	// edgeConnectedWindow is how recently an edge instance must have synced to
+	// count as connected.
+	edgeConnectedWindow = 10 * time.Minute
 )
 
-type fetchFunc func(context.Context, sqlite.DB) (Snapshot, error)
+type fetchFunc func(context.Context, graphql.ServiceSet) (Snapshot, error)
 
 // Metric is one line of supporting state for a product surface.
 type Metric struct {
@@ -47,7 +51,9 @@ type Snapshot struct {
 type Model struct {
 	theme styles.Theme
 	scope log.Scope
-	db    sqlite.DB
+
+	services graphql.ServiceSet
+	ready    bool
 
 	source string
 	fetch  fetchFunc
@@ -56,11 +62,6 @@ type Model struct {
 	hasData   bool
 	fetching  bool
 	lastState string
-}
-
-// NewPolicies creates the policies surface.
-func NewPolicies(theme styles.Theme, scope log.Scope) *Model {
-	return newModel(theme, scope, "policies", fetchPolicies)
 }
 
 // NewIssues creates the issues surface.
@@ -92,15 +93,16 @@ func newModel(theme styles.Theme, scope log.Scope, source string, fetch fetchFun
 	}
 }
 
-// SetDB sets the database and starts polling.
-func (m *Model) SetDB(db sqlite.DB) tea.Cmd {
-	m.db = db
+// SetServices points the surface at the account-scoped services and starts polling.
+func (m *Model) SetServices(services graphql.ServiceSet) tea.Cmd {
+	m.services = services
+	m.ready = true
 	return m.poll()
 }
 
-// Init starts polling when the runtime database is available.
+// Init starts polling once the services are available.
 func (m *Model) Init() tea.Cmd {
-	if m.db == nil {
+	if !m.ready {
 		return nil
 	}
 	return m.poll()
@@ -115,7 +117,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if cmd, handled := tabpoll.UpdatePollCycle(
 		msg,
 		m.source,
-		m.db != nil,
+		m.ready,
 		&m.fetching,
 		m.fetchData(),
 		m.poll(),
@@ -133,11 +135,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) fetchData() tea.Cmd {
-	db := m.db
+	services := m.services
 	fetch := m.fetch
 	scope := m.scope
-	return tabpoll.Fetch(dbTimeout, func(ctx context.Context) (Snapshot, error) {
-		snapshot, err := fetch(ctx, db)
+	return tabpoll.Fetch(fetchTimeout, func(ctx context.Context) (Snapshot, error) {
+		snapshot, err := fetch(ctx, services)
 		if err != nil {
 			scope.Error("fetch surface", "err", err)
 			return Snapshot{}, err
@@ -219,101 +221,65 @@ func (m *Model) renderRows(width int) string {
 	return tbl.View()
 }
 
-func fetchPolicies(ctx context.Context, db sqlite.DB) (Snapshot, error) {
-	summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+func fetchIssues(ctx context.Context, services graphql.ServiceSet) (Snapshot, error) {
+	summary, err := services.Issues.GetSummary(ctx)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	total, err := db.LogEventPolicies().Count(ctx)
-	if err != nil {
-		total = summary.PendingPolicyCount + summary.ApprovedPolicyCount + summary.DismissedPolicyCount
-	}
-
-	return Snapshot{
-		Title:       "Policies",
-		Description: "Reviewable policy state synced from the control plane.",
-		Primary:     Metric{Label: "total", Value: count(total)},
-		Metrics: []Metric{
-			{Label: "pending", Value: count(summary.PendingPolicyCount), Tone: pendingTone(summary.PendingPolicyCount)},
-			{Label: "approved", Value: count(summary.ApprovedPolicyCount), Tone: "success"},
-			{Label: "dismissed", Value: count(summary.DismissedPolicyCount)},
-		},
-		Rows: [][]string{
-			{"Awaiting review", count(summary.PendingPolicyCount), highSignal(summary)},
-			{"Approved", count(summary.ApprovedPolicyCount), "running policy decisions"},
-			{"Dismissed", count(summary.DismissedPolicyCount), "reviewed and set aside"},
-		},
-		Loaded: true,
-	}, nil
-}
-
-func fetchIssues(ctx context.Context, db sqlite.DB) (Snapshot, error) {
-	summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
-	if err != nil {
-		return Snapshot{}, err
-	}
-	high := summary.PolicyPendingCriticalCount + summary.PolicyPendingHighCount
 	return Snapshot{
 		Title:       "Issues",
-		Description: "Policy-remediable issues currently awaiting operator judgment.",
-		Primary:     Metric{Label: "open", Value: count(summary.PendingPolicyCount), Tone: pendingTone(summary.PendingPolicyCount)},
+		Description: "Active issues awaiting operator judgment.",
+		Primary:     Metric{Label: "open", Value: count(summary.Open), Tone: pendingTone(summary.Open)},
 		Metrics: []Metric{
-			{Label: "high", Value: count(high), Tone: highTone(high)},
-			{Label: "medium", Value: count(summary.PolicyPendingMediumCount), Tone: pendingTone(summary.PolicyPendingMediumCount)},
-			{Label: "low", Value: count(summary.PolicyPendingLowCount)},
+			{Label: "high", Value: count(summary.HighCount), Tone: highTone(summary.HighCount)},
+			{Label: "medium", Value: count(summary.MediumCount), Tone: pendingTone(summary.MediumCount)},
+			{Label: "low", Value: count(summary.LowCount)},
 		},
 		Rows: [][]string{
-			{"Critical", count(summary.PolicyPendingCriticalCount), "needs immediate review"},
-			{"High", count(summary.PolicyPendingHighCount), "high-priority review queue"},
-			{"Medium", count(summary.PolicyPendingMediumCount), "normal review queue"},
-			{"Low", count(summary.PolicyPendingLowCount), "background cleanup"},
+			{"High", count(summary.HighCount), "high-priority review queue"},
+			{"Medium", count(summary.MediumCount), "normal review queue"},
+			{"Low", count(summary.LowCount), "background cleanup"},
 		},
 		Loaded: true,
 	}, nil
 }
 
-func fetchChecks(ctx context.Context, db sqlite.DB) (Snapshot, error) {
-	statuses := db.LogEventPolicyCategoryStatuses()
-	waste, err := statuses.ListWasteCategoryStatuses(ctx)
+func fetchChecks(ctx context.Context, services graphql.ServiceSet) (Snapshot, error) {
+	catalog, err := services.Checks.List(ctx)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	quality, err := statuses.ListQualityCategoryStatuses(ctx)
-	if err != nil {
-		return Snapshot{}, err
-	}
-	compliance, err := statuses.ListComplianceCategoryStatuses(ctx)
-	if err != nil {
-		return Snapshot{}, err
+
+	var openFindings, activeIssues int64
+	for _, check := range catalog.Checks {
+		openFindings += check.OpenFindingCount
+		activeIssues += check.ActiveIssueCount
 	}
 
 	return Snapshot{
 		Title:       "Checks",
-		Description: "Control-plane check categories represented in the local projection.",
-		Primary:     Metric{Label: "categories", Value: count(int64(len(waste) + len(quality) + len(compliance)))},
+		Description: "Product checks and their account-scoped posture.",
+		Primary:     Metric{Label: "checks", Value: count(catalog.Total)},
 		Metrics: []Metric{
-			{Label: "cost", Value: count(int64(len(waste)))},
-			{Label: "quality", Value: count(int64(len(quality)))},
-			{Label: "compliance", Value: count(int64(len(compliance)))},
+			{Label: "cost", Value: count(catalog.DomainCount(domain.CheckDomainCost))},
+			{Label: "compliance", Value: count(catalog.DomainCount(domain.CheckDomainCompliance))},
+			{Label: "active issues", Value: count(activeIssues), Tone: pendingTone(activeIssues)},
 		},
 		Rows: [][]string{
-			{"Cost", categorySummary(waste), pendingCategorySignal(waste)},
-			{"Data quality", categorySummary(quality), pendingCategorySignal(quality)},
-			{"Compliance", categorySummary(compliance), pendingCategorySignal(compliance)},
+			{"Cost", checkDomainSummary(catalog, domain.CheckDomainCost), "spend-reduction checks"},
+			{"Compliance", checkDomainSummary(catalog, domain.CheckDomainCompliance), "data-protection checks"},
+			{"Open findings", count(openFindings), "across all checks"},
 		},
 		Loaded: true,
 	}, nil
 }
 
-func fetchLogEvents(ctx context.Context, db sqlite.DB) (Snapshot, error) {
-	summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+func fetchLogEvents(ctx context.Context, services graphql.ServiceSet) (Snapshot, error) {
+	summary, err := services.Status.GetAccountSummary(ctx)
 	if err != nil {
 		return Snapshot{}, err
 	}
-	total, err := db.LogEvents().Count(ctx)
-	if err != nil {
-		total = summary.EventCount
-	}
+	total := summary.EventCount
 	coverage := "not analyzed"
 	if total > 0 {
 		coverage = fmt.Sprintf("%d%% analyzed", int(float64(summary.AnalyzedCount)/float64(total)*100))
@@ -340,19 +306,33 @@ func fetchLogEvents(ctx context.Context, db sqlite.DB) (Snapshot, error) {
 	}, nil
 }
 
-func fetchEdgeInstances(context.Context, sqlite.DB) (Snapshot, error) {
+func fetchEdgeInstances(ctx context.Context, services graphql.ServiceSet) (Snapshot, error) {
+	fleet, err := services.EdgeInstances.List(ctx)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	connected := fleet.ConnectedCount(time.Now(), edgeConnectedWindow)
+
+	rows := make([][]string, 0, len(fleet.Instances))
+	for _, inst := range fleet.Instances {
+		state := "idle"
+		if inst.LastSyncAt.After(time.Now().Add(-edgeConnectedWindow)) {
+			state = "connected"
+		}
+		rows = append(rows, []string{inst.ServiceName, state, "last sync " + relativeTime(inst.LastSyncAt)})
+	}
+	if len(rows) == 0 {
+		rows = [][]string{{"Runtime", "none", "no edge instances registered yet"}}
+	}
+
 	return Snapshot{
 		Title:       "Edge instances",
-		Description: "Edge runtime projection is not synced into this CLI yet.",
-		Primary:     Metric{Label: "instances", Value: "0"},
+		Description: "Edge runtimes syncing policies from this account.",
+		Primary:     Metric{Label: "instances", Value: count(fleet.Total)},
 		Metrics: []Metric{
-			{Label: "connected", Value: "0"},
-			{Label: "projection", Value: "pending"},
+			{Label: "connected", Value: count(connected), Tone: connectedTone(connected, fleet.Total)},
 		},
-		Rows: [][]string{
-			{"Runtime", "pending", "waiting for edge instance sync"},
-			{"Control plane", "available in webapp", "CLI surface reserved"},
-		},
+		Rows:   rows,
 		Loaded: true,
 	}, nil
 }
@@ -378,6 +358,21 @@ func count(n int64) string {
 	return fmt.Sprintf("%d", n)
 }
 
+// relativeTime renders a compact "Xm ago" style duration since t.
+func relativeTime(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	}
+}
+
 func pendingTone(n int64) string {
 	if n > 0 {
 		return "warning"
@@ -392,12 +387,17 @@ func highTone(n int64) string {
 	return "success"
 }
 
-func highSignal(summary domain.AccountSummary) string {
-	high := summary.PolicyPendingCriticalCount + summary.PolicyPendingHighCount
-	if high > 0 {
-		return fmt.Sprintf("%d high priority", high)
+func connectedTone(connected, total int64) string {
+	if total == 0 {
+		return ""
 	}
-	return "no high-priority issues"
+	if connected == 0 {
+		return "danger"
+	}
+	if connected < total {
+		return "warning"
+	}
+	return "success"
 }
 
 func analyzedTone(summary domain.AccountSummary, total int64) string {
@@ -410,28 +410,14 @@ func analyzedTone(summary domain.AccountSummary, total int64) string {
 	return "warning"
 }
 
-func categorySummary(categories []domain.PolicyCategoryStatus) string {
-	var pending int64
-	for _, category := range categories {
-		pending += category.PendingCount
-	}
-	return fmt.Sprintf("%d categories, %d pending", len(categories), pending)
-}
-
-func pendingCategorySignal(categories []domain.PolicyCategoryStatus) string {
-	var high int64
-	var estimatedCost float64
-	for _, category := range categories {
-		high += category.PolicyPendingCriticalCount + category.PolicyPendingHighCount
-		if category.EstimatedCostPerHour != nil {
-			estimatedCost += *category.EstimatedCostPerHour
+func checkDomainSummary(catalog domain.CheckCatalog, d domain.CheckDomain) string {
+	var openFindings, activeIssues int64
+	for _, check := range catalog.Checks {
+		if check.Domain != d {
+			continue
 		}
+		openFindings += check.OpenFindingCount
+		activeIssues += check.ActiveIssueCount
 	}
-	if high > 0 {
-		return fmt.Sprintf("%d high-priority policies", high)
-	}
-	if estimatedCost > 0 {
-		return format.YearlyCost(estimatedCost)
-	}
-	return "no high-priority policies"
+	return fmt.Sprintf("%d checks, %d findings, %d issues", catalog.DomainCount(d), openFindings, activeIssues)
 }

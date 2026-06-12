@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"time"
 
 	"charm.land/bubbles/v2/key"
@@ -8,7 +9,6 @@ import (
 
 	msgs "github.com/usetero/cli/internal/app/chat/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
 
@@ -36,18 +36,18 @@ func (m *Model) handleKeyPress(msg tea.KeyPressMsg) updateDispatch {
 }
 
 func (m *Model) handleEmptyStatePoll() tea.Cmd {
-	if m.hasMessages() || m.db == nil {
+	if m.hasMessages() || m.services.Status == nil {
 		return nil // stop polling once messages exist
 	}
 	return tea.Batch(m.fetchEmptyStateSummary(), m.pollEmptyState())
 }
 
 func (m *Model) fetchEmptyStateSummary() tea.Cmd {
-	db := m.db
+	status := m.services.Status
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, time.Second)
+		ctx, cancel := context.WithTimeout(m.runtimeDeps.EffectContext, time.Second)
 		defer cancel()
-		summary, err := db.DatadogAccountStatuses().GetSummary(ctx)
+		summary, err := status.GetAccountSummary(ctx)
 		return emptyStateSummaryLoadedMsg{summary: summary, err: err}
 	}
 }

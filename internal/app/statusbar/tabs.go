@@ -3,12 +3,13 @@ package statusbar
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/sqlite"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 )
 
 // TabModel is the base contract every status bar tab model must satisfy.
+// Tabs read from control-plane GraphQL services, not a local database.
 type TabModel interface {
-	SetDB(db sqlite.DB) tea.Cmd
+	SetServices(services graphql.ServiceSet) tea.Cmd
 	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
 	HasData() bool
@@ -26,7 +27,7 @@ type InteractiveTabModel interface {
 
 type drawerTab interface {
 	Label() string
-	SetDB(db sqlite.DB) tea.Cmd
+	SetServices(services graphql.ServiceSet) tea.Cmd
 	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
 	HasData() bool
@@ -56,7 +57,7 @@ func (t tab) Label() string { return t.label }
 
 func (t tab) GroupLabel() string { return t.group }
 
-func (t tab) SetDB(db sqlite.DB) tea.Cmd { return t.model.SetDB(db) }
+func (t tab) SetServices(services graphql.ServiceSet) tea.Cmd { return t.model.SetServices(services) }
 
 func (t tab) Init() tea.Cmd { return t.model.Init() }
 
@@ -97,7 +98,6 @@ func (t tab) HandleKeyPress(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *Model) buildTabs() []drawerTab {
 	return []drawerTab{
-		newTab("Control Plane", tabLabels[TabPolicies], m.policiesStatus),
 		newTab("Control Plane", tabLabels[TabIssues], m.issuesStatus),
 		newTab("Control Plane", tabLabels[TabChecks], m.checksStatus),
 		newTab("Data Plane", tabLabels[TabServices], m.servicesStatus),

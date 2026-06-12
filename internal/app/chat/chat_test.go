@@ -14,24 +14,25 @@ import (
 	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/boundary/chat/chattest"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
+	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/teatest"
 )
 
-// newTestChat creates a chat model with a real DB and a mock streaming client.
+// newTestChat creates an ephemeral chat model with a mock streaming client.
 func newTestChat(t *testing.T, client chat.Client) *Model {
 	t.Helper()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
-	db := dbtest.OpenTestDB(t)
+	services := graphql.NewServiceSetFromClient(apitest.NewMockClient(), scope)
 	runtimeDeps := usecase.NewRuntimeDeps(client)
 
-	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, db, runtimeDeps, nil, scope)
+	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, services, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)
 	return m
 }

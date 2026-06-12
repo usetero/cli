@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/log/logtest"
 	"github.com/usetero/cli/internal/powersync/powersynctest"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -101,15 +101,15 @@ type stubDrawerTab struct {
 	onHandle    func(msg tea.KeyPressMsg) tea.Cmd
 }
 
-func (s stubDrawerTab) Label() string                { return s.label }
-func (s stubDrawerTab) SetDB(_ sqlite.DB) tea.Cmd    { return nil }
-func (s stubDrawerTab) Init() tea.Cmd                { return nil }
-func (s stubDrawerTab) Update(_ tea.Msg) tea.Cmd     { return nil }
-func (s stubDrawerTab) HasData() bool                { return s.hasData }
-func (s stubDrawerTab) CompactView() string          { return "" }
-func (s stubDrawerTab) ExpandedView(_, _ int) string { return "" }
-func (s stubDrawerTab) Interactive() bool            { return s.interactive }
-func (s stubDrawerTab) InDetail() bool               { return s.detail }
+func (s stubDrawerTab) Label() string                            { return s.label }
+func (s stubDrawerTab) SetServices(_ graphql.ServiceSet) tea.Cmd { return nil }
+func (s stubDrawerTab) Init() tea.Cmd                            { return nil }
+func (s stubDrawerTab) Update(_ tea.Msg) tea.Cmd                 { return nil }
+func (s stubDrawerTab) HasData() bool                            { return s.hasData }
+func (s stubDrawerTab) CompactView() string                      { return "" }
+func (s stubDrawerTab) ExpandedView(_, _ int) string             { return "" }
+func (s stubDrawerTab) Interactive() bool                        { return s.interactive }
+func (s stubDrawerTab) InDetail() bool                           { return s.detail }
 func (s stubDrawerTab) CloseDetail() {
 	if s.onClose != nil {
 		s.onClose()

@@ -26,6 +26,9 @@ type MockClient struct {
 	GetIssueSummaryFunc                     func(ctx context.Context) (*gen.GetIssueSummaryResponse, error)
 	ListChecksFunc                          func(ctx context.Context) (*gen.ListChecksResponse, error)
 	ListEdgeInstancesFunc                   func(ctx context.Context) (*gen.ListEdgeInstancesResponse, error)
+	GetAccountStatusSummaryFunc             func(ctx context.Context) (*gen.GetAccountStatusSummaryResponse, error)
+	ListServiceStatusesFunc                 func(ctx context.Context, first int) (*gen.ListServiceStatusesResponse, error)
+	ListServiceLogEventsFunc                func(ctx context.Context, serviceID string, first int) (*gen.ListServiceLogEventsResponse, error)
 }
 
 // NewMockClient creates a MockClient with sensible defaults.
@@ -143,6 +146,27 @@ func (m *MockClient) ListChecks(ctx context.Context) (*gen.ListChecksResponse, e
 func (m *MockClient) ListEdgeInstances(ctx context.Context) (*gen.ListEdgeInstancesResponse, error) {
 	if m.ListEdgeInstancesFunc != nil {
 		return m.ListEdgeInstancesFunc(ctx)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) GetAccountStatusSummary(ctx context.Context) (*gen.GetAccountStatusSummaryResponse, error) {
+	if m.GetAccountStatusSummaryFunc != nil {
+		return m.GetAccountStatusSummaryFunc(ctx)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) ListServiceStatuses(ctx context.Context, first int) (*gen.ListServiceStatusesResponse, error) {
+	if m.ListServiceStatusesFunc != nil {
+		return m.ListServiceStatusesFunc(ctx, first)
+	}
+	return nil, nil
+}
+
+func (m *MockClient) ListServiceLogEvents(ctx context.Context, serviceID string, first int) (*gen.ListServiceLogEventsResponse, error) {
+	if m.ListServiceLogEventsFunc != nil {
+		return m.ListServiceLogEventsFunc(ctx, serviceID, first)
 	}
 	return nil, nil
 }
