@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/usetero/cli/internal/auth"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 )
@@ -13,14 +14,23 @@ import (
 func (m *Model) checkAuth() tea.Cmd {
 	return func() tea.Msg {
 		hasValidAuth := false
+		var user *auth.User
 		if m.auth.IsAuthenticated() {
 			if _, err := m.auth.GetAccessToken(m.ctx); err == nil {
 				hasValidAuth = true
+				// Capture the user identity here: when auth is already valid the
+				// onboarding auth gate is skipped, so this is the only place the
+				// resumed-session user is resolved for the completion payload.
+				if userID, idErr := m.auth.GetUserID(m.ctx); idErr == nil && userID != "" {
+					user = &auth.User{ID: userID}
+				} else if idErr != nil {
+					m.scope.Warn("preflight could not resolve user id", "error", idErr)
+				}
 			} else {
 				_ = m.auth.ClearTokens()
 			}
 		}
-		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth}
+		return preflightAuthCheckCompletedMsg{hasValidAuth: hasValidAuth, user: user}
 	}
 }
 

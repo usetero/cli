@@ -82,6 +82,7 @@ type PreflightState struct {
 	Role             string
 	ActiveOrgID      domain.OrganizationID
 	DefaultAccountID domain.AccountID
+	User             *auth.User
 	Org              *domain.Organization
 	Account          *domain.Account
 	HasDatadog       bool
