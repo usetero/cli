@@ -12,13 +12,12 @@ import (
 func (m *Model) paletteCommands() []palette.Command {
 	return []palette.Command{
 		{
-			Name: "New Conversation",
+			Name: "Refresh Issues",
 			Handler: func() tea.Cmd {
-				m.chat = m.newChat()
-				m.statusBar.SetTitle("")
-				m.windowTitle = ""
-				m.updateLayout()
-				return m.chat.Init()
+				if m.explorer == nil {
+					return nil
+				}
+				return m.explorer.Refresh()
 			},
 		},
 		{

@@ -36,11 +36,11 @@ func (m *Model) updateLayout() {
 		if m.onboarding != nil {
 			m.onboarding.SetSize(contentWidth, pageHeight)
 		}
-	case stateChat:
-		if m.chat != nil {
-			m.chat.SetSize(contentWidth, pageHeight)
+	case stateExplorer:
+		if m.explorer != nil {
+			m.explorer.SetSize(contentWidth, pageHeight)
 			// Chat page origin: toast + statusbar + gap (no top padding)
-			m.chat.SetOrigin(horizontalPadding, toastHeight+statusBarHeight+gapAfterStatusBar)
+			m.explorer.SetOrigin(horizontalPadding, toastHeight+statusBarHeight+gapAfterStatusBar)
 		}
 	}
 }
@@ -67,9 +67,9 @@ func (m *Model) updateKeyBar() {
 			if m.onboarding != nil {
 				bindings = m.onboarding.ShortHelp()
 			}
-		case stateChat:
-			if m.chat != nil {
-				bindings = m.chat.ShortHelp()
+		case stateExplorer:
+			if m.explorer != nil {
+				bindings = m.explorer.ShortHelp()
 			}
 		}
 	}
@@ -138,9 +138,9 @@ func (m *Model) currentPageView() string {
 		if m.onboarding != nil {
 			return m.onboarding.View()
 		}
-	case stateChat:
-		if m.chat != nil {
-			return m.chat.View()
+	case stateExplorer:
+		if m.explorer != nil {
+			return m.explorer.View()
 		}
 	}
 	return ""

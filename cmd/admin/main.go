@@ -97,7 +97,7 @@ func setup(cmd *cobra.Command) (*workosadmin.Client, string, error) {
 
 	cliConfig := config.LoadCLIConfig()
 	tokenStore := keyring.New(cliConfig.Environment())
-	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint, cliConfig.ChatEndpoint)
+	workosClient := workos.NewClient(cliConfig.WorkOSClientID, cliConfig.APIEndpoint, cliConfig.PowerSyncEndpoint)
 	authService := auth.NewService(workosClient, tokenStore, scope)
 
 	userID, err := authService.GetUserID(cmd.Context())

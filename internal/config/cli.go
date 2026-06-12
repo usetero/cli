@@ -8,7 +8,6 @@ import (
 type environmentDefaults struct {
 	APIEndpoint       string
 	PowerSyncEndpoint string
-	ChatEndpoint      string
 	WorkOSClientID    string
 }
 
@@ -18,19 +17,16 @@ var environments = map[string]environmentDefaults{
 	"local": {
 		APIEndpoint:       "http://localhost:18081",
 		PowerSyncEndpoint: "http://localhost:18084",
-		ChatEndpoint:      "http://localhost:18083",
 		WorkOSClientID:    "client_01JQCC2CJMTB8AY2JRMZXFY9R1",
 	},
 	"dev": {
 		APIEndpoint:       "https://api.usetero.dev",
 		PowerSyncEndpoint: "https://powersync.usetero.dev",
-		ChatEndpoint:      "https://chat.usetero.dev",
 		WorkOSClientID:    "client_01JQCC2CJMTB8AY2JRMZXFY9R1",
 	},
 	"prd": {
 		APIEndpoint:       "https://api.usetero.com",
 		PowerSyncEndpoint: "https://powersync.usetero.com",
-		ChatEndpoint:      "https://chat.usetero.com",
 		WorkOSClientID:    "client_01JQCC2D06JF9ASFA6GRHMFA3N",
 	},
 }
@@ -43,11 +39,9 @@ type CLIConfig struct {
 	// APIEndpoint is the Tero control plane GraphQL endpoint
 	APIEndpoint string
 
-	// PowerSyncEndpoint is the PowerSync service endpoint for local-first sync
+	// PowerSyncEndpoint is retained only as a token audience for auth
+	// compatibility; the CLI no longer syncs.
 	PowerSyncEndpoint string
-
-	// ChatEndpoint is the Chat API endpoint for message streaming
-	ChatEndpoint string
 
 	// WorkOSClientID is the WorkOS OAuth client ID for authentication
 	WorkOSClientID string
@@ -73,7 +67,6 @@ func LoadCLIConfig() *CLIConfig {
 		Env:               env,
 		APIEndpoint:       getEnvOrDefault("TERO_API_ENDPOINT", defaults.APIEndpoint),
 		PowerSyncEndpoint: getEnvOrDefault("TERO_POWERSYNC_ENDPOINT", defaults.PowerSyncEndpoint),
-		ChatEndpoint:      getEnvOrDefault("TERO_CHAT_ENDPOINT", defaults.ChatEndpoint),
 		WorkOSClientID:    getEnvOrDefault("WORKOS_CLIENT_ID", defaults.WorkOSClientID),
 		Debug:             os.Getenv("TERO_DEBUG") == "true" || os.Getenv("TERO_DEBUG") == "1",
 	}

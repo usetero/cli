@@ -26,9 +26,6 @@ func TestLoadCLIConfig_DefaultsToPrd(t *testing.T) {
 	if cfg.PowerSyncEndpoint != "https://powersync.usetero.com" {
 		t.Errorf("PowerSyncEndpoint = %q, want production", cfg.PowerSyncEndpoint)
 	}
-	if cfg.ChatEndpoint != "https://chat.usetero.com" {
-		t.Errorf("ChatEndpoint = %q, want production", cfg.ChatEndpoint)
-	}
 	if cfg.WorkOSClientID != "client_01JQCC2D06JF9ASFA6GRHMFA3N" {
 		t.Errorf("WorkOSClientID = %q, want production client", cfg.WorkOSClientID)
 	}
@@ -52,9 +49,6 @@ func TestLoadCLIConfig_Local(t *testing.T) {
 	if cfg.PowerSyncEndpoint != "http://localhost:18084" {
 		t.Errorf("PowerSyncEndpoint = %q, want localhost", cfg.PowerSyncEndpoint)
 	}
-	if cfg.ChatEndpoint != "http://localhost:18083" {
-		t.Errorf("ChatEndpoint = %q, want localhost", cfg.ChatEndpoint)
-	}
 	if cfg.WorkOSClientID != "client_01JQCC2CJMTB8AY2JRMZXFY9R1" {
 		t.Errorf("WorkOSClientID = %q, want local/dev client", cfg.WorkOSClientID)
 	}
@@ -77,9 +71,6 @@ func TestLoadCLIConfig_Dev(t *testing.T) {
 	}
 	if cfg.PowerSyncEndpoint != "https://powersync.usetero.dev" {
 		t.Errorf("PowerSyncEndpoint = %q, want dev", cfg.PowerSyncEndpoint)
-	}
-	if cfg.ChatEndpoint != "https://chat.usetero.dev" {
-		t.Errorf("ChatEndpoint = %q, want dev", cfg.ChatEndpoint)
 	}
 }
 

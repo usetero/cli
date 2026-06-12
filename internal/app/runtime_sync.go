@@ -4,9 +4,6 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/usetero/cli/internal/app/chat/usecase"
-	chattools "github.com/usetero/cli/internal/app/chattools"
-	chatboundary "github.com/usetero/cli/internal/boundary/chat"
 	"github.com/usetero/cli/internal/domain"
 )
 
@@ -27,33 +24,9 @@ func (m *Model) startSession(accountID string) {
 	m.scope.Info("session started", "account_id", accountID)
 }
 
-// ensureRuntime scopes the session to the account and initializes dependent
-// runtime services (status surfaces, chat tools, chat client).
+// ensureRuntime scopes the session to the account and starts the status
+// surfaces, which read from the account-scoped control-plane services.
 func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 	m.startSession(accountID)
-
-	// Drawer tabs read from the account-scoped control-plane services.
-	catalogCmd := m.statusBar.SetServices(m.services)
-
-	// Create tool registry. All tools are GraphQL-backed: the read tools query
-	// the control-plane catalog and set_service_enabled is a synchronous
-	// mutation. Policy approval moved to the issue model and is no longer a
-	// chat action.
-	m.toolRegistry = chattools.NewRegistry(
-		map[string]chattools.ActionTool{
-			"list_services":       chattools.NewListServicesTool(m.services),
-			"list_issues":         chattools.NewListIssuesTool(m.services),
-			"list_checks":         chattools.NewListChecksTool(m.services),
-			"list_edge_instances": chattools.NewListEdgeInstancesTool(m.services),
-			"account_status":      chattools.NewAccountStatusTool(m.services),
-			"set_service_enabled": chattools.NewSetServiceEnabledAction(m.services.Services),
-		},
-	)
-
-	// Create chat client with tool definitions
-	m.chatClient = chatboundary.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
-		WithAccountID(domain.AccountID(accountID))
-	m.runtimeDeps = usecase.NewRuntimeDeps(m.chatClient).WithEffectContext(m.sessionCtx)
-
-	return catalogCmd, nil
+	return m.statusBar.SetServices(m.services), nil
 }

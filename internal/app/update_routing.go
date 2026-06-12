@@ -1,12 +1,9 @@
 package app
 
 import (
-	"strings"
-
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	msgs "github.com/usetero/cli/internal/app/chat/events"
 	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/tea/keymap"
 )
@@ -46,16 +43,6 @@ func (m *Model) handleInteractionMessage(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		// Let downstream components observe mouse messages.
 		return nil, false
-	case appevents.DrawerPromptRequested:
-		m.statusBar.CloseDrawer()
-		return func() tea.Msg { return msgs.UserSubmittedInput{Text: msg.Text} }, true
-	case msgs.UserSubmittedInput:
-		text := strings.TrimSpace(msg.Text)
-		if strings.EqualFold(text, "exit") || strings.EqualFold(text, "quit") {
-			m.quitDlg = newQuitDialog(m.theme)
-			return nil, true
-		}
-		return nil, false
 	default:
 		return nil, false
 	}
@@ -86,12 +73,6 @@ func (m *Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 			}
 			m.statusBar.CloseDrawer()
 			return nil, true
-		}
-		// Esc cancels active round first; only show dialog if nothing to cancel.
-		if m.chat != nil {
-			if cancelled, cmd := m.chat.CancelActiveRound(); cancelled {
-				return cmd, true
-			}
 		}
 		m.quitDlg = newQuitDialog(m.theme)
 		return nil, true
@@ -134,9 +115,9 @@ func (m *Model) updateChildren(msg tea.Msg) tea.Cmd {
 		if m.onboarding != nil {
 			cmds = append(cmds, m.onboarding.Update(msg))
 		}
-	case stateChat:
-		if m.chat != nil {
-			cmds = append(cmds, m.chat.Update(msg))
+	case stateExplorer:
+		if m.explorer != nil {
+			cmds = append(cmds, m.explorer.Update(msg))
 		}
 	}
 

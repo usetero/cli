@@ -22,29 +22,14 @@ func TestDependencyBoundaries(t *testing.T) {
 	}
 
 	graphqlRoot := filepath.Join(root, "internal", "boundary", "graphql")
-	chatBoundaryRoot := filepath.Join(root, "internal", "boundary", "chat")
 	coreRoot := filepath.Join(root, "internal", "core")
-	chatRoot := filepath.Join(root, "internal", "app", "chat")
 
 	assertNoForbiddenImports(t, graphqlRoot, []string{
-		"github.com/usetero/cli/internal/app/",
-	})
-	assertNoForbiddenImports(t, chatBoundaryRoot, []string{
 		"github.com/usetero/cli/internal/app/",
 	})
 	assertNoForbiddenImports(t, coreRoot, []string{
 		"github.com/usetero/cli/internal/app/",
 		"github.com/usetero/cli/internal/boundary/graphql/",
-	})
-	assertNoForbiddenImportsExcept(t, chatRoot, []string{
-		"github.com/usetero/cli/internal/boundary/chat",
-	}, []string{
-		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
-		filepath.Join("internal", "app", "chat", "usecase"),
-	})
-	assertOnlyAllowedChatBoundaryImports(t, chatRoot, []string{
-		filepath.Join("internal", "app", "chat", "messagelist", "messagelisttest"),
-		filepath.Join("internal", "app", "chat", "usecase"),
 	})
 }
 

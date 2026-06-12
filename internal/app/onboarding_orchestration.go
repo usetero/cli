@@ -5,7 +5,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	msgs "github.com/usetero/cli/internal/app/chat/events"
 	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
@@ -43,7 +42,7 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 		return catalogCmd, true
 
 	case bootstrap.OnboardingComplete:
-		m.state = stateChat
+		m.state = stateExplorer
 		m.user = msg.User
 		m.account = msg.Account
 		m.scope.Info("onboarding complete",
@@ -51,33 +50,12 @@ func (m *Model) handleOnboardingMessage(msg tea.Msg) (tea.Cmd, bool) {
 			"account", msg.Account.Name,
 		)
 
-		// Create chat model (sizing happens via updateLayout)
-		m.chat = m.newChat()
-
-		// Size the new chat component
+		// Create the issue explorer (sizing happens via updateLayout).
+		m.explorer = m.newExplorer()
 		m.updateLayout()
 
-		return m.chat.Init(), true
+		return m.explorer.Init(), true
 	}
 
 	return nil, false
-}
-
-func (m *Model) handleStreamCompleted(msg tea.Msg) {
-	stream, ok := msg.(msgs.StreamCompleted)
-	if !ok {
-		return
-	}
-
-	if stream.Title != "" && m.chat != nil {
-		// Chat is ephemeral: the title is shown in the status bar and window
-		// title for the session but is not persisted.
-		m.statusBar.SetTitle(stream.Title)
-		m.windowTitle = "Tero: " + stream.Title
-	}
-	// Update context window usage in statusbar
-	if stream.InputTokens > 0 && stream.ContextWindow > 0 {
-		pct := (stream.InputTokens*100 + stream.ContextWindow - 1) / stream.ContextWindow // round up
-		m.statusBar.SetContextPercent(pct)
-	}
 }

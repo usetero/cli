@@ -19,7 +19,6 @@ func newAuthService(cliConfig *config.CLIConfig, scope log.Scope) *auth.Service 
 		cliConfig.WorkOSClientID,
 		cliConfig.APIEndpoint,
 		cliConfig.PowerSyncEndpoint,
-		cliConfig.ChatEndpoint,
 	)
 	return auth.NewService(workosClient, tokenStore, scope)
 }

@@ -8,17 +8,14 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/chat"
-	"github.com/usetero/cli/internal/app/chat/usecase"
-	chattools "github.com/usetero/cli/internal/app/chattools"
 	appevents "github.com/usetero/cli/internal/app/events"
+	"github.com/usetero/cli/internal/app/explorer"
 	"github.com/usetero/cli/internal/app/keybar"
 	"github.com/usetero/cli/internal/app/onboarding"
 	"github.com/usetero/cli/internal/app/palette"
 	"github.com/usetero/cli/internal/app/statusbar"
 	"github.com/usetero/cli/internal/app/toast"
 	"github.com/usetero/cli/internal/auth"
-	chatboundary "github.com/usetero/cli/internal/boundary/chat"
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
@@ -33,7 +30,7 @@ type state int
 
 const (
 	stateOnboarding state = iota
-	stateChat
+	stateExplorer
 )
 
 // Layout constants.
@@ -64,9 +61,6 @@ type Model struct {
 	// Runtime (created after account selection / onboarding)
 	sessionCancel context.CancelFunc
 	sessionCtx    context.Context
-	chatClient    chatboundary.Client
-	runtimeDeps   usecase.RuntimeDeps
-	toolRegistry  *chattools.Registry
 	user          *auth.User
 	account       domain.Account
 
@@ -75,7 +69,7 @@ type Model struct {
 	toast      *toast.Model
 	keyBar     *keybar.Model
 	onboarding *onboarding.Model
-	chat       *chat.Model
+	explorer   *explorer.Model
 	quitDlg    *quitDialog
 	palette    *palette.Model
 	state      state
@@ -183,21 +177,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd, handled := m.handleOnboardingMessage(msg); handled {
 		return m, cmd
 	}
-	m.handleStreamCompleted(msg)
 	return m, m.updateChildren(msg)
 }
 
-// newChat creates a fresh chat model with current dependencies.
-func (m *Model) newChat() *chat.Model {
-	return chat.New(
-		m.user,
-		m.account,
-		m.theme,
-		m.services,
-		m.runtimeDeps,
-		m.toolRegistry,
-		m.scope,
-	)
+// newExplorer creates a fresh issue explorer scoped to the active account.
+func (m *Model) newExplorer() *explorer.Model {
+	return explorer.New(m.services, m.theme, m.scope)
 }
 
 // openPalette creates and opens the command palette.

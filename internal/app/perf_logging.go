@@ -59,7 +59,7 @@ func (m *Model) stateName() string {
 	switch m.state {
 	case stateOnboarding:
 		return "onboarding"
-	case stateChat:
+	case stateExplorer:
 		return "chat"
 	default:
 		return "unknown"

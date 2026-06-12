@@ -3,7 +3,6 @@ package app
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/usetero/cli/internal/app/chat/usecase"
 	appevents "github.com/usetero/cli/internal/app/events"
 	"github.com/usetero/cli/internal/app/onboarding"
 	"github.com/usetero/cli/internal/app/statusbar"
@@ -74,10 +73,7 @@ func (m *Model) switchAccount() tea.Cmd {
 func (m *Model) restartOnboarding() tea.Cmd {
 	m.shutdown()
 
-	m.chatClient = nil
-	m.runtimeDeps = usecase.RuntimeDeps{}
-	m.toolRegistry = nil
-	m.chat = nil
+	m.explorer = nil
 	m.services = m.services.WithAccountID("") // clear stale account scope
 
 	m.statusBar = statusbar.New(m.theme, m.scope, m.cfg.APIEndpoint, m.cfg.Env)
