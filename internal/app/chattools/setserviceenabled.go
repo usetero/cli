@@ -1,20 +1,19 @@
 package tools
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/usetero/cli/internal/app/chat/messagelist/round/turn/assistant/blocks/tools/action"
 	"github.com/usetero/cli/internal/boundary/chat"
+	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/domain/tools"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 // NewSetServiceEnabledAction creates an ActionTool for set_service_enabled.
-func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
+// The enable/disable write is a synchronous control-plane GraphQL mutation.
+func NewSetServiceEnabledAction(services graphql.Services) ActionTool {
 	def := chat.Tool{
 		Name:        "set_service_enabled",
 		Description: "Enable or disable a service for log analysis. Enabling triggers the analysis pipeline.",
@@ -39,41 +38,31 @@ func NewSetServiceEnabledAction(db sqlite.DB) ActionTool {
 			return tools.Result{}, err
 		}
 
+		if _, parseErr := uuid.Parse(in.ServiceID.String()); parseErr != nil {
+			return tools.Result{}, fmt.Errorf(
+				"service ID %q is not a UUID — this looks like a name. "+
+					"Use the query tool: SELECT id, name FROM services WHERE name LIKE '%%%s%%'",
+				in.ServiceID, in.ServiceID,
+			)
+		}
+
 		ctx, cancel := withToolTimeout()
 		defer cancel()
 
-		svc, err := db.Services().Get(ctx, in.ServiceID)
-		if errors.Is(err, sql.ErrNoRows) {
-			if _, parseErr := uuid.Parse(in.ServiceID.String()); parseErr != nil {
-				return tools.Result{}, fmt.Errorf(
-					"no service found with ID %q — this looks like a name, not a UUID. "+
-						"Use the query tool: SELECT id, name FROM services WHERE name LIKE '%%%s%%'",
-					in.ServiceID, in.ServiceID,
-				)
-			}
-			return tools.Result{}, fmt.Errorf(
-				"no service found with ID %q. Use the query tool: SELECT id, name FROM services",
-				in.ServiceID,
-			)
+		var err error
+		if in.Enabled {
+			err = services.EnableService(ctx, in.ServiceID)
+		} else {
+			err = services.DisableService(ctx, in.ServiceID)
 		}
 		if err != nil {
-			return tools.Result{}, fmt.Errorf("get service: %w", err)
-		}
-
-		if err := db.Services().SetEnabled(ctx, in.ServiceID, in.Enabled); err != nil {
 			return tools.Result{}, fmt.Errorf("set service enabled: %w", err)
-		}
-
-		var serviceName string
-		if svc.Name != nil {
-			serviceName = *svc.Name
 		}
 
 		return tools.Result{
 			Content: tools.SetServiceEnabledResult{
-				ServiceID:   in.ServiceID,
-				ServiceName: serviceName,
-				Enabled:     in.Enabled,
+				ServiceID: in.ServiceID,
+				Enabled:   in.Enabled,
 			}.ToMap(),
 		}, nil
 	}
