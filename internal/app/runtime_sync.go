@@ -73,7 +73,7 @@ func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
 	// Create chat client with tool definitions
 	m.chatClient = chatboundary.NewClient(m.cfg.ChatEndpoint, m.authService, m.scope, m.toolRegistry.Definitions()).
 		WithAccountID(domain.AccountID(accountID))
-	m.runtimeDeps = usecase.NewRuntimeDeps(m.db, m.chatClient).WithEffectContext(m.sessionCtx)
+	m.runtimeDeps = usecase.NewRuntimeDeps(m.chatClient).WithEffectContext(m.sessionCtx)
 
 	return catalogCmd, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 // OrphanMessageCleaner removes uncommitted/orphaned messages after cancellation/failure.
@@ -12,19 +11,15 @@ type OrphanMessageCleaner interface {
 	CleanupMessages(ctx context.Context, ids []domain.MessageID) error
 }
 
-type SQLiteOrphanMessageCleaner struct {
-	db sqlite.DB
+// MemoryOrphanMessageCleaner is a no-op cleaner. With ephemeral chat there is
+// no persisted store to reconcile; the message list drops cancelled rounds in
+// the UI, so orphan cleanup has nothing to do.
+type MemoryOrphanMessageCleaner struct{}
+
+func NewMemoryOrphanMessageCleaner() *MemoryOrphanMessageCleaner {
+	return &MemoryOrphanMessageCleaner{}
 }
 
-func NewSQLiteOrphanMessageCleaner(db sqlite.DB) *SQLiteOrphanMessageCleaner {
-	return &SQLiteOrphanMessageCleaner{db: db}
-}
-
-func (c *SQLiteOrphanMessageCleaner) CleanupMessages(ctx context.Context, ids []domain.MessageID) error {
-	for _, id := range ids {
-		if err := c.db.Messages().Delete(ctx, id); err != nil {
-			return err
-		}
-	}
+func (c *MemoryOrphanMessageCleaner) CleanupMessages(_ context.Context, _ []domain.MessageID) error {
 	return nil
 }

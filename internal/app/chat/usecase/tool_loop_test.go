@@ -7,15 +7,12 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
-	"github.com/usetero/cli/internal/powersync/db/dbtest"
-	"github.com/usetero/cli/internal/sqlite/sqlitetest"
 )
 
-func TestSQLiteToolLoop_PrepareNextTurn_AppendsToolResultToSession(t *testing.T) {
+func TestMemoryToolLoop_PrepareNextTurn_AppendsToolResultToSession(t *testing.T) {
 	t.Parallel()
 
-	db := dbtest.OpenTestDB(t)
-	loop := NewSQLiteToolLoop(db)
+	loop := NewMemoryToolLoop()
 
 	session := corechat.NewSession("conv-1", []domain.Message{
 		{
@@ -62,11 +59,10 @@ func TestSQLiteToolLoop_PrepareNextTurn_AppendsToolResultToSession(t *testing.T)
 	}
 }
 
-func TestSQLiteToolLoop_PrepareNextTurn_ContinuesOnPersistenceFailure(t *testing.T) {
+func TestMemoryToolLoop_PrepareNextTurn_StartsSessionWhenNil(t *testing.T) {
 	t.Parallel()
 
-	db := sqlitetest.OpenBareDB(t) // missing schema to force persistence failure
-	loop := NewSQLiteToolLoop(db)
+	loop := NewMemoryToolLoop()
 
 	out, err := loop.PrepareNextTurn(context.Background(), PrepareNextTurnInput{
 		AccountID:      "acct-1",
@@ -76,11 +72,11 @@ func TestSQLiteToolLoop_PrepareNextTurn_ContinuesOnPersistenceFailure(t *testing
 		},
 		Session: nil,
 	})
-	if err == nil {
-		t.Fatal("expected persistence error, got nil")
+	if err != nil {
+		t.Fatalf("PrepareNextTurn() error = %v", err)
 	}
 	if out.MessageID == "" {
-		t.Fatal("expected fallback generated MessageID")
+		t.Fatal("expected a generated MessageID")
 	}
 	if len(out.Messages) != 1 {
 		t.Fatalf("messages len = %d, want 1", len(out.Messages))

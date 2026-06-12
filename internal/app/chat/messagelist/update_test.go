@@ -13,7 +13,6 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -42,7 +41,6 @@ func newStreamingMessageList(t *testing.T) *Model {
 	t.Helper()
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
-	db := dbtest.OpenTestDB(t)
 
 	client := &chattest.MockClient{
 		StreamFunc: func(_ context.Context, _ chat.Request, onMessage func(*domain.Message)) (*corechat.StreamResult, error) {
@@ -54,7 +52,7 @@ func newStreamingMessageList(t *testing.T) *Model {
 			select {}
 		},
 	}
-	runtimeDeps := usecase.NewRuntimeDeps(db, client)
+	runtimeDeps := usecase.NewRuntimeDeps(client)
 
 	m := New(theme, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)

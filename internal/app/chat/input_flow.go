@@ -3,10 +3,8 @@ package chat
 import (
 	tea "charm.land/bubbletea/v2"
 	msgs "github.com/usetero/cli/internal/app/chat/events"
-	appevents "github.com/usetero/cli/internal/app/events"
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 // handleUserInput creates conversation if needed, then persists the user message.
@@ -28,24 +26,12 @@ func (m *Model) handleUserInput(input msgs.UserSubmittedInput) tea.Cmd {
 	return tea.Batch(cancelCmd, m.persistUserMessage(input))
 }
 
-// createConversation creates a new conversation.
+// createConversation starts a new ephemeral conversation. Chat is not
+// persisted, so the conversation ID is minted locally for this session only.
 func (m *Model) createConversation(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
-		defer cancel()
-
-		convID, err := m.db.Conversations().Create(
-			ctx,
-			m.account.ID,
-			m.workspace.ID,
-		)
-		if err != nil {
-			m.scope.Error("failed to create conversation", "error", err)
-			return appevents.ErrorToastPublished{Message: "Failed to create conversation", Err: err}
-		}
-
 		return conversationCreated{
-			conversationID: convID,
+			conversationID: domain.NewConversationID(),
 			input:          input,
 		}
 	}
@@ -57,16 +43,11 @@ type conversationCreated struct {
 	input          msgs.UserSubmittedInput
 }
 
-// persistUserMessage saves the user message and updates in-memory request history.
+// persistUserMessage appends the user message to the in-memory session. Chat
+// is ephemeral, so the message ID is minted locally and nothing is stored.
 func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
-		defer cancel()
-
-		var msgID domain.MessageID
-		var err error
 		var domainResults []domain.ToolResult
-
 		if len(input.ToolResults) > 0 {
 			// Convert typed results to domain format at the boundary.
 			domainResults = make([]domain.ToolResult, len(input.ToolResults))
@@ -80,15 +61,9 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 					domainResults[i].Error = r.Error.Message
 				}
 			}
-			msgID, err = m.db.Messages().CreateToolResultMessage(ctx, m.account.ID, m.conversationID, domainResults)
-		} else {
-			msgID, err = m.db.Messages().CreateUserMessage(ctx, m.account.ID, m.conversationID, input.Text)
-		}
-		if err != nil {
-			m.scope.Error("failed to create user message", "error", err)
-			return appevents.ErrorToastPublished{Message: "Failed to save message", Err: err}
 		}
 
+		msgID := domain.NewMessageID()
 		if m.session == nil {
 			m.session = corechat.NewSession(m.conversationID, nil)
 		}
@@ -108,7 +83,7 @@ func (m *Model) persistUserMessage(input msgs.UserSubmittedInput) tea.Cmd {
 	}
 }
 
-// userMessagePersisted is fired after user message is saved to database.
+// userMessagePersisted is fired after the user message is appended to the session.
 type userMessagePersisted struct {
 	conversationID domain.ConversationID
 	messageID      domain.MessageID

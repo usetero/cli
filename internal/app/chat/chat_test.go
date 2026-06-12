@@ -29,7 +29,7 @@ func newTestChat(t *testing.T, client chat.Client) *Model {
 	theme := styles.NewTheme(true)
 	scope := logtest.NewScope(t)
 	db := dbtest.OpenTestDB(t)
-	runtimeDeps := usecase.NewRuntimeDeps(db, client)
+	runtimeDeps := usecase.NewRuntimeDeps(client)
 
 	m := New(nil, domain.Account{ID: "acct-1"}, domain.Workspace{ID: "ws-1"}, theme, db, runtimeDeps, nil, scope)
 	m.SetSize(80, 40)
@@ -151,13 +151,14 @@ func submitToolResultsAndDrain(m *Model, results []domaintools.Result, maxSteps 
 	teatest.DrainCmds(m.Update, cmd, maxSteps)
 }
 
+// listMessages returns the conversation history from the in-memory session.
+// Chat is ephemeral: the session is the source of truth, not a database.
 func listMessages(t *testing.T, m *Model) []domain.Message {
 	t.Helper()
-	messages, err := m.db.Messages().List(context.Background(), m.conversationID)
-	if err != nil {
-		t.Fatalf("failed to list messages: %v", err)
+	if m.session == nil {
+		return nil
 	}
-	return messages
+	return m.session.Messages()
 }
 
 func TestCancelActiveRound(t *testing.T) {
@@ -211,7 +212,7 @@ func TestCancelActiveRound(t *testing.T) {
 	})
 }
 
-func TestRequestHistoryUsesInMemorySessionNotDBRead(t *testing.T) {
+func TestRequestHistoryUsesInMemorySession(t *testing.T) {
 	t.Parallel()
 
 	var requests []chat.Request
@@ -219,16 +220,8 @@ func TestRequestHistoryUsesInMemorySessionNotDBRead(t *testing.T) {
 
 	submitAndDrain(m, "first", 50)
 
-	// Simulate durability drift: assistant row missing in SQLite.
-	stored := listMessages(t, m)
-	for _, msg := range stored {
-		if msg.Role == domain.RoleAssistant {
-			if err := m.db.Messages().Delete(context.Background(), msg.ID); err != nil {
-				t.Fatalf("delete assistant: %v", err)
-			}
-		}
-	}
-
+	// The in-memory session is the sole source of request history; the second
+	// turn must carry the prior user+assistant exchange forward.
 	submitAndDrain(m, "second", 70)
 
 	if len(requests) < 2 {

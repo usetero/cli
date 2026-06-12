@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 type PersistAssistantInput struct {
@@ -17,34 +16,15 @@ type AssistantPersister interface {
 	PersistAssistant(ctx context.Context, input PersistAssistantInput) (domain.MessageID, error)
 }
 
-type SQLiteAssistantPersister struct {
-	db sqlite.DB
+// MemoryAssistantPersister mints assistant message IDs without persisting.
+// Chat is ephemeral: the rendered content lives in the in-memory message list
+// for the duration of the session and is intentionally not stored.
+type MemoryAssistantPersister struct{}
+
+func NewMemoryAssistantPersister() *MemoryAssistantPersister {
+	return &MemoryAssistantPersister{}
 }
 
-func NewSQLiteAssistantPersister(db sqlite.DB) *SQLiteAssistantPersister {
-	return &SQLiteAssistantPersister{db: db}
-}
-
-func (p *SQLiteAssistantPersister) PersistAssistant(ctx context.Context, input PersistAssistantInput) (domain.MessageID, error) {
-	msgID, err := p.db.Messages().CreateAssistantMessage(
-		ctx,
-		input.AccountID,
-		input.ConversationID,
-		input.Message.Model,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	content, err := domain.EncodeBlocks(input.Message.Content)
-	if err != nil {
-		return "", err
-	}
-	if err := p.db.Messages().UpdateContent(ctx, msgID, content); err != nil {
-		return "", err
-	}
-	if err := p.db.Messages().UpdateMeta(ctx, msgID, input.Message.Model, input.Message.StopReason); err != nil {
-		return "", err
-	}
-	return msgID, nil
+func (p *MemoryAssistantPersister) PersistAssistant(_ context.Context, _ PersistAssistantInput) (domain.MessageID, error) {
+	return domain.NewMessageID(), nil
 }

@@ -6,7 +6,6 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 type PrepareNextTurnInput struct {
@@ -26,15 +25,15 @@ type ToolLoop interface {
 	PrepareNextTurn(ctx context.Context, input PrepareNextTurnInput) (PreparedNextTurn, error)
 }
 
-type SQLiteToolLoop struct {
-	db sqlite.DB
+// MemoryToolLoop prepares the next turn entirely in memory, minting a local
+// message ID and appending the tool results to the in-memory session.
+type MemoryToolLoop struct{}
+
+func NewMemoryToolLoop() *MemoryToolLoop {
+	return &MemoryToolLoop{}
 }
 
-func NewSQLiteToolLoop(db sqlite.DB) *SQLiteToolLoop {
-	return &SQLiteToolLoop{db: db}
-}
-
-func (t *SQLiteToolLoop) PrepareNextTurn(ctx context.Context, input PrepareNextTurnInput) (PreparedNextTurn, error) {
+func (t *MemoryToolLoop) PrepareNextTurn(_ context.Context, input PrepareNextTurnInput) (PreparedNextTurn, error) {
 	domainResults := make([]domain.ToolResult, len(input.Results))
 	for i, r := range input.Results {
 		domainResults[i] = domain.ToolResult{
@@ -47,10 +46,7 @@ func (t *SQLiteToolLoop) PrepareNextTurn(ctx context.Context, input PrepareNextT
 		}
 	}
 
-	msgID, err := t.db.Messages().CreateToolResultMessage(ctx, input.AccountID, input.ConversationID, domainResults)
-	if err != nil {
-		msgID = domain.NewMessageID()
-	}
+	msgID := domain.NewMessageID()
 
 	session := input.Session
 	if session == nil {
@@ -62,5 +58,5 @@ func (t *SQLiteToolLoop) PrepareNextTurn(ctx context.Context, input PrepareNextT
 		MessageID:         msgID,
 		Messages:          session.Messages(),
 		ToolResultMessage: toolResultMessage,
-	}, err
+	}, nil
 }

@@ -8,20 +8,18 @@ import (
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	"github.com/usetero/cli/internal/boundary/chat/chattest"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/db/dbtest"
 	"github.com/usetero/cli/internal/styles"
 )
 
 // New creates a messagelist.Model wired with test dependencies.
-// Uses a real SQLite database, mock chat client, real theme, and test logger.
+// Uses ephemeral in-memory chat deps, mock chat client, real theme, and test logger.
 func New(t *testing.T, width, height int) *messagelist.Model {
 	t.Helper()
 
 	theme := styles.NewTheme(true)
-	db := dbtest.OpenTestDB(t)
 	client := &chattest.MockClient{}
 	scope := logtest.NewScope(t)
-	runtimeDeps := usecase.NewRuntimeDeps(db, client)
+	runtimeDeps := usecase.NewRuntimeDeps(client)
 
 	m := messagelist.New(theme, runtimeDeps, nil, scope)
 	m.SetSize(width, height)

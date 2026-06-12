@@ -1,10 +1,11 @@
 package chat
 
 import (
+	"context"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 // SetSize updates the dimensions. This is a flexible component.
@@ -99,7 +100,7 @@ func (m *Model) cleanupOrphanedMessages(ids []domain.MessageID) tea.Cmd {
 	}
 	cleaner := m.runtimeDeps.OrphanCleaner
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
+		ctx, cancel := context.WithTimeout(m.runtimeDeps.EffectContext, dbOpTimeout)
 		defer cancel()
 		return orphanedMessagesCleanupCompleted{
 			ids: ids,

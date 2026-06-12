@@ -1,6 +1,7 @@
 package round
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,10 +12,9 @@ import (
 	corechat "github.com/usetero/cli/internal/core/chat"
 	"github.com/usetero/cli/internal/domain"
 	domaintools "github.com/usetero/cli/internal/domain/tools"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
-// startNextTurn persists tool results and creates the next turn using in-memory history.
+// startNextTurn appends tool results and creates the next turn using in-memory history.
 func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 	m.scope.Info("starting next turn", "result_count", len(results))
 	for _, summary := range summarizeToolResults(results) {
@@ -22,7 +22,7 @@ func (m *Model) startNextTurn(results []domaintools.Result) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(m.effectCtx, dbOpTimeout)
+		ctx, cancel := context.WithTimeout(m.effectCtx, dbOpTimeout)
 		defer cancel()
 
 		prepared, err := m.toolLoop.PrepareNextTurn(ctx, usecase.PrepareNextTurnInput{
