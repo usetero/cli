@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/usecase"
@@ -11,53 +10,30 @@ import (
 	"github.com/usetero/cli/internal/domain"
 )
 
-// startSync starts the syncer with the open database.
-func (m *Model) startSync(accountID string) error {
-	if m.db == nil {
-		return fmt.Errorf("database not open")
-	}
+// startSession scopes the API services to the account and opens a session
+// context that is cancelled on shutdown. There is no local database or sync
+// engine: reads and writes go straight to the control plane over GraphQL.
+func (m *Model) startSession(accountID string) {
 	if m.sessionCancel != nil {
 		m.shutdown()
-		if err := m.openDatabase(accountID); err != nil {
-			return err
-		}
 	}
 
-	// Create a session context that is cancelled on shutdown.
 	sessionCtx, cancel := context.WithCancel(m.ctx)
 	m.sessionCtx = sessionCtx
 	m.sessionCancel = cancel
 
-	if err := m.syncer.Start(sessionCtx, m.db, accountID, nil); err != nil {
-		cancel()
-		m.sessionCtx = nil
-		m.sessionCancel = nil
-		return err
-	}
-	m.scope.Info("syncer started", "account_id", accountID)
-
 	// Scope API services to the active account.
 	m.services = m.services.WithAccountID(domain.AccountID(accountID))
-
-	return nil
+	m.scope.Info("session started", "account_id", accountID)
 }
 
-// ensureRuntime opens account database, starts sync, and initializes dependent runtime services.
+// ensureRuntime scopes the session to the account and initializes dependent
+// runtime services (status surfaces, chat tools, chat client).
 func (m *Model) ensureRuntime(accountID string) (tea.Cmd, error) {
-	if err := m.openDatabase(accountID); err != nil {
-		return nil, err
-	}
+	m.startSession(accountID)
 
-	if err := m.startSync(accountID); err != nil {
-		return nil, err
-	}
-
-	// Start status polling: drawer tabs read from the account-scoped
-	// control-plane services; the sync indicator still reads the runtime db.
-	catalogCmd := tea.Batch(
-		m.statusBar.SetServices(m.services),
-		m.statusBar.SetDB(m.db),
-	)
+	// Drawer tabs read from the account-scoped control-plane services.
+	catalogCmd := m.statusBar.SetServices(m.services)
 
 	// Create tool registry. All tools are GraphQL-backed: the read tools query
 	// the control-plane catalog and set_service_enabled is a synchronous

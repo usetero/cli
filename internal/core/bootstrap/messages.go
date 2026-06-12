@@ -74,8 +74,6 @@ type WorkspaceSelected struct {
 	Workspace domain.Workspace
 }
 
-type SyncComplete struct{}
-
 type OnboardingComplete struct {
 	User      *auth.User
 	Org       domain.Organization
@@ -118,5 +116,4 @@ func (DatadogAccountCreated) bootstrapMessage() {}
 func (DatadogDiscoveryComplete) bootstrapMessage() {
 }
 func (WorkspaceSelected) bootstrapMessage() {}
-func (SyncComplete) bootstrapMessage()      {}
 func (PreflightResolved) bootstrapMessage() {}

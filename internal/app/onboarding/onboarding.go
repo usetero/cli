@@ -11,7 +11,6 @@ import (
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -25,7 +24,6 @@ type Model struct {
 	userPrefs preferences.UserPreferences
 	orgPrefs  preferences.OrgPreferences
 	auth      iauth.Auth
-	syncer    powersync.Syncer
 	scope     log.Scope
 
 	// Accumulated state from step completions
@@ -50,7 +48,6 @@ func New(
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,
 	authService iauth.Auth,
-	syncer powersync.Syncer,
 	scope log.Scope,
 ) *Model {
 	if ctx == nil {
@@ -65,9 +62,6 @@ func New(
 	if authService == nil {
 		panic("authService is nil")
 	}
-	if syncer == nil {
-		panic("syncer is nil")
-	}
 
 	scope = scope.Child("onboarding")
 
@@ -78,7 +72,6 @@ func New(
 		userPrefs: userPrefs,
 		orgPrefs:  orgPrefs,
 		auth:      authService,
-		syncer:    syncer,
 		scope:     scope,
 	}
 }

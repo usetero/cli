@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/app/onboarding/preflight"
 	"github.com/usetero/cli/internal/app/onboarding/role"
 	"github.com/usetero/cli/internal/app/onboarding/runtimeinit"
-	"github.com/usetero/cli/internal/app/onboarding/sync"
 	"github.com/usetero/cli/internal/app/onboarding/workspaces"
 	"github.com/usetero/cli/internal/core/bootstrap"
 )
@@ -55,8 +54,6 @@ func (m *Model) newStepForGate(gate Gate) (Step, error) {
 		return datadog.NewDiscovery(m.ctx, m.theme, m.state.DDAccount, m.services, m.scope), nil
 	case bootstrap.GateWorkspaceSelect:
 		return workspaces.NewSelect(m.ctx, m.theme, *m.state.Account, m.services, m.orgPrefs, m.scope), nil
-	case bootstrap.GateSync:
-		return sync.New(m.theme, m.syncer, m.scope), nil
 	default:
 		return nil, fmt.Errorf("unsupported gate %q", gate)
 	}

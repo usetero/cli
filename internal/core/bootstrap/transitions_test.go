@@ -52,10 +52,7 @@ func TestApplyWorkspaceSelected(t *testing.T) {
 	t.Parallel()
 
 	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
-	state, next := ApplyWorkspaceSelected(State{}, workspace)
-	if next != GateSync {
-		t.Fatalf("next gate = %q, want %q", next, GateSync)
-	}
+	state := ApplyWorkspaceSelected(State{}, workspace)
 	if state.Workspace == nil || state.Workspace.ID != workspace.ID {
 		t.Fatalf("workspace not applied: %#v", state.Workspace)
 	}

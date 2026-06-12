@@ -11,7 +11,6 @@ import (
 	"github.com/usetero/cli/internal/core/bootstrap"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -126,22 +125,26 @@ func TestHandleTransitionDatadogBranchRouting(t *testing.T) {
 	}
 }
 
-func TestHandleTransitionWorkspaceSelectedSetsState(t *testing.T) {
+func TestHandleTransitionWorkspaceSelectedCompletesOnboarding(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
+	m.state.User = ptrUser("user-1")
 	m.state.Org = ptrOrg("org-1")
 	m.state.Account = ptrAccount("acc-1")
 	workspace := domain.Workspace{ID: "ws-1", Name: "Workspace 1"}
 
-	if cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: workspace}); cmd == nil {
+	// Workspace selection is the terminal step: it completes onboarding rather
+	// than advancing to a sync gate.
+	cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: workspace})
+	if cmd == nil {
 		t.Fatal("expected transition command")
-	}
-	if m.gate != bootstrap.GateSync {
-		t.Fatalf("gate = %s, want %s", m.gate, bootstrap.GateSync)
 	}
 	if m.state.Workspace == nil || m.state.Workspace.ID != workspace.ID {
 		t.Fatalf("workspace state not set correctly: %+v", m.state.Workspace)
+	}
+	if _, ok := cmd().(bootstrap.OnboardingComplete); !ok {
+		t.Fatalf("expected OnboardingComplete command")
 	}
 }
 
@@ -226,38 +229,15 @@ func TestHandleTransitionOrgSelectedClearsServiceAccountScope(t *testing.T) {
 	}
 }
 
-func TestHandleTransitionSyncComplete(t *testing.T) {
+func TestHandleTransitionWorkspaceSelectedMissingStateNoops(t *testing.T) {
 	t.Parallel()
 
 	m := newTestModel(t)
 	m.state.User = ptrUser("user-1")
 	m.state.Org = ptrOrg("org-1")
-	m.state.Account = ptrAccount("acc-1")
-	m.state.Workspace = ptrWorkspace("ws-1")
+	// Missing account should not panic or emit a completion payload.
 
-	cmd := m.handleTransition(bootstrap.SyncComplete{})
-	if cmd == nil {
-		t.Fatal("expected completion command")
-	}
-	msg := cmd()
-	complete, ok := msg.(bootstrap.OnboardingComplete)
-	if !ok {
-		t.Fatalf("message type = %T, want bootstrap.OnboardingComplete", msg)
-	}
-	if complete.Org.ID != "org-1" || complete.Account.ID != "acc-1" || complete.Workspace.ID != "ws-1" || complete.User.ID != "user-1" {
-		t.Fatalf("unexpected completion payload: %+v", complete)
-	}
-}
-
-func TestHandleTransitionSyncCompleteMissingStateNoops(t *testing.T) {
-	t.Parallel()
-
-	m := newTestModel(t)
-	m.state.User = ptrUser("user-1")
-	m.state.Org = ptrOrg("org-1")
-	// Missing account/workspace should not panic or emit completion payload.
-
-	cmd := m.handleTransition(bootstrap.SyncComplete{})
+	cmd := m.handleTransition(bootstrap.WorkspaceSelected{Workspace: domain.Workspace{ID: "ws-1"}})
 	if cmd != nil {
 		t.Fatal("expected nil command when completion state is incomplete")
 	}
@@ -278,9 +258,8 @@ func newTestModelWithClient(t *testing.T) (*Model, *apitest.MockClient) {
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}
-	syncer := powersynctest.NewMockSyncer()
 
-	m := New(context.Background(), styles.NewTheme(true), services, userPrefs, orgPrefs, authSvc, syncer, scope)
+	m := New(context.Background(), styles.NewTheme(true), services, userPrefs, orgPrefs, authSvc, scope)
 	m.SetSize(120, 40)
 	return m, client
 }

@@ -9,9 +9,7 @@ import (
 	"github.com/usetero/cli/internal/app"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/tea/filter"
 )
@@ -67,15 +65,10 @@ Just run 'tero' to start an interactive chat session.`,
 			authService := newAuthService(cliConfig, scope)
 			services := newGraphQLServiceSet(cliConfig, authService, scope)
 
-			// Create storage for SQLite databases
-			storage := sqlite.NewStorageService(orgCfg)
-
-			// Create PowerSync syncer
-			syncer := powersync.NewSyncer(cliConfig.PowerSyncEndpoint, authService, scope)
-
-			// Create and run the TUI
+			// Create and run the TUI. The CLI is a thin GraphQL client: there is
+			// no local database or sync engine.
 			p := tea.NewProgram(
-				app.New(ctx, cliConfig, theme, version, services, authService, userPrefs, orgPrefs, storage, syncer, scope),
+				app.New(ctx, cliConfig, theme, version, services, authService, userPrefs, orgPrefs, scope),
 				tea.WithContext(ctx),
 				tea.WithEnvironment(os.Environ()),
 				tea.WithFilter(filter.Mouse),

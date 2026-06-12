@@ -8,7 +8,6 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -258,13 +257,6 @@ func newDebugPathsCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Comma
 				if err == nil {
 					baseDir, _ := orgCfg.BaseDir()
 					fmt.Println(kv(s, "Base Dir", baseDir))
-
-					orgPrefs := preferences.NewOrgService(orgCfg, scope)
-					if accountID := orgPrefs.GetDefaultAccountID(); accountID != "" {
-						storage := sqlite.NewStorageService(orgCfg)
-						dbPath, _ := storage.DatabasePath(accountID.String())
-						fmt.Println(kv(s, "Database", dbPath))
-					}
 				}
 			}
 

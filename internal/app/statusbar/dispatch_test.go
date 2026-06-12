@@ -7,14 +7,13 @@ import (
 
 	graphql "github.com/usetero/cli/internal/boundary/graphql"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/styles"
 )
 
 func TestToggleDrawerRequiresData(t *testing.T) {
 	t.Parallel()
 
-	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
+	m := New(styles.NewTheme(true), logtest.NewScope(t), "https://api.example.com", "dev")
 	m.tabs = []drawerTab{
 		stubDrawerTab{label: "A", hasData: false},
 		stubDrawerTab{label: "B", hasData: true},
@@ -34,7 +33,7 @@ func TestToggleDrawerRequiresData(t *testing.T) {
 func TestHandleEscDelegatesToActiveTab(t *testing.T) {
 	t.Parallel()
 
-	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
+	m := New(styles.NewTheme(true), logtest.NewScope(t), "https://api.example.com", "dev")
 	closed := false
 	m.tabs = []drawerTab{
 		stubDrawerTab{
@@ -58,7 +57,7 @@ func TestHandleEscDelegatesToActiveTab(t *testing.T) {
 func TestHandleKeyPressUsesInteractiveTabsOnly(t *testing.T) {
 	t.Parallel()
 
-	m := New(styles.NewTheme(true), logtest.NewScope(t), powersynctest.NewMockSyncer(), "https://api.example.com", "dev")
+	m := New(styles.NewTheme(true), logtest.NewScope(t), "https://api.example.com", "dev")
 	called := false
 	m.tabs = []drawerTab{
 		stubDrawerTab{

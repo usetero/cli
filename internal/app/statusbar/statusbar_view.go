@@ -204,11 +204,6 @@ func (m *Model) renderBrand() string {
 		brand += " " + envStyle.Render(strings.ToUpper(m.env))
 	}
 
-	syncView := m.syncStatus.CompactView()
-	if syncView != "" {
-		brand += " " + syncView
-	}
-
 	if m.org != "" {
 		brand += " " + m.renderOrgWorkspace()
 	}
@@ -216,13 +211,10 @@ func (m *Model) renderBrand() string {
 	return brand
 }
 
-// renderOrgWorkspace renders org context. Includes workspace when multiple exist.
+// renderOrgWorkspace renders the org context for the brand segment.
 func (m *Model) renderOrgWorkspace() string {
 	colors := m.theme
 	style := lipgloss.NewStyle().Foreground(colors.TextMuted).Background(colors.Bg)
-	if m.workspace != "" && m.workspaceCount > 1 {
-		return style.Render(m.org + " / " + m.workspace)
-	}
 	return style.Render(m.org)
 }
 

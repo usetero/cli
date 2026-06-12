@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/boundary/graphql/apitest"
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/log/logtest"
-	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/preferences/preferencestest"
 	"github.com/usetero/cli/internal/styles"
 )
@@ -77,7 +75,6 @@ func newViewTestModel(t *testing.T) *Model {
 	userPrefs := preferencestest.NewMockUserPreferences()
 	orgPrefs := preferencestest.NewMockOrgPreferences()
 	authSvc := &authtest.MockAuth{}
-	syncer := powersynctest.NewMockSyncer()
 
 	m := New(
 		context.Background(),
@@ -91,8 +88,6 @@ func newViewTestModel(t *testing.T) *Model {
 		authSvc,
 		userPrefs,
 		orgPrefs,
-		testStorage{dbPath: filepath.Join(t.TempDir(), "view-test.sqlite")},
-		syncer,
 		scope,
 	)
 	m.width = 120

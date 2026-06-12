@@ -26,7 +26,6 @@ const (
 	EventDatadogAccountCreated EventKind = "datadog_account_created"
 	EventDatadogDiscoveryDone  EventKind = "datadog_discovery_done"
 	EventWorkspaceSelected     EventKind = "workspace_selected"
-	EventSyncComplete          EventKind = "sync_complete"
 )
 
 // Event is the canonical transition input consumed by the bootstrap engine.
@@ -112,14 +111,15 @@ func ApplyEvent(state State, event Event) Transition {
 		nextState, next := ApplyDatadogDiscoveryComplete(state)
 		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
 	case EventWorkspaceSelected:
-		nextState, next := ApplyWorkspaceSelected(state, event.Workspace)
-		return Transition{Kind: TransitionAdvance, State: nextState, Next: next}
-	case EventSyncComplete:
-		completion, ok := CompleteOnboarding(state)
+		// Workspace selection is the final onboarding step. The control plane
+		// has no sync to wait for, so completing here drops the agent straight
+		// into chat.
+		nextState := ApplyWorkspaceSelected(state, event.Workspace)
+		completion, ok := CompleteOnboarding(nextState)
 		if !ok {
-			return Transition{Kind: TransitionNoop, State: state}
+			return Transition{Kind: TransitionNoop, State: nextState}
 		}
-		return Transition{Kind: TransitionComplete, State: state, Completion: completion}
+		return Transition{Kind: TransitionComplete, State: nextState, Completion: completion}
 	default:
 		return Transition{Kind: TransitionNoop, State: state}
 	}

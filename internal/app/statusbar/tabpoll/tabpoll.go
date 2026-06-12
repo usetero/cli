@@ -6,7 +6,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/statusbar/listdetail"
-	"github.com/usetero/cli/internal/sqlite"
 )
 
 // PollMsg triggers a tab data refresh tick.
@@ -30,7 +29,7 @@ func Tick(source string, interval time.Duration) tea.Cmd {
 // Fetch executes a typed data fetch with a timeout and returns DataMsg[T].
 func Fetch[T any](timeout time.Duration, fetch func(ctx context.Context) (T, error)) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		data, err := fetch(ctx)
 		return DataMsg[T]{Data: data, Err: err}
@@ -40,7 +39,7 @@ func Fetch[T any](timeout time.Duration, fetch func(ctx context.Context) (T, err
 // FetchDetail executes a typed detail fetch with a timeout and maps result+error into a tea.Msg.
 func FetchDetail[T any](timeout time.Duration, fetch func(ctx context.Context) (T, error), mapMsg func(data T, err error) tea.Msg) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := sqlite.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		data, err := fetch(ctx)
 		return mapMsg(data, err)

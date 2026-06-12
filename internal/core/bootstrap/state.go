@@ -116,9 +116,11 @@ func ApplyDatadogDiscoveryComplete(state State) (State, Gate) {
 	return state, GateWorkspaceSelect
 }
 
-func ApplyWorkspaceSelected(state State, workspace domain.Workspace) (State, Gate) {
+// ApplyWorkspaceSelected records the selected workspace. It is the terminal
+// onboarding step (there is no sync gate), so it returns only the next state.
+func ApplyWorkspaceSelected(state State, workspace domain.Workspace) State {
 	state.Workspace = &workspace
-	return state, GateSync
+	return state
 }
 
 func clearAccountScopedState(state State) State {

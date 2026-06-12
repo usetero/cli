@@ -32,7 +32,6 @@ func TestNewStepForGateCoverage(t *testing.T) {
 		bootstrap.GateDatadogAppKey,
 		bootstrap.GateDatadogDiscovery,
 		bootstrap.GateWorkspaceSelect,
-		bootstrap.GateSync,
 	}
 
 	for _, gate := range expected {

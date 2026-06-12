@@ -18,7 +18,6 @@ const (
 	GateDatadogAppKey    Gate = "datadog_app_key"
 	GateDatadogDiscovery Gate = "datadog_discovery"
 	GateWorkspaceSelect  Gate = "workspace_select"
-	GateSync             Gate = "sync"
 )
 
 func (g Gate) String() string { return string(g) }

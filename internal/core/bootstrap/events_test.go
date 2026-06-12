@@ -25,16 +25,16 @@ func TestApplyEventAuthenticated(t *testing.T) {
 	}
 }
 
-func TestApplyEventSyncComplete(t *testing.T) {
+func TestApplyEventWorkspaceSelectedCompletes(t *testing.T) {
 	t.Parallel()
 
+	// Workspace selection is the terminal onboarding step (no sync gate).
 	state := State{
-		User:      &auth.User{ID: "user-1"},
-		Org:       &domain.Organization{ID: "org-1"},
-		Account:   &domain.Account{ID: "acc-1"},
-		Workspace: &domain.Workspace{ID: "ws-1"},
+		User:    &auth.User{ID: "user-1"},
+		Org:     &domain.Organization{ID: "org-1"},
+		Account: &domain.Account{ID: "acc-1"},
 	}
-	got := ApplyEvent(state, Event{Kind: EventSyncComplete})
+	got := ApplyEvent(state, Event{Kind: EventWorkspaceSelected, Workspace: domain.Workspace{ID: "ws-1"}})
 	if got.Kind != TransitionComplete {
 		t.Fatalf("kind = %q, want %q", got.Kind, TransitionComplete)
 	}
@@ -46,10 +46,10 @@ func TestApplyEventSyncComplete(t *testing.T) {
 	}
 }
 
-func TestApplyEventSyncCompleteMissingStateNoops(t *testing.T) {
+func TestApplyEventWorkspaceSelectedMissingStateNoops(t *testing.T) {
 	t.Parallel()
 
-	got := ApplyEvent(State{User: &auth.User{ID: "user-1"}}, Event{Kind: EventSyncComplete})
+	got := ApplyEvent(State{User: &auth.User{ID: "user-1"}}, Event{Kind: EventWorkspaceSelected, Workspace: domain.Workspace{ID: "ws-1"}})
 	if got.Kind != TransitionNoop {
 		t.Fatalf("kind = %q, want %q", got.Kind, TransitionNoop)
 	}

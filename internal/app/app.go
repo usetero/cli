@@ -23,9 +23,7 @@ import (
 	"github.com/usetero/cli/internal/config"
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/preferences"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/update"
 )
@@ -58,9 +56,7 @@ type Model struct {
 
 	// Dependencies
 	cfg         *config.CLIConfig
-	storage     sqlite.Storage
 	authService auth.Auth
-	syncer      powersync.Syncer
 	services    graphql.ServiceSet
 	userPrefs   preferences.UserPreferences
 	orgPrefs    preferences.OrgPreferences
@@ -68,7 +64,6 @@ type Model struct {
 	// Runtime (created after account selection / onboarding)
 	sessionCancel context.CancelFunc
 	sessionCtx    context.Context
-	db            sqlite.DB
 	chatClient    chatboundary.Client
 	runtimeDeps   usecase.RuntimeDeps
 	toolRegistry  *chattools.Registry
@@ -104,8 +99,6 @@ func New(
 	authService auth.Auth,
 	userPrefs preferences.UserPreferences,
 	orgPrefs preferences.OrgPreferences,
-	storage sqlite.Storage,
-	syncer powersync.Syncer,
 	scope log.Scope,
 ) *Model {
 	if ctx == nil {
@@ -123,12 +116,6 @@ func New(
 	if orgPrefs == nil {
 		panic("orgPrefs is nil")
 	}
-	if storage == nil {
-		panic("storage is nil")
-	}
-	if syncer == nil {
-		panic("syncer is nil")
-	}
 
 	scope = scope.Child("app")
 
@@ -138,16 +125,14 @@ func New(
 		scope:       scope,
 		version:     version,
 		cfg:         cfg,
-		storage:     storage,
 		authService: authService,
-		syncer:      syncer,
 		services:    services,
 		userPrefs:   userPrefs,
 		orgPrefs:    orgPrefs,
-		statusBar:   statusbar.New(theme, scope, syncer, cfg.APIEndpoint, cfg.Env),
+		statusBar:   statusbar.New(theme, scope, cfg.APIEndpoint, cfg.Env),
 		toast:       toast.New(theme),
 		keyBar:      keybar.New(theme, scope),
-		onboarding:  onboarding.New(ctx, theme, services, userPrefs, orgPrefs, authService, syncer, scope),
+		onboarding:  onboarding.New(ctx, theme, services, userPrefs, orgPrefs, authService, scope),
 		state:       stateOnboarding,
 	}
 }

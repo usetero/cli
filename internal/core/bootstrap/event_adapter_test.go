@@ -17,7 +17,7 @@ func TestEventFromMessage(t *testing.T) {
 		{name: "authenticated", msg: Authenticated{}, kind: EventAuthenticated},
 		{name: "org selected", msg: OrgSelected{}, kind: EventOrgSelected},
 		{name: "runtime ready", msg: RuntimeReady{}, kind: EventRuntimeReady},
-		{name: "sync complete", msg: SyncComplete{}, kind: EventSyncComplete},
+		{name: "workspace selected", msg: WorkspaceSelected{}, kind: EventWorkspaceSelected},
 	}
 
 	for _, tt := range tests {

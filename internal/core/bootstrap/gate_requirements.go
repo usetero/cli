@@ -13,8 +13,6 @@ func RequirementForGate(gate Gate) GateRequirement {
 		return GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDSite: true, NeedsDDAPIKey: true}
 	case GateDatadogDiscovery:
 		return GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsDDAccount: true}
-	case GateSync:
-		return GateRequirement{NeedsOrg: true, NeedsAccount: true, NeedsWorkspace: true}
 	default:
 		return GateRequirement{}
 	}

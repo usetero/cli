@@ -34,8 +34,8 @@ func (m *Model) commandForTransition(event bootstrap.Event, transition bootstrap
 			}
 		}
 	case bootstrap.TransitionNoop:
-		if event.Kind == bootstrap.EventSyncComplete {
-			m.scope.Error("sync completed without required onboarding state",
+		if event.Kind == bootstrap.EventWorkspaceSelected {
+			m.scope.Error("workspace selected without required onboarding state",
 				slog.Bool("has_user", m.state.User != nil),
 				slog.Bool("has_org", m.state.Org != nil),
 				slog.Bool("has_account", m.state.Account != nil),

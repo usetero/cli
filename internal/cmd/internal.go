@@ -17,7 +17,6 @@ func NewInternalCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command
 	}
 
 	internalCmd.AddCommand(NewInternalInspectCmd(scope, cliConfig))
-	internalCmd.AddCommand(NewInternalPowerSyncCmd(scope, cliConfig))
 
 	return internalCmd
 }

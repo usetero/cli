@@ -10,7 +10,6 @@ import (
 	"github.com/usetero/cli/internal/domain"
 	"github.com/usetero/cli/internal/log"
 	"github.com/usetero/cli/internal/preferences"
-	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 )
 
@@ -42,7 +41,6 @@ func listOrgIDs(env string) ([]domain.OrganizationID, error) {
 
 func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 	scope = scope.Child("reset")
-	var includeDB bool
 
 	cmd := &cobra.Command{
 		Use:   "reset",
@@ -57,22 +55,6 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 			orgIDs, err := listOrgIDs(env)
 			if err != nil {
 				return fmt.Errorf("failed to list orgs: %w", err)
-			}
-
-			// Clear databases and preferences for all orgs
-			clearedDBs := 0
-			if includeDB {
-				for _, orgID := range orgIDs {
-					// Clear database
-					orgCfg, err := config.Load(env, orgID)
-					if err == nil {
-						storage := sqlite.NewStorageService(orgCfg)
-						if err := storage.Clear(); err != nil {
-							return fmt.Errorf("failed to clear database for org %s: %w", orgID, err)
-						}
-						clearedDBs++
-					}
-				}
 			}
 
 			// Clear org preferences for all orgs
@@ -104,17 +86,11 @@ func NewResetCmd(scope log.Scope, cliConfig *config.CLIConfig) *cobra.Command {
 
 			// Print results
 			fmt.Println(s.Success.Render("✓ Reset complete"))
-			if includeDB {
-				fmt.Println(s.Help.Render(fmt.Sprintf("Cleared preferences, authentication, and %d database(s) for: %s", clearedDBs, env)))
-			} else {
-				fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
-			}
+			fmt.Println(s.Help.Render("Cleared preferences and authentication for: " + env))
 
 			return nil
 		},
 	}
-
-	cmd.Flags().BoolVar(&includeDB, "db", false, "Also delete the local SQLite database")
 
 	return cmd
 }

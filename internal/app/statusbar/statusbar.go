@@ -2,23 +2,13 @@
 package statusbar
 
 import (
-	"time"
-
 	"github.com/usetero/cli/internal/app/statusbar/services"
 	"github.com/usetero/cli/internal/app/statusbar/surfaces"
-	"github.com/usetero/cli/internal/app/statusbar/syncstatus"
 	"github.com/usetero/cli/internal/log"
-	"github.com/usetero/cli/internal/powersync"
 	"github.com/usetero/cli/internal/styles"
 )
 
 const diag = "╱"
-const workspaceCountTimeout = 2 * time.Second
-
-type workspaceCountLoadedMsg struct {
-	count int64
-	err   error
-}
 
 // Tab indices for the drawer.
 const (
@@ -39,7 +29,6 @@ type Model struct {
 	scope           log.Scope
 	env             string
 	tabs            []drawerTab
-	syncStatus      *syncstatus.Model
 	issuesStatus    *surfaces.Model
 	checksStatus    *surfaces.Model
 	servicesStatus  *services.Model
@@ -48,9 +37,8 @@ type Model struct {
 	width           int
 
 	// Account context
-	org            string
-	workspace      string
-	workspaceCount int64
+	org       string
+	workspace string
 
 	// Conversation
 	title string
@@ -64,13 +52,13 @@ type Model struct {
 }
 
 // New creates a new statusbar.
-func New(theme styles.Theme, scope log.Scope, syncer powersync.Syncer, host string, env string) *Model {
+func New(theme styles.Theme, scope log.Scope, host string, env string) *Model {
+	_ = host
 	scope = scope.Child("statusbar")
 	m := &Model{
 		theme:           theme,
 		scope:           scope,
 		env:             env,
-		syncStatus:      syncstatus.New(theme, scope, syncer, host),
 		issuesStatus:    surfaces.NewIssues(theme, scope),
 		checksStatus:    surfaces.NewChecks(theme, scope),
 		servicesStatus:  services.New(theme, scope),
