@@ -101,7 +101,9 @@ func TestSnapshotKeyDetectsContentChange(t *testing.T) {
 		Rows:    [][]string{{"Critical", "1", "needs review"}},
 	}
 
-	if snapshotKey(base) != snapshotKey(base) {
+	first := snapshotKey(base)
+	second := snapshotKey(base)
+	if first != second {
 		t.Fatal("snapshotKey must be stable for identical snapshots")
 	}
 
