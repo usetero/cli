@@ -302,9 +302,9 @@ Datadog today. CloudWatch, Splunk, and others are on the roadmap.
 
 ## Resources
 
-- **[Documentation](https://tero.com/docs)** — full platform docs and guides
+- **[Documentation](https://usetero.com/docs)** — full platform docs and guides
 - **[GitHub Issues](https://github.com/usetero/cli/issues)** — bug reports and feature requests
-- **[Contact us](https://tero.com/contact)** — questions or feedback
+- **[Contact us](https://usetero.com/contact)** — questions or feedback
 - **[Contributing](CONTRIBUTING.md)** — developer documentation for working on the CLI
 
 ## About
