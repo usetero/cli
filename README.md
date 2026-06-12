@@ -1,25 +1,20 @@
 # Tero CLI
 
-Improve your observability data quality from the terminal.
+The terminal interface to the [Tero](https://usetero.com) control plane. Connect a
+Datadog account and explore the issues, waste, and posture Tero finds in your
+observability data — interactively in your terminal, or as JSON for scripting.
 
 *Built by the creators of [Vector.dev](https://vector.dev).*
 
-## What is this?
+Tero analyzes what your logs mean semantically — patterns, quality, and value —
+and surfaces the waste that doesn't help you during incidents (typically 40%+ of
+log volume). The CLI is read-only: it connects to your existing observability
+platform over an API and shows you what Tero found. It deploys no agents,
+collectors, or pipelines.
 
-Tero helps you find and fix waste in your observability data.
+---
 
-Connect your Datadog account (read-only) and Tero will:
-- Understand what your logs mean semantically - patterns, quality, value
-- Identify waste - typically 40%+ of volume that doesn't help during incidents
-- Help you remove it with informed actions - only what won't hurt you
-
-**If someone sent you here:** Your team lead or SRE found waste in one of your services. The CLI will show you exactly what patterns are wasteful and why, then help you fix them. Takes 10 minutes.
-
-**If you're evaluating Tero:** This is how you interact with the platform. Install it, connect your Datadog account, see what we find. Takes 5 minutes.
-
-## Quick Start
-
-**Install:**
+## Install
 
 ```bash
 # Quick install (macOS and Linux)
@@ -36,154 +31,293 @@ scoop install tero
 docker pull usetero/tero
 ```
 
-**Run:**
+Verify the install:
+
+```bash
+tero --version
+```
+
+---
+
+The rest of this README follows the [Diátaxis](https://diataxis.fr) structure:
+
+- **[Getting started](#getting-started)** — a guided first run (start here).
+- **[How-to guides](#how-to-guides)** — recipes for specific tasks.
+- **[Reference](#reference)** — commands, flags, keys, and configuration.
+- **[Concepts](#concepts)** — how Tero works and why.
+
+---
+
+## Getting started
+
+A first run takes about five minutes. You'll authenticate, connect a Datadog
+account, and land in the issue explorer.
+
+### 1. Launch the app
 
 ```bash
 tero
 ```
 
-On first run, `tero` will:
-1. Ask you to authenticate (or create an account)
-2. Walk you through connecting your Datadog account (read-only API key)
-3. Analyze your data and show you what it found
+`tero` with no arguments opens the interactive terminal UI and walks you through
+onboarding.
 
-After that, just run `tero` anytime to explore waste, check status, or take action.
+### 2. Authenticate
 
-## What does it do?
+On first run you'll be prompted to log in (or create an account). This opens a
+browser-based device login. Once you're authenticated, the CLI remembers you —
+you won't be asked again until you log out.
 
-`tero` is an interactive chat interface. Ask questions, get answers about your observability data.
+### 3. Connect a Datadog account
 
-The CLI doesn't just identify waste—it teaches you what makes observability data valuable. Each recommendation explains why something is or isn't useful during incidents, helping your team get better at instrumentation over time.
+If the selected account has no Datadog connection yet, onboarding walks you
+through it:
 
-**Common workflows:**
+1. **Pick your Datadog region** — US1, US3, US5, EU1, AP1, or US1-FED.
+2. **Enter your Datadog API key** — *Datadog → Organization Settings → API Keys.*
+3. **Enter your Datadog Application key** — *Datadog → Organization Settings →
+   Application Keys.*
 
-```
-"How much waste do I have?"
-→ Shows total waste across your account, broken down by service
+Tero validates the keys, registers the account, and begins analyzing your data.
+Access is **read-only**: Tero only reads telemetry metadata.
 
-"What's wrong with checkout-api?"
-→ Shows specific waste patterns in that service
-→ Explains what each pattern is and why it's waste
-→ Lets you take action
+### 4. Explore your issues
 
-"Show me the database_connection_debug logs"
-→ Displays actual log samples
-→ Explains the pattern and cost impact
+After onboarding you land in the **issue explorer** — a read-only list of the
+active issues Tero found, highest priority first. Use:
 
-"Block those logs"
-→ Creates exclusion rule in Datadog
-→ Confirms savings
-```
+- `↑` / `↓` (or `k` / `j`) to move through issues
+- `r` to refresh
+- `ctrl+d` to open the status drawer (Issues, Checks, Services, Log events, Edge)
+- `/` to open the command palette (refresh, switch org/account, theme, quit)
+- `ctrl+c` to quit
 
-**Example session:**
+### 5. Or just ask the CLI directly
 
-```
-$ tero
+You don't need the UI to see your account. The same data is available as plain
+commands:
 
-Welcome back, Ben.
-
-I analyzed your Datadog account. Found $89K/year in waste across 12 services.
-
-Services with the most waste:
-  1. checkout-api: $50K/year
-  2. user-auth: $24K/year
-  3. payment-processor: $15K/year
-
-Want to start with checkout-api?
-
-> yes
-
-Found 24 waste patterns in checkout-api. Here are the top 3:
-
-┌────────────────────────────┬──────────┬──────────────┐
-│ Event                      │ Volume   │ Cost Impact  │
-├────────────────────────────┼──────────┼──────────────┤
-│ middleware_execution_trace │ 2M/hr    │ $26K/year    │
-│ database_query_start       │ 800K/hr  │ $11K/year    │
-│ cache_operation_success    │ 1M/hr    │ $13K/year    │
-└────────────────────────────┴──────────┴──────────────┘
-
-> what is middleware_execution_trace?
-
-This log tracks execution through the middleware chain. Template:
-
-  2024-01-15 10:23:45.123 INFO middleware executing name=cors path=/api/checkout request_id=req_x7k2m
-  2024-01-15 10:23:45.125 INFO middleware executing name=auth path=/api/checkout request_id=req_x7k2m
-  2024-01-15 10:23:45.127 INFO middleware executing name=rate_limit path=/api/checkout request_id=req_x7k2m
-  2024-01-15 10:23:45.129 INFO middleware executing name=request_logger path=/api/checkout request_id=req_x7k2m
-
-Logs 6-8 times per request as it moves through the middleware chain. At 250K requests/hour, that's 2M logs/hour.
-
-Likely added during development to debug middleware ordering. When middleware fails, you get actual error logs. Success logs don't help during incidents.
-
-Safe to drop.
-
-> block it
-
-Created exclusion rule in Datadog. This will save $26K/year immediately.
-
-This log is emitted from src/middleware/logger.ts - want me to help you remove it from the code so it doesn't come back?
-
-> yes
-
-[Scanning your local repository for the logging statement...]
-Found in src/middleware/logger.ts:45
-
-[Opens your editor with the change ready to review]
-
-Done. Blocked in Datadog and removed from code. Want to see the next waste pattern?
+```bash
+tero status     # account health, services, log events, cost, open issues
+tero issues     # active issues
+tero services   # enabled services
+tero checks     # product checks and posture
 ```
 
-## Safety
+That's it. Run `tero` anytime to explore, or use the commands above in scripts.
 
-**Read-only access:** Tero only reads data from Datadog. We never write or modify anything without your explicit confirmation.
+---
 
-**No pipeline required:** We're not a data pipeline or routing tool. Tero connects via API to your existing observability platforms - no new infrastructure to deploy or manage.
+## How-to guides
 
-**No infrastructure changes:** No agents to install. No collector configs to update. No deployment required. Just a read-only API connection.
+### Authenticate, or check who you are
 
-**Opt-in actions:** When you choose to block waste, we configure your existing tools (Datadog exclusion rules, code changes, etc.). Everything is reversible.
+```bash
+tero auth login      # browser device login
+tero auth status     # show the current user and org
+tero auth logout     # clear stored credentials
+```
 
-## What This Isn't
+### Connect (or reconnect) a Datadog account
 
-**Not a cost-cutting tool.** Tero helps you improve observability quality. Reduced costs are a side effect of better data.
+Connecting Datadog happens interactively inside `tero`. It runs automatically
+during onboarding when the active account has no Datadog connection. To connect
+a *different* account, run `tero`, press `/`, and choose **Switch Account** —
+onboarding re-runs for the account you select.
 
-**Not a pipeline.** We don't route, sample, or transform your data in flight. We analyze what you have and help you improve it at the source.
+> There is no headless `tero datadog connect` command yet; connection is
+> interactive only.
 
-**Not automatic.** We never drop data without your explicit approval. You're in control of every action.
+### See your account status at a glance
 
-## Common Questions
+```bash
+tero status
+```
 
-**What Datadog permissions does Tero need?**
+```
+Account Status
+Health         OK
+Ready for use  true
+Services       3 active / 17 total
+Log events     197 (197 analyzed)
+Volume         4.2k/hr
+Cost           $74/yr
+Open issues    1 (0 high, 1 medium, 0 low)
+```
 
-Read-only access to start. Tero will request specific write permissions (like creating exclusion rules) only when you choose to take action. See [setup guide](https://tero.com/docs/setup) for details.
+### List your active issues
 
-**What data does Tero collect?**
+```bash
+tero issues
+```
 
-We analyze metadata about your telemetry (log event names, volumes, services, costs) to build our semantic catalog. We don't store your actual log content. See [Privacy Policy](https://tero.com/privacy).
+```
+PRIORITY  ID     SERVICE     TITLE
+medium    ISS-4  accounting  Order receipt logs include full customer shipping addresses
+```
 
-**Does this work with other observability tools?**
+### Inspect services, checks, and edge instances
 
-Datadog only right now. CloudWatch, Splunk, and others coming soon.
+```bash
+tero services   # enabled services with health, volume, and cost
+tero checks     # product checks with open findings, active issues, and cost
+tero edge       # registered edge instances
+```
 
-**More questions?**
+### Get machine-readable output for scripting
 
-See our [full documentation](https://tero.com/docs) or [contact us](https://tero.com/contact).
+Every surface command supports `-o json` (default is `table`):
+
+```bash
+tero issues -o json
+tero status -o json | jq '.open_issues'
+tero services -o json | jq -r '.[] | select(.health != "OK") | .name'
+```
+
+```json
+[
+  {
+    "id": "019eaa9e-3242-7ba8-92b1-1b034a4b532d",
+    "display_id": "ISS-4",
+    "priority": "medium",
+    "service": "accounting",
+    "title": "Order receipt logs include full customer shipping addresses"
+  }
+]
+```
+
+### Switch organization or account
+
+Inside `tero`, press `/` to open the command palette and choose **Switch
+Organization** or **Switch Account**. To switch org from a script:
+
+```bash
+tero auth switch <organization>
+```
+
+### Start over
+
+```bash
+tero reset       # clear stored preferences and authentication for this environment
+```
+
+---
+
+## Reference
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `tero` | Launch the interactive UI (onboarding → issue explorer). |
+| `tero status` | Account health, service/event counts, cost, and open-issue summary. |
+| `tero issues` | Active issues (priority, ID, service, title). |
+| `tero checks` | Product checks with findings, active issues, and cost. |
+| `tero services` | Enabled services with health, volume, and cost. |
+| `tero edge` | Edge instances registered for the account. |
+| `tero auth login` | Authenticate via browser device login. |
+| `tero auth status` | Show the current user and organization. |
+| `tero auth logout` | Clear stored credentials. |
+| `tero auth switch [org]` | Switch the active organization. |
+| `tero auth token` | Print the current access token. |
+| `tero reset` | Clear preferences and authentication for the current environment. |
+
+### Global flags
+
+| Flag | Description |
+|------|-------------|
+| `-o, --output <table\|json>` | Output format for surface commands. Default `table`. |
+| `--endpoint <url>` | Override the control-plane endpoint. |
+| `-d, --debug` | Enable debug logging. |
+| `-v, --version` | Print the CLI version. |
+| `-h, --help` | Help for any command. |
+
+### Interactive UI keys
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` (or `k` / `j`) | Navigate issues / drawer rows. |
+| `r` | Refresh the issue list. |
+| `ctrl+d` | Toggle the status drawer (Issues, Checks, Services, Log events, Edge). |
+| `tab` | Next tab in the drawer. |
+| `esc` | Close the drawer. |
+| `/` | Open the command palette. |
+| `ctrl+c` | Quit. |
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `TERO_ENV` | Environment to target: `prd` (default), `dev`, or `local`. |
+| `TERO_API_ENDPOINT` | Override the control-plane GraphQL endpoint. |
+| `TERO_DEBUG` | Set to `1` or `true` to enable debug logging. |
+
+### Files
+
+Credentials and preferences live under `~/.tero/environments/<env>/`. Logs are
+written to `~/.tero/environments/<env>/tero.log`. Run `tero internal inspect
+paths` to print the resolved locations.
+
+---
+
+## Concepts
+
+### How it works
+
+The CLI is a thin presentation layer over the Tero **control plane**. It holds no
+local database and runs no sync engine: every command reads (or writes) directly
+to the control plane over GraphQL. Intelligence — the semantic analysis of your
+logs, the issues, the cost modeling — lives server-side. The CLI's job is to
+authenticate you, connect your data source, and show you the results.
+
+### What Tero finds
+
+Tero builds a semantic catalog of your log events — what each pattern *means*,
+how much it costs, and whether it helps during an incident. From that it surfaces
+**issues** (things worth your attention, like leaking PII or high-cost noise) and
+runs **checks** across cost and compliance domains. The CLI lets you browse all
+of this per account.
+
+### Safety
+
+- **Read-only by default.** Tero reads telemetry metadata to build its catalog.
+  It does not store your raw log content.
+- **No infrastructure.** No agents, collectors, or pipeline configs — just a
+  read-only API connection to your existing platform.
+- **Opt-in everything.** Connecting Datadog requires keys you provide; nothing is
+  configured without your action.
+
+### What this isn't
+
+- **Not a pipeline.** Tero doesn't route, sample, or transform data in flight. It
+  analyzes what you already have and helps you improve it at the source.
+- **Not a cost tool.** Reduced spend is a side effect of better data, not the
+  goal. Tero explains *why* a pattern is or isn't valuable.
+
+### Supported sources
+
+Datadog today. CloudWatch, Splunk, and others are on the roadmap.
+
+---
 
 ## Resources
 
-- **[Documentation](https://tero.com/docs)** - Full platform docs and guides
-- **[GitHub Issues](https://github.com/usetero/cli/issues)** - Bug reports and feature requests
-- **[Contact Us](https://tero.com/contact)** - Questions or feedback
-- **[Contributing](CONTRIBUTING.md)** - Developer documentation for working on the CLI
+- **[Documentation](https://tero.com/docs)** — full platform docs and guides
+- **[GitHub Issues](https://github.com/usetero/cli/issues)** — bug reports and feature requests
+- **[Contact us](https://tero.com/contact)** — questions or feedback
+- **[Contributing](CONTRIBUTING.md)** — developer documentation for working on the CLI
 
 ## About
 
-Tero is from the creators of [Vector.dev](https://vector.dev) (acquired by Datadog). We've spent a decade inside enterprise observability systems and seen this problem from every angle - as engineers, founders, and inside major vendors.
+Tero is from the creators of [Vector.dev](https://vector.dev) (acquired by
+Datadog). We've spent a decade inside enterprise observability systems and seen
+this problem from every angle — as engineers, founders, and inside major vendors.
 
-We built Tero because observability data quality is broken and nobody's fixing it. Not the vendors (they profit from waste), not the pipelines (they can't understand semantic meaning), and not the cost tools (they show you bills, not solutions).
-
-Tero is different. We understand what your data means, identify what's wrong, and help you fix it - the right way.
+We built Tero because observability data quality is broken and nobody's fixing
+it: not the vendors (they profit from waste), not the pipelines (they can't
+understand semantic meaning), and not the cost tools (they show you bills, not
+solutions). Tero understands what your data means, identifies what's wrong, and
+helps you fix it at the source.
 
 ---
 
