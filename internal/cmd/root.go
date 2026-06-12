@@ -91,6 +91,7 @@ Just run 'tero' to start an interactive chat session.`,
 	// Global flags with defaults from CLI config
 	rootCmd.PersistentFlags().String("endpoint", cliConfig.APIEndpoint, "Tero control plane endpoint")
 	rootCmd.PersistentFlags().BoolP("debug", "d", cliConfig.Debug, "Enable debug logging")
+	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format: table or json")
 
 	return rootCmd
 }
