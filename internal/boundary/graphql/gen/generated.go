@@ -4,96 +4,29 @@ package gen
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
 )
 
-// ApproveLogEventPolicyApproveLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type ApproveLogEventPolicyApproveLogEventPolicy struct {
-	// Unique identifier
-	Id string `json:"id"`
-	// When this policy was approved by a user
-	ApprovedAt *time.Time `json:"approvedAt"`
-	// User ID who approved this policy
-	ApprovedBy *string `json:"approvedBy"`
-	// When this policy was dismissed by a user
-	DismissedAt *time.Time `json:"dismissedAt"`
-	// User ID who dismissed this policy
-	DismissedBy *string `json:"dismissedBy"`
+// Account creation input.
+type AccountCreateInput struct {
+	// Parent organization this account belongs to
+	OrganizationID string `json:"organizationID"`
+	// Human-readable name within the organization
+	Name string `json:"name"`
+	// Short account key used in display IDs. Auto-set from name when omitted.
+	DisplayKey *string `json:"displayKey"`
 }
 
-// GetId returns ApproveLogEventPolicyApproveLogEventPolicy.Id, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetId() string { return v.Id }
+// GetOrganizationID returns AccountCreateInput.OrganizationID, and is useful for accessing the field via an interface.
+func (v *AccountCreateInput) GetOrganizationID() string { return v.OrganizationID }
 
-// GetApprovedAt returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
+// GetName returns AccountCreateInput.Name, and is useful for accessing the field via an interface.
+func (v *AccountCreateInput) GetName() string { return v.Name }
 
-// GetApprovedBy returns ApproveLogEventPolicyApproveLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
-
-// GetDismissedAt returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedAt() *time.Time {
-	return v.DismissedAt
-}
-
-// GetDismissedBy returns ApproveLogEventPolicyApproveLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyApproveLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
-
-// ApproveLogEventPolicyResponse is returned by ApproveLogEventPolicy on success.
-type ApproveLogEventPolicyResponse struct {
-	// Approve a log event policy, enabling it for enforcement.
-	// Clears any previous dismissal.
-	ApproveLogEventPolicy ApproveLogEventPolicyApproveLogEventPolicy `json:"approveLogEventPolicy"`
-}
-
-// GetApproveLogEventPolicy returns ApproveLogEventPolicyResponse.ApproveLogEventPolicy, and is useful for accessing the field via an interface.
-func (v *ApproveLogEventPolicyResponse) GetApproveLogEventPolicy() ApproveLogEventPolicyApproveLogEventPolicy {
-	return v.ApproveLogEventPolicy
-}
-
-// A content block in a message. Exactly one of the typed fields should be set.
-type ContentBlockInput struct {
-	Type       ContentBlockType    `json:"type"`
-	Text       *TextBlockInput     `json:"text"`
-	Thinking   *ThinkingBlockInput `json:"thinking"`
-	ToolUse    *ToolUseInput       `json:"toolUse"`
-	ToolResult *ToolResultInput    `json:"toolResult"`
-}
-
-// GetType returns ContentBlockInput.Type, and is useful for accessing the field via an interface.
-func (v *ContentBlockInput) GetType() ContentBlockType { return v.Type }
-
-// GetText returns ContentBlockInput.Text, and is useful for accessing the field via an interface.
-func (v *ContentBlockInput) GetText() *TextBlockInput { return v.Text }
-
-// GetThinking returns ContentBlockInput.Thinking, and is useful for accessing the field via an interface.
-func (v *ContentBlockInput) GetThinking() *ThinkingBlockInput { return v.Thinking }
-
-// GetToolUse returns ContentBlockInput.ToolUse, and is useful for accessing the field via an interface.
-func (v *ContentBlockInput) GetToolUse() *ToolUseInput { return v.ToolUse }
-
-// GetToolResult returns ContentBlockInput.ToolResult, and is useful for accessing the field via an interface.
-func (v *ContentBlockInput) GetToolResult() *ToolResultInput { return v.ToolResult }
-
-// The type of content block.
-type ContentBlockType string
-
-const (
-	ContentBlockTypeText       ContentBlockType = "text"
-	ContentBlockTypeThinking   ContentBlockType = "thinking"
-	ContentBlockTypeToolUse    ContentBlockType = "tool_use"
-	ContentBlockTypeToolResult ContentBlockType = "tool_result"
-)
-
-var AllContentBlockType = []ContentBlockType{
-	ContentBlockTypeText,
-	ContentBlockTypeThinking,
-	ContentBlockTypeToolUse,
-	ContentBlockTypeToolResult,
-}
+// GetDisplayKey returns AccountCreateInput.DisplayKey, and is useful for accessing the field via an interface.
+func (v *AccountCreateInput) GetDisplayKey() *string { return v.DisplayKey }
 
 // CreateAccountCreateAccount includes the requested fields of the GraphQL type Account.
 type CreateAccountCreateAccount struct {
@@ -114,136 +47,14 @@ func (v *CreateAccountCreateAccount) GetName() string { return v.Name }
 // GetCreatedAt returns CreateAccountCreateAccount.CreatedAt, and is useful for accessing the field via an interface.
 func (v *CreateAccountCreateAccount) GetCreatedAt() time.Time { return v.CreatedAt }
 
-// CreateAccountInput is used for create Account object.
-// Input was generated by ent.
-type CreateAccountInput struct {
-	// Human-readable name within the organization
-	Name             string  `json:"name"`
-	OrganizationID   string  `json:"organizationID"`
-	DatadogAccountID *string `json:"datadogAccountID"`
-	// Optional client-provided UUID for offline-first sync.
-	// If provided and a record with this ID exists, returns the existing record.
-	Id *string `json:"id"`
-}
-
-// GetName returns CreateAccountInput.Name, and is useful for accessing the field via an interface.
-func (v *CreateAccountInput) GetName() string { return v.Name }
-
-// GetOrganizationID returns CreateAccountInput.OrganizationID, and is useful for accessing the field via an interface.
-func (v *CreateAccountInput) GetOrganizationID() string { return v.OrganizationID }
-
-// GetDatadogAccountID returns CreateAccountInput.DatadogAccountID, and is useful for accessing the field via an interface.
-func (v *CreateAccountInput) GetDatadogAccountID() *string { return v.DatadogAccountID }
-
-// GetId returns CreateAccountInput.Id, and is useful for accessing the field via an interface.
-func (v *CreateAccountInput) GetId() *string { return v.Id }
-
 // CreateAccountResponse is returned by CreateAccount on success.
 type CreateAccountResponse struct {
+	// Create account.
 	CreateAccount CreateAccountCreateAccount `json:"createAccount"`
 }
 
 // GetCreateAccount returns CreateAccountResponse.CreateAccount, and is useful for accessing the field via an interface.
 func (v *CreateAccountResponse) GetCreateAccount() CreateAccountCreateAccount { return v.CreateAccount }
-
-// CreateConversationCreateConversation includes the requested fields of the GraphQL type Conversation.
-type CreateConversationCreateConversation struct {
-	// Unique identifier
-	Id string `json:"id"`
-	// AI-generated title, set after first exchange
-	Title *string `json:"title"`
-	// When the conversation was created
-	CreatedAt time.Time `json:"createdAt"`
-	// When the conversation was last updated
-	UpdatedAt time.Time `json:"updatedAt"`
-}
-
-// GetId returns CreateConversationCreateConversation.Id, and is useful for accessing the field via an interface.
-func (v *CreateConversationCreateConversation) GetId() string { return v.Id }
-
-// GetTitle returns CreateConversationCreateConversation.Title, and is useful for accessing the field via an interface.
-func (v *CreateConversationCreateConversation) GetTitle() *string { return v.Title }
-
-// GetCreatedAt returns CreateConversationCreateConversation.CreatedAt, and is useful for accessing the field via an interface.
-func (v *CreateConversationCreateConversation) GetCreatedAt() time.Time { return v.CreatedAt }
-
-// GetUpdatedAt returns CreateConversationCreateConversation.UpdatedAt, and is useful for accessing the field via an interface.
-func (v *CreateConversationCreateConversation) GetUpdatedAt() time.Time { return v.UpdatedAt }
-
-// CreateConversationInput is used for create Conversation object.
-// Input was generated by ent.
-type CreateConversationInput struct {
-	// AI-generated title, set after first exchange
-	Title       *string `json:"title"`
-	WorkspaceID string  `json:"workspaceID"`
-	ViewID      *string `json:"viewID"`
-	// Optional client-provided UUID for offline-first sync.
-	// If provided and a conversation with this ID exists, returns the existing record.
-	Id *string `json:"id"`
-}
-
-// GetTitle returns CreateConversationInput.Title, and is useful for accessing the field via an interface.
-func (v *CreateConversationInput) GetTitle() *string { return v.Title }
-
-// GetWorkspaceID returns CreateConversationInput.WorkspaceID, and is useful for accessing the field via an interface.
-func (v *CreateConversationInput) GetWorkspaceID() string { return v.WorkspaceID }
-
-// GetViewID returns CreateConversationInput.ViewID, and is useful for accessing the field via an interface.
-func (v *CreateConversationInput) GetViewID() *string { return v.ViewID }
-
-// GetId returns CreateConversationInput.Id, and is useful for accessing the field via an interface.
-func (v *CreateConversationInput) GetId() *string { return v.Id }
-
-// CreateConversationResponse is returned by CreateConversation on success.
-type CreateConversationResponse struct {
-	// Create a new conversation in a workspace.
-	// The conversation is owned by the authenticated user.
-	CreateConversation CreateConversationCreateConversation `json:"createConversation"`
-}
-
-// GetCreateConversation returns CreateConversationResponse.CreateConversation, and is useful for accessing the field via an interface.
-func (v *CreateConversationResponse) GetCreateConversation() CreateConversationCreateConversation {
-	return v.CreateConversation
-}
-
-// CreateDatadogAccountInput is used for create DatadogAccount object.
-// Input was generated by ent.
-type CreateDatadogAccountInput struct {
-	// Display name for this Datadog account
-	Name string `json:"name"`
-	// Datadog regional site. US1: datadoghq.com, US3: us3.datadoghq.com, US5:
-	// us5.datadoghq.com, EU1: datadoghq.eu, US1_FED: ddog-gov.com, AP1:
-	// ap1.datadoghq.com, AP2: ap2.datadoghq.com.
-	Site DatadogAccountSite `json:"site"`
-	// Cost per GB of log data ingested (USD). NULL = using Datadog's published rate
-	// ($0.10/GB). Set to override with actual contract rate.
-	CostPerGBIngested *float64 `json:"costPerGBIngested"`
-	// Fraction of the API rate limit to consume (0.0-1.0). NULL = default (0.8 =
-	// 80%). Leaves headroom for the customer's own API usage.
-	RateLimitUtilization *float64 `json:"rateLimitUtilization"`
-	AccountID            string   `json:"accountID"`
-	// Optional client-provided UUID for offline-first sync.
-	// If provided and a record with this ID exists, returns the existing record.
-	Id *string `json:"id"`
-}
-
-// GetName returns CreateDatadogAccountInput.Name, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetName() string { return v.Name }
-
-// GetSite returns CreateDatadogAccountInput.Site, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetSite() DatadogAccountSite { return v.Site }
-
-// GetCostPerGBIngested returns CreateDatadogAccountInput.CostPerGBIngested, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetCostPerGBIngested() *float64 { return v.CostPerGBIngested }
-
-// GetRateLimitUtilization returns CreateDatadogAccountInput.RateLimitUtilization, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetRateLimitUtilization() *float64 { return v.RateLimitUtilization }
-
-// GetAccountID returns CreateDatadogAccountInput.AccountID, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetAccountID() string { return v.AccountID }
-
-// GetId returns CreateDatadogAccountInput.Id, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountInput) GetId() *string { return v.Id }
 
 // CreateDatadogAccountWithCredentialsCreateDatadogAccount includes the requested fields of the GraphQL type DatadogAccount.
 type CreateDatadogAccountWithCredentialsCreateDatadogAccount struct {
@@ -251,9 +62,9 @@ type CreateDatadogAccountWithCredentialsCreateDatadogAccount struct {
 	Id string `json:"id"`
 	// Display name for this Datadog account
 	Name string `json:"name"`
-	// Datadog regional site. US1: datadoghq.com, US3: us3.datadoghq.com, US5:
-	// us5.datadoghq.com, EU1: datadoghq.eu, US1_FED: ddog-gov.com, AP1:
-	// ap1.datadoghq.com, AP2: ap2.datadoghq.com.
+	// Datadog regional site. Values: US1 = datadoghq.com.; US3 = us3.datadoghq.com.;
+	// US5 = us5.datadoghq.com.; EU1 = datadoghq.eu.; US1_FED = ddog-gov.com.; AP1 =
+	// ap1.datadoghq.com.; AP2 = ap2.datadoghq.com.
 	Site DatadogAccountSite `json:"site"`
 	// When the Datadog account was created
 	CreatedAt time.Time `json:"createdAt"`
@@ -282,23 +93,9 @@ func (v *CreateDatadogAccountWithCredentialsCreateDatadogAccount) GetUpdatedAt()
 	return v.UpdatedAt
 }
 
-type CreateDatadogAccountWithCredentialsInput struct {
-	Attributes  CreateDatadogAccountInput     `json:"attributes"`
-	Credentials CreateDatadogCredentialsInput `json:"credentials"`
-}
-
-// GetAttributes returns CreateDatadogAccountWithCredentialsInput.Attributes, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountWithCredentialsInput) GetAttributes() CreateDatadogAccountInput {
-	return v.Attributes
-}
-
-// GetCredentials returns CreateDatadogAccountWithCredentialsInput.Credentials, and is useful for accessing the field via an interface.
-func (v *CreateDatadogAccountWithCredentialsInput) GetCredentials() CreateDatadogCredentialsInput {
-	return v.Credentials
-}
-
 // CreateDatadogAccountWithCredentialsResponse is returned by CreateDatadogAccountWithCredentials on success.
 type CreateDatadogAccountWithCredentialsResponse struct {
+	// Create datadogaccount.
 	CreateDatadogAccount CreateDatadogAccountWithCredentialsCreateDatadogAccount `json:"createDatadogAccount"`
 }
 
@@ -307,97 +104,10 @@ func (v *CreateDatadogAccountWithCredentialsResponse) GetCreateDatadogAccount() 
 	return v.CreateDatadogAccount
 }
 
-type CreateDatadogCredentialsInput struct {
-	ApiKey string `json:"apiKey"`
-	AppKey string `json:"appKey"`
-}
-
-// GetApiKey returns CreateDatadogCredentialsInput.ApiKey, and is useful for accessing the field via an interface.
-func (v *CreateDatadogCredentialsInput) GetApiKey() string { return v.ApiKey }
-
-// GetAppKey returns CreateDatadogCredentialsInput.AppKey, and is useful for accessing the field via an interface.
-func (v *CreateDatadogCredentialsInput) GetAppKey() string { return v.AppKey }
-
-// CreateMessageCreateMessage includes the requested fields of the GraphQL type Message.
-type CreateMessageCreateMessage struct {
-	// Unique identifier
-	Id string `json:"id"`
-	// Who sent this message. user: human-originated, assistant: AI-originated.
-	Role MessageRole `json:"role"`
-	// AI model that produced this message. Null for user messages.
-	Model *string `json:"model"`
-	// Why the assistant stopped generating. end_turn: completed response, tool_use:
-	// paused to call a tool. Null for user messages.
-	StopReason *MessageStopReason `json:"stopReason"`
-	// When the message was created
-	CreatedAt time.Time `json:"createdAt"`
-}
-
-// GetId returns CreateMessageCreateMessage.Id, and is useful for accessing the field via an interface.
-func (v *CreateMessageCreateMessage) GetId() string { return v.Id }
-
-// GetRole returns CreateMessageCreateMessage.Role, and is useful for accessing the field via an interface.
-func (v *CreateMessageCreateMessage) GetRole() MessageRole { return v.Role }
-
-// GetModel returns CreateMessageCreateMessage.Model, and is useful for accessing the field via an interface.
-func (v *CreateMessageCreateMessage) GetModel() *string { return v.Model }
-
-// GetStopReason returns CreateMessageCreateMessage.StopReason, and is useful for accessing the field via an interface.
-func (v *CreateMessageCreateMessage) GetStopReason() *MessageStopReason { return v.StopReason }
-
-// GetCreatedAt returns CreateMessageCreateMessage.CreatedAt, and is useful for accessing the field via an interface.
-func (v *CreateMessageCreateMessage) GetCreatedAt() time.Time { return v.CreatedAt }
-
-// CreateMessageInput is used for create Message object.
-// Input was generated by ent.
-type CreateMessageInput struct {
-	// Who sent this message. user: human-originated, assistant: AI-originated.
-	Role MessageRole `json:"role"`
-	// Why the assistant stopped generating. end_turn: completed response, tool_use:
-	// paused to call a tool. Null for user messages.
-	StopReason *MessageStopReason `json:"stopReason"`
-	// AI model that produced this message. Null for user messages.
-	Model          *string `json:"model"`
-	ConversationID string  `json:"conversationID"`
-	// Optional client-provided UUID for offline-first sync.
-	// If provided and a message with this ID exists, returns the existing record.
-	Id *string `json:"id"`
-	// Array of typed content blocks.
-	Content []ContentBlockInput `json:"content"`
-}
-
-// GetRole returns CreateMessageInput.Role, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetRole() MessageRole { return v.Role }
-
-// GetStopReason returns CreateMessageInput.StopReason, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetStopReason() *MessageStopReason { return v.StopReason }
-
-// GetModel returns CreateMessageInput.Model, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetModel() *string { return v.Model }
-
-// GetConversationID returns CreateMessageInput.ConversationID, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetConversationID() string { return v.ConversationID }
-
-// GetId returns CreateMessageInput.Id, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetId() *string { return v.Id }
-
-// GetContent returns CreateMessageInput.Content, and is useful for accessing the field via an interface.
-func (v *CreateMessageInput) GetContent() []ContentBlockInput { return v.Content }
-
-// CreateMessageResponse is returned by CreateMessage on success.
-type CreateMessageResponse struct {
-	// Create a new message in a conversation.
-	CreateMessage CreateMessageCreateMessage `json:"createMessage"`
-}
-
-// GetCreateMessage returns CreateMessageResponse.CreateMessage, and is useful for accessing the field via an interface.
-func (v *CreateMessageResponse) GetCreateMessage() CreateMessageCreateMessage { return v.CreateMessage }
-
 // CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult includes the requested fields of the GraphQL type OrganizationBootstrapResult.
 type CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult struct {
 	Organization CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultOrganization `json:"organization"`
 	Account      CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultAccount      `json:"account"`
-	Workspace    CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace    `json:"workspace"`
 }
 
 // GetOrganization returns CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult.Organization, and is useful for accessing the field via an interface.
@@ -408,11 +118,6 @@ func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizatio
 // GetAccount returns CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult.Account, and is useful for accessing the field via an interface.
 func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult) GetAccount() CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultAccount {
 	return v.Account
-}
-
-// GetWorkspace returns CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult.Workspace, and is useful for accessing the field via an interface.
-func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult) GetWorkspace() CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace {
-	return v.Workspace
 }
 
 // CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultAccount includes the requested fields of the GraphQL type Account.
@@ -465,26 +170,9 @@ func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizatio
 	return v.WorkosOrganizationID
 }
 
-// CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace includes the requested fields of the GraphQL type Workspace.
-type CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace struct {
-	// Unique identifier of the workspace
-	Id string `json:"id"`
-	// Human-readable name within the account
-	Name string `json:"name"`
-}
-
-// GetId returns CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace.Id, and is useful for accessing the field via an interface.
-func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace) GetId() string {
-	return v.Id
-}
-
-// GetName returns CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace.Name, and is useful for accessing the field via an interface.
-func (v *CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace) GetName() string {
-	return v.Name
-}
-
 // CreateOrganizationAndBootstrapResponse is returned by CreateOrganizationAndBootstrap on success.
 type CreateOrganizationAndBootstrapResponse struct {
+	// Create a new organization and its default account using the additive  runtime.
 	CreateOrganizationAndBootstrap CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult `json:"createOrganizationAndBootstrap"`
 }
 
@@ -493,23 +181,46 @@ func (v *CreateOrganizationAndBootstrapResponse) GetCreateOrganizationAndBootstr
 	return v.CreateOrganizationAndBootstrap
 }
 
-// CreateOrganizationInput is used for create Organization object.
-// Input was generated by ent.
-type CreateOrganizationInput struct {
-	// Human-readable name, unique across the system
+// DatadogAccount creation input.
+type DatadogAccountCreateInput struct {
+	// Parent account this configuration belongs to
+	AccountID string `json:"accountID"`
+	// Display name for this Datadog account
 	Name string `json:"name"`
-	// Optional client-provided UUID for offline-first sync.
-	// If provided and a record with this ID exists, returns the existing record.
-	Id *string `json:"id"`
+	// Datadog regional site. Values: US1 = datadoghq.com.; US3 = us3.datadoghq.com.;
+	// US5 = us5.datadoghq.com.; EU1 = datadoghq.eu.; US1_FED = ddog-gov.com.; AP1 =
+	// ap1.datadoghq.com.; AP2 = ap2.datadoghq.com.
+	Site DatadogAccountSite `json:"site"`
+	// Datadog API credentials. Stored in the secret store, not Postgres.
+	Credentials DatadogAccountCredentialsInput `json:"credentials"`
 }
 
-// GetName returns CreateOrganizationInput.Name, and is useful for accessing the field via an interface.
-func (v *CreateOrganizationInput) GetName() string { return v.Name }
+// GetAccountID returns DatadogAccountCreateInput.AccountID, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCreateInput) GetAccountID() string { return v.AccountID }
 
-// GetId returns CreateOrganizationInput.Id, and is useful for accessing the field via an interface.
-func (v *CreateOrganizationInput) GetId() *string { return v.Id }
+// GetName returns DatadogAccountCreateInput.Name, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCreateInput) GetName() string { return v.Name }
 
-// DatadogAccountSite is enum for the field site
+// GetSite returns DatadogAccountCreateInput.Site, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCreateInput) GetSite() DatadogAccountSite { return v.Site }
+
+// GetCredentials returns DatadogAccountCreateInput.Credentials, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCreateInput) GetCredentials() DatadogAccountCredentialsInput {
+	return v.Credentials
+}
+
+// Datadog credentials for account creation.
+type DatadogAccountCredentialsInput struct {
+	ApiKey string `json:"apiKey"`
+	AppKey string `json:"appKey"`
+}
+
+// GetApiKey returns DatadogAccountCredentialsInput.ApiKey, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCredentialsInput) GetApiKey() string { return v.ApiKey }
+
+// GetAppKey returns DatadogAccountCredentialsInput.AppKey, and is useful for accessing the field via an interface.
+func (v *DatadogAccountCredentialsInput) GetAppKey() string { return v.AppKey }
+
 type DatadogAccountSite string
 
 const (
@@ -532,44 +243,19 @@ var AllDatadogAccountSite = []DatadogAccountSite{
 	DatadogAccountSiteAp2,
 }
 
-// DatadogAccountStatusCacheHealth is enum for the field health
-type DatadogAccountStatusCacheHealth string
-
-const (
-	DatadogAccountStatusCacheHealthDisabled DatadogAccountStatusCacheHealth = "DISABLED"
-	DatadogAccountStatusCacheHealthInactive DatadogAccountStatusCacheHealth = "INACTIVE"
-	DatadogAccountStatusCacheHealthError    DatadogAccountStatusCacheHealth = "ERROR"
-	DatadogAccountStatusCacheHealthOk       DatadogAccountStatusCacheHealth = "OK"
-)
-
-var AllDatadogAccountStatusCacheHealth = []DatadogAccountStatusCacheHealth{
-	DatadogAccountStatusCacheHealthDisabled,
-	DatadogAccountStatusCacheHealthInactive,
-	DatadogAccountStatusCacheHealthError,
-	DatadogAccountStatusCacheHealthOk,
-}
-
-// DeleteConversationResponse is returned by DeleteConversation on success.
-type DeleteConversationResponse struct {
-	// Delete a conversation and all its messages.
-	DeleteConversation bool `json:"deleteConversation"`
-}
-
-// GetDeleteConversation returns DeleteConversationResponse.DeleteConversation, and is useful for accessing the field via an interface.
-func (v *DeleteConversationResponse) GetDeleteConversation() bool { return v.DeleteConversation }
-
 // DisableServiceResponse is returned by DisableService on success.
 type DisableServiceResponse struct {
-	UpdateService DisableServiceUpdateService `json:"updateService"`
+	// Set service enabled state.
+	SetServiceEnabled DisableServiceSetServiceEnabledService `json:"setServiceEnabled"`
 }
 
-// GetUpdateService returns DisableServiceResponse.UpdateService, and is useful for accessing the field via an interface.
-func (v *DisableServiceResponse) GetUpdateService() DisableServiceUpdateService {
-	return v.UpdateService
+// GetSetServiceEnabled returns DisableServiceResponse.SetServiceEnabled, and is useful for accessing the field via an interface.
+func (v *DisableServiceResponse) GetSetServiceEnabled() DisableServiceSetServiceEnabledService {
+	return v.SetServiceEnabled
 }
 
-// DisableServiceUpdateService includes the requested fields of the GraphQL type Service.
-type DisableServiceUpdateService struct {
+// DisableServiceSetServiceEnabledService includes the requested fields of the GraphQL type Service.
+type DisableServiceSetServiceEnabledService struct {
 	// Unique identifier of the service
 	Id string `json:"id"`
 	// Service identifier in telemetry (e.g., 'checkout-service')
@@ -578,68 +264,28 @@ type DisableServiceUpdateService struct {
 	Enabled bool `json:"enabled"`
 }
 
-// GetId returns DisableServiceUpdateService.Id, and is useful for accessing the field via an interface.
-func (v *DisableServiceUpdateService) GetId() string { return v.Id }
+// GetId returns DisableServiceSetServiceEnabledService.Id, and is useful for accessing the field via an interface.
+func (v *DisableServiceSetServiceEnabledService) GetId() string { return v.Id }
 
-// GetName returns DisableServiceUpdateService.Name, and is useful for accessing the field via an interface.
-func (v *DisableServiceUpdateService) GetName() string { return v.Name }
+// GetName returns DisableServiceSetServiceEnabledService.Name, and is useful for accessing the field via an interface.
+func (v *DisableServiceSetServiceEnabledService) GetName() string { return v.Name }
 
-// GetEnabled returns DisableServiceUpdateService.Enabled, and is useful for accessing the field via an interface.
-func (v *DisableServiceUpdateService) GetEnabled() bool { return v.Enabled }
-
-// DismissLogEventPolicyDismissLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type DismissLogEventPolicyDismissLogEventPolicy struct {
-	// Unique identifier
-	Id string `json:"id"`
-	// When this policy was dismissed by a user
-	DismissedAt *time.Time `json:"dismissedAt"`
-	// User ID who dismissed this policy
-	DismissedBy *string `json:"dismissedBy"`
-	// When this policy was approved by a user
-	ApprovedAt *time.Time `json:"approvedAt"`
-	// User ID who approved this policy
-	ApprovedBy *string `json:"approvedBy"`
-}
-
-// GetId returns DismissLogEventPolicyDismissLogEventPolicy.Id, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetId() string { return v.Id }
-
-// GetDismissedAt returns DismissLogEventPolicyDismissLogEventPolicy.DismissedAt, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedAt() *time.Time {
-	return v.DismissedAt
-}
-
-// GetDismissedBy returns DismissLogEventPolicyDismissLogEventPolicy.DismissedBy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetDismissedBy() *string { return v.DismissedBy }
-
-// GetApprovedAt returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedAt, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedAt() *time.Time { return v.ApprovedAt }
-
-// GetApprovedBy returns DismissLogEventPolicyDismissLogEventPolicy.ApprovedBy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyDismissLogEventPolicy) GetApprovedBy() *string { return v.ApprovedBy }
-
-// DismissLogEventPolicyResponse is returned by DismissLogEventPolicy on success.
-type DismissLogEventPolicyResponse struct {
-	// Dismiss a log event policy, hiding it from pending review.
-	// Clears any previous approval.
-	DismissLogEventPolicy DismissLogEventPolicyDismissLogEventPolicy `json:"dismissLogEventPolicy"`
-}
-
-// GetDismissLogEventPolicy returns DismissLogEventPolicyResponse.DismissLogEventPolicy, and is useful for accessing the field via an interface.
-func (v *DismissLogEventPolicyResponse) GetDismissLogEventPolicy() DismissLogEventPolicyDismissLogEventPolicy {
-	return v.DismissLogEventPolicy
-}
+// GetEnabled returns DisableServiceSetServiceEnabledService.Enabled, and is useful for accessing the field via an interface.
+func (v *DisableServiceSetServiceEnabledService) GetEnabled() bool { return v.Enabled }
 
 // EnableServiceResponse is returned by EnableService on success.
 type EnableServiceResponse struct {
-	UpdateService EnableServiceUpdateService `json:"updateService"`
+	// Set service enabled state.
+	SetServiceEnabled EnableServiceSetServiceEnabledService `json:"setServiceEnabled"`
 }
 
-// GetUpdateService returns EnableServiceResponse.UpdateService, and is useful for accessing the field via an interface.
-func (v *EnableServiceResponse) GetUpdateService() EnableServiceUpdateService { return v.UpdateService }
+// GetSetServiceEnabled returns EnableServiceResponse.SetServiceEnabled, and is useful for accessing the field via an interface.
+func (v *EnableServiceResponse) GetSetServiceEnabled() EnableServiceSetServiceEnabledService {
+	return v.SetServiceEnabled
+}
 
-// EnableServiceUpdateService includes the requested fields of the GraphQL type Service.
-type EnableServiceUpdateService struct {
+// EnableServiceSetServiceEnabledService includes the requested fields of the GraphQL type Service.
+type EnableServiceSetServiceEnabledService struct {
 	// Unique identifier of the service
 	Id string `json:"id"`
 	// Service identifier in telemetry (e.g., 'checkout-service')
@@ -648,40 +294,32 @@ type EnableServiceUpdateService struct {
 	Enabled bool `json:"enabled"`
 }
 
-// GetId returns EnableServiceUpdateService.Id, and is useful for accessing the field via an interface.
-func (v *EnableServiceUpdateService) GetId() string { return v.Id }
+// GetId returns EnableServiceSetServiceEnabledService.Id, and is useful for accessing the field via an interface.
+func (v *EnableServiceSetServiceEnabledService) GetId() string { return v.Id }
 
-// GetName returns EnableServiceUpdateService.Name, and is useful for accessing the field via an interface.
-func (v *EnableServiceUpdateService) GetName() string { return v.Name }
+// GetName returns EnableServiceSetServiceEnabledService.Name, and is useful for accessing the field via an interface.
+func (v *EnableServiceSetServiceEnabledService) GetName() string { return v.Name }
 
-// GetEnabled returns EnableServiceUpdateService.Enabled, and is useful for accessing the field via an interface.
-func (v *EnableServiceUpdateService) GetEnabled() bool { return v.Enabled }
+// GetEnabled returns EnableServiceSetServiceEnabledService.Enabled, and is useful for accessing the field via an interface.
+func (v *EnableServiceSetServiceEnabledService) GetEnabled() bool { return v.Enabled }
 
 // GetAccountAccountsAccountConnection includes the requested fields of the GraphQL type AccountConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type GetAccountAccountsAccountConnection struct {
-	// A list of edges.
-	Edges []*GetAccountAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
+	Edges []GetAccountAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
 }
 
 // GetEdges returns GetAccountAccountsAccountConnection.Edges, and is useful for accessing the field via an interface.
-func (v *GetAccountAccountsAccountConnection) GetEdges() []*GetAccountAccountsAccountConnectionEdgesAccountEdge {
+func (v *GetAccountAccountsAccountConnection) GetEdges() []GetAccountAccountsAccountConnectionEdgesAccountEdge {
 	return v.Edges
 }
 
 // GetAccountAccountsAccountConnectionEdgesAccountEdge includes the requested fields of the GraphQL type AccountEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type GetAccountAccountsAccountConnectionEdgesAccountEdge struct {
-	// The item at the end of the edge.
-	Node *GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount `json:"node"`
+	Node GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount `json:"node"`
 }
 
 // GetNode returns GetAccountAccountsAccountConnectionEdgesAccountEdge.Node, and is useful for accessing the field via an interface.
-func (v *GetAccountAccountsAccountConnectionEdgesAccountEdge) GetNode() *GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount {
+func (v *GetAccountAccountsAccountConnectionEdgesAccountEdge) GetNode() GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccount {
 	return v.Node
 }
 
@@ -707,9 +345,9 @@ type GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAccoun
 	Id string `json:"id"`
 	// Display name for this Datadog account
 	Name string `json:"name"`
-	// Datadog regional site. US1: datadoghq.com, US3: us3.datadoghq.com, US5:
-	// us5.datadoghq.com, EU1: datadoghq.eu, US1_FED: ddog-gov.com, AP1:
-	// ap1.datadoghq.com, AP2: ap2.datadoghq.com.
+	// Datadog regional site. Values: US1 = datadoghq.com.; US3 = us3.datadoghq.com.;
+	// US5 = us5.datadoghq.com.; EU1 = datadoghq.eu.; US1_FED = ddog-gov.com.; AP1 =
+	// ap1.datadoghq.com.; AP2 = ap2.datadoghq.com.
 	Site DatadogAccountSite `json:"site"`
 }
 
@@ -730,7 +368,7 @@ func (v *GetAccountAccountsAccountConnectionEdgesAccountEdgeNodeAccountDatadogAc
 
 // GetAccountResponse is returned by GetAccount on success.
 type GetAccountResponse struct {
-	// Query accounts. Accounts belong to an organization and contain services and workspaces.
+	// Query Accounts records in your account.
 	Accounts GetAccountAccountsAccountConnection `json:"accounts"`
 }
 
@@ -738,30 +376,22 @@ type GetAccountResponse struct {
 func (v *GetAccountResponse) GetAccounts() GetAccountAccountsAccountConnection { return v.Accounts }
 
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection includes the requested fields of the GraphQL type DatadogAccountConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection struct {
-	// A list of edges.
-	Edges []*GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge `json:"edges"`
+	Edges []GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge `json:"edges"`
 }
 
 // GetEdges returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection.Edges, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection) GetEdges() []*GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge {
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection) GetEdges() []GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge {
 	return v.Edges
 }
 
 // GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge includes the requested fields of the GraphQL type DatadogAccountEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge struct {
-	// The item at the end of the edge.
-	Node *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount `json:"node"`
+	Node GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount `json:"node"`
 }
 
 // GetNode returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge.Node, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge) GetNode() *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount {
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdge) GetNode() GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount {
 	return v.Node
 }
 
@@ -769,10 +399,10 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount struct {
 	// Unique identifier of the Datadog configuration
 	Id string `json:"id"`
-	// Status of this Datadog account in the discovery pipeline.
+	// Status of this Datadog account in the catalog pipeline.
 	// Derived from the status of all services discovered from this account.
-	// Returns null if cache has not been populated yet.
-	Status *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache `json:"status"`
+	// Returns null if the status view has no row yet.
+	Status *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus `json:"status"`
 }
 
 // GetId returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount.Id, and is useful for accessing the field via an interface.
@@ -781,222 +411,91 @@ func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesData
 }
 
 // GetStatus returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount.Status, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount) GetStatus() *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache {
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccount) GetStatus() *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus {
 	return v.Status
 }
 
-// GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache includes the requested fields of the GraphQL type DatadogAccountStatusCache.
-type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache struct {
-	// Overall health of the Datadog account. DISABLED (integration turned off), INACTIVE (no data received), OK (healthy).
-	Health                                 DatadogAccountStatusCacheHealth `json:"health"`
-	ReadyForUse                            bool                            `json:"readyForUse"`
-	LogEventCount                          int                             `json:"logEventCount"`
-	LogEventAnalyzedCount                  int                             `json:"logEventAnalyzedCount"`
-	LogServiceCount                        int                             `json:"logServiceCount"`
-	LogActiveServices                      int                             `json:"logActiveServices"`
-	DisabledServices                       int                             `json:"disabledServices"`
-	InactiveServices                       int                             `json:"inactiveServices"`
-	OkServices                             int                             `json:"okServices"`
-	PolicyPendingCount                     int                             `json:"policyPendingCount"`
-	PolicyApprovedCount                    int                             `json:"policyApprovedCount"`
-	PolicyDismissedCount                   int                             `json:"policyDismissedCount"`
-	ServiceVolumePerHour                   *float64                        `json:"serviceVolumePerHour"`
-	ServiceCostPerHourVolumeUsd            *float64                        `json:"serviceCostPerHourVolumeUsd"`
-	LogEventVolumePerHour                  *float64                        `json:"logEventVolumePerHour"`
-	LogEventBytesPerHour                   *float64                        `json:"logEventBytesPerHour"`
-	LogEventCostPerHourBytesUsd            *float64                        `json:"logEventCostPerHourBytesUsd"`
-	LogEventCostPerHourVolumeUsd           *float64                        `json:"logEventCostPerHourVolumeUsd"`
-	LogEventCostPerHourUsd                 *float64                        `json:"logEventCostPerHourUsd"`
-	EstimatedVolumeReductionPerHour        *float64                        `json:"estimatedVolumeReductionPerHour"`
-	EstimatedBytesReductionPerHour         *float64                        `json:"estimatedBytesReductionPerHour"`
-	EstimatedCostReductionPerHourBytesUsd  *float64                        `json:"estimatedCostReductionPerHourBytesUsd"`
-	EstimatedCostReductionPerHourVolumeUsd *float64                        `json:"estimatedCostReductionPerHourVolumeUsd"`
-	EstimatedCostReductionPerHourUsd       *float64                        `json:"estimatedCostReductionPerHourUsd"`
-	ObservedVolumePerHourBefore            *float64                        `json:"observedVolumePerHourBefore"`
-	ObservedVolumePerHourAfter             *float64                        `json:"observedVolumePerHourAfter"`
-	ObservedBytesPerHourBefore             *float64                        `json:"observedBytesPerHourBefore"`
-	ObservedBytesPerHourAfter              *float64                        `json:"observedBytesPerHourAfter"`
-	ObservedCostPerHourBeforeBytesUsd      *float64                        `json:"observedCostPerHourBeforeBytesUsd"`
-	ObservedCostPerHourBeforeVolumeUsd     *float64                        `json:"observedCostPerHourBeforeVolumeUsd"`
-	ObservedCostPerHourBeforeUsd           *float64                        `json:"observedCostPerHourBeforeUsd"`
-	ObservedCostPerHourAfterBytesUsd       *float64                        `json:"observedCostPerHourAfterBytesUsd"`
-	ObservedCostPerHourAfterVolumeUsd      *float64                        `json:"observedCostPerHourAfterVolumeUsd"`
-	ObservedCostPerHourAfterUsd            *float64                        `json:"observedCostPerHourAfterUsd"`
+// GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus includes the requested fields of the GraphQL type DatadogAccountStatus.
+type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus struct {
+	Health    StatusHealth                                                                                                           `json:"health"`
+	Readiness GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness `json:"readiness"`
+	Coverage  GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage  `json:"coverage"`
 }
 
-// GetHealth returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.Health, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetHealth() DatadogAccountStatusCacheHealth {
+// GetHealth returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Health, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetHealth() StatusHealth {
 	return v.Health
 }
 
-// GetReadyForUse returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ReadyForUse, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetReadyForUse() bool {
-	return v.ReadyForUse
+// GetReadiness returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Readiness, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetReadiness() GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness {
+	return v.Readiness
 }
 
-// GetLogEventCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCount() int {
+// GetCoverage returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus.Coverage, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatus) GetCoverage() GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage {
+	return v.Coverage
+}
+
+// GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage includes the requested fields of the GraphQL type DatadogAccountStatusCoverage.
+type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage struct {
+	LogEventCount         int `json:"logEventCount"`
+	LogEventAnalyzedCount int `json:"logEventAnalyzedCount"`
+	LogServiceCount       int `json:"logServiceCount"`
+	LogActiveServices     int `json:"logActiveServices"`
+	DisabledServices      int `json:"disabledServices"`
+	InactiveServices      int `json:"inactiveServices"`
+	OkServices            int `json:"okServices"`
+}
+
+// GetLogEventCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogEventCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogEventCount() int {
 	return v.LogEventCount
 }
 
-// GetLogEventAnalyzedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventAnalyzedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventAnalyzedCount() int {
+// GetLogEventAnalyzedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogEventAnalyzedCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogEventAnalyzedCount() int {
 	return v.LogEventAnalyzedCount
 }
 
-// GetLogServiceCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogServiceCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogServiceCount() int {
+// GetLogServiceCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogServiceCount, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogServiceCount() int {
 	return v.LogServiceCount
 }
 
-// GetLogActiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogActiveServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogActiveServices() int {
+// GetLogActiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.LogActiveServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetLogActiveServices() int {
 	return v.LogActiveServices
 }
 
-// GetDisabledServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.DisabledServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetDisabledServices() int {
+// GetDisabledServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.DisabledServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetDisabledServices() int {
 	return v.DisabledServices
 }
 
-// GetInactiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.InactiveServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetInactiveServices() int {
+// GetInactiveServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.InactiveServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetInactiveServices() int {
 	return v.InactiveServices
 }
 
-// GetOkServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.OkServices, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetOkServices() int {
+// GetOkServices returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage.OkServices, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusCoverage) GetOkServices() int {
 	return v.OkServices
 }
 
-// GetPolicyPendingCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyPendingCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyPendingCount() int {
-	return v.PolicyPendingCount
+// GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness includes the requested fields of the GraphQL type StatusReadiness.
+type GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness struct {
+	ReadyForUse bool `json:"readyForUse"`
 }
 
-// GetPolicyApprovedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyApprovedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyApprovedCount() int {
-	return v.PolicyApprovedCount
-}
-
-// GetPolicyDismissedCount returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.PolicyDismissedCount, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetPolicyDismissedCount() int {
-	return v.PolicyDismissedCount
-}
-
-// GetServiceVolumePerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ServiceVolumePerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetServiceVolumePerHour() *float64 {
-	return v.ServiceVolumePerHour
-}
-
-// GetServiceCostPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ServiceCostPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetServiceCostPerHourVolumeUsd() *float64 {
-	return v.ServiceCostPerHourVolumeUsd
-}
-
-// GetLogEventVolumePerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventVolumePerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventVolumePerHour() *float64 {
-	return v.LogEventVolumePerHour
-}
-
-// GetLogEventBytesPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventBytesPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventBytesPerHour() *float64 {
-	return v.LogEventBytesPerHour
-}
-
-// GetLogEventCostPerHourBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourBytesUsd() *float64 {
-	return v.LogEventCostPerHourBytesUsd
-}
-
-// GetLogEventCostPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourVolumeUsd() *float64 {
-	return v.LogEventCostPerHourVolumeUsd
-}
-
-// GetLogEventCostPerHourUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.LogEventCostPerHourUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetLogEventCostPerHourUsd() *float64 {
-	return v.LogEventCostPerHourUsd
-}
-
-// GetEstimatedVolumeReductionPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedVolumeReductionPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedVolumeReductionPerHour() *float64 {
-	return v.EstimatedVolumeReductionPerHour
-}
-
-// GetEstimatedBytesReductionPerHour returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedBytesReductionPerHour, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedBytesReductionPerHour() *float64 {
-	return v.EstimatedBytesReductionPerHour
-}
-
-// GetEstimatedCostReductionPerHourBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourBytesUsd() *float64 {
-	return v.EstimatedCostReductionPerHourBytesUsd
-}
-
-// GetEstimatedCostReductionPerHourVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourVolumeUsd() *float64 {
-	return v.EstimatedCostReductionPerHourVolumeUsd
-}
-
-// GetEstimatedCostReductionPerHourUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.EstimatedCostReductionPerHourUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetEstimatedCostReductionPerHourUsd() *float64 {
-	return v.EstimatedCostReductionPerHourUsd
-}
-
-// GetObservedVolumePerHourBefore returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedVolumePerHourBefore, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedVolumePerHourBefore() *float64 {
-	return v.ObservedVolumePerHourBefore
-}
-
-// GetObservedVolumePerHourAfter returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedVolumePerHourAfter, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedVolumePerHourAfter() *float64 {
-	return v.ObservedVolumePerHourAfter
-}
-
-// GetObservedBytesPerHourBefore returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedBytesPerHourBefore, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedBytesPerHourBefore() *float64 {
-	return v.ObservedBytesPerHourBefore
-}
-
-// GetObservedBytesPerHourAfter returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedBytesPerHourAfter, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedBytesPerHourAfter() *float64 {
-	return v.ObservedBytesPerHourAfter
-}
-
-// GetObservedCostPerHourBeforeBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeBytesUsd() *float64 {
-	return v.ObservedCostPerHourBeforeBytesUsd
-}
-
-// GetObservedCostPerHourBeforeVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeVolumeUsd() *float64 {
-	return v.ObservedCostPerHourBeforeVolumeUsd
-}
-
-// GetObservedCostPerHourBeforeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourBeforeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourBeforeUsd() *float64 {
-	return v.ObservedCostPerHourBeforeUsd
-}
-
-// GetObservedCostPerHourAfterBytesUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterBytesUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterBytesUsd() *float64 {
-	return v.ObservedCostPerHourAfterBytesUsd
-}
-
-// GetObservedCostPerHourAfterVolumeUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterVolumeUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterVolumeUsd() *float64 {
-	return v.ObservedCostPerHourAfterVolumeUsd
-}
-
-// GetObservedCostPerHourAfterUsd returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache.ObservedCostPerHourAfterUsd, and is useful for accessing the field via an interface.
-func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusDatadogAccountStatusCache) GetObservedCostPerHourAfterUsd() *float64 {
-	return v.ObservedCostPerHourAfterUsd
+// GetReadyForUse returns GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness.ReadyForUse, and is useful for accessing the field via an interface.
+func (v *GetDatadogAccountStatusDatadogAccountsDatadogAccountConnectionEdgesDatadogAccountEdgeNodeDatadogAccountStatusReadiness) GetReadyForUse() bool {
+	return v.ReadyForUse
 }
 
 // GetDatadogAccountStatusResponse is returned by GetDatadogAccountStatus on success.
 type GetDatadogAccountStatusResponse struct {
-	// Query connected Datadog accounts.
+	// Query DatadogAccounts records in your account.
 	DatadogAccounts GetDatadogAccountStatusDatadogAccountsDatadogAccountConnection `json:"datadogAccounts"`
 }
 
@@ -1007,7 +506,7 @@ func (v *GetDatadogAccountStatusResponse) GetDatadogAccounts() GetDatadogAccount
 
 // GetServiceByNameResponse is returned by GetServiceByName on success.
 type GetServiceByNameResponse struct {
-	// Query services in your system.
+	// Query Services records in your account.
 	Services GetServiceByNameServicesServiceConnection `json:"services"`
 }
 
@@ -1017,30 +516,22 @@ func (v *GetServiceByNameResponse) GetServices() GetServiceByNameServicesService
 }
 
 // GetServiceByNameServicesServiceConnection includes the requested fields of the GraphQL type ServiceConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type GetServiceByNameServicesServiceConnection struct {
-	// A list of edges.
-	Edges []*GetServiceByNameServicesServiceConnectionEdgesServiceEdge `json:"edges"`
+	Edges []GetServiceByNameServicesServiceConnectionEdgesServiceEdge `json:"edges"`
 }
 
 // GetEdges returns GetServiceByNameServicesServiceConnection.Edges, and is useful for accessing the field via an interface.
-func (v *GetServiceByNameServicesServiceConnection) GetEdges() []*GetServiceByNameServicesServiceConnectionEdgesServiceEdge {
+func (v *GetServiceByNameServicesServiceConnection) GetEdges() []GetServiceByNameServicesServiceConnectionEdgesServiceEdge {
 	return v.Edges
 }
 
 // GetServiceByNameServicesServiceConnectionEdgesServiceEdge includes the requested fields of the GraphQL type ServiceEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type GetServiceByNameServicesServiceConnectionEdgesServiceEdge struct {
-	// The item at the end of the edge.
-	Node *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
+	Node GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
 }
 
 // GetNode returns GetServiceByNameServicesServiceConnectionEdgesServiceEdge.Node, and is useful for accessing the field via an interface.
-func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdge) GetNode() *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService {
+func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdge) GetNode() GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService {
 	return v.Node
 }
 
@@ -1050,8 +541,6 @@ type GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService struct
 	Id string `json:"id"`
 	// Service identifier in telemetry (e.g., 'checkout-service')
 	Name string `json:"name"`
-	// AI-generated description of what this service does and its telemetry characteristics
-	Description string `json:"description"`
 	// Whether log analysis and policy generation is active for this service
 	Enabled bool `json:"enabled"`
 	// When the service was created
@@ -1070,11 +559,6 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 	return v.Name
 }
 
-// GetDescription returns GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService.Description, and is useful for accessing the field via an interface.
-func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) GetDescription() string {
-	return v.Description
-}
-
 // GetEnabled returns GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService.Enabled, and is useful for accessing the field via an interface.
 func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) GetEnabled() bool {
 	return v.Enabled
@@ -1090,500 +574,41 @@ func (v *GetServiceByNameServicesServiceConnectionEdgesServiceEdgeNodeService) G
 	return v.UpdatedAt
 }
 
-// GetServiceNode includes the requested fields of the GraphQL interface Node.
-//
-// GetServiceNode is implemented by the following types:
-// GetServiceNodeAccount
-// GetServiceNodeConversation
-// GetServiceNodeConversationContext
-// GetServiceNodeDatadogAccount
-// GetServiceNodeDatadogAccountStatusCache
-// GetServiceNodeDatadogLogIndex
-// GetServiceNodeEdgeApiKey
-// GetServiceNodeEdgeInstance
-// GetServiceNodeLogEvent
-// GetServiceNodeLogEventField
-// GetServiceNodeLogEventPolicy
-// GetServiceNodeLogEventPolicyCategoryStatusCache
-// GetServiceNodeLogEventPolicyStatusCache
-// GetServiceNodeLogEventStatusCache
-// GetServiceNodeLogSample
-// GetServiceNodeMessage
-// GetServiceNodeOrganization
-// GetServiceNodeService
-// GetServiceNodeServiceStatusCache
-// GetServiceNodeTeam
-// GetServiceNodeView
-// GetServiceNodeViewFavorite
-// GetServiceNodeWorkspace
-// The GraphQL type's documentation follows.
-//
-// An object with an ID.
-// Follows the [Relay Global Object Identification Specification](https://relay.dev/graphql/objectidentification.htm)
-type GetServiceNode interface {
-	implementsGraphQLInterfaceGetServiceNode()
-	// GetTypename returns the receiver's concrete GraphQL type-name (see interface doc for possible values).
-	GetTypename() *string
+// GetServiceResponse is returned by GetService on success.
+type GetServiceResponse struct {
+	// Query Services records in your account.
+	Services GetServiceServicesServiceConnection `json:"services"`
 }
 
-func (v *GetServiceNodeAccount) implementsGraphQLInterfaceGetServiceNode()                   {}
-func (v *GetServiceNodeConversation) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeConversationContext) implementsGraphQLInterfaceGetServiceNode()       {}
-func (v *GetServiceNodeDatadogAccount) implementsGraphQLInterfaceGetServiceNode()            {}
-func (v *GetServiceNodeDatadogAccountStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeDatadogLogIndex) implementsGraphQLInterfaceGetServiceNode()           {}
-func (v *GetServiceNodeEdgeApiKey) implementsGraphQLInterfaceGetServiceNode()                {}
-func (v *GetServiceNodeEdgeInstance) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeLogEvent) implementsGraphQLInterfaceGetServiceNode()                  {}
-func (v *GetServiceNodeLogEventField) implementsGraphQLInterfaceGetServiceNode()             {}
-func (v *GetServiceNodeLogEventPolicy) implementsGraphQLInterfaceGetServiceNode()            {}
-func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) implementsGraphQLInterfaceGetServiceNode() {
-}
-func (v *GetServiceNodeLogEventPolicyStatusCache) implementsGraphQLInterfaceGetServiceNode() {}
-func (v *GetServiceNodeLogEventStatusCache) implementsGraphQLInterfaceGetServiceNode()       {}
-func (v *GetServiceNodeLogSample) implementsGraphQLInterfaceGetServiceNode()                 {}
-func (v *GetServiceNodeMessage) implementsGraphQLInterfaceGetServiceNode()                   {}
-func (v *GetServiceNodeOrganization) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeService) implementsGraphQLInterfaceGetServiceNode()                   {}
-func (v *GetServiceNodeServiceStatusCache) implementsGraphQLInterfaceGetServiceNode()        {}
-func (v *GetServiceNodeTeam) implementsGraphQLInterfaceGetServiceNode()                      {}
-func (v *GetServiceNodeView) implementsGraphQLInterfaceGetServiceNode()                      {}
-func (v *GetServiceNodeViewFavorite) implementsGraphQLInterfaceGetServiceNode()              {}
-func (v *GetServiceNodeWorkspace) implementsGraphQLInterfaceGetServiceNode()                 {}
+// GetServices returns GetServiceResponse.Services, and is useful for accessing the field via an interface.
+func (v *GetServiceResponse) GetServices() GetServiceServicesServiceConnection { return v.Services }
 
-func __unmarshalGetServiceNode(b []byte, v *GetServiceNode) error {
-	if string(b) == "null" {
-		return nil
-	}
-
-	var tn struct {
-		TypeName string `json:"__typename"`
-	}
-	err := json.Unmarshal(b, &tn)
-	if err != nil {
-		return err
-	}
-
-	switch tn.TypeName {
-	case "Account":
-		*v = new(GetServiceNodeAccount)
-		return json.Unmarshal(b, *v)
-	case "Conversation":
-		*v = new(GetServiceNodeConversation)
-		return json.Unmarshal(b, *v)
-	case "ConversationContext":
-		*v = new(GetServiceNodeConversationContext)
-		return json.Unmarshal(b, *v)
-	case "DatadogAccount":
-		*v = new(GetServiceNodeDatadogAccount)
-		return json.Unmarshal(b, *v)
-	case "DatadogAccountStatusCache":
-		*v = new(GetServiceNodeDatadogAccountStatusCache)
-		return json.Unmarshal(b, *v)
-	case "DatadogLogIndex":
-		*v = new(GetServiceNodeDatadogLogIndex)
-		return json.Unmarshal(b, *v)
-	case "EdgeApiKey":
-		*v = new(GetServiceNodeEdgeApiKey)
-		return json.Unmarshal(b, *v)
-	case "EdgeInstance":
-		*v = new(GetServiceNodeEdgeInstance)
-		return json.Unmarshal(b, *v)
-	case "LogEvent":
-		*v = new(GetServiceNodeLogEvent)
-		return json.Unmarshal(b, *v)
-	case "LogEventField":
-		*v = new(GetServiceNodeLogEventField)
-		return json.Unmarshal(b, *v)
-	case "LogEventPolicy":
-		*v = new(GetServiceNodeLogEventPolicy)
-		return json.Unmarshal(b, *v)
-	case "LogEventPolicyCategoryStatusCache":
-		*v = new(GetServiceNodeLogEventPolicyCategoryStatusCache)
-		return json.Unmarshal(b, *v)
-	case "LogEventPolicyStatusCache":
-		*v = new(GetServiceNodeLogEventPolicyStatusCache)
-		return json.Unmarshal(b, *v)
-	case "LogEventStatusCache":
-		*v = new(GetServiceNodeLogEventStatusCache)
-		return json.Unmarshal(b, *v)
-	case "LogSample":
-		*v = new(GetServiceNodeLogSample)
-		return json.Unmarshal(b, *v)
-	case "Message":
-		*v = new(GetServiceNodeMessage)
-		return json.Unmarshal(b, *v)
-	case "Organization":
-		*v = new(GetServiceNodeOrganization)
-		return json.Unmarshal(b, *v)
-	case "Service":
-		*v = new(GetServiceNodeService)
-		return json.Unmarshal(b, *v)
-	case "ServiceStatusCache":
-		*v = new(GetServiceNodeServiceStatusCache)
-		return json.Unmarshal(b, *v)
-	case "Team":
-		*v = new(GetServiceNodeTeam)
-		return json.Unmarshal(b, *v)
-	case "View":
-		*v = new(GetServiceNodeView)
-		return json.Unmarshal(b, *v)
-	case "ViewFavorite":
-		*v = new(GetServiceNodeViewFavorite)
-		return json.Unmarshal(b, *v)
-	case "Workspace":
-		*v = new(GetServiceNodeWorkspace)
-		return json.Unmarshal(b, *v)
-	case "":
-		return fmt.Errorf(
-			"response was missing Node.__typename")
-	default:
-		return fmt.Errorf(
-			`unexpected concrete type for GetServiceNode: "%v"`, tn.TypeName)
-	}
+// GetServiceServicesServiceConnection includes the requested fields of the GraphQL type ServiceConnection.
+type GetServiceServicesServiceConnection struct {
+	Edges []GetServiceServicesServiceConnectionEdgesServiceEdge `json:"edges"`
 }
 
-func __marshalGetServiceNode(v *GetServiceNode) ([]byte, error) {
-
-	var typename string
-	switch v := (*v).(type) {
-	case *GetServiceNodeAccount:
-		typename = "Account"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeAccount
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeConversation:
-		typename = "Conversation"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeConversation
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeConversationContext:
-		typename = "ConversationContext"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeConversationContext
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeDatadogAccount:
-		typename = "DatadogAccount"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeDatadogAccount
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeDatadogAccountStatusCache:
-		typename = "DatadogAccountStatusCache"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeDatadogAccountStatusCache
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeDatadogLogIndex:
-		typename = "DatadogLogIndex"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeDatadogLogIndex
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeEdgeApiKey:
-		typename = "EdgeApiKey"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeEdgeApiKey
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeEdgeInstance:
-		typename = "EdgeInstance"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeEdgeInstance
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEvent:
-		typename = "LogEvent"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEvent
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEventField:
-		typename = "LogEventField"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventField
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicy:
-		typename = "LogEventPolicy"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicy
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicyCategoryStatusCache:
-		typename = "LogEventPolicyCategoryStatusCache"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicyCategoryStatusCache
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEventPolicyStatusCache:
-		typename = "LogEventPolicyStatusCache"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventPolicyStatusCache
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogEventStatusCache:
-		typename = "LogEventStatusCache"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogEventStatusCache
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeLogSample:
-		typename = "LogSample"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeLogSample
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeMessage:
-		typename = "Message"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeMessage
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeOrganization:
-		typename = "Organization"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeOrganization
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeService:
-		typename = "Service"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeService
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeServiceStatusCache:
-		typename = "ServiceStatusCache"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeServiceStatusCache
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeTeam:
-		typename = "Team"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeTeam
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeView:
-		typename = "View"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeView
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeViewFavorite:
-		typename = "ViewFavorite"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeViewFavorite
-		}{typename, v}
-		return json.Marshal(result)
-	case *GetServiceNodeWorkspace:
-		typename = "Workspace"
-
-		result := struct {
-			TypeName string `json:"__typename"`
-			*GetServiceNodeWorkspace
-		}{typename, v}
-		return json.Marshal(result)
-	case nil:
-		return []byte("null"), nil
-	default:
-		return nil, fmt.Errorf(
-			`unexpected concrete type for GetServiceNode: "%T"`, v)
-	}
+// GetEdges returns GetServiceServicesServiceConnection.Edges, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnection) GetEdges() []GetServiceServicesServiceConnectionEdgesServiceEdge {
+	return v.Edges
 }
 
-// GetServiceNodeAccount includes the requested fields of the GraphQL type Account.
-type GetServiceNodeAccount struct {
-	Typename *string `json:"__typename"`
+// GetServiceServicesServiceConnectionEdgesServiceEdge includes the requested fields of the GraphQL type ServiceEdge.
+type GetServiceServicesServiceConnectionEdgesServiceEdge struct {
+	Node GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
 }
 
-// GetTypename returns GetServiceNodeAccount.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeAccount) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeConversation includes the requested fields of the GraphQL type Conversation.
-type GetServiceNodeConversation struct {
-	Typename *string `json:"__typename"`
+// GetNode returns GetServiceServicesServiceConnectionEdgesServiceEdge.Node, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdge) GetNode() GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService {
+	return v.Node
 }
 
-// GetTypename returns GetServiceNodeConversation.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeConversation) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeConversationContext includes the requested fields of the GraphQL type ConversationContext.
-type GetServiceNodeConversationContext struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeConversationContext.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeConversationContext) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeDatadogAccount includes the requested fields of the GraphQL type DatadogAccount.
-type GetServiceNodeDatadogAccount struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeDatadogAccount.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeDatadogAccount) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeDatadogAccountStatusCache includes the requested fields of the GraphQL type DatadogAccountStatusCache.
-type GetServiceNodeDatadogAccountStatusCache struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeDatadogAccountStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeDatadogAccountStatusCache) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeDatadogLogIndex includes the requested fields of the GraphQL type DatadogLogIndex.
-type GetServiceNodeDatadogLogIndex struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeDatadogLogIndex.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeDatadogLogIndex) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeEdgeApiKey includes the requested fields of the GraphQL type EdgeApiKey.
-type GetServiceNodeEdgeApiKey struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeEdgeApiKey.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeEdgeApiKey) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeEdgeInstance includes the requested fields of the GraphQL type EdgeInstance.
-type GetServiceNodeEdgeInstance struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeEdgeInstance.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeEdgeInstance) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEvent includes the requested fields of the GraphQL type LogEvent.
-type GetServiceNodeLogEvent struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEvent.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEvent) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEventField includes the requested fields of the GraphQL type LogEventField.
-type GetServiceNodeLogEventField struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventField.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventField) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEventPolicy includes the requested fields of the GraphQL type LogEventPolicy.
-type GetServiceNodeLogEventPolicy struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventPolicy.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicy) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEventPolicyCategoryStatusCache includes the requested fields of the GraphQL type LogEventPolicyCategoryStatusCache.
-type GetServiceNodeLogEventPolicyCategoryStatusCache struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventPolicyCategoryStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicyCategoryStatusCache) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEventPolicyStatusCache includes the requested fields of the GraphQL type LogEventPolicyStatusCache.
-type GetServiceNodeLogEventPolicyStatusCache struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventPolicyStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventPolicyStatusCache) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogEventStatusCache includes the requested fields of the GraphQL type LogEventStatusCache.
-type GetServiceNodeLogEventStatusCache struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogEventStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogEventStatusCache) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeLogSample includes the requested fields of the GraphQL type LogSample.
-type GetServiceNodeLogSample struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeLogSample.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeLogSample) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeMessage includes the requested fields of the GraphQL type Message.
-type GetServiceNodeMessage struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeMessage.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeMessage) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeOrganization includes the requested fields of the GraphQL type Organization.
-type GetServiceNodeOrganization struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeOrganization.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeOrganization) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeService includes the requested fields of the GraphQL type Service.
-type GetServiceNodeService struct {
-	Typename *string `json:"__typename"`
+// GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService includes the requested fields of the GraphQL type Service.
+type GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService struct {
 	// Unique identifier of the service
 	Id string `json:"id"`
 	// Service identifier in telemetry (e.g., 'checkout-service')
 	Name string `json:"name"`
-	// AI-generated description of what this service does and its telemetry characteristics
-	Description string `json:"description"`
 	// Whether log analysis and policy generation is active for this service
 	Enabled bool `json:"enabled"`
 	// When the service was created
@@ -1591,206 +616,115 @@ type GetServiceNodeService struct {
 	// When the service was last updated
 	UpdatedAt time.Time `json:"updatedAt"`
 	// Account this service belongs to
-	Account GetServiceNodeServiceAccount `json:"account"`
+	Account GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount `json:"account"`
 	// Log event types produced by this service
-	LogEvents []GetServiceNodeServiceLogEventsLogEvent `json:"logEvents"`
+	LogEvents GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection `json:"logEvents"`
 }
 
-// GetTypename returns GetServiceNodeService.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetTypename() *string { return v.Typename }
+// GetId returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.Id, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetId() string { return v.Id }
 
-// GetId returns GetServiceNodeService.Id, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetId() string { return v.Id }
+// GetName returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.Name, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetName() string {
+	return v.Name
+}
 
-// GetName returns GetServiceNodeService.Name, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetName() string { return v.Name }
+// GetEnabled returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.Enabled, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetEnabled() bool {
+	return v.Enabled
+}
 
-// GetDescription returns GetServiceNodeService.Description, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetDescription() string { return v.Description }
+// GetCreatedAt returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetCreatedAt() time.Time {
+	return v.CreatedAt
+}
 
-// GetEnabled returns GetServiceNodeService.Enabled, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetEnabled() bool { return v.Enabled }
+// GetUpdatedAt returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.UpdatedAt, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetUpdatedAt() time.Time {
+	return v.UpdatedAt
+}
 
-// GetCreatedAt returns GetServiceNodeService.CreatedAt, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetCreatedAt() time.Time { return v.CreatedAt }
+// GetAccount returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.Account, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetAccount() GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount {
+	return v.Account
+}
 
-// GetUpdatedAt returns GetServiceNodeService.UpdatedAt, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetUpdatedAt() time.Time { return v.UpdatedAt }
-
-// GetAccount returns GetServiceNodeService.Account, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetAccount() GetServiceNodeServiceAccount { return v.Account }
-
-// GetLogEvents returns GetServiceNodeService.LogEvents, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeService) GetLogEvents() []GetServiceNodeServiceLogEventsLogEvent {
+// GetLogEvents returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService.LogEvents, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeService) GetLogEvents() GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection {
 	return v.LogEvents
 }
 
-// GetServiceNodeServiceAccount includes the requested fields of the GraphQL type Account.
-type GetServiceNodeServiceAccount struct {
+// GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount includes the requested fields of the GraphQL type Account.
+type GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount struct {
 	// Unique identifier of the account
 	Id string `json:"id"`
 	// Human-readable name within the organization
 	Name string `json:"name"`
 }
 
-// GetId returns GetServiceNodeServiceAccount.Id, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceAccount) GetId() string { return v.Id }
+// GetId returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount.Id, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount) GetId() string {
+	return v.Id
+}
 
-// GetName returns GetServiceNodeServiceAccount.Name, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceAccount) GetName() string { return v.Name }
+// GetName returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount.Name, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceAccount) GetName() string {
+	return v.Name
+}
 
-// GetServiceNodeServiceLogEventsLogEvent includes the requested fields of the GraphQL type LogEvent.
-type GetServiceNodeServiceLogEventsLogEvent struct {
+// GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection includes the requested fields of the GraphQL type LogEventConnection.
+type GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection struct {
+	Edges []GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge `json:"edges"`
+}
+
+// GetEdges returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection.Edges, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnection) GetEdges() []GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge {
+	return v.Edges
+}
+
+// GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge includes the requested fields of the GraphQL type LogEventEdge.
+type GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge struct {
+	Node GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent `json:"node"`
+}
+
+// GetNode returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge.Node, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdge) GetNode() GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent {
+	return v.Node
+}
+
+// GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent includes the requested fields of the GraphQL type LogEvent.
+type GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent struct {
 	// Unique identifier of the log event
 	Id string `json:"id"`
 	// Snake_case identifier unique per service, e.g. nginx_access_log
 	Name string `json:"name"`
-	// What the event is and what data instances carry. Helps engineers decide whether to look here.
-	Description string `json:"description"`
 	// When the log event was created
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-// GetId returns GetServiceNodeServiceLogEventsLogEvent.Id, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceLogEventsLogEvent) GetId() string { return v.Id }
-
-// GetName returns GetServiceNodeServiceLogEventsLogEvent.Name, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceLogEventsLogEvent) GetName() string { return v.Name }
-
-// GetDescription returns GetServiceNodeServiceLogEventsLogEvent.Description, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceLogEventsLogEvent) GetDescription() string { return v.Description }
-
-// GetCreatedAt returns GetServiceNodeServiceLogEventsLogEvent.CreatedAt, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceLogEventsLogEvent) GetCreatedAt() time.Time { return v.CreatedAt }
-
-// GetServiceNodeServiceStatusCache includes the requested fields of the GraphQL type ServiceStatusCache.
-type GetServiceNodeServiceStatusCache struct {
-	Typename *string `json:"__typename"`
+// GetId returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.Id, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetId() string {
+	return v.Id
 }
 
-// GetTypename returns GetServiceNodeServiceStatusCache.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeServiceStatusCache) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeTeam includes the requested fields of the GraphQL type Team.
-type GetServiceNodeTeam struct {
-	Typename *string `json:"__typename"`
+// GetName returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.Name, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetName() string {
+	return v.Name
 }
 
-// GetTypename returns GetServiceNodeTeam.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeTeam) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeView includes the requested fields of the GraphQL type View.
-type GetServiceNodeView struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeView.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeView) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeViewFavorite includes the requested fields of the GraphQL type ViewFavorite.
-type GetServiceNodeViewFavorite struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeViewFavorite.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeViewFavorite) GetTypename() *string { return v.Typename }
-
-// GetServiceNodeWorkspace includes the requested fields of the GraphQL type Workspace.
-type GetServiceNodeWorkspace struct {
-	Typename *string `json:"__typename"`
-}
-
-// GetTypename returns GetServiceNodeWorkspace.Typename, and is useful for accessing the field via an interface.
-func (v *GetServiceNodeWorkspace) GetTypename() *string { return v.Typename }
-
-// GetServiceResponse is returned by GetService on success.
-type GetServiceResponse struct {
-	// Fetches an object given its ID.
-	Node *GetServiceNode `json:"-"`
-}
-
-// GetNode returns GetServiceResponse.Node, and is useful for accessing the field via an interface.
-func (v *GetServiceResponse) GetNode() *GetServiceNode { return v.Node }
-
-func (v *GetServiceResponse) UnmarshalJSON(b []byte) error {
-
-	if string(b) == "null" {
-		return nil
-	}
-
-	var firstPass struct {
-		*GetServiceResponse
-		Node json.RawMessage `json:"node"`
-		graphql.NoUnmarshalJSON
-	}
-	firstPass.GetServiceResponse = v
-
-	err := json.Unmarshal(b, &firstPass)
-	if err != nil {
-		return err
-	}
-
-	{
-		dst := &v.Node
-		src := firstPass.Node
-		if len(src) != 0 && string(src) != "null" {
-			*dst = new(GetServiceNode)
-			err = __unmarshalGetServiceNode(
-				src, *dst)
-			if err != nil {
-				return fmt.Errorf(
-					"unable to unmarshal GetServiceResponse.Node: %w", err)
-			}
-		}
-	}
-	return nil
-}
-
-type __premarshalGetServiceResponse struct {
-	Node json.RawMessage `json:"node"`
-}
-
-func (v *GetServiceResponse) MarshalJSON() ([]byte, error) {
-	premarshaled, err := v.__premarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(premarshaled)
-}
-
-func (v *GetServiceResponse) __premarshalJSON() (*__premarshalGetServiceResponse, error) {
-	var retval __premarshalGetServiceResponse
-
-	{
-
-		dst := &retval.Node
-		src := v.Node
-		if src != nil {
-			var err error
-			*dst, err = __marshalGetServiceNode(
-				src)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"unable to marshal GetServiceResponse.Node: %w", err)
-			}
-		}
-	}
-	return &retval, nil
+// GetCreatedAt returns GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent.CreatedAt, and is useful for accessing the field via an interface.
+func (v *GetServiceServicesServiceConnectionEdgesServiceEdgeNodeServiceLogEventsLogEventConnectionEdgesLogEventEdgeNodeLogEvent) GetCreatedAt() time.Time {
+	return v.CreatedAt
 }
 
 // ListAccountsAccountsAccountConnection includes the requested fields of the GraphQL type AccountConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type ListAccountsAccountsAccountConnection struct {
-	// A list of edges.
-	Edges []*ListAccountsAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
-	// Identifies the total count of items in the connection.
-	TotalCount int `json:"totalCount"`
+	Edges      []ListAccountsAccountsAccountConnectionEdgesAccountEdge `json:"edges"`
+	TotalCount int                                                     `json:"totalCount"`
 }
 
 // GetEdges returns ListAccountsAccountsAccountConnection.Edges, and is useful for accessing the field via an interface.
-func (v *ListAccountsAccountsAccountConnection) GetEdges() []*ListAccountsAccountsAccountConnectionEdgesAccountEdge {
+func (v *ListAccountsAccountsAccountConnection) GetEdges() []ListAccountsAccountsAccountConnectionEdgesAccountEdge {
 	return v.Edges
 }
 
@@ -1798,16 +732,12 @@ func (v *ListAccountsAccountsAccountConnection) GetEdges() []*ListAccountsAccoun
 func (v *ListAccountsAccountsAccountConnection) GetTotalCount() int { return v.TotalCount }
 
 // ListAccountsAccountsAccountConnectionEdgesAccountEdge includes the requested fields of the GraphQL type AccountEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type ListAccountsAccountsAccountConnectionEdgesAccountEdge struct {
-	// The item at the end of the edge.
-	Node *ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount `json:"node"`
+	Node ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount `json:"node"`
 }
 
 // GetNode returns ListAccountsAccountsAccountConnectionEdgesAccountEdge.Node, and is useful for accessing the field via an interface.
-func (v *ListAccountsAccountsAccountConnectionEdgesAccountEdge) GetNode() *ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount {
+func (v *ListAccountsAccountsAccountConnectionEdgesAccountEdge) GetNode() ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount {
 	return v.Node
 }
 
@@ -1838,7 +768,7 @@ func (v *ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount) GetCr
 
 // ListAccountsResponse is returned by ListAccounts on success.
 type ListAccountsResponse struct {
-	// Query accounts. Accounts belong to an organization and contain services and workspaces.
+	// Query Accounts records in your account.
 	Accounts ListAccountsAccountsAccountConnection `json:"accounts"`
 }
 
@@ -1846,18 +776,13 @@ type ListAccountsResponse struct {
 func (v *ListAccountsResponse) GetAccounts() ListAccountsAccountsAccountConnection { return v.Accounts }
 
 // ListOrganizationsOrganizationsOrganizationConnection includes the requested fields of the GraphQL type OrganizationConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type ListOrganizationsOrganizationsOrganizationConnection struct {
-	// A list of edges.
-	Edges []*ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge `json:"edges"`
-	// Identifies the total count of items in the connection.
-	TotalCount int `json:"totalCount"`
+	Edges      []ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge `json:"edges"`
+	TotalCount int                                                                         `json:"totalCount"`
 }
 
 // GetEdges returns ListOrganizationsOrganizationsOrganizationConnection.Edges, and is useful for accessing the field via an interface.
-func (v *ListOrganizationsOrganizationsOrganizationConnection) GetEdges() []*ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge {
+func (v *ListOrganizationsOrganizationsOrganizationConnection) GetEdges() []ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge {
 	return v.Edges
 }
 
@@ -1867,16 +792,12 @@ func (v *ListOrganizationsOrganizationsOrganizationConnection) GetTotalCount() i
 }
 
 // ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge includes the requested fields of the GraphQL type OrganizationEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge struct {
-	// The item at the end of the edge.
-	Node *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization `json:"node"`
+	Node ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization `json:"node"`
 }
 
 // GetNode returns ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge.Node, and is useful for accessing the field via an interface.
-func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge) GetNode() *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization {
+func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge) GetNode() ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization {
 	return v.Node
 }
 
@@ -1914,7 +835,7 @@ func (v *ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEd
 
 // ListOrganizationsResponse is returned by ListOrganizations on success.
 type ListOrganizationsResponse struct {
-	// Query organizations. An organization is the top-level container that holds accounts.
+	// Query Organizations records in your account.
 	Organizations ListOrganizationsOrganizationsOrganizationConnection `json:"organizations"`
 }
 
@@ -1925,7 +846,7 @@ func (v *ListOrganizationsResponse) GetOrganizations() ListOrganizationsOrganiza
 
 // ListServicesResponse is returned by ListServices on success.
 type ListServicesResponse struct {
-	// Query services in your system.
+	// Query Services records in your account.
 	Services ListServicesServicesServiceConnection `json:"services"`
 }
 
@@ -1933,18 +854,13 @@ type ListServicesResponse struct {
 func (v *ListServicesResponse) GetServices() ListServicesServicesServiceConnection { return v.Services }
 
 // ListServicesServicesServiceConnection includes the requested fields of the GraphQL type ServiceConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
 type ListServicesServicesServiceConnection struct {
-	// A list of edges.
-	Edges []*ListServicesServicesServiceConnectionEdgesServiceEdge `json:"edges"`
-	// Identifies the total count of items in the connection.
-	TotalCount int `json:"totalCount"`
+	Edges      []ListServicesServicesServiceConnectionEdgesServiceEdge `json:"edges"`
+	TotalCount int                                                     `json:"totalCount"`
 }
 
 // GetEdges returns ListServicesServicesServiceConnection.Edges, and is useful for accessing the field via an interface.
-func (v *ListServicesServicesServiceConnection) GetEdges() []*ListServicesServicesServiceConnectionEdgesServiceEdge {
+func (v *ListServicesServicesServiceConnection) GetEdges() []ListServicesServicesServiceConnectionEdgesServiceEdge {
 	return v.Edges
 }
 
@@ -1952,16 +868,12 @@ func (v *ListServicesServicesServiceConnection) GetEdges() []*ListServicesServic
 func (v *ListServicesServicesServiceConnection) GetTotalCount() int { return v.TotalCount }
 
 // ListServicesServicesServiceConnectionEdgesServiceEdge includes the requested fields of the GraphQL type ServiceEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
 type ListServicesServicesServiceConnectionEdgesServiceEdge struct {
-	// The item at the end of the edge.
-	Node *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
+	Node ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService `json:"node"`
 }
 
 // GetNode returns ListServicesServicesServiceConnectionEdgesServiceEdge.Node, and is useful for accessing the field via an interface.
-func (v *ListServicesServicesServiceConnectionEdgesServiceEdge) GetNode() *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService {
+func (v *ListServicesServicesServiceConnectionEdgesServiceEdge) GetNode() ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService {
 	return v.Node
 }
 
@@ -1971,8 +883,6 @@ type ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService struct {
 	Id string `json:"id"`
 	// Service identifier in telemetry (e.g., 'checkout-service')
 	Name string `json:"name"`
-	// AI-generated description of what this service does and its telemetry characteristics
-	Description string `json:"description"`
 	// Whether log analysis and policy generation is active for this service
 	Enabled bool `json:"enabled"`
 	// When the service was created
@@ -1991,11 +901,6 @@ func (v *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService) GetNa
 	return v.Name
 }
 
-// GetDescription returns ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService.Description, and is useful for accessing the field via an interface.
-func (v *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService) GetDescription() string {
-	return v.Description
-}
-
 // GetEnabled returns ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService.Enabled, and is useful for accessing the field via an interface.
 func (v *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService) GetEnabled() bool {
 	return v.Enabled
@@ -2011,219 +916,30 @@ func (v *ListServicesServicesServiceConnectionEdgesServiceEdgeNodeService) GetUp
 	return v.UpdatedAt
 }
 
-// ListWorkspacesResponse is returned by ListWorkspaces on success.
-type ListWorkspacesResponse struct {
-	// Query workspaces. Workspaces are used to analyze and classify telemetry.
-	Workspaces ListWorkspacesWorkspacesWorkspaceConnection `json:"workspaces"`
-}
-
-// GetWorkspaces returns ListWorkspacesResponse.Workspaces, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesResponse) GetWorkspaces() ListWorkspacesWorkspacesWorkspaceConnection {
-	return v.Workspaces
-}
-
-// ListWorkspacesWorkspacesWorkspaceConnection includes the requested fields of the GraphQL type WorkspaceConnection.
-// The GraphQL type's documentation follows.
-//
-// A connection to a list of items.
-type ListWorkspacesWorkspacesWorkspaceConnection struct {
-	// A list of edges.
-	Edges []*ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge `json:"edges"`
-	// Identifies the total count of items in the connection.
-	TotalCount int `json:"totalCount"`
-}
-
-// GetEdges returns ListWorkspacesWorkspacesWorkspaceConnection.Edges, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnection) GetEdges() []*ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge {
-	return v.Edges
-}
-
-// GetTotalCount returns ListWorkspacesWorkspacesWorkspaceConnection.TotalCount, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnection) GetTotalCount() int { return v.TotalCount }
-
-// ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge includes the requested fields of the GraphQL type WorkspaceEdge.
-// The GraphQL type's documentation follows.
-//
-// An edge in a connection.
-type ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge struct {
-	// The item at the end of the edge.
-	Node *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace `json:"node"`
-}
-
-// GetNode returns ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge.Node, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdge) GetNode() *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace {
-	return v.Node
-}
-
-// ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace includes the requested fields of the GraphQL type Workspace.
-type ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace struct {
-	// Unique identifier of the workspace
-	Id string `json:"id"`
-	// Human-readable name within the account
+// Organization creation input.
+type OrganizationCreateInput struct {
+	// Human-readable name, unique across the system
 	Name string `json:"name"`
-	// Primary purpose determining evaluation strategy. observability: performance
-	// and reliability, security: threat detection, compliance: regulatory requirements.
-	Purpose WorkspacePurpose `json:"purpose"`
-	// When the workspace was created
-	CreatedAt time.Time `json:"createdAt"`
 }
 
-// GetId returns ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace.Id, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace) GetId() string {
-	return v.Id
-}
+// GetName returns OrganizationCreateInput.Name, and is useful for accessing the field via an interface.
+func (v *OrganizationCreateInput) GetName() string { return v.Name }
 
-// GetName returns ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace.Name, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace) GetName() string {
-	return v.Name
-}
-
-// GetPurpose returns ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace.Purpose, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace) GetPurpose() WorkspacePurpose {
-	return v.Purpose
-}
-
-// GetCreatedAt returns ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace.CreatedAt, and is useful for accessing the field via an interface.
-func (v *ListWorkspacesWorkspacesWorkspaceConnectionEdgesWorkspaceEdgeNodeWorkspace) GetCreatedAt() time.Time {
-	return v.CreatedAt
-}
-
-// MessageRole is enum for the field role
-type MessageRole string
+type StatusHealth string
 
 const (
-	MessageRoleUser      MessageRole = "user"
-	MessageRoleAssistant MessageRole = "assistant"
+	StatusHealthDisabled StatusHealth = "DISABLED"
+	StatusHealthInactive StatusHealth = "INACTIVE"
+	StatusHealthError    StatusHealth = "ERROR"
+	StatusHealthOk       StatusHealth = "OK"
 )
 
-var AllMessageRole = []MessageRole{
-	MessageRoleUser,
-	MessageRoleAssistant,
+var AllStatusHealth = []StatusHealth{
+	StatusHealthDisabled,
+	StatusHealthInactive,
+	StatusHealthError,
+	StatusHealthOk,
 }
-
-// MessageStopReason is enum for the field stop_reason
-type MessageStopReason string
-
-const (
-	MessageStopReasonEndTurn MessageStopReason = "end_turn"
-	MessageStopReasonToolUse MessageStopReason = "tool_use"
-)
-
-var AllMessageStopReason = []MessageStopReason{
-	MessageStopReasonEndTurn,
-	MessageStopReasonToolUse,
-}
-
-// Text content from the user or assistant.
-type TextBlockInput struct {
-	Content string `json:"content"`
-}
-
-// GetContent returns TextBlockInput.Content, and is useful for accessing the field via an interface.
-func (v *TextBlockInput) GetContent() string { return v.Content }
-
-// The AI's internal reasoning (extended thinking).
-type ThinkingBlockInput struct {
-	Content string `json:"content"`
-}
-
-// GetContent returns ThinkingBlockInput.Content, and is useful for accessing the field via an interface.
-func (v *ThinkingBlockInput) GetContent() string { return v.Content }
-
-// The result of a tool call.
-type ToolResultInput struct {
-	// The ID of the tool call this result is for.
-	ToolUseId string `json:"toolUseId"`
-	// Whether the tool execution resulted in an error.
-	IsError bool `json:"isError"`
-	// Human-readable error message when isError is true.
-	Error *string `json:"error"`
-	// Structured result data (JSON object).
-	Content *map[string]any `json:"content"`
-}
-
-// GetToolUseId returns ToolResultInput.ToolUseId, and is useful for accessing the field via an interface.
-func (v *ToolResultInput) GetToolUseId() string { return v.ToolUseId }
-
-// GetIsError returns ToolResultInput.IsError, and is useful for accessing the field via an interface.
-func (v *ToolResultInput) GetIsError() bool { return v.IsError }
-
-// GetError returns ToolResultInput.Error, and is useful for accessing the field via an interface.
-func (v *ToolResultInput) GetError() *string { return v.Error }
-
-// GetContent returns ToolResultInput.Content, and is useful for accessing the field via an interface.
-func (v *ToolResultInput) GetContent() *map[string]any { return v.Content }
-
-// A tool call from the assistant.
-type ToolUseInput struct {
-	// Unique identifier for this tool call.
-	Id string `json:"id"`
-	// The name of the tool being called.
-	Name string `json:"name"`
-	// The input parameters for the tool (JSON object).
-	Input map[string]any `json:"input"`
-}
-
-// GetId returns ToolUseInput.Id, and is useful for accessing the field via an interface.
-func (v *ToolUseInput) GetId() string { return v.Id }
-
-// GetName returns ToolUseInput.Name, and is useful for accessing the field via an interface.
-func (v *ToolUseInput) GetName() string { return v.Name }
-
-// GetInput returns ToolUseInput.Input, and is useful for accessing the field via an interface.
-func (v *ToolUseInput) GetInput() map[string]any { return v.Input }
-
-// UpdateConversationInput is used for update Conversation object.
-// Input was generated by ent.
-type UpdateConversationInput struct {
-	// AI-generated title, set after first exchange
-	Title      *string `json:"title"`
-	ClearTitle *bool   `json:"clearTitle"`
-	ViewID     *string `json:"viewID"`
-	ClearView  *bool   `json:"clearView"`
-}
-
-// GetTitle returns UpdateConversationInput.Title, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetTitle() *string { return v.Title }
-
-// GetClearTitle returns UpdateConversationInput.ClearTitle, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetClearTitle() *bool { return v.ClearTitle }
-
-// GetViewID returns UpdateConversationInput.ViewID, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetViewID() *string { return v.ViewID }
-
-// GetClearView returns UpdateConversationInput.ClearView, and is useful for accessing the field via an interface.
-func (v *UpdateConversationInput) GetClearView() *bool { return v.ClearView }
-
-// UpdateConversationResponse is returned by UpdateConversation on success.
-type UpdateConversationResponse struct {
-	// Update a conversation (e.g., set title).
-	UpdateConversation UpdateConversationUpdateConversation `json:"updateConversation"`
-}
-
-// GetUpdateConversation returns UpdateConversationResponse.UpdateConversation, and is useful for accessing the field via an interface.
-func (v *UpdateConversationResponse) GetUpdateConversation() UpdateConversationUpdateConversation {
-	return v.UpdateConversation
-}
-
-// UpdateConversationUpdateConversation includes the requested fields of the GraphQL type Conversation.
-type UpdateConversationUpdateConversation struct {
-	// Unique identifier
-	Id string `json:"id"`
-	// AI-generated title, set after first exchange
-	Title *string `json:"title"`
-	// When the conversation was last updated
-	UpdatedAt time.Time `json:"updatedAt"`
-}
-
-// GetId returns UpdateConversationUpdateConversation.Id, and is useful for accessing the field via an interface.
-func (v *UpdateConversationUpdateConversation) GetId() string { return v.Id }
-
-// GetTitle returns UpdateConversationUpdateConversation.Title, and is useful for accessing the field via an interface.
-func (v *UpdateConversationUpdateConversation) GetTitle() *string { return v.Title }
-
-// GetUpdatedAt returns UpdateConversationUpdateConversation.UpdatedAt, and is useful for accessing the field via an interface.
-func (v *UpdateConversationUpdateConversation) GetUpdatedAt() time.Time { return v.UpdatedAt }
 
 type ValidateDatadogApiKeyInput struct {
 	ApiKey string             `json:"apiKey"`
@@ -2238,6 +954,7 @@ func (v *ValidateDatadogApiKeyInput) GetSite() DatadogAccountSite { return v.Sit
 
 // ValidateDatadogApiKeyResponse is returned by ValidateDatadogApiKey on success.
 type ValidateDatadogApiKeyResponse struct {
+	// Validate a Datadog API key against a Datadog site.
 	ValidateDatadogApiKey ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult `json:"validateDatadogApiKey"`
 }
 
@@ -2262,78 +979,31 @@ func (v *ValidateDatadogApiKeyValidateDatadogApiKeyValidateDatadogApiKeyResult) 
 	return v.Error
 }
 
-// WorkspacePurpose is enum for the field purpose
-type WorkspacePurpose string
-
-const (
-	WorkspacePurposeObservability WorkspacePurpose = "observability"
-	WorkspacePurposeSecurity      WorkspacePurpose = "security"
-	WorkspacePurposeCompliance    WorkspacePurpose = "compliance"
-)
-
-var AllWorkspacePurpose = []WorkspacePurpose{
-	WorkspacePurposeObservability,
-	WorkspacePurposeSecurity,
-	WorkspacePurposeCompliance,
-}
-
-// __ApproveLogEventPolicyInput is used internally by genqlient
-type __ApproveLogEventPolicyInput struct {
-	Id string `json:"id"`
-}
-
-// GetId returns __ApproveLogEventPolicyInput.Id, and is useful for accessing the field via an interface.
-func (v *__ApproveLogEventPolicyInput) GetId() string { return v.Id }
-
 // __CreateAccountInput is used internally by genqlient
 type __CreateAccountInput struct {
-	Input CreateAccountInput `json:"input"`
+	Input AccountCreateInput `json:"input"`
 }
 
 // GetInput returns __CreateAccountInput.Input, and is useful for accessing the field via an interface.
-func (v *__CreateAccountInput) GetInput() CreateAccountInput { return v.Input }
-
-// __CreateConversationInput is used internally by genqlient
-type __CreateConversationInput struct {
-	Input CreateConversationInput `json:"input"`
-}
-
-// GetInput returns __CreateConversationInput.Input, and is useful for accessing the field via an interface.
-func (v *__CreateConversationInput) GetInput() CreateConversationInput { return v.Input }
+func (v *__CreateAccountInput) GetInput() AccountCreateInput { return v.Input }
 
 // __CreateDatadogAccountWithCredentialsInput is used internally by genqlient
 type __CreateDatadogAccountWithCredentialsInput struct {
-	Input CreateDatadogAccountWithCredentialsInput `json:"input"`
+	Input DatadogAccountCreateInput `json:"input"`
 }
 
 // GetInput returns __CreateDatadogAccountWithCredentialsInput.Input, and is useful for accessing the field via an interface.
-func (v *__CreateDatadogAccountWithCredentialsInput) GetInput() CreateDatadogAccountWithCredentialsInput {
+func (v *__CreateDatadogAccountWithCredentialsInput) GetInput() DatadogAccountCreateInput {
 	return v.Input
 }
 
-// __CreateMessageInput is used internally by genqlient
-type __CreateMessageInput struct {
-	Input CreateMessageInput `json:"input"`
-}
-
-// GetInput returns __CreateMessageInput.Input, and is useful for accessing the field via an interface.
-func (v *__CreateMessageInput) GetInput() CreateMessageInput { return v.Input }
-
 // __CreateOrganizationAndBootstrapInput is used internally by genqlient
 type __CreateOrganizationAndBootstrapInput struct {
-	Input CreateOrganizationInput `json:"input"`
+	Input OrganizationCreateInput `json:"input"`
 }
 
 // GetInput returns __CreateOrganizationAndBootstrapInput.Input, and is useful for accessing the field via an interface.
-func (v *__CreateOrganizationAndBootstrapInput) GetInput() CreateOrganizationInput { return v.Input }
-
-// __DeleteConversationInput is used internally by genqlient
-type __DeleteConversationInput struct {
-	Id string `json:"id"`
-}
-
-// GetId returns __DeleteConversationInput.Id, and is useful for accessing the field via an interface.
-func (v *__DeleteConversationInput) GetId() string { return v.Id }
+func (v *__CreateOrganizationAndBootstrapInput) GetInput() OrganizationCreateInput { return v.Input }
 
 // __DisableServiceInput is used internally by genqlient
 type __DisableServiceInput struct {
@@ -2342,14 +1012,6 @@ type __DisableServiceInput struct {
 
 // GetServiceId returns __DisableServiceInput.ServiceId, and is useful for accessing the field via an interface.
 func (v *__DisableServiceInput) GetServiceId() string { return v.ServiceId }
-
-// __DismissLogEventPolicyInput is used internally by genqlient
-type __DismissLogEventPolicyInput struct {
-	Id string `json:"id"`
-}
-
-// GetId returns __DismissLogEventPolicyInput.Id, and is useful for accessing the field via an interface.
-func (v *__DismissLogEventPolicyInput) GetId() string { return v.Id }
 
 // __EnableServiceInput is used internally by genqlient
 type __EnableServiceInput struct {
@@ -2399,26 +1061,6 @@ type __ListAccountsInput struct {
 // GetOrganizationID returns __ListAccountsInput.OrganizationID, and is useful for accessing the field via an interface.
 func (v *__ListAccountsInput) GetOrganizationID() string { return v.OrganizationID }
 
-// __ListWorkspacesInput is used internally by genqlient
-type __ListWorkspacesInput struct {
-	AccountID string `json:"accountID"`
-}
-
-// GetAccountID returns __ListWorkspacesInput.AccountID, and is useful for accessing the field via an interface.
-func (v *__ListWorkspacesInput) GetAccountID() string { return v.AccountID }
-
-// __UpdateConversationInput is used internally by genqlient
-type __UpdateConversationInput struct {
-	Id    string                  `json:"id"`
-	Input UpdateConversationInput `json:"input"`
-}
-
-// GetId returns __UpdateConversationInput.Id, and is useful for accessing the field via an interface.
-func (v *__UpdateConversationInput) GetId() string { return v.Id }
-
-// GetInput returns __UpdateConversationInput.Input, and is useful for accessing the field via an interface.
-func (v *__UpdateConversationInput) GetInput() UpdateConversationInput { return v.Input }
-
 // __ValidateDatadogApiKeyInput is used internally by genqlient
 type __ValidateDatadogApiKeyInput struct {
 	Input ValidateDatadogApiKeyInput `json:"input"`
@@ -2427,48 +1069,9 @@ type __ValidateDatadogApiKeyInput struct {
 // GetInput returns __ValidateDatadogApiKeyInput.Input, and is useful for accessing the field via an interface.
 func (v *__ValidateDatadogApiKeyInput) GetInput() ValidateDatadogApiKeyInput { return v.Input }
 
-// The mutation executed by ApproveLogEventPolicy.
-const ApproveLogEventPolicy_Operation = `
-mutation ApproveLogEventPolicy ($id: ID!) {
-	approveLogEventPolicy(id: $id) {
-		id
-		approvedAt
-		approvedBy
-		dismissedAt
-		dismissedBy
-	}
-}
-`
-
-// Mutation to approve a log event policy for enforcement
-func ApproveLogEventPolicy(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	id string,
-) (data_ *ApproveLogEventPolicyResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "ApproveLogEventPolicy",
-		Query:  ApproveLogEventPolicy_Operation,
-		Variables: &__ApproveLogEventPolicyInput{
-			Id: id,
-		},
-	}
-
-	data_ = &ApproveLogEventPolicyResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
 // The mutation executed by CreateAccount.
 const CreateAccount_Operation = `
-mutation CreateAccount ($input: CreateAccountInput!) {
+mutation CreateAccount ($input: AccountCreateInput!) {
 	createAccount(input: $input) {
 		id
 		name
@@ -2480,7 +1083,7 @@ mutation CreateAccount ($input: CreateAccountInput!) {
 func CreateAccount(
 	ctx_ context.Context,
 	client_ graphql.Client,
-	input CreateAccountInput,
+	input AccountCreateInput,
 ) (data_ *CreateAccountResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "CreateAccount",
@@ -2502,46 +1105,9 @@ func CreateAccount(
 	return data_, err_
 }
 
-// The mutation executed by CreateConversation.
-const CreateConversation_Operation = `
-mutation CreateConversation ($input: CreateConversationInput!) {
-	createConversation(input: $input) {
-		id
-		title
-		createdAt
-		updatedAt
-	}
-}
-`
-
-func CreateConversation(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	input CreateConversationInput,
-) (data_ *CreateConversationResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "CreateConversation",
-		Query:  CreateConversation_Operation,
-		Variables: &__CreateConversationInput{
-			Input: input,
-		},
-	}
-
-	data_ = &CreateConversationResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
 // The mutation executed by CreateDatadogAccountWithCredentials.
 const CreateDatadogAccountWithCredentials_Operation = `
-mutation CreateDatadogAccountWithCredentials ($input: CreateDatadogAccountWithCredentialsInput!) {
+mutation CreateDatadogAccountWithCredentials ($input: DatadogAccountCreateInput!) {
 	createDatadogAccount(input: $input) {
 		id
 		name
@@ -2555,7 +1121,7 @@ mutation CreateDatadogAccountWithCredentials ($input: CreateDatadogAccountWithCr
 func CreateDatadogAccountWithCredentials(
 	ctx_ context.Context,
 	client_ graphql.Client,
-	input CreateDatadogAccountWithCredentialsInput,
+	input DatadogAccountCreateInput,
 ) (data_ *CreateDatadogAccountWithCredentialsResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "CreateDatadogAccountWithCredentials",
@@ -2577,47 +1143,9 @@ func CreateDatadogAccountWithCredentials(
 	return data_, err_
 }
 
-// The mutation executed by CreateMessage.
-const CreateMessage_Operation = `
-mutation CreateMessage ($input: CreateMessageInput!) {
-	createMessage(input: $input) {
-		id
-		role
-		model
-		stopReason
-		createdAt
-	}
-}
-`
-
-func CreateMessage(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	input CreateMessageInput,
-) (data_ *CreateMessageResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "CreateMessage",
-		Query:  CreateMessage_Operation,
-		Variables: &__CreateMessageInput{
-			Input: input,
-		},
-	}
-
-	data_ = &CreateMessageResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
 // The mutation executed by CreateOrganizationAndBootstrap.
 const CreateOrganizationAndBootstrap_Operation = `
-mutation CreateOrganizationAndBootstrap ($input: CreateOrganizationInput!) {
+mutation CreateOrganizationAndBootstrap ($input: OrganizationCreateInput!) {
 	createOrganizationAndBootstrap(input: $input) {
 		organization {
 			id
@@ -2629,10 +1157,6 @@ mutation CreateOrganizationAndBootstrap ($input: CreateOrganizationInput!) {
 			id
 			name
 		}
-		workspace {
-			id
-			name
-		}
 	}
 }
 `
@@ -2640,7 +1164,7 @@ mutation CreateOrganizationAndBootstrap ($input: CreateOrganizationInput!) {
 func CreateOrganizationAndBootstrap(
 	ctx_ context.Context,
 	client_ graphql.Client,
-	input CreateOrganizationInput,
+	input OrganizationCreateInput,
 ) (data_ *CreateOrganizationAndBootstrapResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "CreateOrganizationAndBootstrap",
@@ -2662,42 +1186,10 @@ func CreateOrganizationAndBootstrap(
 	return data_, err_
 }
 
-// The mutation executed by DeleteConversation.
-const DeleteConversation_Operation = `
-mutation DeleteConversation ($id: ID!) {
-	deleteConversation(id: $id)
-}
-`
-
-func DeleteConversation(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	id string,
-) (data_ *DeleteConversationResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "DeleteConversation",
-		Query:  DeleteConversation_Operation,
-		Variables: &__DeleteConversationInput{
-			Id: id,
-		},
-	}
-
-	data_ = &DeleteConversationResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
 // The mutation executed by DisableService.
 const DisableService_Operation = `
 mutation DisableService ($serviceId: ID!) {
-	updateService(id: $serviceId, input: {enabled:false}) {
+	setServiceEnabled(id: $serviceId, enabled: false) {
 		id
 		name
 		enabled
@@ -2731,49 +1223,10 @@ func DisableService(
 	return data_, err_
 }
 
-// The mutation executed by DismissLogEventPolicy.
-const DismissLogEventPolicy_Operation = `
-mutation DismissLogEventPolicy ($id: ID!) {
-	dismissLogEventPolicy(id: $id) {
-		id
-		dismissedAt
-		dismissedBy
-		approvedAt
-		approvedBy
-	}
-}
-`
-
-// Mutation to dismiss a log event policy from pending review
-func DismissLogEventPolicy(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	id string,
-) (data_ *DismissLogEventPolicyResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "DismissLogEventPolicy",
-		Query:  DismissLogEventPolicy_Operation,
-		Variables: &__DismissLogEventPolicyInput{
-			Id: id,
-		},
-	}
-
-	data_ = &DismissLogEventPolicyResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
 // The mutation executed by EnableService.
 const EnableService_Operation = `
 mutation EnableService ($serviceId: ID!) {
-	updateService(id: $serviceId, input: {enabled:true}) {
+	setServiceEnabled(id: $serviceId, enabled: true) {
 		id
 		name
 		enabled
@@ -2859,39 +1312,18 @@ query GetDatadogAccountStatus ($id: ID!) {
 				id
 				status {
 					health
-					readyForUse
-					logEventCount
-					logEventAnalyzedCount
-					logServiceCount
-					logActiveServices
-					disabledServices
-					inactiveServices
-					okServices
-					policyPendingCount
-					policyApprovedCount
-					policyDismissedCount
-					serviceVolumePerHour
-					serviceCostPerHourVolumeUsd
-					logEventVolumePerHour
-					logEventBytesPerHour
-					logEventCostPerHourBytesUsd
-					logEventCostPerHourVolumeUsd
-					logEventCostPerHourUsd
-					estimatedVolumeReductionPerHour
-					estimatedBytesReductionPerHour
-					estimatedCostReductionPerHourBytesUsd
-					estimatedCostReductionPerHourVolumeUsd
-					estimatedCostReductionPerHourUsd
-					observedVolumePerHourBefore
-					observedVolumePerHourAfter
-					observedBytesPerHourBefore
-					observedBytesPerHourAfter
-					observedCostPerHourBeforeBytesUsd
-					observedCostPerHourBeforeVolumeUsd
-					observedCostPerHourBeforeUsd
-					observedCostPerHourAfterBytesUsd
-					observedCostPerHourAfterVolumeUsd
-					observedCostPerHourAfterUsd
+					readiness {
+						readyForUse
+					}
+					coverage {
+						logEventCount
+						logEventAnalyzedCount
+						logServiceCount
+						logActiveServices
+						disabledServices
+						inactiveServices
+						okServices
+					}
 				}
 			}
 		}
@@ -2927,24 +1359,27 @@ func GetDatadogAccountStatus(
 // The query executed by GetService.
 const GetService_Operation = `
 query GetService ($id: ID!) {
-	node(id: $id) {
-		__typename
-		... on Service {
-			id
-			name
-			description
-			enabled
-			createdAt
-			updatedAt
-			account {
+	services(where: {id:$id}, first: 1) {
+		edges {
+			node {
 				id
 				name
-			}
-			logEvents {
-				id
-				name
-				description
+				enabled
 				createdAt
+				updatedAt
+				account {
+					id
+					name
+				}
+				logEvents {
+					edges {
+						node {
+							id
+							name
+							createdAt
+						}
+					}
+				}
 			}
 		}
 	}
@@ -2985,7 +1420,6 @@ query GetServiceByName ($name: String!) {
 			node {
 				id
 				name
-				description
 				enabled
 				createdAt
 				updatedAt
@@ -3108,7 +1542,6 @@ query ListServices {
 			node {
 				id
 				name
-				description
 				enabled
 				createdAt
 				updatedAt
@@ -3130,86 +1563,6 @@ func ListServices(
 	}
 
 	data_ = &ListServicesResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
-// The query executed by ListWorkspaces.
-const ListWorkspaces_Operation = `
-query ListWorkspaces ($accountID: ID!) {
-	workspaces(where: {accountID:$accountID}) {
-		edges {
-			node {
-				id
-				name
-				purpose
-				createdAt
-			}
-		}
-		totalCount
-	}
-}
-`
-
-func ListWorkspaces(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	accountID string,
-) (data_ *ListWorkspacesResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "ListWorkspaces",
-		Query:  ListWorkspaces_Operation,
-		Variables: &__ListWorkspacesInput{
-			AccountID: accountID,
-		},
-	}
-
-	data_ = &ListWorkspacesResponse{}
-	resp_ := &graphql.Response{Data: data_}
-
-	err_ = client_.MakeRequest(
-		ctx_,
-		req_,
-		resp_,
-	)
-
-	return data_, err_
-}
-
-// The mutation executed by UpdateConversation.
-const UpdateConversation_Operation = `
-mutation UpdateConversation ($id: ID!, $input: UpdateConversationInput!) {
-	updateConversation(id: $id, input: $input) {
-		id
-		title
-		updatedAt
-	}
-}
-`
-
-func UpdateConversation(
-	ctx_ context.Context,
-	client_ graphql.Client,
-	id string,
-	input UpdateConversationInput,
-) (data_ *UpdateConversationResponse, err_ error) {
-	req_ := &graphql.Request{
-		OpName: "UpdateConversation",
-		Query:  UpdateConversation_Operation,
-		Variables: &__UpdateConversationInput{
-			Id:    id,
-			Input: input,
-		},
-	}
-
-	data_ = &UpdateConversationResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

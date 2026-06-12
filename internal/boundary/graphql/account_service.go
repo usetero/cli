@@ -87,8 +87,7 @@ func (s *AccountService) Get(ctx context.Context, accountID domain.AccountID) (*
 // Create creates a new account with the given client-provided ID.
 func (s *AccountService) Create(ctx context.Context, input CreateAccountInput) (*domain.Account, error) {
 	s.scope.Debug("creating account via API", "id", input.ID.String(), "organizationID", input.OrganizationID, "name", input.Name)
-	genInput := gen.CreateAccountInput{
-		Id:             ptr(input.ID.String()),
+	genInput := gen.AccountCreateInput{
 		OrganizationID: input.OrganizationID.String(),
 		Name:           input.Name,
 	}

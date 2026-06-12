@@ -38,11 +38,10 @@ func NewOrganizationService(client Client, scope log.Scope) *OrganizationService
 	}
 }
 
-// OrganizationBootstrapResult contains the organization, account, and workspace created during bootstrap.
+// OrganizationBootstrapResult contains the organization and account created during bootstrap.
 type OrganizationBootstrapResult struct {
 	Organization *domain.Organization
 	Account      *domain.Account
-	Workspace    *domain.Workspace
 }
 
 // List fetches all organizations for the user.
@@ -71,8 +70,7 @@ func (s *OrganizationService) List(ctx context.Context) ([]domain.Organization, 
 // Create creates a new organization with bootstrapped account and workspace.
 func (s *OrganizationService) Create(ctx context.Context, input CreateOrganizationInput) (*OrganizationBootstrapResult, error) {
 	s.scope.Debug("creating organization with bootstrap via API", "id", input.ID.String(), "name", input.Name)
-	genInput := gen.CreateOrganizationInput{
-		Id:   ptr(input.ID.String()),
+	genInput := gen.OrganizationCreateInput{
 		Name: input.Name,
 	}
 
@@ -93,15 +91,9 @@ func (s *OrganizationService) Create(ctx context.Context, input CreateOrganizati
 		Name: resp.CreateOrganizationAndBootstrap.Account.Name,
 	}
 
-	workspace := &domain.Workspace{
-		ID:   domain.WorkspaceID(resp.CreateOrganizationAndBootstrap.Workspace.Id),
-		Name: resp.CreateOrganizationAndBootstrap.Workspace.Name,
-	}
-
 	result := &OrganizationBootstrapResult{
 		Organization: org,
 		Account:      account,
-		Workspace:    workspace,
 	}
 
 	s.scope.Debug("created organization via API", "id", org.ID, "name", org.Name, "accountID", account.ID)

@@ -20,9 +20,9 @@ func TestAccountService_List(t *testing.T) {
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
 				return &gen.ListAccountsResponse{
 					Accounts: gen.ListAccountsAccountsAccountConnection{
-						Edges: []*gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
-							{Node: &gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
-							{Node: &gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
+						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{
+							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-1", Name: "Production"}},
+							{Node: gen.ListAccountsAccountsAccountConnectionEdgesAccountEdgeNodeAccount{Id: "acc-2", Name: "Staging"}},
 						},
 					},
 				}, nil
@@ -52,7 +52,7 @@ func TestAccountService_List(t *testing.T) {
 			ListAccountsFunc: func(ctx context.Context, orgID string) (*gen.ListAccountsResponse, error) {
 				return &gen.ListAccountsResponse{
 					Accounts: gen.ListAccountsAccountsAccountConnection{
-						Edges: []*gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
+						Edges: []gen.ListAccountsAccountsAccountConnectionEdgesAccountEdge{},
 					},
 				}, nil
 			},
@@ -93,9 +93,9 @@ func TestAccountService_Create(t *testing.T) {
 	t.Parallel()
 	t.Run("creates account and returns domain model", func(t *testing.T) {
 		t.Parallel()
-		var capturedInput gen.CreateAccountInput
+		var capturedInput gen.AccountCreateInput
 		mockClient := &apitest.MockClient{
-			CreateAccountFunc: func(ctx context.Context, input gen.CreateAccountInput) (*gen.CreateAccountResponse, error) {
+			CreateAccountFunc: func(ctx context.Context, input gen.AccountCreateInput) (*gen.CreateAccountResponse, error) {
 				capturedInput = input
 				return &gen.CreateAccountResponse{
 					CreateAccount: gen.CreateAccountCreateAccount{
@@ -127,7 +127,7 @@ func TestAccountService_Create(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			CreateAccountFunc: func(ctx context.Context, input gen.CreateAccountInput) (*gen.CreateAccountResponse, error) {
+			CreateAccountFunc: func(ctx context.Context, input gen.AccountCreateInput) (*gen.CreateAccountResponse, error) {
 				return nil, errors.New("validation error")
 			},
 		}

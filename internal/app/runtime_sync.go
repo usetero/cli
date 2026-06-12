@@ -2,19 +2,16 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/usetero/cli/internal/app/chat/usecase"
 	chattools "github.com/usetero/cli/internal/app/chattools"
 	chatboundary "github.com/usetero/cli/internal/boundary/chat"
-	psapi "github.com/usetero/cli/internal/boundary/powersync"
 	"github.com/usetero/cli/internal/domain"
-	"github.com/usetero/cli/internal/upload"
 )
 
-// startSync starts the syncer and uploader with the open database.
+// startSync starts the syncer with the open database.
 func (m *Model) startSync(accountID string) error {
 	if m.db == nil {
 		return fmt.Errorf("database not open")
@@ -41,35 +38,6 @@ func (m *Model) startSync(accountID string) error {
 
 	// Scope API services to the active account.
 	m.services = m.services.WithAccountID(domain.AccountID(accountID))
-
-	// Create PowerSync API client for write checkpoints
-	psClient := psapi.NewClient(m.cfg.PowerSyncEndpoint)
-
-	// Create and start uploader
-	syncer := m.syncer
-	scope := m.scope
-	uploader := upload.New(
-		m.db,
-		psClient,
-		m.authService,
-		upload.MutationDeps{
-			Conversations: m.services.Conversations,
-			Messages:      m.services.Messages,
-			Services:      m.services.Services,
-			Policies:      m.services.Policies,
-		},
-		scope,
-		upload.WithBatchCompletedHook(func(ctx context.Context) error {
-			return syncer.NotifyUploadCompleted(ctx)
-		}),
-	)
-	m.uploader = uploader
-	go func() {
-		if err := uploader.Run(sessionCtx); err != nil && !errors.Is(err, context.Canceled) {
-			scope.Error("uploader error", "error", err)
-		}
-	}()
-	scope.Info("uploader started", "account_id", accountID)
 
 	return nil
 }

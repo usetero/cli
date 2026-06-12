@@ -167,14 +167,11 @@ func (s *DatadogAccountService) ValidateAPIKey(ctx context.Context, input Valida
 // The control plane validates the credentials before creating the account.
 func (s *DatadogAccountService) CreateAccount(ctx context.Context, input CreateDatadogAccountInput) (*DatadogAccount, error) {
 	s.scope.Debug("creating datadog account with credentials via API", "id", input.ID.String(), "accountID", input.AccountID, "site", input.Site)
-	genInput := gen.CreateDatadogAccountWithCredentialsInput{
-		Attributes: gen.CreateDatadogAccountInput{
-			Id:        ptr(input.ID.String()),
-			AccountID: input.AccountID.String(),
-			Name:      input.Name,
-			Site:      gen.DatadogAccountSite(input.Site),
-		},
-		Credentials: gen.CreateDatadogCredentialsInput{
+	genInput := gen.DatadogAccountCreateInput{
+		AccountID: input.AccountID.String(),
+		Name:      input.Name,
+		Site:      gen.DatadogAccountSite(input.Site),
+		Credentials: gen.DatadogAccountCredentialsInput{
 			ApiKey: input.APIKey,
 			AppKey: input.AppKey,
 		},
@@ -217,18 +214,20 @@ func (s *DatadogAccountService) GetStatus(ctx context.Context, datadogAccountID 
 	}
 
 	result := &DatadogAccountStatus{
-		Health:               DatadogAccountHealth(statusNode.Health),
-		ReadyForUse:          statusNode.ReadyForUse,
-		ServiceCount:         statusNode.LogServiceCount,
-		ActiveServices:       statusNode.LogActiveServices,
-		OkServices:           statusNode.OkServices,
-		DisabledServices:     statusNode.DisabledServices,
-		InactiveServices:     statusNode.InactiveServices,
-		EventCount:           statusNode.LogEventCount,
-		AnalyzedCount:        statusNode.LogEventAnalyzedCount,
-		PendingPolicyCount:   statusNode.PolicyPendingCount,
-		ApprovedPolicyCount:  statusNode.PolicyApprovedCount,
-		DismissedPolicyCount: statusNode.PolicyDismissedCount,
+		Health:           DatadogAccountHealth(statusNode.Health),
+		ReadyForUse:      statusNode.Readiness.ReadyForUse,
+		ServiceCount:     statusNode.Coverage.LogServiceCount,
+		ActiveServices:   statusNode.Coverage.LogActiveServices,
+		OkServices:       statusNode.Coverage.OkServices,
+		DisabledServices: statusNode.Coverage.DisabledServices,
+		InactiveServices: statusNode.Coverage.InactiveServices,
+		EventCount:       statusNode.Coverage.LogEventCount,
+		AnalyzedCount:    statusNode.Coverage.LogEventAnalyzedCount,
+		// Policy counts moved to the Issue model and are no longer on the
+		// Datadog account status. Wired via the issues query in a later step.
+		PendingPolicyCount:   0,
+		ApprovedPolicyCount:  0,
+		DismissedPolicyCount: 0,
 	}
 
 	s.scope.Debug("fetched datadog account status",

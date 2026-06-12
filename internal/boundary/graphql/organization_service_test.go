@@ -20,13 +20,13 @@ func TestOrganizationService_List(t *testing.T) {
 			ListOrganizationsFunc: func(ctx context.Context) (*gen.ListOrganizationsResponse, error) {
 				return &gen.ListOrganizationsResponse{
 					Organizations: gen.ListOrganizationsOrganizationsOrganizationConnection{
-						Edges: []*gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge{
-							{Node: &gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization{
+						Edges: []gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge{
+							{Node: gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization{
 								Id:                   "org-1",
 								Name:                 "Acme Corp",
 								WorkosOrganizationID: "org_workos_123",
 							}},
-							{Node: &gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization{
+							{Node: gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdgeNodeOrganization{
 								Id:                   "org-2",
 								Name:                 "Beta Inc",
 								WorkosOrganizationID: "org_workos_456",
@@ -60,7 +60,7 @@ func TestOrganizationService_List(t *testing.T) {
 			ListOrganizationsFunc: func(ctx context.Context) (*gen.ListOrganizationsResponse, error) {
 				return &gen.ListOrganizationsResponse{
 					Organizations: gen.ListOrganizationsOrganizationsOrganizationConnection{
-						Edges: []*gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge{},
+						Edges: []gen.ListOrganizationsOrganizationsOrganizationConnectionEdgesOrganizationEdge{},
 					},
 				}, nil
 			},
@@ -101,9 +101,9 @@ func TestOrganizationService_Create(t *testing.T) {
 	t.Parallel()
 	t.Run("creates organization and returns bootstrap result", func(t *testing.T) {
 		t.Parallel()
-		var capturedInput gen.CreateOrganizationInput
+		var capturedInput gen.OrganizationCreateInput
 		mockClient := &apitest.MockClient{
-			CreateOrganizationAndBootstrapFunc: func(ctx context.Context, input gen.CreateOrganizationInput) (*gen.CreateOrganizationAndBootstrapResponse, error) {
+			CreateOrganizationAndBootstrapFunc: func(ctx context.Context, input gen.OrganizationCreateInput) (*gen.CreateOrganizationAndBootstrapResponse, error) {
 				capturedInput = input
 				return &gen.CreateOrganizationAndBootstrapResponse{
 					CreateOrganizationAndBootstrap: gen.CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResult{
@@ -115,10 +115,6 @@ func TestOrganizationService_Create(t *testing.T) {
 						Account: gen.CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultAccount{
 							Id:   "acc-new",
 							Name: "Default Account",
-						},
-						Workspace: gen.CreateOrganizationAndBootstrapCreateOrganizationAndBootstrapOrganizationBootstrapResultWorkspace{
-							Id:   "ws-new",
-							Name: "Default Workspace",
 						},
 					},
 				}, nil
@@ -138,12 +134,6 @@ func TestOrganizationService_Create(t *testing.T) {
 		if result.Account.ID != "acc-new" || result.Account.Name != "Default Account" {
 			t.Errorf("account = %+v, want ID=acc-new, Name=Default Account", result.Account)
 		}
-		if result.Workspace.ID != "ws-new" || result.Workspace.Name != "Default Workspace" {
-			t.Errorf("workspace = %+v, want ID=ws-new, Name=Default Workspace", result.Workspace)
-		}
-		if capturedInput.Id == nil || *capturedInput.Id != testID.String() {
-			t.Errorf("input.Id = %v, want %q", capturedInput.Id, testID.String())
-		}
 		if capturedInput.Name != "New Org" {
 			t.Errorf("input.Name = %q, want %q", capturedInput.Name, "New Org")
 		}
@@ -152,7 +142,7 @@ func TestOrganizationService_Create(t *testing.T) {
 	t.Run("propagates client errors", func(t *testing.T) {
 		t.Parallel()
 		mockClient := &apitest.MockClient{
-			CreateOrganizationAndBootstrapFunc: func(ctx context.Context, input gen.CreateOrganizationInput) (*gen.CreateOrganizationAndBootstrapResponse, error) {
+			CreateOrganizationAndBootstrapFunc: func(ctx context.Context, input gen.OrganizationCreateInput) (*gen.CreateOrganizationAndBootstrapResponse, error) {
 				return nil, errors.New("validation error")
 			},
 		}

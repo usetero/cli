@@ -77,7 +77,6 @@ func (m *Model) restartOnboarding() tea.Cmd {
 	m.shutdown()
 
 	m.db = nil
-	m.uploader = nil
 	m.chatClient = nil
 	m.runtimeDeps = usecase.RuntimeDeps{}
 	m.toolRegistry = nil

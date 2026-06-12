@@ -28,7 +28,6 @@ import (
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/styles"
 	"github.com/usetero/cli/internal/update"
-	"github.com/usetero/cli/internal/upload"
 )
 
 // state represents the app state.
@@ -70,7 +69,6 @@ type Model struct {
 	sessionCancel context.CancelFunc
 	sessionCtx    context.Context
 	db            sqlite.DB
-	uploader      upload.Uploader
 	chatClient    chatboundary.Client
 	runtimeDeps   usecase.RuntimeDeps
 	toolRegistry  *chattools.Registry

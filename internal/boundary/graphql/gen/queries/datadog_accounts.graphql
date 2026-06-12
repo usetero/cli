@@ -39,39 +39,18 @@ query GetDatadogAccountStatus($id: ID!) {
                 id
                 status {
                     health
-                    readyForUse
-                    logEventCount
-                    logEventAnalyzedCount
-                    logServiceCount
-                    logActiveServices
-                    disabledServices
-                    inactiveServices
-                    okServices
-                    policyPendingCount
-                    policyApprovedCount
-                    policyDismissedCount
-                    serviceVolumePerHour
-                    serviceCostPerHourVolumeUsd
-                    logEventVolumePerHour
-                    logEventBytesPerHour
-                    logEventCostPerHourBytesUsd
-                    logEventCostPerHourVolumeUsd
-                    logEventCostPerHourUsd
-                    estimatedVolumeReductionPerHour
-                    estimatedBytesReductionPerHour
-                    estimatedCostReductionPerHourBytesUsd
-                    estimatedCostReductionPerHourVolumeUsd
-                    estimatedCostReductionPerHourUsd
-                    observedVolumePerHourBefore
-                    observedVolumePerHourAfter
-                    observedBytesPerHourBefore
-                    observedBytesPerHourAfter
-                    observedCostPerHourBeforeBytesUsd
-                    observedCostPerHourBeforeVolumeUsd
-                    observedCostPerHourBeforeUsd
-                    observedCostPerHourAfterBytesUsd
-                    observedCostPerHourAfterVolumeUsd
-                    observedCostPerHourAfterUsd
+                    readiness {
+                        readyForUse
+                    }
+                    coverage {
+                        logEventCount
+                        logEventAnalyzedCount
+                        logServiceCount
+                        logActiveServices
+                        disabledServices
+                        inactiveServices
+                        okServices
+                    }
                 }
             }
         }

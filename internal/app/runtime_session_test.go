@@ -14,7 +14,6 @@ import (
 	"github.com/usetero/cli/internal/powersync/powersynctest"
 	"github.com/usetero/cli/internal/sqlite"
 	"github.com/usetero/cli/internal/sqlite/sqlitetest"
-	"github.com/usetero/cli/internal/upload"
 )
 
 type testStorage struct {
@@ -30,17 +29,6 @@ func (s testStorage) ClearDatabase(accountID string) error {
 }
 
 func (s testStorage) Clear() error {
-	return nil
-}
-
-type testUploader struct{}
-
-func (testUploader) Run(ctx context.Context) error {
-	<-ctx.Done()
-	return ctx.Err()
-}
-
-func (testUploader) Events() <-chan upload.Event {
 	return nil
 }
 
@@ -90,7 +78,6 @@ func TestShutdown_CleansRuntimeResources(t *testing.T) {
 		syncer:        syncer,
 		sessionCancel: func() { cancelled = true },
 		db:            db,
-		uploader:      testUploader{},
 	}
 
 	m.shutdown()
@@ -110,9 +97,6 @@ func TestShutdown_CleansRuntimeResources(t *testing.T) {
 	if m.db != nil {
 		t.Fatalf("expected db to be nil")
 	}
-	if m.uploader != nil {
-		t.Fatalf("expected uploader to be nil")
-	}
 }
 
 func TestStartSync_RequiresOpenDatabase(t *testing.T) {
@@ -123,7 +107,7 @@ func TestStartSync_RequiresOpenDatabase(t *testing.T) {
 	}
 }
 
-func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
+func TestStartSync_InitializesSession(t *testing.T) {
 	scope := logtest.NewScope(t)
 	db := sqlitetest.OpenBareDB(t)
 
@@ -173,9 +157,6 @@ func TestStartSync_InitializesSessionAndUploader(t *testing.T) {
 	}
 	if m.sessionCancel == nil {
 		t.Fatalf("expected session cancel to be initialized")
-	}
-	if m.uploader == nil {
-		t.Fatalf("expected uploader to be initialized")
 	}
 	if scopedAccountID != domain.AccountID("acc_123") {
 		t.Fatalf("expected services account scope to be set, got %q", scopedAccountID)

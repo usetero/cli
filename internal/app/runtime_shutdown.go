@@ -17,5 +17,4 @@ func (m *Model) shutdown() {
 		}
 	}
 	m.db = nil
-	m.uploader = nil
 }

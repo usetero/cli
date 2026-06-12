@@ -29,24 +29,14 @@ func NewWorkspaceService(client Client, scope log.Scope) *WorkspaceService {
 	}
 }
 
-// List fetches all workspaces for an account.
-func (s *WorkspaceService) List(ctx context.Context, accountID domain.AccountID) ([]domain.Workspace, error) {
-	s.scope.Debug("fetching workspaces from API", "accountID", accountID)
-	resp, err := s.client.ListWorkspaces(ctx, accountID.String())
-	if err != nil {
-		s.scope.Error("failed to fetch workspaces", "error", err, "accountID", accountID)
-		return nil, err
-	}
-
-	// Convert GraphQL response to domain model
-	workspaces := make([]domain.Workspace, len(resp.Workspaces.Edges))
-	for i, edge := range resp.Workspaces.Edges {
-		workspaces[i] = domain.Workspace{
-			ID:   domain.WorkspaceID(edge.Node.Id),
-			Name: edge.Node.Name,
-		}
-	}
-
-	s.scope.Debug("fetched workspaces from API", "count", len(workspaces))
-	return workspaces, nil
+// List returns the workspaces for an account.
+//
+// TODO(drop-powersync): workspaces were removed from the control plane — the
+// account is the working context now. As an interim, this returns a single
+// synthetic workspace mirroring the account so the onboarding selection step is
+// a no-op auto-select. The full workspace→account rename is task #7.
+func (s *WorkspaceService) List(_ context.Context, accountID domain.AccountID) ([]domain.Workspace, error) {
+	return []domain.Workspace{
+		{ID: domain.WorkspaceID(accountID.String()), Name: "Default"},
+	}, nil
 }

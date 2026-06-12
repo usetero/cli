@@ -31,35 +31,17 @@ func NewPolicyService(client Client, scope log.Scope) *PolicyService {
 }
 
 // ApprovePolicy approves a log event policy.
-func (s *PolicyService) ApprovePolicy(ctx context.Context, id string) error {
-	s.scope.Debug("approving policy via API", "id", id)
-
-	_, err := s.client.ApproveLogEventPolicy(ctx, id)
-	if err != nil {
-		s.scope.Error("failed to approve policy", "error", err, "id", id)
-		if classified := classifyError(err); classified != nil {
-			return fmt.Errorf("approve policy %s: %w", id, classified)
-		}
-		return err
-	}
-
-	s.scope.Debug("approved policy via API", "id", id)
-	return nil
+//
+// TODO(drop-powersync): the policy lifecycle moved to the Issue model in the
+// control plane (createLogEventPolicy / ignoreIssue). Re-wire as an inline
+// mutation in the writes step (task #5).
+func (s *PolicyService) ApprovePolicy(_ context.Context, id string) error {
+	return fmt.Errorf("approve policy %s: not wired — moved to the issue model", id)
 }
 
 // DismissPolicy dismisses a log event policy.
-func (s *PolicyService) DismissPolicy(ctx context.Context, id string) error {
-	s.scope.Debug("dismissing policy via API", "id", id)
-
-	_, err := s.client.DismissLogEventPolicy(ctx, id)
-	if err != nil {
-		s.scope.Error("failed to dismiss policy", "error", err, "id", id)
-		if classified := classifyError(err); classified != nil {
-			return fmt.Errorf("dismiss policy %s: %w", id, classified)
-		}
-		return err
-	}
-
-	s.scope.Debug("dismissed policy via API", "id", id)
-	return nil
+//
+// TODO(drop-powersync): see ApprovePolicy — moved to the Issue model.
+func (s *PolicyService) DismissPolicy(_ context.Context, id string) error {
+	return fmt.Errorf("dismiss policy %s: not wired — moved to the issue model", id)
 }
